@@ -1,0 +1,25 @@
+.root {
+    @apply bg-black/[42%] border border-gray-9 rounded-3xl;
+  }
+  .indicator {
+    @apply rounded-2xl;
+  }
+  
+  .innerLabel {
+    @apply text-white text-10px;
+  }
+  
+  .control[data-active] {
+    @apply bg-success-6/20 border border-success-6 rounded-2xl;
+  }
+  
+  /* TABLE STYLES */
+  
+  .table_th {
+    @apply text-gray-9 text-base font-bold;
+  }
+  
+  .table_tr {
+    @apply border-0;
+  }
+  

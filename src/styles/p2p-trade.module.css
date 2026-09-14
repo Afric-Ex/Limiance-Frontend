@@ -1,0 +1,8 @@
+.table_th {
+  @apply text-white/50 whitespace-nowrap bg-gray-22 pt-8 pb-[15px] px-[22px] text-sm font-medium ;
+}
+
+.table_tb {
+  @apply border-0 border-b bg-gray-22 border-b-gray-45 py-8 px-4 ;
+}
+

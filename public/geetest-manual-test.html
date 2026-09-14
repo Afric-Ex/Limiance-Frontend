@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GeeTest v4 manual test</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; background: #0b0b10; color: #f6f7fb; }
+  label { display: block; margin-top: 12px; color: #c9ccda; }
+  input { width: 100%; box-sizing: border-box; margin-top: 6px; padding: 10px 12px; border-radius: 6px; border: 1px solid #33384a; background: #151823; color: #f6f7fb; }
+  #captcha-box { margin: 20px 0; }
+  pre { background: #111; color: #0f0; padding: 16px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
+  button { margin-top: 16px; padding: 10px 16px; cursor: pointer; border: 0; border-radius: 6px; background: #7c5cff; color: white; font-weight: 700; }
+  code { color: #9bbcff; }
+</style>
+</head>
+<body>
+  <h1>GeeTest v4 manual test</h1>
+  <p>captcha_id: <code id="cid"></code></p>
+
+  <label>
+    Email or phone
+    <input id="emailOrPhone" value="erenphilip600@gmail.com" />
+  </label>
+
+  <label>
+    Password
+    <input id="password" type="password" value="" />
+  </label>
+
+  <button id="start-btn">Solve captcha</button>
+  <div id="captcha-box"></div>
+
+  <h2>Status / errors</h2>
+  <pre id="status">Waiting for click...</pre>
+
+  <h2>Captcha result</h2>
+  <pre id="result">Not solved yet.</pre>
+
+  <h2>Login body for Apidog</h2>
+  <pre id="login-body">Solve captcha first.</pre>
+
+  <h2>curl example</h2>
+  <pre id="curl"></pre>
+
+  <script src="https://static.geetest.com/v4/gt4.js"></script>
+  <script>
+    const CAPTCHA_ID = "b301a74931a7835059414d9d4ecfb96e";
+    const LOGIN_URL = "http://206.189.193.194:3000/api/v1/users/login";
+
+    document.getElementById("cid").textContent = CAPTCHA_ID;
+
+    const statusEl = document.getElementById("status");
+    const log = (msg) => {
+      console.log(msg);
+      statusEl.textContent += "\n" + msg;
+    };
+
+    window.addEventListener("error", (e) => log("window error: " + e.message));
+
+    document.getElementById("start-btn").addEventListener("click", () => {
+      statusEl.textContent = "Button clicked.";
+
+      if (typeof initGeetest4 !== "function") {
+        log("ERROR: initGeetest4 is not defined. Check Network tab, ad blocker, or blocked geetest script.");
+        return;
+      }
+
+      log("initGeetest4 found, calling it...");
+
+      initGeetest4(
+        {
+          captchaId: CAPTCHA_ID,
+          product: "float",
+        },
+        (captcha) => {
+          log("initGeetest4 success callback fired.");
+          captcha.appendTo("#captcha-box");
+          log("captcha appended to #captcha-box.");
+          captcha.showCaptcha();
+          log("showCaptcha() called.");
+
+          captcha.onError((err) => {
+            log("captcha onError: " + JSON.stringify(err));
+          });
+
+          captcha.onSuccess(() => {
+            const result = captcha.getValidate();
+            document.getElementById("result").textContent = JSON.stringify(result, null, 2);
+
+            const loginBody = {
+              emailOrPhone: document.getElementById("emailOrPhone").value,
+              password: document.getElementById("password").value,
+              rememberMe: false,
+              userAgent: navigator.userAgent,
+              lotNumber: result.lot_number,
+              captchaOutput: result.captcha_output,
+              passToken: result.pass_token,
+              genTime: result.gen_time,
+            };
+
+            document.getElementById("login-body").textContent = JSON.stringify(loginBody, null, 2);
+
+            document.getElementById("curl").textContent =
+              `curl -X POST ${LOGIN_URL} \\\n` +
+              `  -H "Content-Type: application/json" \\\n` +
+              `  -d '${JSON.stringify(loginBody)}'`;
+          });
+        }
+      );
+    });
+  </script>
+</body>
+</html>

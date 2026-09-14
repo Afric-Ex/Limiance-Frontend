@@ -1,0 +1,21 @@
+{
+  "name": "Limiance Exchange",
+  "short_name": "Limiance",
+  "description": "Limiance Exchange is a secure, fast, and reliable cryptocurrency exchange.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0e12",
+  "theme_color": "#4d77f0",
+  "icons": [
+    {
+      "src": "/logo-1.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

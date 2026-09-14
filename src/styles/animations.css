@@ -1,0 +1,316 @@
+/* ================================================================
+   LIMIANCE EXCHANGE — GLOBAL ANIMATION SYSTEM
+   ================================================================
+   All keyframes, utility classes, and micro-interactions.
+   Imported once in globals.css, available everywhere.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   KEYFRAMES
+   ---------------------------------------------------------------- */
+
+/* Shimmer effect for skeleton loaders */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Fade up entrance animation */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Simple fade in */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Slide down from top */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Green flash for price up */
+@keyframes flashGreen {
+  0% {
+    background-color: rgba(37, 171, 66, 0.25);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* Red flash for price down */
+@keyframes flashRed {
+  0% {
+    background-color: rgba(234, 57, 67, 0.25);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* Pulse glow (for CTAs, live indicators) */
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Subtle float for decorative elements */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Spin (for loading states) */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scale in (for modals, tooltips) */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ----------------------------------------------------------------
+   ANIMATION UTILITY CLASSES
+   ---------------------------------------------------------------- */
+
+.animate-fade-up {
+  animation: fadeUp 0.5s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out both;
+}
+
+.animate-fade-in-up {
+  animation: fadeUp 0.45s ease-out both;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out both;
+}
+
+.animate-flash-green {
+  animation: flashGreen 0.6s ease-out both;
+}
+
+.animate-flash-red {
+  animation: flashRed 0.6s ease-out both;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Stagger delays for sequential entrance animations */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+
+/* ----------------------------------------------------------------
+   SKELETON SHIMMER BASE
+   ---------------------------------------------------------------- */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* ----------------------------------------------------------------
+   CUSTOM SCROLLBAR
+   ---------------------------------------------------------------- */
+
+/* Thin themed scrollbar for all overflow containers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+/* ----------------------------------------------------------------
+   SMOOTH SCROLL
+   ---------------------------------------------------------------- */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ----------------------------------------------------------------
+   BUTTON PRESS MICRO-INTERACTION
+   ---------------------------------------------------------------- */
+
+button:not(:disabled):active,
+[role="button"]:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+button,
+[role="button"] {
+  transition: transform 0.1s ease, background-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* ----------------------------------------------------------------
+   FOCUS RING STYLING
+   ---------------------------------------------------------------- */
+
+:focus-visible {
+  outline: 2px solid rgba(77, 119, 240, 0.5);
+  outline-offset: 2px;
+}
+
+/* Remove default focus outline for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ----------------------------------------------------------------
+   LIVE INDICATOR DOT
+   ---------------------------------------------------------------- */
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #25AB42;
+  animation: pulseGlow 2s ease-in-out infinite;
+  display: inline-block;
+}
+
+.live-dot--disconnected {
+  background-color: #EA3943;
+}
+
+.live-dot--connecting {
+  background-color: #F0B90B;
+}
+
+/* ----------------------------------------------------------------
+   DEPTH BAR BACKGROUNDS (for order book)
+   ---------------------------------------------------------------- */
+
+.depth-bar-bid {
+  background: linear-gradient(to left, rgba(37, 171, 66, 0.12), transparent);
+}
+
+.depth-bar-ask {
+  background: linear-gradient(to left, rgba(234, 57, 67, 0.12), transparent);
+}
+
+/* ----------------------------------------------------------------
+   TABLE ROW HOVER (global)
+   ---------------------------------------------------------------- */
+
+.row-hover {
+  transition: background-color 0.15s ease;
+}
+
+.row-hover:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+
+/* ── Glassmorphism header (original) ── */
+.header-blur {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* ── Mobile side drawer slide-in ── */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}

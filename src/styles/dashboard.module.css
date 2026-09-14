@@ -1,0 +1,49 @@
+/* Sidebar scrollbar hidden */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* TAB STYLES */
+
+.tab_tabLabel {
+  @apply text-sm font-semibold text-white/50 hover:text-white/80 transition-colors;
+}
+.tab_list {
+  @apply gap-6;
+}
+.tab_list::before {
+  @apply border-0;
+}
+
+.tab_tab {
+  @apply p-0 border-b-2 border-transparent;
+}
+.tab_tab[data-active] .tab_tabLabel {
+  @apply text-primary font-bold;
+}
+.tab_tab[data-active] {
+  @apply border-primary;
+}
+.tab_tab:hover {
+  @apply bg-transparent;
+}
+
+/* TABLE STYLES */
+
+.table_table {
+  @apply mt-2;
+}
+.table_th {
+  @apply whitespace-nowrap border-b border-white/[0.06] pb-3 pt-2;
+}
+
+.table_td {
+  @apply pr-4 border-0;
+}
+.table_tr {
+  @apply border-0;
+}

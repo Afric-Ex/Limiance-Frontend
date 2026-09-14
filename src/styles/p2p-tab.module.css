@@ -1,0 +1,16 @@
+.list {
+  @apply rounded-lg flex w-[283px] items-center justify-between before:rounded-lg;
+}
+
+.tab {
+  @apply p-0 text-sm hover:bg-transparent font-medium text-white/55 data-[active]:text-white pb-4 data-[active]:border-b-[3px]
+               
+}
+
+.root {
+    @apply flex flex-col gap-2
+}
+
+.tabLabel {
+    @apply flex items-center gap-1
+}

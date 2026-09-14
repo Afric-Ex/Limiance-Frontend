@@ -1,0 +1,11 @@
+.label {
+    @apply p-0 text-10px font-medium rounded-2xl text-white/55  border-0 px-[29px] py-[9px]
+}
+
+.root{
+  @apply  rounded-[24px] shrink-0 flex w-[160px] items-center before:rounded-lg before:border-0 border border-gray-9 px-1 py-[3px] h-fit bg-transparent
+}
+
+.indicator {
+    @apply bg-transparent
+}

@@ -1,0 +1,40 @@
+.root {
+  @apply flex flex-col gap-6;
+}
+
+.tab {
+  @apply pb-2;
+}
+
+.tab:hover {
+  @apply bg-transparent;
+}
+.list {
+  @apply flex-nowrap overflow-x-auto
+}
+
+.list::before {
+  @apply border-0;
+}
+.tabLabel {
+  @apply text-sm font-semibold text-white/55;
+}
+
+.tab[data-active] .tabLabel {
+  @apply text-base font-semibold text-white;
+}
+.tab[data-active] {
+  @apply border-0;
+}
+
+.table_th {
+  @apply text-gray-9 text-sm whitespace-nowrap;
+}
+
+.table_tr {
+  @apply border-0;
+}
+
+.select_input {
+  @apply w-142px h-38px rounded-lg border-gray-9/55;
+}

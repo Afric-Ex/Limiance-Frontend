@@ -1,0 +1,486 @@
+"use client";
+
+import { UserAvatar } from "@/src/components/shared/user-avatar";
+import { VerifyStatusTag } from "@/src/components/shared/verify-status-tag";
+import { MdKeyboardArrowRight, MdTrendingUp, MdTrendingDown } from "react-icons/md";
+import { ArrowTo } from "@/src/components/icons/arrow-to";
+import { Basket } from "@/src/components/icons/basket";
+import { Coins as CoinsIcon } from "@/src/components/icons/coins";
+import {
+  Table,
+  TableTd,
+  TableTh,
+  TableTr,
+  Tabs,
+  TabsList,
+  TabsPanel,
+  TabsTab,
+} from "@mantine/core";
+import classes from "@/src/styles/dashboard.module.css";
+import Link from "next/link";
+import { useUserStore } from "@/src/stores/user-store";
+import { Copy } from "@/src/components/shared/copy";
+import { getCryptoIcon } from "@/src/utils/crypto-icons";
+import { tradingKeys, tradingService } from "@/src/services/trading";
+import { userKeys, userService } from "@/src/services/user";
+import { MOCK_MODE } from "@/src/mocks";
+import { mockTrading } from "@/src/mocks/mock-trading";
+import { useQuery } from "@tanstack/react-query";
+import { useMarketFeed } from "@/src/hooks/use-market-feed";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import clsx from "clsx";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { WalletCard } from "@/src/components/assets/wallet-card";
+import { Skeleton } from "@/src/components/shared/skeleton";
+
+const depositChannels = [
+  {
+    name: "Buy Crypto",
+    channel: "Local currency, payment...",
+    color: "var(--primary)",
+    icon: Basket,
+    link: "/buy-crypto",
+  },
+  {
+    name: "Deposit",
+    channel: "Deposit crypto or fiat",
+    color: "var(--yellow-1)",
+    icon: CoinsIcon,
+    link: "/transactions/deposit",
+  },
+];
+
+function formatVolume(val: number) {
+  if (val >= 1e9) return `${(val / 1e9).toFixed(2)}B`;
+  if (val >= 1e6) return `${(val / 1e6).toFixed(2)}M`;
+  if (val >= 1e3) return `${(val / 1e3).toFixed(2)}K`;
+  return val.toFixed(2);
+}
+
+function PriceCell({ value, change }: { value: number; change: number }) {
+  const numValue = Number(value) || 0;
+  return (
+    <span className={clsx("text-sm max-[1150px]:text-base font-semibold tabular-nums", change >= 0 ? "text-success-2 max-[1150px]:text-white/90" : "text-error-1 max-[1150px]:text-white/90")}>
+      ${numValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: numValue > 100 ? 2 : 6 })}
+    </span>
+  );
+}
+
+function ChangeCell({ value, mobile }: { value: number; mobile?: boolean }) {
+  const numValue = Number(value) || 0;
+  const isUp = numValue >= 0;
+  return (
+    <span className={clsx(
+      "font-semibold px-2 py-0.5 rounded inline-flex items-center justify-center gap-1 min-w-[72px]",
+      isUp ? "bg-success-2/10 text-success-2" : "bg-error-1/10 text-error-1",
+      mobile ? "text-xs min-[1150px]:hidden" : "text-sm max-[1150px]:hidden"
+    )}>
+      {!mobile && (isUp ? <MdTrendingUp size={14} /> : <MdTrendingDown size={14} />)}
+      {isUp ? "+" : ""}{numValue.toFixed(2)}%
+    </span>
+  );
+}
+
+const marketTabs = [
+  "Holding",
+  "Hot",
+  "New listing",
+  "Favorite",
+  "Top Gainers",
+  "24h Volume",
+];
+
+function Dashboard() {
+  const user = useUserStore((state) => state.user);
+  const router = useRouter();
+
+  const [activeMarketTab, setActiveMarketTab] = useState("Holding");
+
+  // Use live WebSocket portfolio — already subscribed globally, no extra fetch needed
+  const { coins: wsPortfolio } = usePortfolioWs();
+
+  const { data: kycStatus } = useQuery({
+    queryKey: userKeys.kycStatus,
+    queryFn: () => userService.getKycStatus(),
+    select: (res) => res?.data?.status,
+  });
+
+  const feed = useMarketFeed("BTC/USDT");
+
+  const marketTokens = (feed.markets || []).map((m: any) => ({
+    pair: m.symbol || m.pair || `${m.base}/${m.quote}`,
+    symbol: m.base || m.symbol?.split("-")[0] || "",
+    price: Number(m.last_price ?? m.lastPrice ?? m.price ?? 0),
+    changePercent24h: Number(m.percent_change ?? m.priceChangePercent ?? m.changePercent24h ?? 0),
+    volume24h: Number(m.volume ?? m.volume24h ?? m.quoteVolume ?? 0),
+  }));
+
+  const { data: movers } = useQuery({
+    queryKey: tradingKeys.gainersLosers,
+    queryFn: () =>
+      MOCK_MODE.gainersLosers
+        ? mockTrading.gainersLosers(10)
+        : tradingService.gainersLosers(10),
+    staleTime: 60000,
+    select: (res: any) => res.data,
+  });
+
+  // Normalize REST movers into the same shape as WS marketTokens
+  const moversArray = movers ? [...(movers.gainers || []), ...(movers.losers || [])] : [];
+  const moverTokens = moversArray.map((m: any) => {
+    const rawPair = m.pair ?? m.symbol ?? `${m.base ?? ""}/USDT`;
+    const base = m.base ?? rawPair.replace("-", "/").split("/")[0] ?? "";
+    return {
+      pair: rawPair,
+      symbol: base,
+      price: Number(m.price ?? m.latest_price ?? m.last_price ?? m.lastPrice ?? 0),
+      changePercent24h: Number(m.changePercent24h ?? m.percent_change ?? m.priceChangePercent ?? 0),
+      volume24h: Number(m.volume24h ?? m.volume ?? m.quoteVolume ?? 0),
+      image: getCryptoIcon(base, m.image ?? m.logo ?? m.icon),
+    };
+  });
+
+  // Combine WS market feed (subscribed pairs) and REST movers for a complete market list
+  const allTokensMap = new Map();
+  moverTokens.forEach((t: any) => allTokensMap.set(t.symbol, t));
+  marketTokens.forEach((t: any) => {
+    const rawPair = t.pair ?? t.symbol ?? "";
+    const base = t.base ?? rawPair.replace("-", "/").split("/")[0] ?? "";
+    const sym = base || t.symbol;
+    allTokensMap.set(sym, { 
+      ...allTokensMap.get(sym), 
+      ...t, 
+      symbol: sym, 
+      pair: rawPair,
+      image: getCryptoIcon(sym, t.image ?? t.logo ?? t.icon) || allTokensMap.get(sym)?.image
+    });
+  });
+
+  // Hydrate images from portfolio if missing
+  if (wsPortfolio && wsPortfolio.length > 0) {
+    wsPortfolio.forEach((p: any) => {
+      const sym = (p.symbol || "").toUpperCase();
+      if (sym && p.image && allTokensMap.has(sym)) {
+        allTokensMap.get(sym).image = p.image;
+      }
+    });
+  }
+  
+  const displayTokens = Array.from(allTokensMap.values()).filter((t: any) => {
+    // Filter out garbage pairs the backend might send
+    const validQuotes = ["USDT", "USDC", "BTC", "ETH"];
+    const [base, quote] = (t.pair || "").replace("-", "/").split("/");
+    if (!quote) return false;
+    if (!validQuotes.includes(quote)) return false;
+    if ((base === "USDT" && quote === "USDC") || (base === "USDC" && quote === "USDT")) return true;
+    if (validQuotes.includes(base) && quote !== "USDT") return false;
+    return true;
+  });
+
+  const getRepresentativeHoldingTokens = () => {
+    const portfolio = wsPortfolio;
+    if (!portfolio || portfolio.length === 0) return [];
+
+    return portfolio
+      .filter((item: any) => {
+        const totalBal =
+          parseFloat(item.spotBalance || "0") +
+          parseFloat(item.fundingBalance || "0") +
+          parseFloat(item.futuresBalance || "0") +
+          parseFloat(item.marginBalance || "0");
+        return totalBal > 0;
+      })
+      .map((item: any) => {
+        const sym = (item.symbol || "").toUpperCase();
+        // Try to find a market price from the live WS feed
+        const marketMatch = displayTokens.find(
+          (t: any) =>
+            t.symbol.toUpperCase() === sym &&
+            (t.pair.toUpperCase().endsWith("/USDT") || t.pair.toUpperCase().endsWith("-USDT"))
+        ) || displayTokens.find(
+          (t: any) => t.symbol.toUpperCase() === sym
+        );
+
+        const price = marketMatch
+          ? Number(marketMatch.price)
+          : parseFloat(item.currencyPrice || item.usdPrice || "1");
+
+        const changePercent24h = marketMatch
+          ? Number(marketMatch.changePercent24h)
+          : 0;
+
+        const totalBalance =
+          parseFloat(item.spotBalance || "0") +
+          parseFloat(item.fundingBalance || "0");
+
+        return {
+          pair: marketMatch?.pair ?? `${sym}/USDT`,
+          symbol: sym,
+          price,
+          changePercent24h,
+          volume24h: marketMatch?.volume24h ?? 0,
+          balance: totalBalance,
+          usdValue: totalBalance * price,
+          image: getCryptoIcon(sym, marketMatch?.image ?? item.image ?? item.logo),
+        };
+      })
+      .sort((a: any, b: any) => b.usdValue - a.usdValue); // Sort by USD value
+  };
+
+  const getFilteredTokens = () => {
+    if (activeMarketTab === "Top Gainers") {
+      return [...displayTokens]
+        .filter((t: any) => t.changePercent24h !== 0)
+        .sort((a: any, b: any) => b.changePercent24h - a.changePercent24h)
+        .slice(0, 10);
+    }
+    if (activeMarketTab === "Top Losers") {
+      return [...displayTokens]
+        .filter((t: any) => t.changePercent24h !== 0)
+        .sort((a: any, b: any) => a.changePercent24h - b.changePercent24h)
+        .slice(0, 10);
+    }
+    if (activeMarketTab === "24h Volume") {
+      return [...displayTokens]
+        .sort((a: any, b: any) => (b.volume24h * b.price) - (a.volume24h * a.price))
+        .slice(0, 10);
+    }
+    if (activeMarketTab === "Holding") {
+      return getRepresentativeHoldingTokens();
+    }
+    // Hot / New listing / Favorite → just show full list by volume
+    return [...displayTokens]
+      .sort((a: any, b: any) => (b.volume24h * b.price) - (a.volume24h * a.price))
+      .slice(0, 10);
+  };
+
+  const userInfo = [
+    {
+      info: "User ID",
+      value: user?.id,
+      withCopy: true,
+    },
+    {
+      info: "User Type",
+      value: "Personal",
+      withArrow: true,
+    },
+  ];
+
+  return (
+    <main className="flex flex-col pb-6 gap-6 w-full max-[1150px]:pb-[90px] page-enter max-[1150px]:px-2">
+      {/* Top Bar - Flat design */}
+      <div className="animate-fade-up px-5 max-[1150px]:px-4 flex items-center justify-between py-4 bg-[#181a20] border border-white/[0.06] rounded-2xl w-full max-[1150px]:rounded-xl">
+        <div className="flex gap-4 items-center">
+          <UserAvatar size={48} className="ring-1 ring-white/10" />
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg font-bold max-[1150px]:text-base">
+              {user?.firstName} {user?.lastName}
+            </h2>
+            <div className="flex gap-2">
+              <VerifyStatusTag verified={user?.isIDverified} status={kycStatus} />
+              <div className="min-[1150px]:hidden flex items-center gap-1 bg-white/5 rounded-full px-2 py-0.5 border border-white/10">
+                <span className="text-[10px] font-semibold text-white/70">ID: {user?.id?.split("-")?.at(-1)}</span>
+                <Copy text={user?.id ?? ""} />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="hidden md:flex gap-10">
+          {userInfo.map((item) => (
+            <div key={item.info} className="flex flex-col gap-[2px]">
+              <span className="text-xs font-medium text-white/40">
+                {item.info}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-white/80">
+                  {item.info === "User ID"
+                    ? item.value?.split("-")?.at(-1)
+                    : item.value}
+                </span>
+                {item.withCopy && <Copy text={item.value ?? ""} />}
+                {item.withArrow && <MdKeyboardArrowRight className="text-white/40" />}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid wrapper */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-[1150px]:gap-4 items-start w-full">
+        {/* Left Column: Wallet Card */}
+        <div className="w-full flex">
+          <div className="w-full h-full max-[1150px]:min-h-[160px]">
+             <WalletCard />
+          </div>
+        </div>
+
+        {/* Right Column: Deposit Channels */}
+        <div className="w-full h-full animate-fade-up stagger-2 rounded-2xl border border-white/[0.06] bg-[#181a20] flex flex-col p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl">
+          <h4 className="text-sm font-semibold text-white/80 mb-4 max-[1150px]:mb-2">
+            Deposit / Fiat Channels
+          </h4>
+          <div className="flex flex-col gap-3 flex-1 justify-center">
+            {depositChannels.map((item) => (
+              <Link
+                key={item.name}
+                href={item.link}
+                className="p-4 border border-white/[0.04] bg-[#181a20] rounded-xl flex items-center justify-between transition-colors hover:bg-white/[0.04] row-hover group"
+              >
+                <div className="flex items-center gap-4">
+                  <span
+                    className="w-10 h-10 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-white/80"
+                  >
+                    <item.icon className="w-5 h-5" />
+                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <h5 className="text-sm font-semibold">{item.name}</h5>
+                    <span className="text-xs text-white/40">
+                      {item.channel}
+                    </span>
+                  </div>
+                </div>
+                <span className="p-2 hover:bg-white/10 text-white/40 group-hover:text-white transition-all rounded-full">
+                  <ArrowTo className="w-4 h-4" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Markets Section */}
+      <div className="animate-fade-up stagger-3 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:p-0 max-[1150px]:bg-transparent max-[1150px]:border-0 flex flex-col gap-4 max-[1150px]:gap-2">
+        <div className="flex items-center justify-between max-[1150px]:px-1">
+          <span className="text-lg max-[1150px]:text-base font-bold text-white/90">Markets</span>
+          <Link href="/markets" className="flex items-center gap-1 text-xs font-medium text-white/50 hover:text-white transition-colors">
+            View All <MdKeyboardArrowRight />
+          </Link>
+        </div>
+        <Tabs
+          classNames={{
+            tabLabel: classes.tab_tabLabel,
+            list: classes.tab_list,
+            tab: classes.tab_tab,
+          }}
+          styles={{
+            list: {
+              flexWrap: "nowrap",
+              overflowX: "auto",
+              borderBottom: "1px solid rgba(255,255,255,0.06)",
+            },
+            tab: {
+              paddingBottom: "12px",
+            }
+          }}
+          value={activeMarketTab}
+          onChange={(v) => setActiveMarketTab(v ?? "Hot")}
+        >
+          <TabsList>
+            {marketTabs.map((item) => (
+              <TabsTab key={item} value={item}>
+                {item}
+              </TabsTab>
+            ))}
+          </TabsList>
+          {marketTabs.map((item) => (
+            <TabsPanel
+              className="!w-full !overflow-auto pt-2"
+              key={item}
+              value={item}
+            >
+              <Table
+                classNames={{
+                  table: classes.table_table,
+                  th: classes.table_th,
+                  tr: classes.table_tr,
+                  td: classes.table_td,
+                }}
+              >
+                <thead>
+                  <TableTr>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] pl-4 max-[1150px]:pl-2">Coin</TableTh>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[1150px]:text-right max-[1150px]:pr-2">Price</TableTh>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[1150px]:hidden">
+                      <span>{item === "Holding" ? "Balance" : "24h Volume"}</span>
+                    </TableTh>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[1150px]:hidden">24h Change</TableTh>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] text-right pr-4 max-[1150px]:hidden">Action</TableTh>
+                  </TableTr>
+                </thead>
+                <tbody>
+                  {displayTokens.length === 0 ? (
+                    <TableTr>
+                      <TableTd colSpan={5} className="!p-0">
+                        <Skeleton variant="table-row" count={5} columns={5} className="py-2" />
+                      </TableTd>
+                    </TableTr>
+                  ) : getFilteredTokens().length === 0 ? (
+                    <TableTr>
+                      <TableTd colSpan={5}>
+                        <div className="py-8 flex flex-col items-center justify-center gap-2">
+                          <span className="text-sm font-medium text-white/30">No tokens match this filter</span>
+                        </div>
+                      </TableTd>
+                    </TableTr>
+                  ) : getFilteredTokens().slice(0, 10).map((token: any) => (
+                    <TableTr key={token.pair} className="row-hover cursor-pointer border-b border-transparent transition-colors" onClick={() => router.push(`/trades/spot?pair=${token.pair}`)}>
+                      <TableTd className="py-1.5 pl-4 max-[1150px]:pl-2 max-[1150px]:py-4">
+                        <span className="flex items-center gap-2.5 max-[1150px]:gap-2.5">
+                          {token.image ? (
+                            <img src={token.image} alt={token.symbol} className="w-6 h-6 max-[1150px]:w-9 max-[1150px]:h-9 rounded-full object-cover shrink-0" />
+                          ) : (
+                            <span className="w-6 h-6 max-[1150px]:w-9 max-[1150px]:h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] max-[1150px]:text-sm font-bold text-white/80 shrink-0">
+                              {token.symbol.charAt(0)}
+                            </span>
+                          )}
+                          <span className="flex items-baseline max-[1150px]:flex-col max-[1150px]:items-start gap-1.5 max-[1150px]:gap-0">
+                            <span className="text-[13px] max-[1150px]:text-base font-bold text-white/90">
+                              {token.symbol}
+                            </span>
+                            <span className="text-[10px] max-[1150px]:text-xs font-medium text-white/30 max-[1150px]:text-white/40">{token.pair.split('/')[1]}</span>
+                          </span>
+                        </span>
+                      </TableTd>
+                      <TableTd className="max-[1150px]:text-right max-[1150px]:pr-2 py-1.5 max-[1150px]:py-4">
+                        <span className="flex flex-col min-[1150px]:block max-[1150px]:items-end gap-1">
+                          <PriceCell value={token.price} change={token.changePercent24h} />
+                          <ChangeCell value={token.changePercent24h} mobile={true} />
+                        </span>
+                      </TableTd>
+                      <TableTd className="max-[1150px]:hidden py-1.5">
+                        <span className="text-[13px] font-medium text-white/90 tabular-nums">
+                          {item === "Holding" && token.balance != null
+                            ? `${Number(token.balance).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${token.symbol}`
+                            : `$${formatVolume(token.volume24h * token.price)}`
+                          }
+                        </span>
+                      </TableTd>
+                      <TableTd className="max-[1150px]:hidden py-1.5">
+                        <ChangeCell value={token.changePercent24h} />
+                      </TableTd>
+                      <TableTd className="text-right pr-4 max-[1150px]:hidden py-1.5">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/trades/spot?pair=${token.pair}`);
+                          }}
+                          className="text-primary hover:text-white transition-colors duration-200 py-1 px-2 rounded font-semibold text-xs active:scale-95"
+                        >
+                          Trade
+                        </button>
+                      </TableTd>
+                    </TableTr>
+                  ))}
+                </tbody>
+              </Table>
+            </TabsPanel>
+          ))}
+        </Tabs>
+      </div>
+    </main>
+  );
+}
+
+export default Dashboard;

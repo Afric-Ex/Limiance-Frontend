@@ -1,0 +1,14 @@
+.root {
+    @apply bg-white/15
+}
+.indicator {
+    @apply bg-white/15
+}
+
+.innerLabel {
+    @apply text-white
+}
+
+.control[data-active] {
+    @apply bg-primary
+}

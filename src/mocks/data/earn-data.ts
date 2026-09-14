@@ -1,0 +1,65 @@
+// staking products and positions
+
+export const MOCK_STAKING_PRODUCTS = [
+  {
+    id: "stake_prod_001",
+    asset: "USDT",
+    image: "https://assets.coingecko.com/coins/images/325/small/Tether.png",
+    apy: 8.5,
+    minAmount: "100",
+    lockDays: 30,
+    type: "fixed" as const,
+    totalStaked: "1,245,000",
+    available: true,
+  },
+  {
+    id: "stake_prod_002",
+    asset: "BTC",
+    image: "https://assets.coingecko.com/coins/images/1/small/bitcoin.png",
+    apy: 3.2,
+    minAmount: "0.001",
+    lockDays: 0,
+    type: "flexible" as const,
+    totalStaked: "45.23",
+    available: true,
+  },
+  {
+    id: "stake_prod_003",
+    asset: "ETH",
+    image: "https://assets.coingecko.com/coins/images/279/small/ethereum.png",
+    apy: 5.8,
+    minAmount: "0.01",
+    lockDays: 60,
+    type: "fixed" as const,
+    totalStaked: "892.45",
+    available: true,
+  },
+  {
+    id: "stake_prod_004",
+    asset: "SOL",
+    image: "https://assets.coingecko.com/coins/images/4128/small/solana.png",
+    apy: 6.5,
+    minAmount: "1",
+    lockDays: 30,
+    type: "fixed" as const,
+    totalStaked: "23,456",
+    available: true,
+  },
+];
+
+export const MOCK_MY_STAKING = [
+  {
+    id: "stake_pos_001",
+    productId: "stake_prod_001",
+    asset: "USDT",
+    image: "https://assets.coingecko.com/coins/images/325/small/Tether.png",
+    amount: "500.00",
+    earned: "3.47",
+    apy: 8.5,
+    startDate: new Date(Date.now() - 15 * 86400000).toISOString(),
+    endDate: new Date(Date.now() + 15 * 86400000).toISOString(),
+    lockDays: 30,
+    type: "fixed" as const,
+    status: "active" as const,
+  },
+];

@@ -1,0 +1,34 @@
+.root {
+    @apply w-full flex flex-col gap-19px
+}
+
+.control {
+    @apply bg-gray-6/[8%] shadow-3 py-3 px-19px rounded-xl
+}
+
+.control:hover {
+    @apply bg-gray-6/[8%]
+}
+
+.label {
+    @apply text-white font-bold text-sm sm:text-19px
+}
+
+.item {
+    @apply border-0
+}
+
+.item[data-active] {
+    @apply bg-gray-7 border border-primary rounded-xl
+}
+
+.item[data-active] .control {
+    @apply bg-gray-7
+}
+.content {
+    @apply md:pl-76px pl-8 sm:text-15px text-sm
+}
+
+.chevron {
+    @apply md:w-38px md:h-41px w-6 h-6 rounded-full border border-primary flex items-center justify-center text-primary
+}

@@ -1,0 +1,25 @@
+.root {
+    @apply flex flex-col gap-6
+}
+
+.tab {
+    @apply pb-4
+}
+
+.tab:hover {
+    @apply bg-transparent
+}
+.list::before {
+    @apply border-0
+}
+.tabLabel {
+    @apply text-sm font-semibold text-white/55
+}
+
+.tab[data-active] .tabLabel {
+    @apply text-base font-medium text-white
+}
+
+.input_input {
+    @apply h-10 bg-gray-7 border-0 rounded-full
+}

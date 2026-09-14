@@ -1,0 +1,12 @@
+.input_input {
+    @apply h-10 bg-gray-13 rounded-full
+}
+
+.table_th {
+    @apply text-gray-9 text-base font-bold;
+  }
+  
+  .table_tr {
+    @apply border-0;
+  }
+  

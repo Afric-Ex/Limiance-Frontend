@@ -1,0 +1,20 @@
+import React from "react";
+
+export const Favourite = () => {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M5.51758 0.754083L6.448 0.75L7.85383 3.73083L10.9607 4.21558L11.25 5.08767L8.98083 7.42858L9.50292 10.7162L8.74575 11.25L5.98367 9.70533L3.221 11.25L2.465 10.7116L3.01683 7.42625L0.75 5.08767L1.03933 4.21558L4.14383 3.73142L5.51758 0.754083Z"
+        fill="#848E9C"
+      />
+    </svg>
+  );
+};

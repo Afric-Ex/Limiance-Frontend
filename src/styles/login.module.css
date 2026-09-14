@@ -1,0 +1,19 @@
+.root {
+  @apply flex flex-col gap-8;
+}
+
+.tabLabel {
+  @apply font-medium text-base text-white/55;
+}
+
+.tab:hover {
+  background: none;
+}
+
+.tab[data-active] {
+    border-bottom-color: var(--primary)
+}
+
+.tab[data-active] .tabLabel {
+  @apply text-white;
+}

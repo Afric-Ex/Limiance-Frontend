@@ -1,0 +1,37 @@
+.root {
+    @apply w-full h-full
+}
+
+.separator {
+  @apply mx-0;
+}
+
+.steps {
+  @apply max-w-524px mx-auto;
+}
+
+.stepIcon {
+  @apply w-3 h-3 min-h-3 min-w-3;
+}
+.stepIcon[data-progress] {
+  background: var(--step-color);
+}
+
+.stepWrapper {
+  border: 6px solid #ffffff0f;
+  @apply rounded-full;
+}
+
+.step[data-progress] .stepWrapper,
+.step[data-completed] .stepWrapper {
+  border: 6px solid #8974ff0f;
+  @apply rounded-full;
+}
+.content {
+  @apply pt-12;
+}
+
+/* POPOVER STYLES */
+.popover_dropdown {
+  @apply bg-gray-10 shadow-5 border-0 p-0;
+}
