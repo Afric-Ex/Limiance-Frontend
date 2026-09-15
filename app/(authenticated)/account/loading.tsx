@@ -1,1 +1,5 @@
-export default function Loading() { return <div className="flex justify-center items-center h-64"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>; }
+import { AccountPageSkeleton } from "@/src/components/skeletons/account";
+
+export default function Loading() {
+  return <AccountPageSkeleton />;
+}

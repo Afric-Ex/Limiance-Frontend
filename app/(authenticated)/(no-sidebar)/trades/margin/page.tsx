@@ -6,6 +6,7 @@ import { tradingKeys, tradingService } from "@/src/services/trading";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { useOrderBook } from "@/src/hooks/use-order-book";
 import { Skeleton } from "@/src/components/shared/skeleton";
+import { MarginTradePageSkeleton } from "@/src/components/skeletons/trades";
 import { MOCK_MODE } from "@/src/mocks";
 import { mockTrading } from "@/src/mocks/mock-trading";
 import { successNotification } from "@/src/lib/notification-handler";
@@ -908,7 +909,7 @@ function MarginTrades() {
 
 export default function MarginTradePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+    <Suspense fallback={<MarginTradePageSkeleton />}>
       <MarginTrades />
     </Suspense>
   );
