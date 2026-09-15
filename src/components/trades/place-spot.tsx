@@ -429,7 +429,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           <button
             onClick={() => placeBuy()}
             disabled={buyLoading || !buyAmount || rawQuote === 0}
-            className="mt-0.5 bg-[#2ecc71] hover:bg-[#27ae60] disabled:opacity-50 transition-all text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(46,204,113,0.3)] active:scale-95"
+            className="mt-0.5 bg-buy hover:bg-buy/90 disabled:opacity-50 transition-all text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(37,171,66,0.3)] active:scale-95"
           >
             {buyLoading && <Loader size={13} color="white" />}
             Buy {base}
@@ -488,7 +488,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           <button
             onClick={() => placeSell()}
             disabled={sellLoading || !sellAmount || rawBase === 0}
-            className="mt-0.5 bg-[#e74c3c] hover:bg-[#c0392b] disabled:opacity-50 transition-all text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(231,76,60,0.3)] active:scale-95"
+            className="mt-0.5 bg-sell hover:bg-sell/90 disabled:opacity-50 transition-all text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(246,70,93,0.3)] active:scale-95"
           >
             {sellLoading && <Loader size={13} color="white" />}
             Sell {base}

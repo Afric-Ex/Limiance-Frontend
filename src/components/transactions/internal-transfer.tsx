@@ -133,7 +133,7 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
         onChange={onToggle}
         width="target"
         classNames={{
-          dropdown: "!border !border-white/[0.08] !bg-[#1e2026] !rounded-xl !p-0 !overflow-hidden",
+          dropdown: "!border !border-white/[0.08] !bg-elevated !rounded-xl !p-0 !overflow-hidden",
         }}
       >
         <PopoverTarget>
@@ -173,7 +173,7 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
   );
 
   return (
-    <div className="w-full max-w-[540px] bg-[#181a20] rounded-2xl flex flex-col p-8 gap-6 border border-white/[0.06] relative animate-fade-in-up">
+    <div className="w-full max-w-[540px] bg-elevated rounded-2xl flex flex-col p-8 gap-6 border border-white/[0.06] relative animate-fade-in-up">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h4 className="text-xl font-bold text-white">Internal Transfer</h4>

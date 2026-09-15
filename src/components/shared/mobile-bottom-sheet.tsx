@@ -24,7 +24,7 @@ export const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({
       size="auto"
       withCloseButton={false}
       classNames={{
-        content: "!bg-[#181a20] !rounded-t-3xl !border-t !border-t-white/[0.08]",
+        content: "!bg-elevated !rounded-t-3xl !border-t !border-t-white/[0.08]",
         body: "!p-0"
       }}
     >

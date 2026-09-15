@@ -23,7 +23,7 @@ export const LivePulseBar = () => {
   }, []);
 
   return (
-    <div className="fixed bottom-[60px] min-[1150px]:hidden left-0 right-0 z-40 bg-[#181a20]/95 backdrop-blur-md border-t border-b border-primary/20 shadow-[0_-2px_10px_rgba(37,171,66,0.1)] overflow-hidden">
+    <div className="fixed bottom-[60px] min-[1150px]:hidden left-0 right-0 z-40 bg-elevated/95 backdrop-blur-md border-t border-b border-primary/20 shadow-[0_-2px_10px_rgba(37,171,66,0.1)] overflow-hidden">
       <div className="flex items-center px-4 py-1.5 gap-2">
         <div className="flex items-center justify-center text-primary animate-pulse w-4 h-4">
           <AiOutlineFire size={14} />

@@ -58,7 +58,7 @@ export const AdCard = ({ ad, onActionClick, isOwnAd = false }: AdCardProps) => {
         ) : (
           <Button 
             color={isBuy ? "green" : "red"} 
-            className={`w-full ${isBuy ? 'bg-[#0ECB81] hover:bg-[#0ECB81]/90' : 'bg-[#F6465D] hover:bg-[#F6465D]/90'}`}
+            className={`w-full ${isBuy ? 'bg-buy hover:bg-buy/90' : 'bg-[#F6465D] hover:bg-[#F6465D]/90'}`}
             onClick={() => onActionClick(ad)}
           >
             {isBuy ? "Sell" : "Buy"} {ad.asset}

@@ -105,7 +105,8 @@ export default function Header() {
           !pathname.includes("auth")
           ? ""
           : "mb-5",
-        "md:px-8 px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-[100] backdrop-blur-md bg-[#181a20]/80"
+        "h-[var(--size-header-height)] md:px-8 px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-[100] backdrop-blur-md bg-elevated/80"
+
       )}
     >
       <div className="flex items-center gap-6">
@@ -147,7 +148,7 @@ export default function Header() {
         {!user ? (
           <div className="flex items-center gap-6px">
             <Link href="/auth/login">
-              <button className="font-medium py-3 px-5 bg-gray-42 rounded-lg">
+              <button className="font-medium py-3 px-5 bg-muted rounded-lg">
                 Login
               </button>
             </Link>

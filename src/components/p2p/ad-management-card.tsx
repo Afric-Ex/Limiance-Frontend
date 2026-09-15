@@ -24,11 +24,11 @@ export const AdManagementCard = ({ ad, isActive, onPause, onResume, onDelete }: 
       <div className="flex justify-between items-start border-b border-white/10 pb-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <span className={`text-lg font-bold ${ad.type === "BUY" ? "text-[#0ECB81]" : "text-[#F6465D]"}`}>
+            <span className={`text-lg font-bold ${ad.type === "BUY" ? "text-buy" : "text-[#F6465D]"}`}>
               {ad.type} {ad.asset}/{ad.fiat}
             </span>
             <div className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${isActive ? "bg-[#0ECB81]" : "bg-gray-500"}`} />
+              <span className={`w-2 h-2 rounded-full ${isActive ? "bg-buy" : "bg-gray-500"}`} />
               <span className="text-sm font-medium text-white/70">{isActive ? "Active" : "Paused"}</span>
             </div>
           </div>
@@ -84,7 +84,7 @@ export const AdManagementCard = ({ ad, isActive, onPause, onResume, onDelete }: 
           <Button 
             variant="light" 
             color="green" 
-            className="flex-1 bg-[#0ECB81]/10 hover:bg-[#0ECB81]/20 text-[#0ECB81] border border-[#0ECB81]/20"
+            className="flex-1 bg-buy/10 hover:bg-buy/20 text-buy border border-buy/20"
             onClick={onResume}
           >
             Resume

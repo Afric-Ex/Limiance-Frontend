@@ -1,8 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { assetKeys, asset } from "@/src/services/asset";
+import React, { useEffect, useRef } from "react";
 import { Convert } from "../icons/convert";
 import { Transfer } from "../icons/transfer";
 import { Withdraw } from "../icons/withdraw";
@@ -14,40 +12,47 @@ import { useRouter } from "next/navigation";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { ConvertAsset } from "../transactions/convert-asset";
-import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { useWalletBalances } from "@/src/hooks/use-wallet-balances";
+import { useBalanceCloak } from "@/src/stores/balance-cloak-store";
+import { Eye } from "../icons/eye";
+import { BsEyeSlashFill } from "react-icons/bs";
+import toast from "react-hot-toast";
 
 export const MyWallet = () => {
   const { push } = useRouter();
   const { handleOpenDepositModal, handleOpenInternalTransferModal } = useAssets();
+  const { funding, trading, isLoading, isConnected } = useWalletBalances();
+  const { enabled, toggleCloak } = useBalanceCloak();
 
-  // Use WebSocket for real-time balance data
-  const { balances, isLoading: balanceLoading } = usePortfolioWs();
+  const prevConnectedRef = useRef(isConnected);
 
-  // "total" = backend overall, per-account derived from coins
-  const fundingBal = balances["funding"];
-  const overallBal = balances["total"];
+  useEffect(() => {
+    if (!isConnected && prevConnectedRef.current && !isLoading) {
+      toast.loading("Reconnecting to balance stream...", { id: "wallet-ws" });
+    } else if (isConnected) {
+      toast.dismiss("wallet-ws");
+    }
+    prevConnectedRef.current = isConnected;
+  }, [isConnected, isLoading]);
 
-  const overallLoading = balanceLoading;
-  const fundingBalLoading = balanceLoading;
+  const fundingUsd = funding?.inUsd ?? "0.00";
+  const fundingBtc = funding?.inBtc ?? "0.00000000";
+  const tradingUsd = trading?.inUsd ?? "0.00";
+  const tradingBtc = trading?.inBtc ?? "0.00000000";
 
-  const safeNum = (val: string | null | undefined) => {
-    const n = parseFloat(val ?? "");
-    return isNaN(n) ? 0 : n;
-  };
+  const isFundingLoading = isLoading && !funding;
+  const isTradingLoading = isLoading && !trading;
 
-  const fundingUsd = safeNum(fundingBal?.inUsd).toFixed(2);
-  const fundingBtc = safeNum(fundingBal?.inBtc).toFixed(8);
-
-  const overallUsdNum = safeNum(overallBal?.inUsd);
-  const fundingUsdNum = safeNum(fundingBal?.inUsd);
-  const tradingUsd = Math.max(0, overallUsdNum - fundingUsdNum).toFixed(2);
-  
-  const overallBtcNum = safeNum(overallBal?.inBtc);
-  const fundingBtcNum = safeNum(fundingBal?.inBtc);
-  const tradingBtc = Math.max(0, overallBtcNum - fundingBtcNum).toFixed(8);
-
-  const fundingLoading = fundingBalLoading;
-  const tradingLoading = overallLoading || fundingBalLoading;
+  const statusColor = isConnected
+    ? "bg-green-500"
+    : isLoading
+      ? "bg-yellow-500 animate-pulse"
+      : "bg-red-500";
+  const statusLabel = isConnected
+    ? "Real-time balances connected"
+    : isLoading
+      ? "Connecting..."
+      : "Disconnected - balances may be stale";
 
   const actions = [
     { icon: BusinessCard, text: "Deposit", onClick: handleOpenDepositModal },
@@ -66,8 +71,27 @@ export const MyWallet = () => {
 
   return (
     <div className="flex flex-col gap-4 animate-fade-up stagger-1 max-[1150px]:gap-3">
-      <h3 className="text-xl font-bold mb-2 max-[1150px]:mb-0 max-[1150px]:text-lg">My Assets</h3>
-      
+      <div className="flex items-center justify-between mb-2 max-[1150px]:mb-0">
+        <h3 className="text-xl font-bold max-[1150px]:text-lg">My Assets</h3>
+        <div className="flex items-center gap-3">
+          <span
+            data-testid="ws-status"
+            aria-label={statusLabel}
+            title={statusLabel}
+            className={`w-2 h-2 rounded-full ${statusColor}`}
+          />
+          <button
+            aria-label={enabled ? "Show balances" : "Hide balances"}
+            title={enabled ? "Show balances" : "Hide balances"}
+            onClick={toggleCloak}
+            data-testid="cloak-toggle"
+            className="p-1.5 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+          >
+            {enabled ? <Eye className="w-4 h-4" /> : <BsEyeSlashFill size={16} />}
+          </button>
+        </div>
+      </div>
+
       <div className="rounded-xl border border-white/[0.06] bg-[#181a20] flex flex-col divide-y divide-white/[0.04]">
         {/* ROW 1: Funding */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 max-[1150px]:p-4 gap-4 max-[1150px]:gap-3 row-hover transition-colors">
@@ -80,9 +104,9 @@ export const MyWallet = () => {
               <span className="text-xs text-white/50 max-[1150px]:text-[10px]">Deposits / Withdrawals / P2P</span>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:items-end gap-1">
-            {fundingLoading ? (
+            {isFundingLoading ? (
               <Skeleton variant="text" width="100px" height="20px" />
             ) : (
               <div className="flex items-baseline gap-1.5 justify-end max-[1150px]:justify-start">
@@ -92,7 +116,7 @@ export const MyWallet = () => {
                 <span className="text-xs text-white/50 max-[1150px]:text-[10px]">USD</span>
               </div>
             )}
-            {fundingLoading ? (
+            {isFundingLoading ? (
               <Skeleton variant="text" width="60px" height="14px" />
             ) : (
               <div className="flex items-baseline gap-1 justify-end max-[1150px]:justify-start">
@@ -108,6 +132,7 @@ export const MyWallet = () => {
                 key={action.text}
                 onClick={action.onClick}
                 title={action.text}
+                aria-label={action.text}
                 className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-all active:scale-95 max-[1150px]:bg-white/5 max-[1150px]:flex max-[1150px]:justify-center max-[1150px]:rounded-lg"
               >
                 <action.icon className="w-4 h-4 max-[1150px]:w-5 max-[1150px]:h-5" />
@@ -129,9 +154,9 @@ export const MyWallet = () => {
               </span>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:items-end gap-1">
-            {tradingLoading ? (
+            {isTradingLoading ? (
               <Skeleton variant="text" width="100px" height="20px" />
             ) : (
               <div className="flex items-baseline gap-1.5 justify-end max-[1150px]:justify-start">
@@ -141,7 +166,7 @@ export const MyWallet = () => {
                 <span className="text-xs text-white/50 max-[1150px]:text-[10px]">USD</span>
               </div>
             )}
-            {tradingLoading ? (
+            {isTradingLoading ? (
               <Skeleton variant="text" width="60px" height="14px" />
             ) : (
               <div className="flex items-baseline gap-1 justify-end max-[1150px]:justify-start">
@@ -152,7 +177,11 @@ export const MyWallet = () => {
           </div>
 
           <div className="flex items-center sm:justify-end gap-2 mt-2 sm:mt-0 max-[1150px]:grid max-[1150px]:grid-cols-4 max-[1150px]:mt-2">
-            <button className="text-xs font-semibold px-4 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors max-[1150px]:rounded-lg max-[1150px]:h-full max-[1150px]:col-span-1">
+            <button
+              onClick={() => push("/trade")}
+              aria-label="Trade"
+              className="text-xs font-semibold px-4 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors max-[1150px]:rounded-lg max-[1150px]:h-full max-[1150px]:col-span-1"
+            >
               Trade
             </button>
             {actions.slice(2).map((action) => (
@@ -160,6 +189,7 @@ export const MyWallet = () => {
                 key={action.text}
                 onClick={action.onClick}
                 title={action.text}
+                aria-label={action.text}
                 className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-all active:scale-95 max-[1150px]:bg-white/5 max-[1150px]:flex max-[1150px]:justify-center max-[1150px]:rounded-lg"
               >
                 <action.icon className="w-4 h-4 max-[1150px]:w-5 max-[1150px]:h-5" />

@@ -36,7 +36,7 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
       className={clsx(
         "min-[1150px]:hidden sticky top-0 z-30",
         "flex items-center justify-between px-4",
-        "h-12 bg-[#0a0b0f]/90 backdrop-blur-xl border-b border-white/[0.05]",
+        "h-12 bg-surface/90 backdrop-blur-xl border-b border-white/[0.05]",
         className
       )}
     >

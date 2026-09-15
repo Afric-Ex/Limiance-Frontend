@@ -19,10 +19,10 @@ export const ResetModal = () => {
         </button>
       </div>
 
-      <div className="flex items-center justify-center w-[124px] h-[124px] rounded-full mt-4 -mb-2 border-4 border-yellow-500/10 relative">
-        <div className="absolute inset-0 bg-yellow-500/10 rounded-full" />
+      <div className="flex items-center justify-center w-[124px] h-[124px] rounded-full mt-4 -mb-2 border-4 border-warning/10 relative">
+        <div className="absolute inset-0 bg-warning/10 rounded-full" />
         <div className="relative z-10 w-full h-full flex items-center justify-center">
-          <MdOutlineWarningAmber size={56} className="text-yellow-500 drop-shadow-[0_0_24px_rgba(234,179,8,0.4)]" />
+          <MdOutlineWarningAmber size={56} className="text-warning drop-shadow-[0_0_24px_rgba(251,164,42,0.4)]" />
         </div>
       </div>
 

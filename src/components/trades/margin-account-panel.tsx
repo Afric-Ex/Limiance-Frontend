@@ -145,7 +145,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
               className={clsx(
                 "px-4 py-1.5 rounded-md text-sm font-semibold transition-all capitalize",
                 tradeMode === m
-                  ? "bg-primary text-[#0b0c10]"
+                  ? "bg-primary text-surface"
                   : "text-white/50 hover:text-white/80"
               )}
             >
@@ -158,7 +158,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
         <div className="flex items-center gap-2">
           <button
             onClick={() => openBorrow("borrow")}
-            className="px-5 py-2 rounded-lg bg-primary text-[#0b0c10] text-sm font-bold hover:bg-primary/90 transition-colors"
+            className="px-5 py-2 rounded-lg bg-primary text-surface text-sm font-bold hover:bg-primary/90 transition-colors"
           >
             Borrow
           </button>

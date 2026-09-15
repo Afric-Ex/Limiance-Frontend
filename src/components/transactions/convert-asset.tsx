@@ -138,7 +138,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
   };
 
   return (
-    <div className="w-full max-w-[540px] bg-[#181a20] rounded-2xl flex flex-col p-8 gap-6 border border-white/[0.06] relative animate-fade-in-up">
+    <div className="w-full max-w-[540px] bg-elevated rounded-2xl flex flex-col p-8 gap-6 border border-white/[0.06] relative animate-fade-in-up">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h4 className="text-xl font-bold text-white">Convert</h4>
@@ -191,7 +191,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
           classNames={{
             input:
               "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 focus:!shadow-[0_0_10px_rgba(77,119,240,0.12)] !rounded-xl !h-[48px] !text-white !text-sm !transition-all !duration-200",
-            dropdown: "!bg-[#1e2026] !border-white/[0.08]",
+            dropdown: "!bg-elevated !border-white/[0.08]",
             option: "!text-white/80 hover:!bg-white/[0.04]",
           }}
         />

@@ -149,7 +149,7 @@ function NavDropdown({
         >
           <Icon
             size={18}
-            color={isActive ? "var(--color-primary, #3B82F6)" : undefined}
+            color={isActive ? "var(--color-primary, #4D77F0)" : undefined}
             fillOpacity={isActive ? "1" : "0.5"}
           />
         </span>
@@ -215,7 +215,7 @@ function NavLink({
       <span
         className={clsx(
           "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full transition-all duration-300",
-          isActive ? "h-7 bg-primary shadow-[0_0_8px_2px_rgba(59,130,246,0.5)]" : "h-0"
+          isActive ? "h-7 bg-primary shadow-[0_0_8px_2px_rgba(77,119,240,0.5)]" : "h-0"
         )}
       />
       <Link
@@ -230,7 +230,7 @@ function NavLink({
         <span className="flex-shrink-0 transition-transform duration-200 group-hover:scale-110">
           <Icon
             size={18}
-            color={isActive ? "var(--color-primary, #3B82F6)" : undefined}
+            color={isActive ? "var(--color-primary, #4D77F0)" : undefined}
           />
         </span>
         <span className="flex-1 text-sm font-semibold tracking-wide">
@@ -289,7 +289,7 @@ function UserProfileCard() {
           <UserAvatar size={32} />
           {/* KYC verified dot */}
           <span
-            className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#181a20] ${isVerified ? "bg-emerald-400" : "bg-yellow-400"}`}
+            className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-elevated ${isVerified ? "bg-buy" : "bg-warning"}`}
             title={statusText}
           />
         </div>
@@ -297,7 +297,7 @@ function UserProfileCard() {
         {/* Name + verification */}
         <div className="flex-1 min-w-0">
           <p className="text-white text-xs font-semibold truncate">{displayName}</p>
-          <p className={`text-[10px] font-medium ${isVerified ? "text-emerald-400" : "text-yellow-400"}`}>
+          <p className={`text-[10px] font-medium ${isVerified ? "text-buy" : "text-warning"}`}>
             {statusText}
           </p>
         </div>
@@ -306,7 +306,7 @@ function UserProfileCard() {
         <button
           onClick={() => handleLogout()}
           title="Sign out"
-          className="flex-shrink-0 opacity-40 group-hover:opacity-80 transition-opacity duration-200 hover:text-red-400"
+          className="flex-shrink-0 opacity-40 group-hover:opacity-80 transition-opacity duration-200 hover:text-sell"
         >
           <Logout />
         </button>

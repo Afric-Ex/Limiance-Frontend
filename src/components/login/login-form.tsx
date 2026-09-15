@@ -4,6 +4,17 @@ import { TextInput, PasswordInput, Button, Divider } from "@mantine/core";
 import { useAuth } from "@/src/hooks/queries/use-auth";
 import Link from "next/link";
 import { GoogleLogin } from "@react-oauth/google";
+import dynamic from "next/dynamic";
+import { useRef } from "react";
+import type { GeeTestValidateResult } from "react-geetest-v4";
+import type { Login } from "@/src/types/auth";
+
+const CaptchaButton = dynamic(
+  () => import("./captcha-button").then((m) => m.CaptchaButton),
+  { ssr: false }
+);
+
+const captchaId = process.env.NEXT_PUBLIC_GEETEST_CAPTCHA_ID;
 
 const inputStyles = {
   input:
@@ -12,13 +23,68 @@ const inputStyles = {
 };
 
 export const LoginForm = () => {
-  const { loginForm: form, handleLogin, loginLoading } = useAuth();
+  const { loginForm: form, submitLogin, loginLoading } = useAuth();
 
+  const showCaptchaRef = useRef<(() => void) | null>(null);
+  const pendingLoginValues = useRef<Login | null>(null);
+  const captchaBusy = useRef(false);
 
+  const submitLoginWithCaptcha = (values: Login) => {
+    if (!captchaId) {
+      submitLogin(values);
+      return;
+    }
+
+    if (captchaBusy.current) return; // challenge already open — ignore re-entrancy
+
+    if (!showCaptchaRef.current) {
+      // Captcha SDK not initialised yet (async script load) — fail open so
+      // login can't dead-end silently; the backend still rate-limits.
+      submitLogin(values);
+      return;
+    }
+
+    captchaBusy.current = true;
+    pendingLoginValues.current = values; // hold values while challenge runs
+    showCaptchaRef.current();            // open the captcha
+  };
+
+  const handleCaptchaSuccess = (result?: GeeTestValidateResult) => {
+    captchaBusy.current = false;
+    const values = pendingLoginValues.current;
+    pendingLoginValues.current = null;
+    if (!values) return;
+
+    const rawGenTime =
+      result?.gen_time ??
+      (result as Record<string, unknown> | undefined)?.genTime;
+
+    const payload: Login = {
+      ...values,
+      lotNumber: result?.lot_number,
+      captchaOutput: result?.captcha_output,
+      passToken: result?.pass_token,
+      genTime:
+        rawGenTime !== undefined && rawGenTime !== null
+          ? String(rawGenTime)
+          : undefined,
+    };
+
+    submitLogin(payload);
+  };
+
+  const handleCaptchaClose = () => {
+    captchaBusy.current = false;
+    pendingLoginValues.current = null;
+  };
+
+  const handleShowCaptcha = (show: () => void) => {
+    showCaptchaRef.current = show;
+  };
 
   return (
     <div className="flex flex-col gap-4">
-      <form onSubmit={handleLogin} className="flex flex-col gap-60px">
+      <form onSubmit={form.onSubmit(submitLoginWithCaptcha)} className="flex flex-col gap-60px">
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-10">
             <TextInput
@@ -91,6 +157,15 @@ export const LoginForm = () => {
           }}
         />
       )}
+
+      {captchaId ? (
+        <CaptchaButton
+          captchaId={captchaId}
+          onSuccess={handleCaptchaSuccess}
+          onShowCaptcha={handleShowCaptcha}
+          onClose={handleCaptchaClose}
+        />
+      ) : null}
     </div>
   );
 };

@@ -102,7 +102,7 @@ export const ExternalTransfer = () => {
   }) => (
     <div className="flex flex-col gap-2">
       <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">{label}</label>
-      <Popover opened={opened} onChange={close} width="target" classNames={{ dropdown: "!border !border-white/[0.08] !bg-[#1e2026] !rounded-xl !p-0 !overflow-hidden" }}>
+      <Popover opened={opened} onChange={close} width="target" classNames={{ dropdown: "!border !border-white/[0.08] !bg-elevated !rounded-xl !p-0 !overflow-hidden" }}>
         <PopoverTarget>
           <button onClick={toggle} className="bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.18] cursor-pointer rounded-xl h-[56px] px-4 flex items-center justify-between transition-all">
             <span className="font-semibold text-sm text-white/90">
@@ -134,7 +134,7 @@ export const ExternalTransfer = () => {
   );
 
   return (
-    <div className="w-full max-w-[540px] bg-[#181a20] rounded-2xl flex flex-col p-8 gap-6 border border-white/[0.06] relative animate-fade-in-up">
+    <div className="w-full max-w-[540px] bg-elevated rounded-2xl flex flex-col p-8 gap-6 border border-white/[0.06] relative animate-fade-in-up">
       <div className="flex items-center justify-between">
         <h4 className="text-xl font-bold text-white">External Transfer</h4>
         <button

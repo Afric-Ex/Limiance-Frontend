@@ -43,7 +43,7 @@ export const OrderConfirmationModal = ({
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-sm bg-[#0d0d1a] border border-white/10 rounded-2xl shadow-[0_24px_48px_rgba(0,0,0,0.7)] overflow-hidden">
+      <div className="relative w-full max-w-sm bg-elevated border border-white/10 rounded-2xl shadow-[0_24px_48px_rgba(0,0,0,0.7)] overflow-hidden">
         {/* Top gradient bar */}
         <div
           className="h-1 w-full"

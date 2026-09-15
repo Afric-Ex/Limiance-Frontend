@@ -41,7 +41,7 @@ export const SuccessModal = ({
           width={124}
           height={124}
           alt="verify success image"
-          className="relative z-10 drop-shadow-[0_0_24px_rgba(43,212,130,0.4)]"
+          className="relative z-10 drop-shadow-[0_0_24px_rgba(37,171,66,0.4)]"
         />
       </div>
 

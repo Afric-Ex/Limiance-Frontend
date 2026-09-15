@@ -63,8 +63,8 @@ export const PaymentMethodManager = ({ isOpen, onClose, selectedMethodIds, onCha
       title="Manage Payment Methods"
       size="md"
       classNames={{
-        content: "bg-[#1A1A2E] text-white",
-        header: "bg-[#1A1A2E] text-white border-b border-white/10",
+        content: "bg-elevated text-white",
+        header: "bg-elevated text-white border-b border-white/10",
         title: "text-lg font-bold",
         close: "text-white/50 hover:text-white"
       }}

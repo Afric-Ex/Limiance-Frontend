@@ -113,7 +113,7 @@ export const Transactions = () => {
                           arrowSize={8}
                           w={220}
                           label="Assets will be debited from your account once the required number of confirmations is reached or exceeded."
-                          color="#2A2D34"
+                          color="elevated"
                         >
                           <span className="cursor-help">
                             <PendingIcon />

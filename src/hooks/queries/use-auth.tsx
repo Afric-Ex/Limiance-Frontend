@@ -1,7 +1,6 @@
 import { auth, findAuthToken } from "@/src/services/auth";
 import { authDebug, describeAuthPayload } from "@/src/lib/auth-debug";
 import { mockAuth } from "@/src/mocks/mock-auth";
-import { useGeetest } from "@/src/hooks/use-geetest";
 import { MOCK_MODE } from "@/src/mocks";
 import { Login, LoginResponse } from "@/src/types/auth";
 import { mutate } from "../use-query-factory";
@@ -55,7 +54,6 @@ export const useAuth = () => {
   const setUser = useUserStore((state) => state.setUser);
 
   const { push } = useRouter();
-  const { triggerCaptcha, resetCaptcha } = useGeetest();
   const getLoginToken = (payload: any) =>
     payload?.accessToken ||
     payload?.access_token ||
@@ -146,7 +144,6 @@ export const useAuth = () => {
 
     if (!token || token === "undefined" || token === "null") {
       errorNotification("Login succeeded, but no auth token was returned.");
-      resetCaptcha();
       return false;
     }
 
@@ -244,7 +241,6 @@ export const useAuth = () => {
       }
     },
     onError: (error: any) => {
-      resetCaptcha();
       if (error?.response?.data?.error === "Account is not verified, resend verification code") {
         setEmail(loginForm.values.emailOrPhone);
       }
@@ -291,9 +287,6 @@ export const useAuth = () => {
         successNotification("Login successful");
         window.location.href = "/dashboard";
       }
-    },
-    onError: () => {
-      resetCaptcha();
     },
   })();
 
@@ -408,23 +401,13 @@ export const useAuth = () => {
     register({ ...values, country });
   });
 
-  const handleLogin = loginForm.onSubmit(async (values) => {
-    try {
-      clearStoredAuthToken();
-      const captchaResult = await triggerCaptcha();
-      login({
-        ...values,
-        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Mozilla/5.0",
-        lotNumber: captchaResult.lot_number,
-        captchaOutput: captchaResult.captcha_output,
-        passToken: captchaResult.pass_token,
-        genTime: captchaResult.gen_time,
-      });
-    } catch (error) {
-      resetCaptcha();
-      console.error("Login captcha failed or was closed by user:", error);
-    }
-  });
+  const submitLogin = (values: Login) => {
+    clearStoredAuthToken();
+    login({
+      ...values,
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Mozilla/5.0",
+    });
+  };
 
   const handleVerify = otpForm.onSubmit((values) => {
     setOtp(values.otp);
@@ -460,7 +443,7 @@ export const useAuth = () => {
     clearPendingLogin2FA,
 
     handleRegister,
-    handleLogin,
+    submitLogin,
     handleVerify,
     handleForgotPassword,
     handleResetPassword,

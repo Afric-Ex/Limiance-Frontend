@@ -115,12 +115,12 @@ export const AdvertiserProfilePanel = ({
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold">{name}</span>
                 {advertiser.verified && (
-                  <MdVerified className="text-[#0ECB81] text-lg" />
+                  <MdVerified className="text-buy text-lg" />
                 )}
               </div>
               <div className="text-sm text-white/50 flex items-center gap-2">
                 <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-[#0ECB81]" />
+                  <span className="w-2 h-2 rounded-full bg-buy" />
                   Verified advertiser
                 </span>
                 <span>•</span>
@@ -135,7 +135,7 @@ export const AdvertiserProfilePanel = ({
               color={blocked ? "green" : "red"}
               className={`flex-1 border-white/10 ${
                 blocked
-                  ? "bg-[#0ECB81]/10 hover:bg-[#0ECB81]/20 text-[#0ECB81]"
+                  ? "bg-buy/10 hover:bg-buy/20 text-buy"
                   : "bg-white/5 hover:bg-[#F6465D]/20 hover:text-[#F6465D] text-white/80"
               }`}
               onClick={() =>
@@ -161,7 +161,7 @@ export const AdvertiserProfilePanel = ({
             </div>
             <div className="bg-white/5 p-4 rounded-xl">
               <div className="text-white/50 text-sm mb-1">Completion Rate</div>
-              <div className="text-2xl font-bold text-[#0ECB81]">
+              <div className="text-2xl font-bold text-buy">
                 {completionRate.toFixed(1)}%
               </div>
             </div>
@@ -182,7 +182,7 @@ export const AdvertiserProfilePanel = ({
           <div>
             <h3 className="text-lg font-bold mb-4">Feedback (30d)</h3>
             <div className="flex gap-4 mb-4">
-              <div className="flex items-center gap-2 text-[#0ECB81]">
+              <div className="flex items-center gap-2 text-buy">
                 <FaThumbsUp />
                 <span className="font-bold">{feedback.positive}</span>
               </div>
@@ -207,7 +207,7 @@ export const AdvertiserProfilePanel = ({
                       <span
                         className={
                           item.rating === "POSITIVE"
-                            ? "text-[#0ECB81]"
+                            ? "text-buy"
                             : "text-[#F6465D]"
                         }
                       >

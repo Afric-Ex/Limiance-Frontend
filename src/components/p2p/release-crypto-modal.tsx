@@ -56,8 +56,8 @@ export function ReleaseCryptoModal({
       title="Security Verification Required"
       centered
       classNames={{
-        content: "bg-[#1A1A2E] border border-white/10",
-        header: "bg-[#1A1A2E] border-b border-white/5",
+        content: "bg-elevated border border-white/10",
+        header: "bg-elevated border-b border-white/5",
         title: "text-white font-bold",
         close: "text-white/50 hover:text-white",
       }}
@@ -84,7 +84,7 @@ export function ReleaseCryptoModal({
                   classNames={{ input: "bg-white/10 border-white/20 text-white text-center w-10 h-12 text-lg focus:border-yellow-500" }}
                 />
                 <Button 
-                  className="w-full bg-[#0ECB81] hover:bg-[#0ECB81]/90 text-white font-bold mt-2" 
+                  className="w-full bg-buy hover:bg-buy/90 text-white font-bold mt-2" 
                   disabled={otpValue.length < 6}
                   onClick={() => setShowFinalConfirm(true)}
                 >

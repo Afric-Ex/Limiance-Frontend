@@ -28,7 +28,7 @@ export const NotificationsDropdown = () => {
   const hasItems = notifications && notifications.length > 0;
 
   return (
-    <div className="bg-[#181a20] border border-white/[0.06] w-[360px] rounded-2xl overflow-hidden shadow-xl">
+    <div className="bg-elevated border border-white/[0.06] w-[360px] rounded-2xl overflow-hidden shadow-xl">
       <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
         <span className="text-sm font-bold text-white">Notifications</span>
         {hasItems && (

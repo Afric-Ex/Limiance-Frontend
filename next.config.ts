@@ -2,14 +2,21 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async rewrites() {
+    const backendUrl = process.env.BACKEND_URL;
+    if (!backendUrl) {
+      console.warn(
+        "[next.config] BACKEND_URL is not set — /proxy and /ws-proxy rewrites are disabled."
+      );
+      return [];
+    }
     return [
       {
         source: '/proxy/:path*',
-        destination: `${process.env.BACKEND_URL}/:path*`,
+        destination: `${backendUrl}/:path*`,
       },
       {
         source: '/ws-proxy',
-        destination: `${process.env.BACKEND_URL}/api/v1/ws`,
+        destination: `${backendUrl}/api/v1/ws`,
       },
     ];
   },

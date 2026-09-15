@@ -65,7 +65,7 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
 
 
   return (
-    <div className="flex flex-col h-full bg-[#131320]/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden relative">
+    <div className="flex flex-col h-full bg-elevated/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden relative">
       {/* Subtle inner highlight */}
       <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent z-10"></div>
       
