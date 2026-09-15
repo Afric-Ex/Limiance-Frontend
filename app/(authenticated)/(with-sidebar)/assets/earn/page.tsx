@@ -11,6 +11,8 @@ import { Skeleton } from "@/src/components/shared/skeleton";
 import { successNotification } from "@/src/lib/notification-handler";
 import { useState } from "react";
 import clsx from "clsx";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { AssetsEarnSkeleton } from "@/src/components/skeletons";
 
 const PRODUCT_TABS = [
   "Simple Earn",
@@ -22,7 +24,7 @@ const PRODUCT_TABS = [
   "Smart Trend",
 ];
 
-export default function Earn() {
+function EarnInner() {
   const queryClient = useQueryClient();
   const [mainTab, setMainTab] = useState<"products" | "positions">("products");
   const [productTab, setProductTab] = useState(PRODUCT_TABS[0]);
@@ -87,7 +89,7 @@ export default function Earn() {
     <main className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8 pb-24 w-full min-h-[80vh] overflow-y-auto">
 
       {/* ── Hero Banner ── */}
-      <div className="relative rounded-2xl overflow-hidden border border-white/[0.05] bg-gradient-to-br from-[#12141c] via-[#181a20] to-[#0d0e12]">
+      <div className="relative rounded-2xl overflow-hidden border border-white/[0.05] bg-gradient-to-br from-surface via-elevated to-black">
         <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-primary/20 blur-[120px] pointer-events-none" />
         <div className="absolute bottom-0 left-10 w-48 h-48 rounded-full bg-blue-600/10 blur-[80px] pointer-events-none" />
 
@@ -498,5 +500,13 @@ export default function Earn() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function Earn() {
+  return (
+    <PageSuspense fallback={<AssetsEarnSkeleton />}>
+      <EarnInner />
+    </PageSuspense>
   );
 }

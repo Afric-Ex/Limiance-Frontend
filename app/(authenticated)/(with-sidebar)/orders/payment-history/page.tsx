@@ -16,13 +16,15 @@ import { useQuery } from "@tanstack/react-query";
 import { MOCK_MODE } from "@/src/mocks";
 import { mockTrading } from "@/src/mocks/mock-trading";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { PaymentHistorySkeleton } from "@/src/components/skeletons";
 
 const selectStyles = {
   input: "!h-11 !rounded-lg !bg-transparent",
   label: "!text-xs !font-medium",
 };
 
-export default function PaymentHistory() {
+function PaymentHistoryInner() {
   const { data: history } = useQuery({
     queryKey: tradingKeys.paymentHistory,
     queryFn: () =>
@@ -113,5 +115,13 @@ export default function PaymentHistory() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PaymentHistory() {
+  return (
+    <PageSuspense fallback={<PaymentHistorySkeleton />}>
+      <PaymentHistoryInner />
+    </PageSuspense>
   );
 }

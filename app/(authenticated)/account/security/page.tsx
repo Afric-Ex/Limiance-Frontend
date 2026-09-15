@@ -144,7 +144,7 @@ const normalizeDateValue = (value: unknown): string => {
   return "";
 };
 
-export default function SecurityPageInner() {
+function SecurityPageInner() {
   const queryClient = useQueryClient();
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);

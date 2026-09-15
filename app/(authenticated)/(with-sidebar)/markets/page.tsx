@@ -10,6 +10,8 @@ import { getCryptoIcon } from "@/src/utils/crypto-icons";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { Skeleton } from "@/src/components/shared/skeleton";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { MarketsPageSkeleton } from "@/src/components/skeletons";
 
 type TokenRow = {
   symbol: string;
@@ -145,7 +147,7 @@ function getPageNumbers(current: number, total: number) {
   return pages;
 }
 
-export default function MarketsPage() {
+function MarketsPageInner() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const feed = useMarketFeed("BTC/USDT");
@@ -391,7 +393,7 @@ export default function MarketsPage() {
                   {cat.icon && <MdStar size={16} className={clsx(active ? "text-yellow-500" : "text-white/30")} />}
                   <span>{cat.name}</span>
                   {active && (
-                    <span className="absolute bottom-0 left-0 right-0 h-[2.5px] rounded-full bg-[#f68c1e]" />
+                    <span className="absolute bottom-0 left-0 right-0 h-[2.5px] rounded-full bg-primary" />
                   )}
                 </button>
               );
@@ -491,7 +493,7 @@ export default function MarketsPage() {
                             <span className="text-[13px] font-bold text-white">{token.symbol}</span>
                             <span className="text-[10px] font-medium text-white/30">/{quote || token.suffix || "USDT"}</span>
                             {token.leverage && (
-                              <span className="text-[9px] font-bold px-1 py-0.2 bg-[#f68c1e]/15 text-[#f68c1e] rounded uppercase shrink-0">
+                              <span className="text-[9px] font-bold px-1 py-0.2 bg-primary/15 text-primary rounded uppercase shrink-0">
                                 {token.leverage}
                               </span>
                             )}
@@ -546,13 +548,13 @@ export default function MarketsPage() {
                         <div className="flex items-center justify-end gap-3" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => router.push(`/trades/spot?pair=${token.pair}`)}
-                            className="text-[#f68c1e] hover:underline text-xs font-semibold transition-all"
+                            className="text-primary hover:underline text-xs font-semibold transition-all"
                           >
                             Details
                           </button>
                           <button
                             onClick={() => router.push(`/trades/spot?pair=${token.pair}`)}
-                            className="bg-[#f68c1e] hover:bg-[#e07b16] active:scale-95 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition-all"
+                            className="bg-primary hover:bg-primary/90 active:scale-95 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition-all"
                           >
                             Trade
                           </button>
@@ -599,7 +601,7 @@ export default function MarketsPage() {
                         <span className="text-sm font-bold text-white">{token.symbol}</span>
                         <span className="text-[11px] text-white/30">/{quote || "USDT"}</span>
                         {token.leverage && (
-                          <span className="text-[8px] font-bold px-1 bg-[#f68c1e]/15 text-[#f68c1e] rounded uppercase shrink-0">
+                          <span className="text-[8px] font-bold px-1 bg-primary/15 text-primary rounded uppercase shrink-0">
                             {token.leverage}
                           </span>
                         )}
@@ -653,7 +655,7 @@ export default function MarketsPage() {
                   className={clsx(
                     "w-8 h-8 rounded text-xs font-semibold transition-all border border-transparent",
                     active
-                      ? "bg-[#f68c1e] text-white font-bold"
+                      ? "bg-primary text-white font-bold"
                       : "text-white/60 hover:bg-white/[0.05]"
                   )}
                 >
@@ -675,5 +677,13 @@ export default function MarketsPage() {
 
       </div>
     </main>
+  );
+}
+
+export default function MarketsPage() {
+  return (
+    <PageSuspense fallback={<MarketsPageSkeleton />}>
+      <MarketsPageInner />
+    </PageSuspense>
   );
 }

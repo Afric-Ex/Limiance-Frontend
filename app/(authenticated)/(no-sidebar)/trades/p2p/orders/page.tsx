@@ -5,6 +5,8 @@ import { P2PLayout } from "@/src/components/p2p/p2p-layout";
 import { Select, Loader, Skeleton } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { useAllMatchedOrders } from "@/src/hooks/p2p/use-p2p";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { P2POrdersSkeleton } from "@/src/components/skeletons";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
@@ -17,7 +19,7 @@ const STATUS_COLORS: Record<string, string> = {
   DISPUTED: "text-orange-400 bg-orange-400/10 border-orange-400/20",
 };
 
-export default function OrderHistoryPage() {
+function OrderHistoryPageInner() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"PROCESSING" | "ALL">("PROCESSING");
   const [filterType, setFilterType] = useState<string>("ALL");
@@ -191,5 +193,13 @@ export default function OrderHistoryPage() {
         )}
       </div>
     </P2PLayout>
+  );
+}
+
+export default function OrderHistoryPage() {
+  return (
+    <PageSuspense fallback={<P2POrdersSkeleton />}>
+      <OrderHistoryPageInner />
+    </PageSuspense>
   );
 }

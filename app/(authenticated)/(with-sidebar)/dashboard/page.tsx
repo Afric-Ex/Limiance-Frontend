@@ -33,6 +33,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { WalletCard } from "@/src/components/assets/wallet-card";
 import { Skeleton } from "@/src/components/shared/skeleton";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { DashboardSkeleton } from "@/src/components/skeletons";
 
 const depositChannels = [
   {
@@ -91,7 +93,7 @@ const marketTabs = [
   "24h Volume",
 ];
 
-function Dashboard() {
+function DashboardInner() {
   const user = useUserStore((state) => state.user);
   const router = useRouter();
 
@@ -483,4 +485,10 @@ function Dashboard() {
   );
 }
 
-export default Dashboard;
+export default function Dashboard() {
+  return (
+    <PageSuspense fallback={<DashboardSkeleton />}>
+      <DashboardInner />
+    </PageSuspense>
+  );
+}

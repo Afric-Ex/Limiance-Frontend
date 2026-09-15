@@ -3,8 +3,10 @@ import classes from "@/src/styles/assets-margin.module.css";
 import { OpenTab } from "@/src/components/orders/history-tab";
 import { OrderHistory } from "@/src/components/orders/order-history";
 import { OrderDetails } from "@/src/components/orders/order-details";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { SpotOrdersSkeleton } from "@/src/components/skeletons";
 
-export default function SpotOrders() {
+function SpotOrdersInner() {
   return (
     <Tabs classNames={classes} defaultValue="open">
       <TabsList>
@@ -23,5 +25,13 @@ export default function SpotOrders() {
         <OrderDetails />
       </TabsPanel>
     </Tabs>
+  );
+}
+
+export default function SpotOrders() {
+  return (
+    <PageSuspense fallback={<SpotOrdersSkeleton />}>
+      <SpotOrdersInner />
+    </PageSuspense>
   );
 }

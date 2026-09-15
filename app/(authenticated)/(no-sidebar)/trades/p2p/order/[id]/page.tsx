@@ -24,8 +24,10 @@ import { SellerPaidPanel } from "@/src/components/p2p/seller-paid-panel";
 import { CancelOrderModal } from "@/src/components/p2p/cancel-order-modal";
 import { ReleaseCryptoModal } from "@/src/components/p2p/release-crypto-modal";
 import { DisputePanel } from "@/src/components/p2p/dispute-panel";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { P2POrderDetailSkeleton } from "@/src/components/skeletons";
 
-export default function OrderRoomPage() {
+function OrderRoomPageInner() {
   const params = useParams();
   const orderId = params.id as string;
   const router = useRouter();
@@ -320,7 +322,7 @@ export default function OrderRoomPage() {
         <div className="flex flex-col min-[1150px]:flex-row gap-6 min-[1150px]:h-[calc(100vh-220px)] min-h-[600px] max-[1150px]:min-h-0">
           {/* LEFT: Order Details Panel */}
           <div className="min-[1150px]:w-[50%] xl:w-[45%] overflow-y-auto custom-scrollbar pr-0 min-[1150px]:pr-2 pb-10 max-[1150px]:pb-0">
-            <div className="bg-[#131320]/80 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-2xl max-[1150px]:rounded-xl p-6 min-[1150px]:p-8 max-[1150px]:p-4 flex flex-col relative overflow-hidden">
+            <div className="bg-elevated/80 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-2xl max-[1150px]:rounded-xl p-6 min-[1150px]:p-8 max-[1150px]:p-4 flex flex-col relative overflow-hidden">
               
               {/* Subtle inner highlight for 3D glass effect */}
               <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
@@ -334,15 +336,15 @@ export default function OrderRoomPage() {
                     const done = stepNum < currentStep;
                     const active = stepNum === currentStep;
                     return (
-                      <div key={step} className="flex flex-col items-center gap-2 relative bg-[#131320] px-2">
+                      <div key={step} className="flex flex-col items-center gap-2 relative bg-elevated px-2">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-500
                           ${active ? "border-2 border-red-400 bg-red-400/20 text-red-400" 
-                            : done ? "border-2 border-[#0ECB81] bg-[#0ECB81]/20 text-[#0ECB81]" 
+                            : done ? "border-2 border-buy bg-buy/20 text-buy" 
                             : "border border-white/10 bg-white/5 text-white/30"}`}
                         >
                           {done ? "✓" : stepNum}
                         </div>
-                        <span className={`text-xs font-semibold tracking-wide ${active ? "text-white" : done ? "text-[#0ECB81]" : "text-white/30"}`}>{step}</span>
+                        <span className={`text-xs font-semibold tracking-wide ${active ? "text-white" : done ? "text-buy" : "text-white/30"}`}>{step}</span>
                       </div>
                     );
                   })}
@@ -363,7 +365,7 @@ export default function OrderRoomPage() {
                 <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
                   {[
                     { label: isBuyer ? "You Receive" : "Locked in Escrow", value: <span className="font-bold text-white text-base">{quantity.toLocaleString()} <span className="text-white/60 text-sm">{asset}</span></span> },
-                    { label: isBuyer ? "You Pay" : "You Receive", value: <span className="font-bold text-[#0ECB81] text-base drop-shadow-[0_0_8px_rgba(14,203,129,0.4)]">{fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-[#0ECB81]/60 text-sm">{fiat}</span></span> },
+                    { label: isBuyer ? "You Pay" : "You Receive", value: <span className="font-bold text-buy text-base drop-shadow-[0_0_8px_rgba(14,203,129,0.4)]">{fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-buy/60 text-sm">{fiat}</span></span> },
                     { label: "Price", value: `${price.toLocaleString()} ${fiat}/${asset}` },
                     { label: "Counterparty", value: <span className="text-white/90 font-medium">{counterpartyName || "—"}</span> },
                     { label: "Order Time", value: <span className="text-white/70">{order.createdAt ? new Date(order.createdAt).toLocaleString() : "—"}</span> },
@@ -452,7 +454,7 @@ export default function OrderRoomPage() {
             {order?.chatId ? (
               <ChatWindow chatId={order.chatId} currentUserId={user?.id ?? ""} />
             ) : (
-              <div className="flex justify-center items-center h-full bg-[#1A1A2E] rounded-xl border border-white/5">
+              <div className="flex justify-center items-center h-full bg-elevated rounded-xl border border-white/5">
                 <span className="text-white/40 text-sm">Chat is not available for this order</span>
               </div>
             )}
@@ -505,8 +507,8 @@ export default function OrderRoomPage() {
         title="Confirm Payment Sent"
         centered
         classNames={{
-          content: "bg-[#131320] border border-white/10 backdrop-blur-xl",
-          header: "bg-[#131320] border-b border-white/5",
+          content: "bg-elevated border border-white/10 backdrop-blur-xl",
+          header: "bg-elevated border-b border-white/5",
           title: "text-white font-bold text-lg",
           close: "text-white/50 hover:text-white",
         }}
@@ -529,12 +531,20 @@ export default function OrderRoomPage() {
             <button 
               onClick={handleConfirmPayment}
               disabled={isUpdating}
-              className="flex-1 h-11 rounded-xl bg-[#0ECB81] hover:bg-emerald-500 text-white font-bold transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 h-11 rounded-xl bg-buy hover:bg-emerald-500 text-white font-bold transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >{isUpdating ? "Confirming..." : "Yes, I've Paid"}</button>
           </div>
         </div>
       </Modal>
 
     </P2PLayout>
+  );
+}
+
+export default function OrderRoomPage() {
+  return (
+    <PageSuspense fallback={<P2POrderDetailSkeleton />}>
+      <OrderRoomPageInner />
+    </PageSuspense>
   );
 }

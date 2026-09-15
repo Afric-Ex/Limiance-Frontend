@@ -15,7 +15,7 @@ const CURRENCIES = ["USD", "EUR", "GBP", "NGN", "USDT"];
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-export default function SettingsPageInner() {
+function SettingsPageInner() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevValuesRef = useRef<Record<string, any>>({});

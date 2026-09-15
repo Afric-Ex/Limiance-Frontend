@@ -42,6 +42,8 @@ import { MobileTopBar } from '@/src/components/shared/mobile-top-bar';
 import { IoChevronDown, IoChevronUp, IoSwapHorizontal, IoBarChartOutline, IoListOutline } from 'react-icons/io5';
 import { MobileBottomSheet } from '@/src/components/shared/mobile-bottom-sheet';
 import { MobileBottomNav } from '@/src/components/shared/mobile-bottom-nav';
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { FuturesTradePageSkeleton } from "@/src/components/skeletons";
 
 const CandlestickChart = dynamic(
   () => import('@/src/components/trades/candlestick-char'),
@@ -56,7 +58,7 @@ type OrderType = 'limit' | 'market' | 'stop';
 type TradeSide = 'buy' | 'sell';
 type MarginMode = 'cross' | 'isolated';
 
-function FuturesTrades() {
+function FuturesTradesInner() {
   const [selectedPair, setSelectedPair] = useState('BTC/USDT');
   const [pairSearch, setPairSearch] = useState('');
   const [futuresPrice, setFuturesPrice] = useState<number | string>('');
@@ -1596,4 +1598,10 @@ function FuturesTrades() {
   );
 }
 
-export default FuturesTrades;
+export default function FuturesTrades() {
+  return (
+    <PageSuspense fallback={<FuturesTradePageSkeleton />}>
+      <FuturesTradesInner />
+    </PageSuspense>
+  );
+}

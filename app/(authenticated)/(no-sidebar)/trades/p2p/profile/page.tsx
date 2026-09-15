@@ -6,8 +6,10 @@ import { useAdvertiserInfo } from "@/src/hooks/p2p/use-p2p";
 import { MdVerified } from "react-icons/md";
 import { FaThumbsDown, FaThumbsUp } from "react-icons/fa";
 import { Loader } from "@mantine/core";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { P2PProfileSkeleton } from "@/src/components/skeletons";
 
-export default function MyAdvertiserProfilePage() {
+function MyAdvertiserProfilePageInner() {
   const { data: advertiserData, isLoading } = useAdvertiserInfo();
 
   if (isLoading) {
@@ -70,14 +72,14 @@ export default function MyAdvertiserProfilePage() {
                   <div className="flex items-center justify-center gap-2 mb-1">
                     <span className="text-2xl font-bold">{name}</span>
                     {advertiser.verified && (
-                      <MdVerified className="text-[#0ECB81] text-xl" />
+                      <MdVerified className="text-buy text-xl" />
                     )}
                   </div>
                   <div className="text-sm text-white/50 flex items-center justify-center gap-2 bg-black/20 py-1.5 px-3 rounded-full w-fit mx-auto">
                     {advertiser.verified ? (
                       <>
-                        <span className="w-2 h-2 rounded-full bg-[#0ECB81] shadow-[0_0_8px_#0ECB81]" />
-                        <span className="text-[#0ECB81] font-medium">Verified Merchant</span>
+                        <span className="w-2 h-2 rounded-full bg-buy shadow-[0_0_8px_#0ECB81]" />
+                        <span className="text-buy font-medium">Verified Merchant</span>
                       </>
                     ) : (
                       <>
@@ -99,8 +101,8 @@ export default function MyAdvertiserProfilePage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/50 text-sm">Status</span>
-                  <span className="text-[#0ECB81] font-medium text-sm flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#0ECB81]" /> Active
+                  <span className="text-buy font-medium text-sm flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-buy" /> Active
                   </span>
                 </div>
               </div>
@@ -116,9 +118,9 @@ export default function MyAdvertiserProfilePage() {
                 <div className="text-3xl font-bold text-white">{trades}</div>
               </div>
               <div className="bg-white/5 border border-white/10 p-5 rounded-2xl relative overflow-hidden group hover:bg-white/[0.07] transition-colors">
-                <div className="absolute top-0 right-0 w-16 h-16 bg-[#0ECB81]/10 rounded-full blur-2xl group-hover:bg-[#0ECB81]/20 transition-colors" />
+                <div className="absolute top-0 right-0 w-16 h-16 bg-buy/10 rounded-full blur-2xl group-hover:bg-buy/20 transition-colors" />
                 <div className="text-white/50 text-sm mb-2 font-medium">Completion Rate</div>
-                <div className="text-3xl font-bold text-[#0ECB81]">
+                <div className="text-3xl font-bold text-buy">
                   {completionRate.toFixed(1)}%
                 </div>
               </div>
@@ -144,10 +146,10 @@ export default function MyAdvertiserProfilePage() {
               </h3>
               
               <div className="flex gap-6 mb-6 pb-6 border-b border-white/5">
-                <div className="flex items-center gap-2 text-[#0ECB81] bg-[#0ECB81]/10 px-4 py-2 rounded-xl">
+                <div className="flex items-center gap-2 text-buy bg-buy/10 px-4 py-2 rounded-xl">
                   <FaThumbsUp />
                   <span className="font-bold text-lg">{feedback.positive}</span>
-                  <span className="text-xs text-[#0ECB81]/70 ml-1">Positive</span>
+                  <span className="text-xs text-buy/70 ml-1">Positive</span>
                 </div>
                 <div className="flex items-center gap-2 text-[#F6465D] bg-[#F6465D]/10 px-4 py-2 rounded-xl">
                   <FaThumbsDown />
@@ -172,5 +174,13 @@ export default function MyAdvertiserProfilePage() {
         </div>
       </div>
     </P2PLayout>
+  );
+}
+
+export default function MyAdvertiserProfilePage() {
+  return (
+    <PageSuspense fallback={<P2PProfileSkeleton />}>
+      <MyAdvertiserProfilePageInner />
+    </PageSuspense>
   );
 }

@@ -10,7 +10,8 @@ import { p2p, p2pKey } from "@/src/services/p2p";
 import { asset, assetKeys } from "@/src/services/asset";
 import { useMatchOrder, usePaymentMethods } from "@/src/hooks/p2p/use-p2p";
 import toast from "react-hot-toast";
-import { Suspense } from "react";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { P2PCreateOrderSkeleton } from "@/src/components/skeletons";
 
 function PreOrderScreenContent() {
   const router = useRouter();
@@ -139,7 +140,7 @@ function PreOrderScreenContent() {
           {/* Left: Ad Details */}
           <div className="flex flex-col gap-4">
             {/* Advertiser Card */}
-            <div className="bg-[#111] border border-white/[0.05] shadow-xl rounded-2xl max-[1150px]:rounded-xl p-6 max-[1150px]:p-4">
+            <div className="bg-surface border border-white/[0.05] shadow-xl rounded-2xl max-[1150px]:rounded-xl p-6 max-[1150px]:p-4">
               <div className="flex items-center gap-4 mb-6">
                 <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold text-white ${ad.advertiser?.verified ? "ring-2 ring-blue-500 bg-blue-500/20" : "bg-white/10"}`}>
                   {advertiserName.slice(0, 2).toUpperCase()}
@@ -297,7 +298,7 @@ function PreOrderScreenContent() {
               <Button
                 size="xl"
                 radius="md"
-                className={`w-full font-bold text-base shadow-lg ${userAction === "Buy" ? "bg-[#0ECB81] hover:bg-[#0ECB81]/90 shadow-[#0ECB81]/20" : "bg-[#F6465D] hover:bg-[#F6465D]/90 shadow-[#F6465D]/20"} text-white transition-all`}
+                className={`w-full font-bold text-base shadow-lg ${userAction === "Buy" ? "bg-buy hover:bg-buy/90 shadow-[#0ECB81]/20" : "bg-[#F6465D] hover:bg-[#F6465D]/90 shadow-[#F6465D]/20"} text-white transition-all`}
                 disabled={!canProceed}
                 onClick={() => setIsModalOpen(true)}
               >
@@ -330,14 +331,8 @@ function PreOrderScreenContent() {
 
 export default function PreOrderScreen() {
   return (
-    <Suspense fallback={
-      <P2PLayout>
-        <div className="flex justify-center items-center h-full min-h-[400px]">
-          <Loader color="blue" size="lg" />
-        </div>
-      </P2PLayout>
-    }>
+    <PageSuspense fallback={<P2PCreateOrderSkeleton />}>
       <PreOrderScreenContent />
-    </Suspense>
+    </PageSuspense>
   );
 }

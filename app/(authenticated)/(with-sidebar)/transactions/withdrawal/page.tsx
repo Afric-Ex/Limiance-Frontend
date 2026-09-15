@@ -35,7 +35,8 @@ import { useState } from "react";
 import { truncateCryptoAddress } from "@/src/utils/truncate-address";
 import { TablePagination } from "@/src/components/shared/table-pagination";
 import { IoMdInformationCircleOutline } from "react-icons/io";
-
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { WithdrawalSkeleton } from "@/src/components/skeletons";
 
 const faqs = [
   {
@@ -111,7 +112,7 @@ function validateAddress(address: string, networkSymbol: string): string | null 
   return null;
 }
 
-export default function Withdrawal() {
+function WithdrawalInner() {
   const {
     selectedCoin,
     form,
@@ -599,5 +600,13 @@ export default function Withdrawal() {
         <TablePagination totalCount={history?.length ?? 0} page={page} setPage={setPage} limit={limit} />
       </div>
     </div>
+  );
+}
+
+export default function Withdrawal() {
+  return (
+    <PageSuspense fallback={<WithdrawalSkeleton />}>
+      <WithdrawalInner />
+    </PageSuspense>
   );
 }

@@ -15,8 +15,10 @@ import { TradeReminder } from "@/src/components/settings/trade-reminder";
 import { TransactionNotifications } from "@/src/components/settings/transaction-notifications";
 import { XTermOfUse } from "@/src/components/settings/x-term-of-use";
 import { useUserStore } from "@/src/stores/user-store";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { WithSidebarSettingsSkeleton } from "@/src/components/skeletons";
 
-export default function Settings() {
+function SettingsInner() {
   const user = useUserStore((state) => state.user);
 
   const settingsList = [
@@ -163,5 +165,13 @@ export default function Settings() {
         ))}
       </div>
     </main>
+  );
+}
+
+export default function Settings() {
+  return (
+    <PageSuspense fallback={<WithSidebarSettingsSkeleton />}>
+      <SettingsInner />
+    </PageSuspense>
   );
 }

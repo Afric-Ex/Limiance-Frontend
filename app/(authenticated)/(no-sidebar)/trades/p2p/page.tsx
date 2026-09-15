@@ -11,8 +11,10 @@ import { useOrderListings, useAdvertiserInfo } from "@/src/hooks/p2p/use-p2p";
 import { useRouter } from "next/navigation";
 import { P2POrderListings } from "@/src/types/p2p";
 import { isAdvertiserBlocked } from "@/src/lib/p2p-user-actions";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { P2PMarketplaceSkeleton } from "@/src/components/skeletons";
 
-export default function P2PMarketplacePage() {
+function P2PMarketplacePageInner() {
   const { adFilters } = useP2PStore();
   const [selectedAdvertiser, setSelectedAdvertiser] = useState<any | null>(null);
   const [showNonAdvertiserModal, setShowNonAdvertiserModal] = useState(false);
@@ -224,7 +226,7 @@ export default function P2PMarketplacePage() {
                       ) : (
                         <Button
                           size="sm"
-                          className={`max-[1150px]:w-full ${adFilters.type === "BUY" ? "bg-[#0ECB81] hover:bg-[#0ECB81]/90 text-white font-semibold" : "bg-[#F6465D] hover:bg-[#F6465D]/90 text-white font-semibold"}`}
+                          className={`max-[1150px]:w-full ${adFilters.type === "BUY" ? "bg-buy hover:bg-buy/90 text-white font-semibold" : "bg-[#F6465D] hover:bg-[#F6465D]/90 text-white font-semibold"}`}
                           onClick={() => handleAdAction(ad, false)}
                         >
                           {adFilters.type === "BUY" ? "Buy" : "Sell"} {ad.asset?.toUpperCase()}
@@ -252,5 +254,13 @@ export default function P2PMarketplacePage() {
         onClose={() => setShowNonAdvertiserModal(false)}
       />
     </P2PLayout>
+  );
+}
+
+export default function P2PMarketplacePage() {
+  return (
+    <PageSuspense fallback={<P2PMarketplaceSkeleton />}>
+      <P2PMarketplacePageInner />
+    </PageSuspense>
   );
 }
