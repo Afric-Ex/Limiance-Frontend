@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getCookie } from "cookies-next";
 import { api } from "@/src/lib/axios";
+import { wsClient } from "@/src/lib/websocket-client";
 
 export interface PortfolioCoin {
   userId: string;
@@ -191,9 +192,6 @@ export const usePortfolioWs = (): PortfolioWsData => {
     refreshBalances: () => {},
   });
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const retryCountRef = useRef(0);
-  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // If WS doesn't deliver data within 5s, trigger HTTP fallback
   const wsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Track if WS has ever delivered data so we avoid redundant HTTP overwrites
@@ -237,37 +235,31 @@ export const usePortfolioWs = (): PortfolioWsData => {
     }
   }, []);
 
-  // refreshBalances always uses WS when connected, HTTP otherwise
+  // refreshBalances uses WS when connected, HTTP otherwise
   const refreshBalances = useCallback(() => {
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "get_portfolio", data: { page: "1", limit: "100", query: "" } }));
-      ws.send(JSON.stringify({ type: "get_portfolio_balance_allocations", data: {} }));
-      ws.send(JSON.stringify({ type: "get_portfolio_balance", data: {} }));
-      ws.send(JSON.stringify({ type: "get_margin_account", data: {} }));
-      ws.send(JSON.stringify({ type: "get_futures_positions", data: {} }));
+    const token = getCookie("auth-token");
+    if (!token) {
+      applyHttpFallbackData();
+      return;
+    }
+
+    if (wsClient.getIsConnected()) {
+      wsClient.send({ type: "get_portfolio", data: { page: "1", limit: "100", query: "" } });
+      wsClient.send({ type: "get_portfolio_balance_allocations", data: {} });
+      wsClient.send({ type: "get_portfolio_balance", data: {} });
+      wsClient.send({ type: "get_margin_account", data: {} });
+      wsClient.send({ type: "get_futures_positions", data: {} });
     } else {
-      // WS not ready — fall back to HTTP
       applyHttpFallbackData();
     }
   }, [applyHttpFallbackData]);
 
-  const connectWs = useCallback(() => {
+  useEffect(() => {
     const token = getCookie("auth-token");
     if (!token) {
-      // No auth token — go straight to HTTP
       applyHttpFallbackData();
       return;
     }
-
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-    if (!wsUrl) {
-      applyHttpFallbackData();
-      return;
-    }
-
-    const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
-    const safeUrl = isHttps ? wsUrl.replace(/^ws:\/\//, "wss://") : wsUrl;
 
     // If WS doesn't deliver data within 5s, fall back to HTTP
     if (wsTimeoutRef.current) clearTimeout(wsTimeoutRef.current);
@@ -278,30 +270,26 @@ export const usePortfolioWs = (): PortfolioWsData => {
       }
     }, 5000);
 
-    const ws = new WebSocket(`${safeUrl}?auth-token=${token}`);
-    wsRef.current = ws;
+    const unsubscribeStatus = wsClient.onStatusChange((connected) => {
+      setData((prev) => ({ ...prev, isConnected: connected }));
+      if (!connected && !wsHasDataRef.current) {
+        applyHttpFallbackData();
+      }
+    });
 
-    ws.onopen = () => {
-      retryCountRef.current = 0;
-      setData((prev) => ({ ...prev, isConnected: true }));
-      // Request all data over WS immediately on connect
-      ws.send(JSON.stringify({ type: "get_portfolio", data: { page: "1", limit: "100", query: "" } }));
-      ws.send(JSON.stringify({ type: "get_portfolio_balance_allocations", data: {} }));
-      ws.send(JSON.stringify({ type: "get_portfolio_balance", data: {} }));
-      ws.send(JSON.stringify({ type: "get_margin_account", data: {} }));
-      ws.send(JSON.stringify({ type: "get_futures_positions", data: {} }));
-    };
+    const unsubs: Array<() => void> = [];
 
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-
-        // Portfolio coins -> derive per-account balance breakdowns
-        if (msg.type === "portfolio" || msg.type === "get_portfolio") {
-          const items: PortfolioCoin[] = Array.isArray(msg.data?.data)
-            ? msg.data.data
-            : Array.isArray(msg.data)
-            ? msg.data
+    // 1. Portfolio items
+    unsubs.push(
+      wsClient.subscribe(
+        "portfolio",
+        { type: "get_portfolio", data: { page: "1", limit: "100", query: "" } },
+        (rawPayload, fullMsg) => {
+          const payload = fullMsg?.data ?? rawPayload;
+          const items: PortfolioCoin[] = Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload)
+            ? payload
             : [];
           if (items.length > 0) {
             wsHasDataRef.current = true;
@@ -315,10 +303,16 @@ export const usePortfolioWs = (): PortfolioWsData => {
             }));
           }
         }
+      )
+    );
 
-        // Total portfolio balance from backend
-        if (msg.type === "portfolio_balance" || msg.type === "get_portfolio_balance") {
-          const raw = msg.data?.data ?? msg.data;
+    // 2. Portfolio balance
+    unsubs.push(
+      wsClient.subscribe(
+        "portfolio_balance",
+        { type: "get_portfolio_balance", data: {} },
+        (rawPayload, fullMsg) => {
+          const raw = fullMsg?.data?.data ?? fullMsg?.data ?? rawPayload;
           if (raw && raw.inUsd !== undefined) {
             wsHasDataRef.current = true;
             if (wsTimeoutRef.current) clearTimeout(wsTimeoutRef.current);
@@ -337,14 +331,16 @@ export const usePortfolioWs = (): PortfolioWsData => {
             }));
           }
         }
+      )
+    );
 
-        // Allocations
-        if (
-          msg.type === "portfolio_balance_allocations" ||
-          msg.type === "get_portfolio_balance_allocations" ||
-          msg.type === "balance_allocations"
-        ) {
-          const raw = msg.data?.data ?? msg.data ?? msg;
+    // 3. Allocations
+    unsubs.push(
+      wsClient.subscribe(
+        "portfolio_balance_allocations",
+        { type: "get_portfolio_balance_allocations", data: {} },
+        (rawPayload, fullMsg) => {
+          const raw = fullMsg?.data?.data ?? fullMsg?.data ?? rawPayload;
           if (raw && (raw.totalValue !== undefined || raw.allocations)) {
             wsHasDataRef.current = true;
             if (wsTimeoutRef.current) clearTimeout(wsTimeoutRef.current);
@@ -358,10 +354,16 @@ export const usePortfolioWs = (): PortfolioWsData => {
             }));
           }
         }
+      )
+    );
 
-        // Margin Account
-        if (msg.type === "margin_account" || msg.type === "get_margin_account") {
-          const raw = msg.data?.data ?? msg.data;
+    // 4. Margin Account
+    unsubs.push(
+      wsClient.subscribe(
+        "margin_account",
+        { type: "get_margin_account", data: {} },
+        (rawPayload, fullMsg) => {
+          const raw = fullMsg?.data?.data ?? fullMsg?.data ?? rawPayload;
           if (raw && raw.assets) {
             setData((prev) => ({
               ...prev,
@@ -369,10 +371,16 @@ export const usePortfolioWs = (): PortfolioWsData => {
             }));
           }
         }
+      )
+    );
 
-        // Futures Positions
-        if (msg.type === "futures_positions" || msg.type === "get_futures_positions") {
-          const raw = msg.data?.data ?? msg.data;
+    // 5. Futures Positions
+    unsubs.push(
+      wsClient.subscribe(
+        "futures_positions",
+        { type: "get_futures_positions", data: {} },
+        (rawPayload, fullMsg) => {
+          const raw = fullMsg?.data?.data ?? fullMsg?.data ?? rawPayload;
           if (Array.isArray(raw)) {
             setData((prev) => ({
               ...prev,
@@ -380,40 +388,15 @@ export const usePortfolioWs = (): PortfolioWsData => {
             }));
           }
         }
-      } catch {
-        // ignore bad/malformed messages
-      }
-    };
+      )
+    );
 
-    ws.onclose = () => {
-      setData((prev) => ({ ...prev, isConnected: false }));
-      // Only fall back to HTTP if WS never delivered data (don't overwrite live data with stale HTTP)
-      if (!wsHasDataRef.current) {
-        applyHttpFallbackData();
-      }
-      // Exponential backoff reconnect: 2s → 4s → 8s → max 30s
-      const backoff = Math.min(2000 * Math.pow(2, retryCountRef.current), 30000);
-      retryCountRef.current++;
-      retryTimeoutRef.current = setTimeout(connectWs, backoff);
-    };
-
-    ws.onerror = () => {
-      ws.close();
-    };
-  }, [refreshBalances, applyHttpFallbackData]);
-
-  useEffect(() => {
-    // WS first — HTTP is only triggered by timeout or WS failure
-    connectWs();
     return () => {
       if (wsTimeoutRef.current) clearTimeout(wsTimeoutRef.current);
-      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
-      if (wsRef.current) {
-        wsRef.current.onclose = null; // prevent reconnect on intentional unmount
-        wsRef.current.close();
-      }
+      unsubscribeStatus();
+      unsubs.forEach((unsub) => unsub());
     };
-  }, [connectWs]);
+  }, [applyHttpFallbackData]);
 
   // Always expose refreshBalances directly so callers don't rely on stale state
   return { ...data, refreshBalances };
