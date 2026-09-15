@@ -7,7 +7,6 @@ export default function middleware(req: NextRequest) {
   const isAuthPage = pathname.startsWith("/auth");
   const isProtected =
     !isAuthPage &&
-    !pathname.startsWith("/proxy") &&
     pathname !== "/";
 
   if (isProtected && !token) {

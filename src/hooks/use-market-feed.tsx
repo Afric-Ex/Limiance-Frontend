@@ -144,13 +144,11 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
     if (MOCK_MODE.marketFeed) return;
 
     const token = getCookie("auth-token");
-    const explicitUrl = process.env.NEXT_PUBLIC_WS_URL;
-    const isHttps = window.location.protocol === "https:";
-    const proto = isHttps ? "wss:" : "ws:";
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (!wsUrl) return;
 
-    // Auto-upgrade ws:// → wss:// when on HTTPS (Nginx terminates SSL)
-    const rawUrl = explicitUrl || `${proto}//${window.location.host}/ws-proxy`;
-    const safeUrl = isHttps ? rawUrl.replace(/^ws:\/\//, "wss://") : rawUrl;
+    const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
+    const safeUrl = isHttps ? wsUrl.replace(/^ws:\/\//, "wss://") : wsUrl;
 
     const ws = new WebSocket(`${safeUrl}?auth-token=${token}`);
     wsRef.current = ws;

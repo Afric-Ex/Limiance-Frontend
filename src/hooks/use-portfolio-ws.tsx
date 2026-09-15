@@ -260,11 +260,14 @@ export const usePortfolioWs = (): PortfolioWsData => {
       return;
     }
 
-    const explicitUrl = process.env.NEXT_PUBLIC_WS_URL;
-    const isHttps = window.location.protocol === "https:";
-    const proto = isHttps ? "wss:" : "ws:";
-    const rawUrl = explicitUrl || `${proto}//${window.location.host}/ws-proxy`;
-    const safeUrl = isHttps ? rawUrl.replace(/^ws:\/\//, "wss://") : rawUrl;
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (!wsUrl) {
+      applyHttpFallbackData();
+      return;
+    }
+
+    const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
+    const safeUrl = isHttps ? wsUrl.replace(/^ws:\/\//, "wss://") : wsUrl;
 
     // If WS doesn't deliver data within 5s, fall back to HTTP
     if (wsTimeoutRef.current) clearTimeout(wsTimeoutRef.current);
