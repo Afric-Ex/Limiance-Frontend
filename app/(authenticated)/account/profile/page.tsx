@@ -13,6 +13,8 @@ import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { CheckMark } from "@/src/components/icons/check-mark";
 import { isKycApproved } from "@/src/lib/normalize-kyc-status";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { AccountProfileSkeleton } from "@/src/components/skeletons";
 
 const kycBadge: Record<string, { label: string; color: string }> = {
   pending:       { label: "Pending",    color: "bg-yellow-500/20 text-yellow-400" },
@@ -22,7 +24,7 @@ const kycBadge: Record<string, { label: string; color: string }> = {
   not_submitted: { label: "Unverified", color: "bg-gray-500/20 text-gray-400" },
 };
 
-export default function ProfilePage() {
+function ProfilePageInner() {
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
 
@@ -309,5 +311,13 @@ export default function ProfilePage() {
         </form>
       </div>
     </main>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <PageSuspense fallback={<AccountProfileSkeleton />}>
+      <ProfilePageInner />
+    </PageSuspense>
   );
 }

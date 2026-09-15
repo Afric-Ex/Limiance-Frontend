@@ -10,8 +10,10 @@ import { successNotification } from "@/src/lib/notification-handler";
 import SumsubWebSdk from "@sumsub/websdk-react";
 import { useUserStore } from "@/src/stores/user-store";
 import { getKycAccessToken, isKycApproved } from "@/src/lib/normalize-kyc-status";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { AccountKycSkeleton } from "@/src/components/skeletons";
 
-export default function KycPage() {
+function KycPageInner() {
   const queryClient = useQueryClient();
   const [polling, setPolling] = useState(false);
   const [pollCount, setPollCount] = useState(0);
@@ -309,5 +311,13 @@ export default function KycPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function KycPage() {
+  return (
+    <PageSuspense fallback={<AccountKycSkeleton />}>
+      <KycPageInner />
+    </PageSuspense>
   );
 }

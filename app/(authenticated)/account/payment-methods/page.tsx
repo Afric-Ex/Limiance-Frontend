@@ -12,10 +12,12 @@ import { Delete as Trash } from "@/src/components/icons/trash";
 import { Add } from "@/src/components/icons/add";
 import { MdVisibility, MdVisibilityOff, MdClose, MdAccountBalance } from "react-icons/md";
 import clsx from "clsx";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { AccountPaymentMethodsSkeleton } from "@/src/components/skeletons";
 
 type Step = 1 | 2;
 
-export default function PaymentMethodsPage() {
+function PaymentMethodsPageInner() {
   const queryClient = useQueryClient();
 
   // Queries
@@ -350,5 +352,13 @@ export default function PaymentMethodsPage() {
         </div>
       </Modal>
     </main>
+  );
+}
+
+export default function PaymentMethodsPage() {
+  return (
+    <PageSuspense fallback={<AccountPaymentMethodsSkeleton />}>
+      <PaymentMethodsPageInner />
+    </PageSuspense>
   );
 }

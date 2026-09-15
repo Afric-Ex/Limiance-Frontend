@@ -13,6 +13,8 @@ import { OtpInput } from "@/src/components/settings/otp-input";
 import { MdSmartphone, MdDesktopMac, MdMailOutline } from "react-icons/md";
 import { BiCheck } from "react-icons/bi";
 import { CopyButton } from "@/src/components/shared/copy-button";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { AccountSecuritySkeleton } from "@/src/components/skeletons";
 
 type TwoFASetupData = {
   secret: string;
@@ -142,7 +144,7 @@ const normalizeDateValue = (value: unknown): string => {
   return "";
 };
 
-export default function SecurityPage() {
+export default function SecurityPageInner() {
   const queryClient = useQueryClient();
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
@@ -728,5 +730,13 @@ export default function SecurityPage() {
       </Modal>
 
     </main>
+  );
+}
+
+export default function SecurityPage() {
+  return (
+    <PageSuspense fallback={<AccountSecuritySkeleton />}>
+      <SecurityPageInner />
+    </PageSuspense>
   );
 }

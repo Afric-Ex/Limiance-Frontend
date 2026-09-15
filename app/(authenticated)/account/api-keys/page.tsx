@@ -13,6 +13,8 @@ import { useState } from "react";
 import { CopyButton } from "@/src/components/shared/copy-button";
 import { MdVisibility, MdVisibilityOff, MdClose } from "react-icons/md";
 import clsx from "clsx";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { AccountApiKeysSkeleton } from "@/src/components/skeletons";
 
 const PERMISSIONS = [
   { id: "read",     label: "Read",     desc: "View balances and orders" },
@@ -26,7 +28,7 @@ const permColor: Record<string, string> = {
   withdraw: "bg-warning-1/20 text-warning-1 border border-warning-1/30",
 };
 
-export default function ApiKeysPage() {
+function ApiKeysPageInner() {
   const queryClient = useQueryClient();
 
   // Queries
@@ -321,5 +323,13 @@ export default function ApiKeysPage() {
         </div>
       </Modal>
     </main>
+  );
+}
+
+export default function ApiKeysPage() {
+  return (
+    <PageSuspense fallback={<AccountApiKeysSkeleton />}>
+      <ApiKeysPageInner />
+    </PageSuspense>
   );
 }
