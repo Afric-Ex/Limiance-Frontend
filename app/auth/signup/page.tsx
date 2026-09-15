@@ -7,6 +7,8 @@ import Link from "next/link";
 import { countryData } from "@/src/utils/countries";
 import { useState } from "react";
 import { useAuthStore } from "@/src/stores/auth-store";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { SignUpPageSkeleton } from "@/src/components/skeletons";
 
 function SignUp() {
   const [isAgreed, setIsAgreed] = useState(false);
@@ -108,4 +110,10 @@ function SignUp() {
   );
 }
 
-export default SignUp;
+export default function SignUpPage() {
+  return (
+    <PageSuspense fallback={<SignUpPageSkeleton />}>
+      <SignUp />
+    </PageSuspense>
+  );
+}

@@ -1,6 +1,8 @@
 import Image from "next/image";
 import LoginImage from "@/public/login-image.png";
 import { ForgotPasswordForm } from "@/src/components/forgot-password/forgot-form";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { ForgotPasswordPageSkeleton } from "@/src/components/skeletons";
 
 function ForgotPassword() {
   return (
@@ -31,4 +33,10 @@ function ForgotPassword() {
   );
 }
 
-export default ForgotPassword;
+export default function ForgotPasswordPage() {
+  return (
+    <PageSuspense fallback={<ForgotPasswordPageSkeleton />}>
+      <ForgotPassword />
+    </PageSuspense>
+  );
+}

@@ -4,8 +4,10 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/src/services/auth";
 import { isKycApproved } from "@/src/lib/normalize-kyc-status";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { VerifyIdentityPendingPageSkeleton } from "@/src/components/skeletons";
 
-export default function VerifyIdentityPending() {
+function VerifyIdentityPendingInner() {
   const router = useRouter();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -51,5 +53,13 @@ export default function VerifyIdentityPending() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function VerifyIdentityPending() {
+  return (
+    <PageSuspense fallback={<VerifyIdentityPendingPageSkeleton />}>
+      <VerifyIdentityPendingInner />
+    </PageSuspense>
   );
 }

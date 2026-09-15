@@ -3,6 +3,8 @@
 import { useAuth } from "@/src/hooks/queries/use-auth";
 import { useAuthStore } from "@/src/stores/auth-store";
 import { PinInput, Loader } from "@mantine/core";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { Verify2FAPageSkeleton } from "@/src/components/skeletons";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -28,7 +30,7 @@ function TotpCountdown() {
         <circle cx="16" cy="16" r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
         <circle
           cx="16" cy="16" r={r} fill="none"
-          stroke={remaining <= 5 ? "#ef4444" : "#4D77F0"}
+          stroke={remaining <= 5 ? "var(--color-warning-base)" : "var(--color-primary)"}
           strokeWidth="3"
           strokeDasharray={`${dash} ${circ}`}
           strokeLinecap="round"
@@ -42,7 +44,7 @@ function TotpCountdown() {
   );
 }
 
-export default function Verify2FAPage() {
+function Verify2FAPageInner() {
   const { push } = useRouter();
   const {
     emailOrPhone,
@@ -153,5 +155,13 @@ export default function Verify2FAPage() {
         </button>
       </div>
     </main>
+  );
+}
+
+export default function Verify2FAPage() {
+  return (
+    <PageSuspense fallback={<Verify2FAPageSkeleton />}>
+      <Verify2FAPageInner />
+    </PageSuspense>
   );
 }

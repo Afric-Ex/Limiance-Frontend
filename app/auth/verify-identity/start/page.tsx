@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/src/services/auth";
 import SumsubWebSdk from "@sumsub/websdk-react";
 import { getKycAccessToken } from "@/src/lib/normalize-kyc-status";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { VerifyIdentityStartPageSkeleton } from "@/src/components/skeletons";
 
-export default function Start() {
+function StartInner() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -92,5 +94,13 @@ export default function Start() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function Start() {
+  return (
+    <PageSuspense fallback={<VerifyIdentityStartPageSkeleton />}>
+      <StartInner />
+    </PageSuspense>
   );
 }

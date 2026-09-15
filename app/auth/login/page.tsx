@@ -3,6 +3,8 @@ import LoginImage from "@/public/login-image.png";
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@mantine/core";
 import classes from "@/src/styles/login.module.css";
 import { LoginForm } from "@/src/components/login/login-form";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { LoginPageSkeleton } from "@/src/components/skeletons";
 
 function Login() {
   return (
@@ -44,4 +46,10 @@ function Login() {
   );
 }
 
-export default Login;
+export default function LoginPage() {
+  return (
+    <PageSuspense fallback={<LoginPageSkeleton />}>
+      <Login />
+    </PageSuspense>
+  );
+}

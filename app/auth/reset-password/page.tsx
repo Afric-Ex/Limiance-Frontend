@@ -1,6 +1,8 @@
 import Image from "next/image";
 import ResetImage from "@/public/reset-image.png";
 import { ResetPasswordForm } from "@/src/components/reset-password/reset-form";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { ResetPasswordPageSkeleton } from "@/src/components/skeletons";
 
 function ResetPassword() {
   return (
@@ -32,4 +34,10 @@ function ResetPassword() {
   );
 }
 
-export default ResetPassword;
+export default function ResetPasswordPage() {
+  return (
+    <PageSuspense fallback={<ResetPasswordPageSkeleton />}>
+      <ResetPassword />
+    </PageSuspense>
+  );
+}

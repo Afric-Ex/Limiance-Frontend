@@ -1,6 +1,8 @@
 import Image from "next/image";
 import SignupImage from "@/public/signup-image.png";
 import { RegisterForm } from "@/src/components/register/register-form";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { SignUpProfilePageSkeleton } from "@/src/components/skeletons";
 
 function Profile() {
   return (
@@ -27,4 +29,10 @@ function Profile() {
   );
 }
 
-export default Profile;
+export default function ProfilePage() {
+  return (
+    <PageSuspense fallback={<SignUpProfilePageSkeleton />}>
+      <Profile />
+    </PageSuspense>
+  );
+}

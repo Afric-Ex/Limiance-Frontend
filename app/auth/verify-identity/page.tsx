@@ -3,6 +3,8 @@ import VerifyIcon from "@/public/verify-icon.png";
 import Pattern from "@/public/pattern.png";
 import Image from "next/image";
 import Link from "next/link";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { VerifyIdentityPageSkeleton } from "@/src/components/skeletons";
 
 const instructions = [
   "Identity Documents and Facial Verification",
@@ -80,4 +82,10 @@ function VerifyIdentity() {
   );
 }
 
-export default VerifyIdentity;
+export default function VerifyIdentityPage() {
+  return (
+    <PageSuspense fallback={<VerifyIdentityPageSkeleton />}>
+      <VerifyIdentity />
+    </PageSuspense>
+  );
+}
