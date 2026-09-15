@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { getCookie } from "cookies-next";
+import { useState, useEffect, useCallback } from "react";
 import { api } from "@/src/lib/axios";
 import { MOCK_MODE } from "@/src/mocks";
 import { MOCK_PRICES } from "@/src/mocks/data/market-data";
+import { wsClient } from "@/src/lib/websocket-client";
 
 export interface OrderBookEntry {
   price: number;
@@ -83,10 +83,6 @@ export const useOrderBook = (pair: string): OrderBookData => {
     }
   }, [pair]);
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const retryCountRef = useRef(0);
-  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // --- mock mode ---
   useEffect(() => {
     if (!MOCK_MODE.orderBook) return;
@@ -109,37 +105,29 @@ export const useOrderBook = (pair: string): OrderBookData => {
     });
   }, [pair]);
 
-  // --- real mode: WebSocket with exponential backoff ---
-  const connectWs = useCallback(() => {
+  // --- real mode: single shared WebSocket connection via wsClient ---
+  useEffect(() => {
     if (MOCK_MODE.orderBook) return;
 
-    const token = getCookie("auth-token");
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-    if (!wsUrl) return;
+    fetchHttpFallback();
 
-    const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
-    const safeUrl = isHttps ? wsUrl.replace(/^ws:\/\//, "wss://") : wsUrl;
+    const wsPair = pair.replace("/", "-");
+    const payload = { type: "get_spot_order_books", data: { pair: wsPair } };
 
-    const ws = new WebSocket(`${safeUrl}?auth-token=${token}`);
-    wsRef.current = ws;
+    const unsubscribeStatus = wsClient.onStatusChange((connected) => {
+      setData((prev) => ({ ...prev, isConnected: connected }));
+      if (!connected) {
+        fetchHttpFallback();
+      }
+    });
 
-    ws.onopen = () => {
-      retryCountRef.current = 0;
-      setData((prev) => ({ ...prev, isConnected: true }));
-      // pair comes in as "BTC/USDT" — WS expects "BTC-USDT"
-      const wsPair = pair.replace("/", "-");
-      ws.send(JSON.stringify({ type: "get_spot_order_books", data: { pair: wsPair } }));
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.type !== "order_book_update") return;
-
-        const book = msg.data?.orderBook;
+    const unsubscribeMessages = wsClient.subscribe(
+      "order_book_update",
+      payload,
+      (dataPayload) => {
+        const book = dataPayload?.orderBook;
         if (!book) return;
 
-        // buyOrders/sellOrders are currently null from backend — treat as []
         const buyOrders: OrderBookEntry[] = Array.isArray(book.buyOrders) ? book.buyOrders : [];
         const sellOrders: OrderBookEntry[] = Array.isArray(book.sellOrders) ? book.sellOrders : [];
 
@@ -153,38 +141,14 @@ export const useOrderBook = (pair: string): OrderBookData => {
           isConnected: true,
           lastUpdated: new Date(),
         });
-      } catch {
-        // bad message — ignore
       }
-    };
-
-    ws.onclose = () => {
-      setData((prev) => ({ ...prev, isConnected: false }));
-      fetchHttpFallback();
-      const backoff = Math.min(2000 * Math.pow(2, retryCountRef.current), 30000);
-      retryCountRef.current++;
-      retryTimeoutRef.current = setTimeout(connectWs, backoff);
-    };
-
-    ws.onerror = () => {
-      ws.close();
-    };
-  }, [pair, fetchHttpFallback]);
-
-  useEffect(() => {
-    if (!MOCK_MODE.orderBook) {
-      fetchHttpFallback();
-      connectWs();
-    }
+    );
 
     return () => {
-      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
-      if (wsRef.current) {
-        wsRef.current.onclose = null;
-        wsRef.current.close();
-      }
+      unsubscribeStatus();
+      unsubscribeMessages();
     };
-  }, [connectWs]);
+  }, [pair, fetchHttpFallback]);
 
   return data;
 };

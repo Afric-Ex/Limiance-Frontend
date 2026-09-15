@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { getCookie } from "cookies-next";
+import { useState, useEffect, useCallback } from "react";
 import { api } from "@/src/lib/axios";
 import { MOCK_MODE } from "@/src/mocks";
 import { MOCK_PRICES } from "@/src/mocks/data/market-data";
+import { wsClient } from "@/src/lib/websocket-client";
 
 interface MarketItem {
   symbol: string;
@@ -72,9 +72,8 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
         (m: any) => (m.symbol || m.pair || "").replace("/", "-").toUpperCase() === normalisedPair
       );
 
-      setData(prev => ({
+      setData((prev) => ({
         ...prev,
-        isConnected: false,
         price: match ? parseFloat(match.last_price ?? match.lastPrice ?? match.price ?? "0") : prev.price,
         change24h: match ? parseFloat(match.price_change ?? match.priceChange ?? match.change24h ?? "0") : prev.change24h,
         changePercent24h: match ? parseFloat(match.percent_change ?? match.priceChangePercent ?? match.changePercent24h ?? "0") : prev.changePercent24h,
@@ -88,10 +87,6 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
       console.error("HTTP fallback for market feed failed", err);
     }
   }, [pair]);
-
-  const wsRef = useRef<WebSocket | null>(null);
-  const retryCountRef = useRef(0);
-  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // --- mock mode: simulate live feed with setInterval ---
   useEffect(() => {
@@ -117,7 +112,6 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
     const interval = setInterval(() => {
       setData((prev) => {
         const currentPrice = prev.price ?? base.price;
-        // ±0.1% random drift
         const drift = currentPrice * (Math.random() - 0.5) * 0.002;
         const newPrice = +(currentPrice + drift).toFixed(
           currentPrice > 100 ? 2 : 4
@@ -139,88 +133,53 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
     return () => clearInterval(interval);
   }, [pair]);
 
-  // --- real mode: WebSocket with exponential backoff ---
-  const connectWs = useCallback(() => {
+  // --- real mode: single shared WebSocket connection via wsClient ---
+  useEffect(() => {
     if (MOCK_MODE.marketFeed) return;
 
-    const token = getCookie("auth-token");
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-    if (!wsUrl) return;
+    fetchHttpFallback();
 
-    const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
-    const safeUrl = isHttps ? wsUrl.replace(/^ws:\/\//, "wss://") : wsUrl;
-
-    const ws = new WebSocket(`${safeUrl}?auth-token=${token}`);
-    wsRef.current = ws;
-
-    // normalise "BTC/USDT" → "BTC-USDT" for the backend subscription
     const normalisedPair = pair.replace("/", "-").toUpperCase();
+    const payload = { type: "get_market_data", data: { pair: normalisedPair } };
 
-    ws.onopen = () => {
-      retryCountRef.current = 0;
-      setData((prev) => ({ ...prev, isConnected: true }));
-      ws.send(JSON.stringify({ type: "get_market_data", data: { pair: normalisedPair } }));
-    };
+    const unsubscribeStatus = wsClient.onStatusChange((connected) => {
+      setData((prev) => ({ ...prev, isConnected: connected }));
+      if (!connected) {
+        fetchHttpFallback();
+      }
+    });
 
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.type !== "spot_margin_markets") return;
-
-        const items: any[] = Array.isArray(msg.data?.data) ? msg.data.data : [];
+    const unsubscribeMessages = wsClient.subscribe(
+      "spot_margin_markets",
+      payload,
+      (dataPayload) => {
+        const items: any[] = Array.isArray(dataPayload?.data) ? dataPayload.data : [];
         const match = items.find(
           (m) => (m.symbol || m.pair || "").replace("/", "-").toUpperCase() === normalisedPair
         );
 
-        setData({
-          price: match?.last_price ?? match?.lastPrice ?? match?.price ?? null,
-          change24h: match?.price_change ?? match?.priceChange ?? match?.change24h ?? null,
-          changePercent24h: match?.percent_change ?? match?.priceChangePercent ?? match?.changePercent24h ?? null,
-          high24h: match?.high_24h ?? match?.highPrice ?? match?.high24h ?? null,
-          low24h: match?.low_24h ?? match?.lowPrice ?? match?.low24h ?? null,
-          volume24h: match?.volume ?? match?.volume24h ?? null,
-          fundingRate: match?.funding_rate ?? match?.fundingRate ?? null,
-          nextFundingTime: match?.next_funding_time ?? null,
+        setData((prev) => ({
+          ...prev,
+          price: match?.last_price ?? match?.lastPrice ?? match?.price ?? prev.price,
+          change24h: match?.price_change ?? match?.priceChange ?? match?.change24h ?? prev.change24h,
+          changePercent24h: match?.percent_change ?? match?.priceChangePercent ?? match?.changePercent24h ?? prev.changePercent24h,
+          high24h: match?.high_24h ?? match?.highPrice ?? match?.high24h ?? prev.high24h,
+          low24h: match?.low_24h ?? match?.lowPrice ?? match?.low24h ?? prev.low24h,
+          volume24h: match?.volume ?? match?.volume24h ?? prev.volume24h,
+          fundingRate: match?.funding_rate ?? match?.fundingRate ?? prev.fundingRate,
+          nextFundingTime: match?.next_funding_time ?? prev.nextFundingTime,
           isConnected: true,
           lastUpdated: new Date(),
           markets: items,
-        });
-      } catch {
-        // bad message — ignore
+        }));
       }
-    };
-
-    ws.onclose = () => {
-      setData((prev) => ({ ...prev, isConnected: false }));
-      fetchHttpFallback();
-      // exponential backoff: 2s → 4s → 8s → max 30s
-      const backoff = Math.min(
-        2000 * Math.pow(2, retryCountRef.current),
-        30000
-      );
-      retryCountRef.current++;
-      retryTimeoutRef.current = setTimeout(connectWs, backoff);
-    };
-
-    ws.onerror = () => {
-      ws.close();
-    };
-  }, [pair, fetchHttpFallback]);
-
-  useEffect(() => {
-    if (!MOCK_MODE.marketFeed) {
-      fetchHttpFallback();
-      connectWs();
-    }
+    );
 
     return () => {
-      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
-      if (wsRef.current) {
-        wsRef.current.onclose = null; // prevent reconnect on intentional close
-        wsRef.current.close();
-      }
+      unsubscribeStatus();
+      unsubscribeMessages();
     };
-  }, [connectWs]);
+  }, [pair, fetchHttpFallback]);
 
   return data;
 };
