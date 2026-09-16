@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Modal, Button, Radio, Select, Textarea } from "@mantine/core";
+import { Modal, Button, Select } from "@mantine/core";
 
 interface CancelOrderModalProps {
   opened: boolean;

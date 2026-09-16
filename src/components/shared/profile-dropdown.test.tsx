@@ -1,6 +1,6 @@
 import React from "react";
 (globalThis as any).React = React;
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { ProfileDropdown } from "./profile-dropdown";
 import { useUserStore } from "@/src/stores/user-store";
 import { renderWithProviders } from "@/src/test/utils";

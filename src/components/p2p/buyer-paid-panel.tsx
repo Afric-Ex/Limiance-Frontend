@@ -34,7 +34,6 @@ export function BuyerPaidPanel({
     return () => clearInterval(interval);
   }, [deadlineStr]);
 
-  const canDispute = secondsLeft <= 0;
   const mins = Math.max(0, Math.floor(secondsLeft / 60));
   const secs = Math.max(0, secondsLeft % 60);
 

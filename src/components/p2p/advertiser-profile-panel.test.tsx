@@ -32,20 +32,20 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 vi.mock("./block-user-modal", () => ({
-  BlockUserModal: ({ isOpen, onClose, onConfirm, username }: any) =>
+  BlockUserModal: ({ isOpen, onConfirm }: any) =>
     isOpen ? (
       <div data-testid="block-modal">
-        <input placeholder="Reason for blocking" onChange={(e) => {}} />
+        <input placeholder="Reason for blocking" onChange={(_e) => {}} />
         <button onClick={() => onConfirm("Scam attempt")}>Confirm Block</button>
       </div>
     ) : null,
 }));
 
 vi.mock("./report-user-modal", () => ({
-  ReportUserModal: ({ isOpen, onClose, onSubmit, username }: any) =>
+  ReportUserModal: ({ isOpen, onSubmit }: any) =>
     isOpen ? (
       <div data-testid="report-modal">
-        <input placeholder="Add anything useful" onChange={(e) => {}} />
+        <input placeholder="Add anything useful" onChange={(_e) => {}} />
         <button onClick={() => onSubmit({ reason: "Fraud or scam attempt", details: "Repeated spam" })}>
           Submit Report
         </button>

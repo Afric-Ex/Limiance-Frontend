@@ -6,7 +6,7 @@ import { DateInput } from "@mantine/dates";
 import { useState } from "react";
 import clsx from "clsx";
 import { useQuery } from "@tanstack/react-query";
-import { tradingService, tradingKeys } from "@/src/services/trading";
+import { tradingService } from "@/src/services/trading";
 
 const selectStyles = {
   input: "!h-11 !rounded-lg !bg-transparent",

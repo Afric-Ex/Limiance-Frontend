@@ -1,6 +1,6 @@
 import React from "react";
 (globalThis as any).React = React;
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { Sidebar } from "./sidebar";
 import { useUserStore } from "@/src/stores/user-store";
 import { renderWithProviders } from "@/src/test/utils";

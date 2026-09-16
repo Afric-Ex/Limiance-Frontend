@@ -1,6 +1,6 @@
 "use client";
 
-import { Checkbox, Table, TableTd, TableTh, TableTr } from "@mantine/core";
+import { Table, TableTd, TableTh, TableTr } from "@mantine/core";
 import { InlineLoading } from "../shared/inline-loading";
 import { useState } from "react";
 import { modals } from "@mantine/modals";

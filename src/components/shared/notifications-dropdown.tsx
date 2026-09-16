@@ -1,12 +1,8 @@
 "use client";
 
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { asset, assetKeys } from "@/src/services/asset";
-import { MdKeyboardArrowRight, MdOutlineQrCode } from "react-icons/md";
-import { IoCheckmarkCircle, IoTimeOutline } from "react-icons/io5";
+import { MdOutlineQrCode } from "react-icons/md";
 import { PiBellFill } from "react-icons/pi";
-import { InlineLoading } from "./inline-loading";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 

@@ -1,6 +1,6 @@
 import React from "react";
 (globalThis as any).React = React;
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { TablePagination } from "./table-pagination";
 import { installTestGlobals, renderWithProviders } from "@/src/test/utils";
 

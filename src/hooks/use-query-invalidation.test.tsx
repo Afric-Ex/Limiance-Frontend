@@ -5,9 +5,11 @@ import { renderHook, act } from "@testing-library/react";
 import { useQueryInvalidation } from "./use-query-invalidation";
 
 function createWrapper(client: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) => (
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
+  Wrapper.displayName = "Wrapper";
+  return Wrapper;
 }
 
 describe("useQueryInvalidation", () => {

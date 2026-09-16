@@ -4,7 +4,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { AppContainer } from "./app-container";
 
 const pathnameMock = vi.hoisted(() => vi.fn(() => "/"));
-const pushMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({
   usePathname: pathnameMock,

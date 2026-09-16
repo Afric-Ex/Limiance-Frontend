@@ -5,8 +5,7 @@ import { modals } from "@mantine/modals";
 import { MdOutlineClose } from "react-icons/md";
 import { NumberInput, Popover, PopoverDropdown, PopoverTarget, TextInput } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
-import { useQueryClient } from "@tanstack/react-query";
-import { asset, assetKeys } from "@/src/services/asset";
+import { asset } from "@/src/services/asset";
 import { SupportedListingsDropdown } from "../assets/supported-pairs-dropdown";
 import { SelectedCoin } from "@/src/hooks/use-deposit";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -17,7 +16,7 @@ import { IoChevronDown } from "react-icons/io5";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 export const ExternalTransfer = () => {
-  const { coins: portfolio, refreshBalances } = usePortfolioWs();
+  const { refreshBalances } = usePortfolioWs();
   const [activeStep, setActiveStep] = useState<"request" | "transfer">("request");
   const [selectedCoin, setSelectedCoin] = useState<SelectedCoin>({
     name: "",

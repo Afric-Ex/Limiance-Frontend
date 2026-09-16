@@ -2,9 +2,6 @@ import { Skeleton } from "@/src/components/shared/skeleton";
 import {
   SkeletonCard,
   SkeletonField,
-  SkeletonHeader,
-  SkeletonShell,
-  SkeletonStatGrid,
   SkeletonTable,
 } from "@/src/components/skeletons/shared";
 
@@ -17,7 +14,7 @@ import {
 const contentShell = "flex flex-col gap-6 max-w-5xl max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter";
 
 /** Shared header block for account pages. */
-const AccountHeader: React.FC<{ title: string; subtitle?: string }> = ({ title, subtitle }) => (
+const AccountHeader: React.FC<{ title: string; subtitle?: string }> = ({ title: _title, subtitle }) => (
   <div className="flex flex-col min-[1150px]:flex-row min-[1150px]:items-start justify-between gap-4 max-[1150px]:gap-3">
     <div className="flex flex-col gap-2">
       <Skeleton variant="text" width={220} height={28} />

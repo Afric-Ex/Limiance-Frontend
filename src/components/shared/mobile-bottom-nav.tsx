@@ -16,7 +16,6 @@ import {
   IoWallet,
   IoSwapHorizontal,
 } from "react-icons/io5";
-import { MdAutoGraph } from "react-icons/md";
 import { RiBarChartFill } from "react-icons/ri";
 // ─── Trade Sheet ────────────────────────────────────────────────────────────
 

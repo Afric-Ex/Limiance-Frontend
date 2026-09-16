@@ -68,7 +68,7 @@ export const PaymentInstructions = ({ method }: PaymentInstructionsProps) => {
       </div>
 
       <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-500/90 text-sm">
-        <strong>⚠️ Important:</strong> Use exactly the Account Name shown above for the transfer. Do not include crypto-related words like "BTC", "USDT", or "Limiance" in your transfer remarks to prevent your bank account from being blocked.
+        <strong>⚠️ Important:</strong> Use exactly the Account Name shown above for the transfer. Do not include crypto-related words like &quot;BTC&quot;, &quot;USDT&quot;, or &quot;Limiance&quot; in your transfer remarks to prevent your bank account from being blocked.
       </div>
     </div>
   );

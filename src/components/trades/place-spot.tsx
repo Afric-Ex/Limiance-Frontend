@@ -11,7 +11,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MOCK_MODE } from "@/src/mocks";
 import { mockTrading } from "@/src/mocks/mock-trading";
 import { tradingService, tradingKeys } from "@/src/services/trading";
-import { asset, assetKeys } from "@/src/services/asset";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";

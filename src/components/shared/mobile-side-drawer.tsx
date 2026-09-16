@@ -13,7 +13,6 @@ import {
   IoSettingsOutline,
   IoHelpCircleOutline,
   IoLogOutOutline,
-  IoSwapHorizontalOutline,
   IoArrowDownOutline,
   IoArrowUpOutline,
 } from "react-icons/io5";

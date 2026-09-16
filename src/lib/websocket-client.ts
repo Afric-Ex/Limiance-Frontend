@@ -190,7 +190,7 @@ class WebSocketClient {
           this.ws.close();
         }
       };
-    } catch (err) {
+    } catch {
       this.isConnecting = false;
       this.notifyStatus(false);
       this.scheduleReconnect();

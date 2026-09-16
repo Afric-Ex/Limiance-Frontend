@@ -29,12 +29,12 @@ export const PaymentConfirmModal = ({ isOpen, onClose, onConfirm }: PaymentConfi
         <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-lg text-sm text-yellow-500/90">
           <p className="font-bold mb-2">⚠️ Warning</p>
           <p>
-            Maliciously clicking "I Have Paid" without actually making the payment will lead to your account being restricted or permanently banned.
+            Maliciously clicking &quot;I Have Paid&quot; without actually making the payment will lead to your account being restricted or permanently banned.
           </p>
         </div>
 
         <p className="text-white/80 text-sm">
-          Please confirm that you have successfully transferred the funds to the seller's provided payment method via your banking or payment app.
+          Please confirm that you have successfully transferred the funds to the seller&apos;s provided payment method via your banking or payment app.
         </p>
 
         <Checkbox

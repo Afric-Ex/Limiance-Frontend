@@ -1,5 +1,4 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
-import React from "react";
 import { getToken, onMessage } from "firebase/messaging";
 import { messaging } from "@/src/lib/firebase";
 import { notificationService } from "@/src/services/notification";

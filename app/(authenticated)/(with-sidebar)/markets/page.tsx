@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { IoSearchOutline, IoChevronBackOutline, IoChevronForwardOutline } from "react-icons/io5";
-import { MdStar, MdStarBorder, MdTrendingUp, MdTrendingDown } from "react-icons/md";
+import { MdStar, MdStarBorder } from "react-icons/md";
 import { getCryptoIcon } from "@/src/utils/crypto-icons";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { tradingKeys, tradingService } from "@/src/services/trading";
@@ -166,7 +166,7 @@ function MarketsPageInner() {
   useEffect(() => {
     const stored = localStorage.getItem("market_favorites");
     if (stored) {
-      try { setFavorites(JSON.parse(stored)); } catch (e) {}
+      try { setFavorites(JSON.parse(stored)); } catch (_e) {}
     }
   }, []);
 
@@ -462,7 +462,7 @@ function MarketsPageInner() {
                 paginatedRows.map((token) => {
                   const isFav = favorites.includes(token.pair);
                   const isUp = token.change >= 0;
-                  const [base, quote] = token.pair.split("/");
+                  const [, quote] = token.pair.split("/");
                   
                   return (
                     <tr
@@ -581,7 +581,7 @@ function MarketsPageInner() {
           ) : (
             paginatedRows.map((token) => {
               const isUp = token.change >= 0;
-              const [base, quote] = token.pair.split("/");
+              const [, quote] = token.pair.split("/");
               return (
                 <button
                   key={token.pair}

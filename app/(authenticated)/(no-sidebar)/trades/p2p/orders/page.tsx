@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
-import { Select, Loader, Skeleton } from "@mantine/core";
+import { Select, Skeleton } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { useAllMatchedOrders } from "@/src/hooks/p2p/use-p2p";
 import { PageSuspense } from "@/src/components/shared/page-suspense";

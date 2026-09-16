@@ -1,5 +1,4 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
-import React from "react";
 import { api } from "@/src/lib/axios";
 import { useMarketFeed } from "./use-market-feed";
 
@@ -47,17 +46,17 @@ class FakeWebSocket {
     this.readyState = FakeWebSocket.CLOSED;
     this.trigger("close");
   });
-  private handlers: Record<string, Function[]> = {};
+  private handlers: Record<string, ((...args: any[]) => unknown)[]> = {};
 
   constructor(url: string) {
     this.url = url;
   }
 
-  addEventListener(type: string, cb: Function) {
+  addEventListener(type: string, cb: (...args: any[]) => unknown) {
     (this.handlers[type] ||= []).push(cb);
   }
 
-  removeEventListener(type: string, cb: Function) {
+  removeEventListener(type: string, cb: (...args: any[]) => unknown) {
     this.handlers[type] = (this.handlers[type] || []).filter((h) => h !== cb);
   }
 

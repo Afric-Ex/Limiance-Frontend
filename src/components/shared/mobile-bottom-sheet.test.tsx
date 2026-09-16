@@ -1,6 +1,6 @@
 import React from "react";
 (globalThis as any).React = React;
-import { render, waitFor } from "@testing-library/react";
+import { waitFor } from "@testing-library/react";
 import { MobileBottomSheet } from "./mobile-bottom-sheet";
 import { installTestGlobals, renderWithProviders } from "@/src/test/utils";
 

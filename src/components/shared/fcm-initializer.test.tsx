@@ -1,6 +1,6 @@
 import React from "react";
 (globalThis as any).React = React;
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { FCMInitializer } from "./fcm-initializer";
 
 const useFCMMock = vi.hoisted(() => vi.fn());

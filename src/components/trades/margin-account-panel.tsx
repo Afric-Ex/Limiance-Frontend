@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { modals } from "@mantine/modals";
 import { Tabs, TabsList, TabsTab, TabsPanel, Table, TableTh, TableTr, TableTd } from "@mantine/core";
-import { asset, assetKeys } from "@/src/services/asset";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { MarginBorrowRepayModal } from "./margin-borrow-repay-modal";
@@ -82,7 +81,6 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
   const totalAssetsUsd = marginAccount && parseNum(marginAccount.total_assets_usd ?? marginAccount.totalAssetsUsd) > 0 ? parseNum(marginAccount.total_assets_usd ?? marginAccount.totalAssetsUsd) : fallbackTotalUsd;
   const totalLiabilitiesUsd = marginAccount ? parseNum(marginAccount.total_liability_usd ?? marginAccount.totalLiabilitiesUsd ?? marginAccount.totalLiabilityUsd) : 0;
   const equityUsd = marginAccount && parseNum(marginAccount.equity_usd ?? marginAccount.equityUsd ?? marginAccount.equity) > 0 ? parseNum(marginAccount.equity_usd ?? marginAccount.equityUsd ?? marginAccount.equity) : fallbackTotalUsd;
-  const maxLeverage = marginAccount && parseNum(marginAccount.max_leverage ?? marginAccount.maxLeverage) > 0 ? parseNum(marginAccount.max_leverage ?? marginAccount.maxLeverage) : 3;
 
   const collateralUsd = totalUsd; // the base transfer balance
   
@@ -362,7 +360,6 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                       // Fetch image and name from portfolio matching coin
                       const pCoin = portfolio?.find(c => c.symbol === a.asset);
                       const bal      = parseNum(a.free) + parseNum(a.locked);
-                      const locked   = parseNum(a.locked);
                       const avail    = parseNum(a.free);
                       const borrowed = parseNum(a.borrowed);
                       const interest = parseNum(a.interest);

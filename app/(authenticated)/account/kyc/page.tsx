@@ -2,7 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button, Loader } from "@mantine/core";
 import { MdShield, MdCheckCircle, MdPermIdentity, MdVideocam, MdHourglassEmpty } from "react-icons/md";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -69,6 +70,17 @@ function KycPageInner() {
   const isApproved = ["approved", "verified"].includes(status);
   const isRejected = ["rejected", "failed"].includes(status);
   const isNotStarted = !isPending && !isApproved && !isRejected;
+
+  const searchParams = useSearchParams();
+  const autoStartRef = useRef(false);
+
+  useEffect(() => {
+    const shouldStart = searchParams?.get("start") === "1" || searchParams?.get("start") === "true";
+    if (mounted && shouldStart && !autoStartRef.current && (isNotStarted || isRejected) && !activeToken && !startingKyc) {
+      autoStartRef.current = true;
+      startKyc();
+    }
+  }, [mounted, searchParams, isNotStarted, isRejected, activeToken, startingKyc, startKyc]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;

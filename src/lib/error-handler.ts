@@ -25,7 +25,7 @@ export const errorMessageHandler = (obj: ErrorType) => {
           /validation for '([^']+)' failed on the '([^']+)' tag/i
         );
         if (match) {
-          let field = match[1].replace(/([A-Z])/g, " $1").trim();
+          const field = match[1].replace(/([A-Z])/g, " $1").trim();
           const tag = match[2];
           if (tag === "required") return field + " is required.";
           if (tag === "min") return field + " is too short.";

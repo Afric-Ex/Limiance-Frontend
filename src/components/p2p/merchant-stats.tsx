@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { Avatar } from "@mantine/core";
 import { MdVerified } from "react-icons/md";
 import { FaThumbsUp } from "react-icons/fa";
 

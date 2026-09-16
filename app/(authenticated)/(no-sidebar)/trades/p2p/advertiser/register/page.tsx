@@ -178,7 +178,7 @@ function AdvertiserRegisterPageInner() {
                   <p className="mb-4">5. Limiance is not responsible for losses due to user error.</p>
                   {/* Simulate long text */}
                   <div className="h-40"></div>
-                  <p className="mb-4 text-white">By clicking "I Agree", you acknowledge that you have read and understood these terms.</p>
+                  <p className="mb-4 text-white">By clicking &quot;I Agree&quot;, you acknowledge that you have read and understood these terms.</p>
                 </div>
 
                 <Checkbox

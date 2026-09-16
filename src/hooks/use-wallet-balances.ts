@@ -43,8 +43,8 @@ export function useWalletBalances(): UseWalletBalancesReturn {
 
   const trading = useMemo(() => {
     if (!total || !funding) return null;
-    const usd = Math.max(0, total.inUsd - funding.inUsd);
-    const btc = Math.max(0, total.inBtc - funding.inBtc);
+    const usd = Math.max(0, total.inUsd - safeParse(funding.inUsd));
+    const btc = Math.max(0, total.inBtc - safeParse(funding.inBtc));
     return {
       inUsd: usd.toFixed(2),
       inBtc: btc.toFixed(8),

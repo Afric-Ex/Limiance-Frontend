@@ -10,7 +10,6 @@ import { errorMessageHandler } from '@/src/lib/error-handler';
 import { successNotification } from '@/src/lib/notification-handler';
 import { MOCK_MODE } from '@/src/mocks';
 import { mockTrading } from '@/src/mocks/mock-trading';
-import { asset, assetKeys } from '@/src/services/asset';
 import { useUserStore } from '@/src/stores/user-store';
 import { tradingService } from '@/src/services/trading';
 import { DEFAULT_MODAL_SETTINGS } from '@/src/utils/constants';
@@ -50,7 +49,6 @@ const CandlestickChart = dynamic(
   { ssr: false, loading: () => <Skeleton variant="chart" height="100%" /> }
 );
 
-const FUTURES_ACCOUNT_KEY = 'futures-account-enabled';
 const LEVERAGE_PRESETS = [1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100];
 const PERCENT_MARKS = [{ value: 25 }, { value: 50 }, { value: 75 }];
 
@@ -145,7 +143,7 @@ function FuturesTradesInner() {
     onError: (err: any) => errorMessageHandler(err),
   });
 
-  const { mutate: updateTPSL, isPending: updatingTPSL } = useMutation({
+  const { mutate: updateTPSL } = useMutation({
     mutationFn: (data: { positionId: string; take_profit_price?: string; stop_loss_price?: string }) => 
       tradingService.updateFuturesPositionTPSL(data),
     onSuccess: () => {

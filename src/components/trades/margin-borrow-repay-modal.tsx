@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader, Tabs, TabsList, TabsTab, Button, Select } from "@mantine/core";
+import { Tabs, TabsList, TabsTab, Button, Select } from "@mantine/core";
 import { tradingService } from "@/src/services/trading";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -89,7 +89,7 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
       }
       return res;
     },
-    onSuccess: (res) => {
+    onSuccess: (_res) => {
       successNotification(`Successfully borrowed ${amount} ${selectedAsset}`);
       // Immediate refresh
       refreshBalances();
@@ -117,7 +117,7 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
       }
       return res;
     },
-    onSuccess: (res) => {
+    onSuccess: (_res) => {
       successNotification(`Successfully repaid ${amount} ${selectedAsset}`);
       refreshBalances();
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });

@@ -1,5 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
-import React from "react";
+import { renderHook } from "@testing-library/react";
 import { useWalletBalances } from "./use-wallet-balances";
 import { usePortfolioWs } from "./use-portfolio-ws";
 

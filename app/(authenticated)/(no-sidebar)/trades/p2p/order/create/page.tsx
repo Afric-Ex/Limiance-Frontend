@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
 import { OrderConfirmationModal } from "@/src/components/p2p/order-confirmation-modal";
@@ -181,7 +181,7 @@ function PreOrderScreenContent() {
             {/* Remarks */}
             {ad.remark && (
               <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5">
-                <div className="text-white/60 text-sm font-medium mb-2">Advertiser's Remarks</div>
+                <div className="text-white/60 text-sm font-medium mb-2">Advertiser&apos;s Remarks</div>
                 <div className="text-white/80 text-sm whitespace-pre-line leading-relaxed">{ad.remark}</div>
               </div>
             )}

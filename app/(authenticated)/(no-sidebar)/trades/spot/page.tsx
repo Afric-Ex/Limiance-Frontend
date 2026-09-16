@@ -3,7 +3,6 @@
 import { Search } from "@/src/components/icons/search";
 import { PlaceSpot } from "@/src/components/trades/place-spot";
 import { tradingKeys, tradingService } from "@/src/services/trading";
-import { assetKeys } from "@/src/services/asset";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { useOrderBook } from "@/src/hooks/use-order-book";
 import { Skeleton } from "@/src/components/shared/skeleton";

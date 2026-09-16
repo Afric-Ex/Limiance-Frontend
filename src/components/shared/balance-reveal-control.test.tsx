@@ -1,6 +1,6 @@
 import React from "react";
 (globalThis as any).React = React;
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, fireEvent } from "@testing-library/react";
 import { BalanceRevealControl } from "./balance-reveal-control";
 import { useUserStore } from "@/src/stores/user-store";
 

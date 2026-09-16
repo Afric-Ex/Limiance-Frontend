@@ -1,6 +1,6 @@
 import React from "react";
 (globalThis as any).React = React;
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { installTestGlobals, renderWithProviders } from "@/src/test/utils";
 import { CoinSelectDropdown } from "./coin-select-dropdown";
 

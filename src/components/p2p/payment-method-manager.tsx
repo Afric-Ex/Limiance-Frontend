@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Drawer, Button, Select, TextInput, ActionIcon, Loader, Skeleton } from "@mantine/core";
-import { MdDelete } from "react-icons/md";
-import { PaymentMethodBadge } from "./payment-method-badge";
+import { Drawer, Button, Select, TextInput, Skeleton } from "@mantine/core";
 import { usePaymentMethods, useAddPaymentMethod } from "@/src/hooks/p2p/use-p2p";
 
 interface PaymentMethodManagerProps {
@@ -15,7 +13,7 @@ interface PaymentMethodManagerProps {
   adMode?: "BUY" | "SELL";
 }
 
-export const PaymentMethodManager = ({ isOpen, onClose, selectedMethodIds, onChangeSelected, fiat, adMode }: PaymentMethodManagerProps) => {
+export const PaymentMethodManager = ({ isOpen, onClose, selectedMethodIds, onChangeSelected }: PaymentMethodManagerProps) => {
   const [isAdding, setIsAdding] = useState(false);
   
   const { data: pmData, isLoading } = usePaymentMethods();

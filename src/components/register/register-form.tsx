@@ -14,8 +14,6 @@ import { useAuth } from "@/src/hooks/queries/use-auth";
 import { useAuthStore } from "@/src/stores/auth-store";
 import { useGoogleLogin } from "@react-oauth/google";
 
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
 const inputStyles = {
   input:
     "!bg-transparent !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 focus:!shadow-[0_0_10px_rgba(77,119,240,0.12)] !rounded-xl !h-[55px] !text-white !text-sm !transition-all !duration-200 placeholder:!text-white/20",

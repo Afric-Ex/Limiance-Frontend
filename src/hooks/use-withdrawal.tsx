@@ -7,7 +7,6 @@ import { assetKeys, asset } from "../services/asset";
 import { MOCK_MODE } from "../mocks";
 import { mockAsset } from "../mocks/mock-asset";
 import { useUserStore } from "../stores/user-store";
-import { successNotification } from "../lib/notification-handler";
 import { errorMessageHandler } from "../lib/error-handler";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "../utils/constants";

@@ -8,7 +8,6 @@ import { ActionIcon, Badge, Tooltip, Loader } from "@mantine/core";
 import { MdWarning } from "react-icons/md";
 import { useFetchChats, useSendChatMessage } from "@/src/hooks/p2p/use-p2p";
 import { P2PChatMessage } from "@/src/types/p2p";
-import toast from "react-hot-toast";
 
 interface ChatWindowProps {
   chatId: string;
@@ -16,7 +15,7 @@ interface ChatWindowProps {
 }
 
 export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
-  const [isTyping, setIsTyping] = useState(false); // Mock typing for now until WS is fully integrated
+  const [isTyping] = useState(false); // Mock typing for now until WS is fully integrated
   
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);

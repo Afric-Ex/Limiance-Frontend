@@ -11,7 +11,7 @@ interface AdTableProps {
   onAvatarClick?: (userId: string) => void;
 }
 
-export const AdTable = ({ ads, currentUserId, onAvatarClick }: AdTableProps) => {
+export const AdTable = ({ ads, currentUserId }: AdTableProps) => {
   const router = useRouter();
 
   if (ads.length === 0) {

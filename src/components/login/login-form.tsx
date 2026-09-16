@@ -16,7 +16,6 @@ const CaptchaButton = dynamic(
 );
 
 const captchaId = process.env.NEXT_PUBLIC_GEETEST_CAPTCHA_ID;
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
 const inputStyles = {
   input:

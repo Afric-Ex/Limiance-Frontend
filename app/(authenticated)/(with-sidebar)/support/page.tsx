@@ -390,7 +390,7 @@ function TicketItem({ ticket, isActive, onClick }: { ticket: SupportTicket; isAc
 function SupportPageInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [mobileView, setMobileView] = useState<"list" | "thread">("list");
+  const [, setMobileView] = useState<"list" | "thread">("list");
 
   const { data, isLoading } = useQuery({
     queryKey: supportKeys.tickets(),

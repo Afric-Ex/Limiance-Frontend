@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useP2PStore } from "@/src/stores/p2p-store";
-import { Select, TextInput, NumberInput } from "@mantine/core";
+import { Select, NumberInput } from "@mantine/core";
 
 export const FilterBar = () => {
   const { adFilters, setAdFilters } = useP2PStore();

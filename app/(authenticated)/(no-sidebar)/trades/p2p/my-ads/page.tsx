@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
-import { Button, Loader, Skeleton } from "@mantine/core";
+import { Button, Skeleton } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { useUserAds, useDeactivateSingleOrder } from "@/src/hooks/p2p/use-p2p";
 import { UserAds } from "@/src/types/p2p";

@@ -35,6 +35,8 @@ import { WalletCard } from "@/src/components/assets/wallet-card";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { DashboardSkeleton } from "@/src/components/skeletons";
+import { KickstartJourney } from "@/src/components/dashboard/kickstart-journey";
+import { isKycApproved } from "@/src/lib/normalize-kyc-status";
 
 const depositChannels = [
   {
@@ -104,11 +106,13 @@ function DashboardInner() {
   // Use live WebSocket portfolio — already subscribed globally, no extra fetch needed
   const { coins: wsPortfolio } = usePortfolioWs();
 
-  const { data: kycStatus } = useQuery({
+  const { data: kycStatus, refetch: refetchKycStatus } = useQuery({
     queryKey: userKeys.kycStatus,
     queryFn: () => userService.getKycStatus(),
     select: (res) => res?.data?.status,
   });
+
+  const isKycComplete = Boolean(user?.isIDverified || isKycApproved(kycStatus));
 
   const feed = useMarketFeed("BTC/USDT");
 
@@ -312,6 +316,14 @@ function DashboardInner() {
           ))}
         </div>
       </div>
+
+      {/* Kick Start Your Journey KYC Section - Only shown for users who haven't completed KYC */}
+      {!isKycComplete && (
+        <KickstartJourney
+          kycStatus={kycStatus}
+          onRefreshStatus={() => refetchKycStatus()}
+        />
+      )}
 
       {/* Grid wrapper */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-[1150px]:gap-4 items-start w-full">

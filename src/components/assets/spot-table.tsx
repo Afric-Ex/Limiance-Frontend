@@ -1,7 +1,6 @@
 "use client";
 
 import { Checkbox, Table, TableTd, TableTh, TableTr } from "@mantine/core";
-import classes from "@/src/styles/assets-overview.module.css";
 import { InlineLoading } from "../shared/inline-loading";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";

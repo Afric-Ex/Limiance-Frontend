@@ -1,6 +1,6 @@
 import React from "react";
 (globalThis as any).React = React;
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { Copy } from "./copy";
 import { mockClipboard, renderWithProviders } from "@/src/test/utils";
 import { installTestGlobals } from "@/src/test/utils";

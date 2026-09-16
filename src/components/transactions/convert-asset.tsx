@@ -5,7 +5,7 @@ import { modals } from "@mantine/modals";
 import { NumberInput } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Select } from "@mantine/core";
-import { assetKeys, asset } from "@/src/services/asset";
+import { asset } from "@/src/services/asset";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { tradingService } from "@/src/services/trading";
 import { MdOutlineClose, MdSwapVert } from "react-icons/md";
@@ -21,7 +21,7 @@ interface ConvertAssetProps {
 }
 
 export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
-  const queryClient = useQueryClient();
+  useQueryClient();
   const [fromCoin, setFromCoin] = useState<SelectedCoin>({
     name: "",
     image: "",
