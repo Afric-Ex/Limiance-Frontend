@@ -11,8 +11,8 @@ import { AuthenticatorVerificationModal } from "./authenticator-verify-modal";
 import { SuccessModal } from "../login/verify-email-success";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { SupportedListingsDropdown } from "../assets/supported-pairs-dropdown";
-import { assetKeys, asset } from "@/src/services/asset";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { asset } from "@/src/services/asset";
+import { useMutation } from "@tanstack/react-query";
 import { SelectedCoin } from "@/src/hooks/use-deposit";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
@@ -25,7 +25,6 @@ import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 
 export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }: { defaultFrom?: string, defaultTo?: string }) => {
-  const queryClient = useQueryClient();
   const [selectedCoin, setSelectedCoin] = useState<SelectedCoin>({
     name: "",
     image: "",
@@ -63,10 +62,7 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
         totpCode,
       }),
     onSuccess: () => {
-      // Force-refetch portfolio (staleTime:Infinity means invalidate alone won't re-fetch)
-      queryClient.refetchQueries({ queryKey: assetKeys.portfolio() });
-      queryClient.refetchQueries({ queryKey: assetKeys.balance() });
-      queryClient.refetchQueries({ queryKey: assetKeys.balanceAllocations() });
+      // Refresh wallet balances over WebSocket
       refreshBalances();
       modals.open({
         children: (

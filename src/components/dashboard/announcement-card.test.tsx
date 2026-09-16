@@ -9,6 +9,6 @@ describe("AnnouncementCard", () => {
   it("renders the announcement date and title", () => {
     renderWithProviders(<AnnouncementCard />);
     expect(screen.getByText("16/12/2024")).toBeInTheDocument();
-    expect(screen.getByText("Afriq to list W-Coin for spot trading")).toBeInTheDocument();
+    expect(screen.getByText("Limiance to list W-Coin for spot trading")).toBeInTheDocument();
   });
 });

@@ -13,11 +13,11 @@ describe("Sort", () => {
 
   it("uses the ascending color when state is asc", () => {
     const { container } = render(<Sort state="asc" />);
-    expect(container.querySelector("path")).toHaveAttribute("fill", "#4D77F0");
+    expect(container.querySelectorAll("path")[1]).toHaveAttribute("fill", "#4D77F0");
   });
 
   it("uses the descending color when state is desc", () => {
     const { container } = render(<Sort state="desc" />);
-    expect(container.querySelector("path")).toHaveAttribute("fill", "#848E9C");
+    expect(container.querySelectorAll("path")[0]).toHaveAttribute("fill", "#4D77F0");
   });
 });

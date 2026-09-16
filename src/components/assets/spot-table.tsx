@@ -2,8 +2,6 @@
 
 import { Checkbox, Table, TableTd, TableTh, TableTr } from "@mantine/core";
 import classes from "@/src/styles/assets-overview.module.css";
-import { assetKeys, asset } from "@/src/services/asset";
-import { useQuery } from "@tanstack/react-query";
 import { InlineLoading } from "../shared/inline-loading";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";

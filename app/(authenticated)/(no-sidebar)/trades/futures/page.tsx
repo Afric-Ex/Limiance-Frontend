@@ -59,6 +59,8 @@ type TradeSide = 'buy' | 'sell';
 type MarginMode = 'cross' | 'isolated';
 
 function FuturesTradesInner() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const [selectedPair, setSelectedPair] = useState('BTC/USDT');
   const [pairSearch, setPairSearch] = useState('');
   const [futuresPrice, setFuturesPrice] = useState<number | string>('');
@@ -596,6 +598,8 @@ function FuturesTradesInner() {
       </div>
     </div>
   );
+
+  if (!mounted) return <FuturesTradePageSkeleton />;
 
   return (
     <div className="flex gap-1 flex-col h-full bg-black min-h-screen page-enter">

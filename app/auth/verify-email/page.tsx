@@ -3,10 +3,12 @@ import VerifyImage from "@/public/verify-image.png";
 import { VerifyForm } from "@/src/components/verify-email/verify-form";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { VerifyEmailPageSkeleton } from "@/src/components/skeletons";
+import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function VerifyEmail() {
   return (
     <main className="flex items-center justify-center px-4 min-h-hero relative bg-landing bg-cover bg-no-repeat animate-fade-in max-[1150px]:bg-none max-[1150px]:bg-black page-enter">
+      <HeroDecorations />
       <div className="grid max-w-auth grid-cols-1 sm:grid-cols-2 gap-5 w-full items-center animate-fade-in max-[1150px]:flex max-[1150px]:flex-col max-[1150px]:justify-center">
         
         {/* Mobile Logo Header */}

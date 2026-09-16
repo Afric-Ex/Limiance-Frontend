@@ -31,8 +31,6 @@ describe("assetKeys", () => {
       "BTC",
       1,
     ]);
-    expect(assetKeys.portfolio()).toEqual(["portfolio"]);
-    expect(assetKeys.balance({ account: "spot" })).toEqual(["balance", { account: "spot" }]);
     expect(assetKeys.walletById("w1")).toEqual(["wallet-by-id", "w1"]);
   });
 });
@@ -212,28 +210,6 @@ describe("asset.confirmWithdrawal", () => {
 });
 
 describe("asset fetch endpoints", () => {
-  it("fetchPortfolio fetches with a default limit", async () => {
-    mockGet.mockResolvedValueOnce(axiosResponse({ data: {} }));
-    const result = await asset.fetchPortfolio();
-    expect(mockGet).toHaveBeenCalledWith("wallet/portfolio", { params: { limit: 100 } });
-    expect(result).toEqual({ data: {} });
-  });
-
-  it("balance fetches with optional params", async () => {
-    mockGet.mockResolvedValueOnce(axiosResponse({ btc: 1 }));
-    const result = await asset.balance({ account: "spot", symbol: "BTC" });
-    expect(mockGet).toHaveBeenCalledWith("wallet/balance", {
-      params: { account: "spot", symbol: "BTC" },
-    });
-    expect(result).toEqual({ btc: 1 });
-  });
-
-  it("balance fetches without params", async () => {
-    mockGet.mockResolvedValueOnce(axiosResponse({}));
-    await asset.balance();
-    expect(mockGet).toHaveBeenCalledWith("wallet/balance", { params: undefined });
-  });
-
   it("transactionHistory fetches with params", async () => {
     mockGet.mockResolvedValueOnce(axiosResponse({ data: [] }));
     await asset.transactionHistory({ page: 1, limit: 50, transaction_type: "deposit" });
@@ -257,13 +233,6 @@ describe("asset fetch endpoints", () => {
     });
   });
 
-  it("balanceAllocations fetches allocations", async () => {
-    mockGet.mockResolvedValueOnce(axiosResponse({ data: {} }));
-    const result = await asset.balanceAllocations();
-    expect(mockGet).toHaveBeenCalledWith("wallet/balance_allocations");
-    expect(result).toEqual({ data: {} });
-  });
-
   it("fetchSupportedTokens fetches listed tokens with params", async () => {
     mockGet.mockResolvedValueOnce(axiosResponse({ data: [] }));
     await asset.fetchSupportedTokens({ q: "btc", page: 1, limit: 10 });
@@ -276,11 +245,6 @@ describe("asset fetch endpoints", () => {
     mockGet.mockResolvedValueOnce(axiosResponse({ data: [] }));
     await asset.fetchSupportedChains({ q: "erc" });
     expect(mockGet).toHaveBeenCalledWith("trading/listed_networks", { params: { q: "erc" } });
-  });
-
-  it("rejects when a fetch request fails", async () => {
-    mockGet.mockRejectedValueOnce(new Error("portfolio failed"));
-    await expect(asset.fetchPortfolio()).rejects.toThrow("portfolio failed");
   });
 });
 

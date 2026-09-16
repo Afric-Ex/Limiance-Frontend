@@ -1,6 +1,6 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "@/src/test/test-utils";
 import { queryResults } from "@/src/test/react-query-mock";
 import { useUserStore } from "@/src/stores/user-store";
@@ -20,10 +20,6 @@ vi.mock("@/src/services/asset", () => ({
   assetKeys: {
     supportedTokensKey: (q: string) => ["assets", "supported-tokens", q],
   },
-}));
-
-vi.mock("next/image", () => ({
-  default: (props: any) => <img {...props} alt={props.alt} />,
 }));
 
 import { SupportedListingsDropdown } from "./supported-pairs-dropdown";
@@ -55,17 +51,16 @@ describe("SupportedListingsDropdown", () => {
     useUserStore.setState({ selectedCoinsHistory: [""] });
   });
 
-  const renderOpen = (overrides = {}) => {
+  const renderOpen = () => {
     const setSelectedCoin = vi.fn();
-    const utils = renderWithProviders(
+    renderWithProviders(
       <SupportedListingsDropdown
         selectedCoin={{ name: "", symbol: "", image: "", contractAddress: "" }}
         setSelectedCoin={setSelectedCoin}
-        {...overrides}
       />
     );
     fireEvent.click(screen.getByAltText("arrow"));
-    return { setSelectedCoin, utils };
+    return { setSelectedCoin };
   };
 
   it("renders the selected coin once chosen", () => {
@@ -76,34 +71,39 @@ describe("SupportedListingsDropdown", () => {
       />
     );
     expect(screen.getByText("BTC")).toBeInTheDocument();
+    expect(screen.getByText("Bitcoin")).toBeInTheDocument();
   });
 
-  it("lists the supported tokens when the popover is open", () => {
+  it("lists the supported tokens when the popover is open", async () => {
     const { setSelectedCoin } = renderOpen();
     expect(mocks.fetchSupportedTokens).toHaveBeenCalledWith({ limit: 200 });
+    await screen.findByText("ETH");
     fireEvent.click(screen.getByText("ETH"));
-    expect(setSelectedCoin).toHaveBeenCalledWith({
-      name: "Ethereum",
-      symbol: "ETH",
-      image: "/eth.png",
-      contractAddress: "0x",
-      blockchain: "ethereum",
-    });
+    await waitFor(() =>
+      expect(setSelectedCoin).toHaveBeenCalledWith({
+        name: "Ethereum",
+        symbol: "ETH",
+        image: "/eth.png",
+        contractAddress: "0x",
+        blockchain: "ethereum",
+      })
+    );
   });
 
-  it("filters the coin list by search query", () => {
+  it("filters the coin list by search query", async () => {
     renderOpen();
-    expect(screen.getByText("SOL")).toBeInTheDocument();
-    fireEvent.change(screen.getByPlaceholderText("Search"), {
-      target: { value: "SOL" },
-    });
+    await screen.findByText("SOL");
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "SOL" } });
     expect(screen.getAllByText("SOL").length).toBeGreaterThan(0);
     expect(screen.queryByText("ETH")).not.toBeInTheDocument();
   });
 
-  it("shows the coin history chips when present", () => {
+  it("shows the coin history chips when present", async () => {
     useUserStore.setState({ selectedCoinsHistory: ["BTC", "ETH"] });
     renderOpen();
-    expect(screen.getByText("BTC")).toBeInTheDocument();
+    await screen.findByText("History");
+    expect(screen.getAllByText("BTC").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("ETH").length).toBeGreaterThan(1);
   });
 });

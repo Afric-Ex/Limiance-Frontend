@@ -63,10 +63,12 @@ describe("RecentHistory", () => {
   it("lists the most recent transactions", () => {
     queryResults[historyKey] = { data: history, isLoading: false };
     renderWithProviders(<RecentHistory />);
-    expect(screen.getByText("Deposit")).toBeInTheDocument();
-    expect(screen.getByText("0.02 BTC")).toBeInTheDocument();
-    expect(screen.getByText("Withdrawal")).toBeInTheDocument();
-    expect(screen.getByText("50 USDT")).toBeInTheDocument();
+    expect(screen.getAllByText(/deposit/i).length).toBeGreaterThan(0);
+    expect(screen.getByText("0.02")).toBeInTheDocument();
+    expect(screen.getByText("BTC")).toBeInTheDocument();
+    expect(screen.getAllByText(/withdrawal/i).length).toBeGreaterThan(0);
+    expect(screen.getByText("50")).toBeInTheDocument();
+    expect(screen.getByText("USDT")).toBeInTheDocument();
   });
 
   it("shows the empty state when there is no history", () => {

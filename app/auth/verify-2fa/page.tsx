@@ -8,6 +8,7 @@ import { Verify2FAPageSkeleton } from "@/src/components/skeletons";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function TotpCountdown() {
   const [remaining, setRemaining] = useState(() => 30 - (Math.floor(Date.now() / 1000) % 30));
@@ -98,7 +99,8 @@ function Verify2FAPageInner() {
   };
 
   return (
-    <main className="flex items-center justify-center px-4 min-h-hero bg-landing bg-cover bg-no-repeat max-[1150px]:bg-none max-[1150px]:bg-black page-enter animate-fade-in">
+    <main className="flex items-center justify-center px-4 min-h-hero relative bg-landing bg-cover bg-no-repeat max-[1150px]:bg-none max-[1150px]:bg-black page-enter animate-fade-in">
+      <HeroDecorations />
       <div className="flex flex-col items-center gap-8 max-w-sm w-full">
         
         {/* Mobile Logo Header */}

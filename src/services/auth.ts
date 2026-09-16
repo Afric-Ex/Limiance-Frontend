@@ -154,14 +154,16 @@ export const auth = {
     password: string;
     confirmPassword: string;
     otp?: string;
+    email?: string;
   }): Promise<ApiResponse<any>> => {
     const verifyToken = typeof window !== "undefined" ? sessionStorage.getItem("verify-token") : null;
     const response = await api.post(
       "users/reset_password",
       {
+        email: data.email,
+        code: data.otp,
         newPassword: data.password,
         confirmPassword: data.confirmPassword,
-        ...(data.otp ? { otp: data.otp } : {}),
       },
       verifyToken ? { headers: { Authorization: `Bearer ${verifyToken}` } } : undefined
     );

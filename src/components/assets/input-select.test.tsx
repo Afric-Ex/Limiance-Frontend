@@ -26,14 +26,14 @@ describe("InputSelect", () => {
     expect(screen.getByText("USD")).toBeInTheDocument();
   });
 
-  it("calls handleCurrencyUpdate when a currency is selected from the dropdown", () => {
+  it("calls handleCurrencyUpdate when a currency is selected from the dropdown", async () => {
     const handleCurrencyUpdate = vi.fn();
     renderWithProviders(
       <InputSelect data={data} handleCurrencyUpdate={handleCurrencyUpdate} />
     );
     fireEvent.click(screen.getByText("NGN"));
-    const usdOption = screen.getAllByText("US Dollar");
-    fireEvent.click(usdOption[0]);
+    const usdOption = await screen.findByText("US Dollar");
+    fireEvent.click(usdOption);
     expect(handleCurrencyUpdate).toHaveBeenCalledWith("usd");
     expect(screen.getByText("USD")).toBeInTheDocument();
   });

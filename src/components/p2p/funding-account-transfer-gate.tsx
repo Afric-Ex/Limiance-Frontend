@@ -2,8 +2,7 @@
 
 import React, { useState } from "react";
 import { Modal, Button, NumberInput } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import { asset, assetKeys } from "@/src/services/asset";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 interface FundingAccountTransferGateProps {
   isOpen: boolean;
@@ -15,12 +14,7 @@ interface FundingAccountTransferGateProps {
 export const FundingAccountTransferGate = ({ isOpen, onClose, asset: assetSymbol, onTransferComplete }: FundingAccountTransferGateProps) => {
   const [amount, setAmount] = useState<number | "">("");
 
-  const { data: portfolio } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: asset.fetchPortfolio,
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
-    staleTime: 30_000,
-  });
+  const { coins: portfolio } = usePortfolioWs();
 
   const spotBalance = parseFloat(
     portfolio?.find((p: any) => p.symbol.toUpperCase() === assetSymbol.toUpperCase())?.spotBalance || "0"

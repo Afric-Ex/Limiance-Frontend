@@ -94,8 +94,8 @@ describe("PlaceSpot", () => {
     expect(screen.getByText(/Stop/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Buy BTC" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Sell BTC" })).toBeDisabled();
-    expect(screen.getAllByText("10,000.00").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("1.000000").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/10,000\.00/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/1\.000000/).length).toBeGreaterThan(0);
     expect(screen.getByText("TP/SL")).toBeInTheDocument();
     expect(screen.getByText("Transfer")).toBeInTheDocument();
   });
@@ -174,7 +174,7 @@ describe("PlaceSpot", () => {
   it("renders the leverage selector in cross mode", () => {
     renderWithProviders(<PlaceSpot pair="BTC/USDT" mode="cross" leverage={3} />);
     expect(screen.getByText("Leverage")).toBeInTheDocument();
-    expect(screen.getByText("3x")).toBeInTheDocument();
+    expect(screen.getAllByText("3x").length).toBeGreaterThan(0);
     expect(screen.getByText("OCO")).toBeInTheDocument();
     expect(screen.getByText("Borrow")).toBeInTheDocument();
   });

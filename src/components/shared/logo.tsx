@@ -29,7 +29,8 @@ export default function Logo({
         width={177}
         height={40}
         priority
-        className={clsx(imageClasses ?? "w-[177px] h-auto max-sm:w-[142px]", "object-contain")}
+        style={{ width: "auto", height: "auto" }}
+        className={clsx(imageClasses ?? "w-[177px] max-sm:w-[142px]", "object-contain")}
       />
     </Link>
   );

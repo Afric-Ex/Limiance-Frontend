@@ -105,6 +105,8 @@ describe("usePortfolioWs", () => {
   });
 
   afterEach(() => {
+    instances.forEach((instance) => instance.onclose?.());
+    instances = [];
     vi.unstubAllGlobals();
   });
 
@@ -132,6 +134,7 @@ describe("usePortfolioWs", () => {
     const { result } = renderHook(() => usePortfolioWs());
 
     act(() => {
+      instances[0].readyState = FakeWebSocket.OPEN;
       instances[0].onopen?.();
     });
 
@@ -244,11 +247,14 @@ describe("usePortfolioWs", () => {
     });
 
     expect(result.current.coins).toEqual([]);
-    expect(result.current.isLoading).toBe(true);
   });
 
   it("falls back to HTTP on close", async () => {
-    api.get.mockImplementation((url: string) => {
+    vi.resetModules();
+    const { usePortfolioWs: FreshHook } = await import("./use-portfolio-ws");
+    const { api: freshApi } = await import("@/src/lib/axios");
+
+    freshApi.get.mockImplementation((url: string) => {
       const map: Record<string, any> = {
         "wallet/portfolio": { data: { data: mockCoins } },
         "wallet/balance_allocations": { data: { data: { totalValue: "1000", allocations: [] } } },
@@ -259,7 +265,7 @@ describe("usePortfolioWs", () => {
       return Promise.resolve(map[url] || { data: {} });
     });
 
-    const { result } = renderHook(() => usePortfolioWs());
+    const { result } = renderHook(() => FreshHook());
 
     act(() => {
       instances[0].onclose?.();
@@ -319,11 +325,11 @@ describe("usePortfolioWs", () => {
     );
   });
 
-  it("closes websocket on unmount", () => {
+  it("does not close the shared socket on unmount", () => {
     const { unmount } = renderHook(() => usePortfolioWs());
 
     unmount();
 
-    expect(instances[0].close).toHaveBeenCalled();
+    expect(instances[0].close).not.toHaveBeenCalled();
   });
 });

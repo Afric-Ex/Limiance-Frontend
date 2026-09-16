@@ -1,9 +1,9 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
-import { asset } from "../services/asset";
 import { tradingService } from "../services/trading";
 import { useP2P } from "./use-p2p";
+import { usePortfolioWs } from "./use-portfolio-ws";
 
 const formCache = new Map<string, any>();
 vi.mock("@mantine/form", () => ({
@@ -26,13 +26,8 @@ vi.mock("@mantine/form", () => ({
   }),
 }));
 
-vi.mock("../services/asset", () => ({
-  asset: {
-    fetchPortfolio: vi.fn(),
-  },
-  assetKeys: {
-    portfolio: () => ["portfolio"],
-  },
+vi.mock("./use-portfolio-ws", () => ({
+  usePortfolioWs: vi.fn(),
 }));
 
 vi.mock("../services/trading", () => ({
@@ -50,11 +45,27 @@ function createWrapper() {
   };
 }
 
+const mockUsePortfolioWs = vi.mocked(usePortfolioWs);
+
+function mockCoins(coins: any[] = []) {
+  mockUsePortfolioWs.mockReturnValue({
+    coins,
+    allocations: null,
+    marginAccount: null,
+    futuresPositions: [],
+    balances: {},
+    isConnected: false,
+    isLoading: false,
+    isAllocationsLoading: false,
+    refreshBalances: () => {},
+  } as any);
+}
+
 describe("useP2P", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     formCache.clear();
-    asset.fetchPortfolio.mockResolvedValue({ data: [] });
+    mockCoins([]);
     tradingService.listedTokens.mockResolvedValue({ data: [] });
   });
 
@@ -126,9 +137,7 @@ describe("useP2P", () => {
   });
 
   it("availableBalance returns 0 when asset not in portfolio", async () => {
-        asset.fetchPortfolio.mockResolvedValue({
-      data: [{ symbol: "BTC", fundingBalance: "1.5" }],
-    });
+    mockCoins([{ symbol: "BTC", fundingBalance: "1.5" }]);
 
     const { result } = renderHook(() => useP2P(), {
       wrapper: createWrapper(),
@@ -142,12 +151,10 @@ describe("useP2P", () => {
   });
 
   it("availableBalance finds balance for selected asset", async () => {
-        asset.fetchPortfolio.mockResolvedValue({
-      data: [
-        { symbol: "BTC", fundingBalance: "1.5" },
-        { symbol: "USDT", fundingBalance: "100" },
-      ],
-    });
+    mockCoins([
+      { symbol: "BTC", fundingBalance: "1.5" },
+      { symbol: "USDT", fundingBalance: "100" },
+    ]);
 
     const { result } = renderHook(() => useP2P(), {
       wrapper: createWrapper(),
@@ -163,7 +170,7 @@ describe("useP2P", () => {
   });
 
   it("handles empty portfolio gracefully", async () => {
-        asset.fetchPortfolio.mockResolvedValue({ data: null });
+    mockCoins([]);
 
     const { result } = renderHook(() => useP2P(), {
       wrapper: createWrapper(),

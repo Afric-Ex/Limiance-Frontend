@@ -94,6 +94,8 @@ describe("useMarketFeed", () => {
   });
 
   afterEach(() => {
+    instances.forEach((instance) => instance.onclose?.());
+    instances = [];
     vi.unstubAllGlobals();
   });
 
@@ -124,6 +126,7 @@ describe("useMarketFeed", () => {
     const { result } = renderHook(() => useMarketFeed("BTC/USDT"));
 
     act(() => {
+      instances[0].readyState = FakeWebSocket.OPEN;
       instances[0].onopen?.();
     });
 
@@ -321,11 +324,11 @@ describe("useMarketFeed", () => {
     expect(result.current.price).toBeNull();
   });
 
-  it("closes websocket on unmount", () => {
+  it("does not close the shared socket on unmount", () => {
     const { unmount } = renderHook(() => useMarketFeed("BTC/USDT"));
 
     unmount();
 
-    expect(instances[0].close).toHaveBeenCalled();
+    expect(instances[0].close).not.toHaveBeenCalled();
   });
 });

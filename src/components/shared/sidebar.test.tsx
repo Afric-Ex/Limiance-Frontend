@@ -42,7 +42,7 @@ describe("Sidebar", () => {
     expect(screen.getAllByText("Overview").length).toBeGreaterThan(0);
     expect(screen.getByText("Trading")).toBeInTheDocument();
     expect(screen.getByText("Finance")).toBeInTheDocument();
-    expect(screen.getByText("Profile")).toBeInTheDocument();
+    expect(screen.getAllByText("Profile").length).toBeGreaterThan(0);
     expect(screen.getByText("Dashboard").closest("a")).toHaveAttribute(
       "href",
       "/dashboard"

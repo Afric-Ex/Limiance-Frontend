@@ -113,6 +113,35 @@ export default function Header() {
         <div className="flex items-center gap-4">
           <Logo />
           {/* <SegmentedControl classNames={classes} data={["Exchange", "DEX"]} /> */}
+          {user && (
+            <ul className="flex max-[1150px]:hidden items-center gap-4">
+              {navList.map((item) => (
+                <li key={item.name}>
+                  {item.children ? (
+                    <PopoverWrapper
+                      target={({ toggle }) => (
+                        <span
+                          onClick={toggle}
+                          className="flex cursor-pointer items-center gap-6px"
+                        >
+                          <span>{item.name}</span>
+                          <IoIosArrowDown size={14} color="white" />
+                        </span>
+                      )}
+                    >
+                      {item.children}
+                    </PopoverWrapper>
+                  ) : (item as any).link ? (
+                    <Link href={(item as any).link} className="cursor-pointer">
+                      <span>{item.name}</span>
+                    </Link>
+                  ) : (
+                    <span>{item.name}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         {user ? (
           <ul className="flex max-[1150px]:hidden items-center gap-4">
@@ -210,6 +239,7 @@ export default function Header() {
           <SettingsIcon className={headerActionClasses} />
         </Link>
       </div>
+      
       <div className="hidden max-[1150px]:flex items-center gap-5">
         {user && (
           <PopoverWrapper

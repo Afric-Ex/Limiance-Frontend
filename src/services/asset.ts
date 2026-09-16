@@ -2,10 +2,8 @@ import { api } from "../lib/axios";
 import {
   AllWalletsResponse,
   Balance,
-  BalanceAllocationsResponse,
   DepositHistory,
   GenerateWalletResponse,
-  Portfolio,
   SupportedChains,
   SupportedTokens,
 } from "../types/asset";
@@ -19,14 +17,8 @@ export const assetKeys = {
     network,
     walletType,
   ],
-  portfolio: (userId?: string) => {
-    void userId;
-    return ["portfolio"] as const;
-  },
-  balance: (params?: { account?: string; symbol?: string }) => ["balance", params],
   transactionHistory: (params?: any) => ["transaction-history", params],
   allWallets: (params?: any) => ["all-wallets", params],
-  balanceAllocations: () => ["balance-allocations"],
   convertAsset: ["convert-asset"],
   externalTransferCode: (asset: string) => ["external-transfer-code", asset],
   walletById: (id: string) => ["wallet-by-id", id],
@@ -114,14 +106,6 @@ export const asset = {
     return response.data;
   },
 
-  fetchPortfolio: async () => {
-    const response = await api.get<Portfolio>(`wallet/portfolio`, { params: { limit: 100 } });
-    return response.data;
-  },
-  balance: async (params?: { account?: string; symbol?: string }) => {
-    const response = await api.get<Balance>(`wallet/balance`, { params });
-    return response.data;
-  },
   transactionHistory: async (params?: {
     page?: number;
     limit?: number;
@@ -143,10 +127,6 @@ export const asset = {
     const response = await api.get<AllWalletsResponse>(`wallet/all_wallets`, {
       params,
     });
-    return response.data;
-  },
-  balanceAllocations: async () => {
-    const response = await api.get<BalanceAllocationsResponse>(`wallet/balance_allocations`);
     return response.data;
   },
   fetchSupportedTokens: async (params?: {

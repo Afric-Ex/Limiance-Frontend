@@ -59,10 +59,10 @@ describe("Transactions", () => {
     renderWithProviders(<Transactions />);
     expect(screen.getByText("Transactions")).toBeInTheDocument();
     expect(screen.getByText("Date & Time")).toBeInTheDocument();
-    expect(screen.getByText("0xabc12...")).toBeInTheDocument();
-    expect(screen.getByText("BTC")).toBeInTheDocument();
-    expect(screen.getByText("BITCOIN")).toBeInTheDocument();
-    expect(screen.getByText("Deposit")).toBeInTheDocument();
+    expect(screen.getByText("0xabc123")).toBeInTheDocument();
+    expect(screen.getAllByText(/^BTC$/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^BITCOIN$/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^Deposit$/i).length).toBeGreaterThan(0);
     expect(screen.getByText("completed")).toBeInTheDocument();
   });
 
@@ -73,7 +73,7 @@ describe("Transactions", () => {
   });
 
   it("renders the no records empty state when empty", () => {
-    queryResults[historyKey] = { data: [], isLoading: false };
+    queryResults[historyKey] = { data: undefined, isLoading: false };
     renderWithProviders(<Transactions />);
     expect(screen.getByText("No Records")).toBeInTheDocument();
   });

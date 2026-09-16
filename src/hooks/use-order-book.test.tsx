@@ -85,6 +85,8 @@ describe("useOrderBook", () => {
   });
 
   afterEach(() => {
+    instances.forEach((instance) => instance.onclose?.());
+    instances = [];
     vi.unstubAllGlobals();
   });
 
@@ -108,6 +110,7 @@ describe("useOrderBook", () => {
     expect(instances[0].url).toContain("ws://");
 
     act(() => {
+      instances[0].readyState = FakeWebSocket.OPEN;
       instances[0].onopen?.();
     });
 
@@ -119,6 +122,7 @@ describe("useOrderBook", () => {
     const { result } = renderHook(() => useOrderBook("BTC/USDT"));
 
     act(() => {
+      instances[0].readyState = FakeWebSocket.OPEN;
       instances[0].onopen?.();
     });
 
@@ -254,6 +258,7 @@ describe("useOrderBook", () => {
     renderHook(() => useOrderBook("ETH/USDT"));
 
     act(() => {
+      instances[0].readyState = FakeWebSocket.OPEN;
       instances[0].onopen?.();
     });
 
@@ -262,11 +267,11 @@ describe("useOrderBook", () => {
     );
   });
 
-  it("closes websocket on unmount", () => {
+  it("does not close the shared socket on unmount", () => {
     const { unmount } = renderHook(() => useOrderBook("BTC/USDT"));
 
     unmount();
 
-    expect(instances[0].close).toHaveBeenCalled();
+    expect(instances[0].close).not.toHaveBeenCalled();
   });
 });

@@ -419,7 +419,7 @@ export const useAuth = () => {
   };
 
   const handleResetPassword = resetForm.onSubmit((values) => {
-    reset({ ...values, otp });
+    reset({ ...values, otp, email: emailOrPhone });
   });
 
   return {

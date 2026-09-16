@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
 import { useUserStore } from "@/src/stores/user-store";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useDisclosure } from "@mantine/hooks";
 import { Modal, Loader, TextInput, Button } from "@mantine/core";
 import { successNotification } from "@/src/lib/notification-handler";
@@ -150,6 +150,8 @@ function SecurityPageInner() {
   const setUser = useUserStore((state) => state.setUser);
   const twoFAEnabled = user?.twoFaEnabled ?? false;
   const emailOtpEnabled = user?.emailOtpEnabled ?? false;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // Modals state
   const [setupOpen, { open: openSetup, close: closeSetup }] = useDisclosure(false);
@@ -347,6 +349,8 @@ function SecurityPageInner() {
       }));
     },
   });
+
+  if (!mounted) return <AccountSecuritySkeleton />;
 
   return (
     <main className="flex flex-col gap-8 max-[1150px]:gap-4 max-w-4xl max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter">

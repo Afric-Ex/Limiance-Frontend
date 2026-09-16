@@ -1,6 +1,6 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "@/src/test/test-utils";
 import { queryResults, queryClientMock } from "@/src/test/react-query-mock";
 
@@ -55,8 +55,10 @@ describe("TradingBotFutures", () => {
     renderWithProviders(<TradingBotFutures />);
     fireEvent.click(screen.getByRole("button", { name: "Stop" }));
     expect(mocks.stopBot).toHaveBeenCalledWith("f1");
-    expect(queryClientMock.invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["active-bots", "futures"],
+    await waitFor(() => {
+      expect(queryClientMock.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["active-bots", "futures"],
+      });
     });
   });
 

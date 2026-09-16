@@ -24,11 +24,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/src/services/asset", () => ({
   asset: mocks.asset,
-  assetKeys: {
-    portfolio: () => ["portfolio"],
-    balance: () => ["balance"],
-    balanceAllocations: () => ["balance-allocations"],
-  },
 }));
 
 vi.mock("@mantine/modals", () => ({

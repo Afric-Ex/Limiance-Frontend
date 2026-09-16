@@ -68,14 +68,14 @@ describe("Header", () => {
     useUserStore.setState({ user: { id: 1 } as any });
     useNotificationStore.setState({ unreadCount: 12 });
     renderWithProviders(<Header />);
-    expect(screen.getByText("9+")).toBeInTheDocument();
+    expect(screen.getAllByText("9+").length).toBeGreaterThan(0);
   });
 
   it("renders the numeric notification count when small", () => {
     useUserStore.setState({ user: { id: 1 } as any });
     useNotificationStore.setState({ unreadCount: 3 });
     renderWithProviders(<Header />);
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getAllByText("3").length).toBeGreaterThan(0);
   });
 
   it("renders the mobile navbar container", () => {

@@ -4,9 +4,8 @@ import { Table, TableTd, TableTh, TableTr, TextInput } from "@mantine/core";
 import { useState } from "react";
 import { IoSearchOutline } from "react-icons/io5";
 import { MdSwapHoriz } from "react-icons/md";
-import { assetKeys, asset } from "@/src/services/asset";
-import { useQuery } from "@tanstack/react-query";
 import { useAssets } from "@/src/hooks/use-assets";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { Skeleton } from "../shared/skeleton";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
@@ -17,12 +16,7 @@ export const FundingTable = () => {
   const [search, setSearch] = useState("");
   const { handleOpenDepositModal, handleOpenInternalTransferModal } = useAssets();
 
-  const { data: portfolio, isLoading } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: asset.fetchPortfolio,
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
-    staleTime: 30_000,
-  });
+  const { coins: portfolio, isLoading } = usePortfolioWs();
 
   const visibleAssets = portfolio?.filter((item: any) => {
     const passesZero = hideZero ? !!+item.fundingBalance : true;

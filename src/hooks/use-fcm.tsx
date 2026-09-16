@@ -28,7 +28,7 @@ export function useFCM() {
         // Only run in browser
         if (typeof window === "undefined" || !("Notification" in window)) return;
         if (!VAPID_KEY || VAPID_KEY === "<ADD_YOUR_VAPID_KEY_HERE>") {
-          console.warn("[useFCM] VAPID key is not configured. Push notifications are disabled.");
+          console.debug("[useFCM] VAPID key is not configured. Push notifications are disabled.");
           return;
         }
 

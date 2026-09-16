@@ -5,6 +5,7 @@ import { successNotification } from "@/src/lib/notification-handler";
 import { auth } from "@/src/services/auth";
 import { Button, LoadingOverlay, PinInput } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
+import { maskIdentifier } from "@/src/utils/mask-identifier";
 
 export const VerifyForm = () => {
   const { handleVerify, otpForm, emailOrPhone, verifyLoading } = useAuth();
@@ -24,7 +25,7 @@ export const VerifyForm = () => {
       <div className="flex flex-col gap-30px">
         <p className="sm:text-base text-sm">
           A 6-digit verification code has just been sent to{" "}
-          <span className="text-primary">{emailOrPhone}</span>
+          <span className="text-primary">{maskIdentifier(emailOrPhone ?? "")}</span>
         </p>
         <div className="flex flex-col gap-6">
           <span className="font-medium sm:text-base text-sm">Enter Verification Code</span>

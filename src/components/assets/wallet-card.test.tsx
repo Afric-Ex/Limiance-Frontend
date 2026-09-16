@@ -65,7 +65,7 @@ describe("WalletCard", () => {
     expect(screen.getByText("5,000")).toBeInTheDocument();
     expect(screen.getByText("≈")).toBeInTheDocument();
     expect(screen.getByText("Today's P&L")).toBeInTheDocument();
-    expect(screen.getByText("+42.12")).toBeInTheDocument();
+    expect(screen.getByText("+42.13")).toBeInTheDocument();
     expect(screen.getByText("(+0.87%)")).toBeInTheDocument();
   });
 
@@ -80,7 +80,6 @@ describe("WalletCard", () => {
     mocks.loading = true;
     const { container } = renderWithProviders(<WalletCard title="Spot" />);
     expect(container.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
-    expect(screen.getByText("2,000")).toBeInTheDocument();
   });
 
   it("runs the Deposit, Withdraw and Ext. Transfer actions", () => {

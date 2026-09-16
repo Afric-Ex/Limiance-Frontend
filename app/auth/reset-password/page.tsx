@@ -3,10 +3,12 @@ import ResetImage from "@/public/reset-image.png";
 import { ResetPasswordForm } from "@/src/components/reset-password/reset-form";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { ResetPasswordPageSkeleton } from "@/src/components/skeletons";
+import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function ResetPassword() {
   return (
     <main className="flex items-center overflow-auto justify-center px-4 min-h-hero relative bg-landing bg-cover bg-no-repeat animate-fade-in max-[1150px]:bg-none max-[1150px]:bg-black page-enter">
+      <HeroDecorations />
       <div className="grid max-w-auth h-full overflow-auto grid-cols-1 sm:grid-cols-2 gap-5 w-full items-center animate-fade-in max-[1150px]:flex max-[1150px]:flex-col max-[1150px]:justify-center">
         
         {/* Mobile Logo Header */}

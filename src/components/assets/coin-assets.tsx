@@ -1,22 +1,14 @@
 import React from "react";
 import { Table, TableTd, TableTh, TableTr } from "@mantine/core";
 import classes from "@/src/styles/assets-overview.module.css";
-import { assetKeys, asset } from "@/src/services/asset";
-import { useQuery } from "@tanstack/react-query";
-import { useUserStore } from "@/src/stores/user-store";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { InlineLoading } from "../shared/inline-loading";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { ConvertAsset } from "../transactions/convert-asset";
 
 export const CoinAssets = () => {
-  const user = useUserStore((state) => state.user);
-  const { data: portfolio, isLoading: portfolioLoading } = useQuery({
-    queryKey: assetKeys.portfolio(user?.id as string),
-    queryFn: asset.fetchPortfolio,
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
-    staleTime: Infinity,
-  });
+  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs();
 
   return (
     <Table

@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
 import { Button, Checkbox, Stepper } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { MdCheckCircle, MdCancel } from "react-icons/md";
 import { useAdvertiserInfo, useBecomeAdvertiser } from "@/src/hooks/p2p/use-p2p";
 import { useUserStore } from "@/src/stores/user-store";
-import { useQuery } from "@tanstack/react-query";
-import { assetKeys, asset as assetService } from "@/src/services/asset";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2PAdvertiserRegisterSkeleton } from "@/src/components/skeletons";
 
@@ -19,6 +18,8 @@ function AdvertiserRegisterPageInner() {
   const [activeStep, setActiveStep] = useState(0);
   const [agreed, setAgreed] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // We check if they are already an advertiser. If so, they shouldn't need to register again.
   const { data: advertiserData, isLoading } = useAdvertiserInfo();
@@ -27,13 +28,10 @@ function AdvertiserRegisterPageInner() {
   const { mutate: becomeAdvertiser, isPending: isRegistering } = useBecomeAdvertiser();
   const { user } = useUserStore();
 
-  // Fetch real funding balance
-  const { data: balanceData } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: () => assetService.fetchPortfolio()
-  });
+  // Fetch real funding balance via WebSocket portfolio channel
+  const { coins: portfolioCoins } = usePortfolioWs();
 
-  const balanceArray = Array.isArray(balanceData?.data) ? balanceData.data : [];
+  const balanceArray = Array.isArray(portfolioCoins) ? portfolioCoins : [];
   const fundingBalance = balanceArray.reduce((acc: number, b: any) => 
     acc + parseFloat(b.fundingBalance || "0"), 0
   );
@@ -66,6 +64,12 @@ function AdvertiserRegisterPageInner() {
       }
     });
   };
+
+  if (!mounted) return (
+    <P2PLayout>
+      <P2PAdvertiserRegisterSkeleton />
+    </P2PLayout>
+  );
 
   if (isLoading) {
     return (

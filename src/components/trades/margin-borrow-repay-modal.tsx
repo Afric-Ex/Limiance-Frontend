@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader, Tabs, TabsList, TabsTab, Button, Select } from "@mantine/core";
 import { tradingService } from "@/src/services/trading";
-import { asset, assetKeys } from "@/src/services/asset";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { MdWarning, MdInfoOutline } from "react-icons/md";
@@ -23,7 +22,6 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
   const [selectedAsset, setSelectedAsset] = useState<string>(quote);
 
   const queryClient = useQueryClient();
-  const balanceKey = assetKeys.balance({ account: "margin" });
 
   const { coins: portfolioResponse, refreshBalances, marginAccount, balances } = usePortfolioWs();
 

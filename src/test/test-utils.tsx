@@ -44,7 +44,10 @@ if (typeof HTMLElement !== "undefined") {
 }
 
 export const renderWithProviders = (ui: React.ReactElement, options?: Omit<RenderOptions, "wrapper">) => {
-  return render(<MantineProvider className="App">{ui}</MantineProvider>, options);
+  const wrapper = (node: React.ReactElement) => <MantineProvider className="App">{node}</MantineProvider>;
+  const result = render(wrapper(ui), options);
+  const rerender = (nextUi: React.ReactElement) => result.rerender(wrapper(nextUi));
+  return { ...result, rerender };
 };
 
 afterEach(() => {

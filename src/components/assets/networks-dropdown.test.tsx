@@ -1,6 +1,6 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "@/src/test/test-utils";
 import { queryResults } from "@/src/test/react-query-mock";
 
@@ -33,16 +33,16 @@ const chains = [
   { name: "Solana", symbol: "SOL", blockchain: "solana", standard: "SOL" },
 ];
 
+const allChainsKey = JSON.stringify(["assets", "supported-chains", ""]);
+const solChaKey = JSON.stringify(["assets", "supported-chains", "sol"]);
+
 describe("NetworksDropdown", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryResults[JSON.stringify(["assets", "supported-chains", ""])] = {
-      data: chains,
-      isLoading: false,
-    };
+    queryResults[allChainsKey] = { data: chains, isLoading: false };
   });
 
-  it("shows the selected network name and the warning note when opened", () => {
+  it("shows the selected network name and the warning note when opened", async () => {
     const setSelectedNetwork = vi.fn();
     renderWithProviders(
       <NetworksDropdown
@@ -53,11 +53,11 @@ describe("NetworksDropdown", () => {
     expect(screen.getByText("Ethereum")).toBeInTheDocument();
     fireEvent.click(screen.getByAltText("arrow"));
     expect(
-      screen.getByText(/Ensure you select a network that matches/)
+      await screen.findByText(/Ensure you select a network that matches/)
     ).toBeInTheDocument();
   });
 
-  it("selects a network from the list", () => {
+  it("selects a network from the list", async () => {
     const setSelectedNetwork = vi.fn();
     renderWithProviders(
       <NetworksDropdown
@@ -66,6 +66,7 @@ describe("NetworksDropdown", () => {
       />
     );
     fireEvent.click(screen.getByAltText("arrow"));
+    await screen.findByText("SOL");
     fireEvent.click(screen.getByText("SOL"));
     expect(setSelectedNetwork).toHaveBeenCalledWith({
       name: "Solana",
@@ -74,7 +75,8 @@ describe("NetworksDropdown", () => {
     });
   });
 
-  it("filters networks by the search query", () => {
+  it("refetches the supported networks when the search query changes", async () => {
+    queryResults[solChaKey] = { data: [chains[2]], isLoading: false };
     renderWithProviders(
       <NetworksDropdown
         selectedNetwork={{ name: "Bitcoin", symbol: "BTC", blockchain: "bitcoin" }}
@@ -82,10 +84,12 @@ describe("NetworksDropdown", () => {
       />
     );
     fireEvent.click(screen.getByAltText("arrow"));
-    fireEvent.change(screen.getByPlaceholderText("Search"), {
-      target: { value: "sol" },
-    });
+    const input = await screen.findByRole("textbox");
+    fireEvent.change(input, { target: { value: "sol" } });
+    await waitFor(() =>
+      expect(mocks.fetchSupportedChains).toHaveBeenCalledWith({ q: "sol" })
+    );
+    expect(await screen.findByText("SOL")).toBeInTheDocument();
     expect(screen.queryByText("ERC20")).not.toBeInTheDocument();
-    expect(screen.getByText("SOL")).toBeInTheDocument();
   });
 });

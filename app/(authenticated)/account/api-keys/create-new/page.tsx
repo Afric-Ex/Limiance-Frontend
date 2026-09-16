@@ -120,7 +120,7 @@ function CreateApiKeyInner() {
           </div>
           <ol className="text-xs text-gray-9 list-decimal pl-4">
             <li>
-              Afriq offers a robust API that allows you to access market data,
+              Limiance offers a robust API that allows you to access market data,
               execute trades, transfer assets, and process withdrawals.
             </li>
             <li>

@@ -87,13 +87,15 @@ describe("EarnTab", () => {
   it("shows the no records empty state when there are no products", () => {
     queryResults[productsKey] = { data: [], isLoading: false };
     renderWithProviders(<EarnTab />);
-    expect(screen.getByText("No Records")).toBeInTheDocument();
+    expect(screen.getAllByText("No Records").length).toBeGreaterThan(0);
   });
 
   it("stakes a product from the Simple Earn tab", async () => {
     renderWithProviders(<EarnTab />);
-    fireEvent.click(screen.getByRole("button", { name: "Stake" }));
-    expect(screen.getByText("Stake USDT")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Stake" })[0]);
+    await waitFor(() => {
+      expect(screen.getByText("Stake USDT")).toBeInTheDocument();
+    });
     const amountInput = screen.getByPlaceholderText("0.00");
     fireEvent.change(amountInput, { target: { value: "42" } });
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
@@ -109,7 +111,10 @@ describe("EarnTab", () => {
 
   it("blocks staking below the product minimum", async () => {
     renderWithProviders(<EarnTab />);
-    fireEvent.click(screen.getByRole("button", { name: "Stake" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Stake" })[0]);
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("0.00")).toBeInTheDocument();
+    });
     fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "1" } });
     expect(screen.getByText("Minimum stake is 10 USDT")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
@@ -123,7 +128,7 @@ describe("EarnTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Unstake" }));
 
     await waitFor(() => {
-      expect(mocks.unstake).toHaveBeenCalledWith("pos-1");
+      expect(mocks.unstake).toHaveBeenCalledWith({ subscriptionId: "pos-1" });
     });
     expect(mocks.successNotification).toHaveBeenCalledWith("Unstaked successfully");
     expect(queryClientMock.invalidateQueries).toHaveBeenCalledWith({

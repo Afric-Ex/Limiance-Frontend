@@ -16,5 +16,20 @@ export default defineConfig({
     css: false,
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     exclude: ["node_modules", ".next", ".scratch"],
+    testTimeout: 15000,
+    teardownTimeout: 5000,
+    pool: "threads",
+    poolOptions: {
+      threads: {
+        isolate: true,
+        maxThreads: 2,
+        minThreads: 1,
+      },
+    },
+    fileParallelism: true,
+    reporters: [
+      "default",
+      path.resolve(__dirname, "src/test/grouped-reporter.ts"),
+    ],
   },
 });

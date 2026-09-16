@@ -2,6 +2,7 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/src/test/test-utils";
 import { queryResults } from "@/src/test/react-query-mock";
+import { waitFor } from "@testing-library/react";
 
 vi.mock("@tanstack/react-query", async () => {
   const actual = await vi.importActual("@tanstack/react-query");
@@ -20,9 +21,12 @@ vi.mock("@/src/services/p2p", () => ({
   },
 }));
 
-const toastSuccess = vi.fn();
+const { toastSuccess, toastError } = vi.hoisted(() => ({
+  toastSuccess: vi.fn(),
+  toastError: vi.fn(),
+}));
 vi.mock("react-hot-toast", () => ({
-  default: { success: toastSuccess, error: vi.fn() },
+  toast: { success: toastSuccess, error: toastError },
 }));
 
 vi.mock("@/src/stores/user-store", () => ({
@@ -32,18 +36,23 @@ vi.mock("@/src/stores/user-store", () => ({
 
 import { GlobalP2PNotification } from "./global-p2p-notification";
 
-const withOrders = (orders: any[]) => ({ data: { data: orders } });
+const withOrders = (orders: any[]) => ({ data: { data: { data: orders } } });
 
 describe("GlobalP2PNotification", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryResults["all-matched-orders"] = { data: { data: [] } };
+    queryResults["all-matched-orders"] = { data: { data: { data: [] } } };
   });
 
   it("renders no visible content", () => {
     const { container } = renderWithProviders(<GlobalP2PNotification />);
     expect(container.querySelector("[data-testid]")).toBeNull();
-    expect(container.textContent?.trim() || "").toBe("");
+    const textWithoutStyles = Array.from(container.querySelectorAll("*"))
+      .filter((el) => el.tagName !== "STYLE" && el.tagName !== "SCRIPT")
+      .map((el) => el.textContent ?? "")
+      .join("")
+      .trim();
+    expect(textWithoutStyles).toBe("");
   });
 
   it("does not toast on initial load with no orders", () => {
@@ -59,7 +68,7 @@ describe("GlobalP2PNotification", () => {
     expect(toastSuccess).not.toHaveBeenCalled();
   });
 
-  it("toasts when a new order from a different advertiser appears", () => {
+  it("toasts when a new order from a different advertiser appears", async () => {
     queryResults["all-matched-orders"] = withOrders([
       { id: "o1", matcherId: "someone-else", type: "BUY" },
     ]);
@@ -72,7 +81,7 @@ describe("GlobalP2PNotification", () => {
     ]);
     rerender(<GlobalP2PNotification />);
     rerender(<GlobalP2PNotification />);
-    expect(toastSuccess).toHaveBeenCalled();
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
     expect(toastSuccess).toHaveBeenCalledWith(
       expect.stringContaining("You have a new SELL order!"),
       expect.objectContaining({ duration: 10000 })

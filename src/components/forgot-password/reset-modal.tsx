@@ -1,8 +1,10 @@
 import { Button, Loader } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { MdOutlineWarningAmber, MdClose } from "react-icons/md";
+import { MdClose } from "react-icons/md";
+import Image from "next/image";
 import { useAuthStore } from "@/src/stores/auth-store";
 import { useAuth } from "@/src/hooks/queries/use-auth";
+import { maskIdentifier } from "@/src/utils/mask-identifier";
 
 export const ResetModal = () => {
   const email = useAuthStore((state) => state.email);
@@ -19,19 +21,16 @@ export const ResetModal = () => {
         </button>
       </div>
 
-      <div className="flex items-center justify-center w-[124px] h-[124px] rounded-full mt-4 -mb-2 border-4 border-warning/10 relative">
-        <div className="absolute inset-0 bg-warning/10 rounded-full" />
-        <div className="relative z-10 w-full h-full flex items-center justify-center">
-          <MdOutlineWarningAmber size={56} className="text-warning drop-shadow-[0_0_24px_rgba(251,164,42,0.4)]" />
-        </div>
+      <div className="flex items-center justify-center w-[124px] h-[124px] rounded-full mt-4 -mb-2">
+        <Image src="/warning.svg" alt="Warning" width={124} height={124} />
       </div>
 
       <div className="flex items-center flex-col gap-8 w-full px-2 mt-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <h2 className="text-[32px] tracking-tight font-bold text-white">Reset Password?</h2>
           <div className="text-center text-white/50 text-base max-w-[380px] font-medium leading-relaxed">
-            Hi, <span className="text-yellow-500">{email}</span>.<br/><br/>
-            Please note that for your security, withdrawals, P2P selling, and payment services may be disabled for <strong className="text-white">24 hours</strong> after a password change.
+            Hi, <span className="text-primary">{maskIdentifier(email)}</span>.<br/><br/>
+            For your security, withdrawals, P2P selling, and payment services may be disabled for 24 hours after a password change.
           </div>
         </div>
 

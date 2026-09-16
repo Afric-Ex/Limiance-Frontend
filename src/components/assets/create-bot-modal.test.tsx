@@ -48,13 +48,14 @@ describe("CreateBotModal", () => {
     expect(screen.getByRole("button", { name: "Launch Bot" })).toBeDisabled();
   });
 
-  it("switches the strategy description panel", () => {
+  it("switches the strategy description panel", async () => {
     renderWithProviders(<CreateBotModal type="spot" />);
     expect(screen.getByText("DCA Strategy")).toBeInTheDocument();
-    const combos = screen.getAllByRole("combobox");
-    fireEvent.click(combos[1]);
-    fireEvent.click(screen.getAllByText("Grid")[0]);
-    expect(screen.getByText("Grid Strategy")).toBeInTheDocument();
+    const strategyInputs = screen.getAllByDisplayValue("DCA");
+    fireEvent.click(strategyInputs[strategyInputs.length - 1]);
+    const gridOption = await screen.findByText("Grid");
+    fireEvent.click(gridOption);
+    expect(await screen.findByText("Grid Strategy")).toBeInTheDocument();
   });
 
   it("launches the bot once an amount is entered", async () => {

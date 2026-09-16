@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useAuthStore } from "@/src/stores/auth-store";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { SignUpPageSkeleton } from "@/src/components/skeletons";
+import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function SignUp() {
   const [isAgreed, setIsAgreed] = useState(false);
@@ -17,6 +18,7 @@ function SignUp() {
 
   return (
     <main className="flex items-center flex-1 overflow-auto px-4 justify-center min-h-hero relative bg-landing bg-cover bg-no-repeat animate-fade-in max-[1150px]:bg-none max-[1150px]:bg-black page-enter">
+      <HeroDecorations />
       <div className="grid max-w-auth grid-cols-1 sm:grid-cols-2 gap-5 w-full items-center animate-fade-in max-[1150px]:flex max-[1150px]:flex-col max-[1150px]:justify-center">
         
         {/* Mobile Logo Header */}
@@ -87,7 +89,7 @@ function SignUp() {
               <Button
                 component={Link}
                 href={!isAgreed || !country ? "" : "/auth/signup/profile"}
-                className="!h-[52px] !rounded-xl disabled:!bg-gray-9 !bg-primary hover:!bg-primary/90 transition-colors"
+                className="!h-[55px] !rounded-xl !bg-primary hover:!bg-primary/90 hover:!shadow-[0_0_16px_rgba(77,119,240,0.3)] !text-white !font-bold !transition-all active:!scale-[0.98] data-[disabled]:!bg-gray-9 data-[disabled]:!text-white"
                 fullWidth
                 disabled={!isAgreed || !country}
               >

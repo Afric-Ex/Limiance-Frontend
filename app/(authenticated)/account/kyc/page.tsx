@@ -18,6 +18,8 @@ function KycPageInner() {
   const [polling, setPolling] = useState(false);
   const [pollCount, setPollCount] = useState(0);
   const [showBanner, setShowBanner] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const [activeToken, setActiveToken] = useState<string | null>(null);
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
@@ -126,6 +128,8 @@ function KycPageInner() {
     console.error("Sumsub error:", error);
     errorMessageHandler(new Error(error?.message || "An unknown error occurred"));
   };
+
+  if (!mounted) return <AccountKycSkeleton />;
 
   return (
     <main className="flex flex-col gap-6 max-w-2xl mx-auto w-full">

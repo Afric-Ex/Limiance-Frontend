@@ -30,6 +30,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { InlineLoading } from "@/src/components/shared/inline-loading";
 import { WalletDropdown } from "@/src/components/assets/wallet-dropdown";
 import { assetKeys, asset } from "@/src/services/asset";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { truncateCryptoAddress } from "@/src/utils/truncate-address";
@@ -134,26 +135,7 @@ function WithdrawalInner() {
     resolvedWalletId,
   } = useWithdrawal();
 
-  const { data: fundingBalance, isLoading: fundingBalanceLoading } = useQuery({
-    queryKey: assetKeys.balance({ account: "funding" }),
-    queryFn: () => asset.balance({ account: "funding" }),
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
-    staleTime: Infinity,
-  });
-
-  const { data: spotBalance, isLoading: spotBalanceLoading } = useQuery({
-    queryKey: assetKeys.balance({ account: "spot" }),
-    queryFn: () => asset.balance({ account: "spot" }),
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
-    staleTime: Infinity,
-  });
-
-  const { data: portfolio, isLoading: portfolioLoading } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: () => asset.fetchPortfolio(),
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
-    staleTime: 30_000,
-  });
+  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs();
 
   // Per-asset balance for the selected coin, in coin units
   const coinPortfolio = selectedCoin?.symbol
@@ -163,9 +145,6 @@ function WithdrawalInner() {
     ? parseFloat(coinPortfolio?.spotBalance ?? "0")
     : parseFloat(coinPortfolio?.fundingBalance ?? "0");
   const assetBalanceLoading = portfolioLoading;
-
-  const balance = sourceWallet === "spot" ? spotBalance : fundingBalance;
-  const balanceLoading = sourceWallet === "spot" ? spotBalanceLoading : fundingBalanceLoading;
 
   const [page, setPage] = useState(1);
   const limit = 30;

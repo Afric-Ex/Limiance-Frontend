@@ -3,8 +3,8 @@
 import React, { useState, useMemo } from "react";
 import ReactECharts from "echarts-for-react";
 import { useQuery } from "@tanstack/react-query";
-import { assetKeys, asset } from "@/src/services/asset";
 import { InlineLoading } from "../shared/inline-loading";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import dayjs from "dayjs";
 
 type Period = "7D" | "30D" | "90D" | "180D";
@@ -28,15 +28,7 @@ function extractBase(pair: string): string {
 export const AssetTrendChart = () => {
   const [period, setPeriod] = useState<Period>("30D");
 
-  const { data: portfolio, isLoading: portfolioLoading } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: () => asset.fetchPortfolio(),
-    select: (res: any) => {
-      const arr = Array.isArray(res) ? res : (res?.data?.data ?? res?.data ?? res?.items ?? []);
-      return Array.isArray(arr) ? arr : [];
-    },
-    staleTime: 60_000,
-  });
+  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs();
 
   const { data: moversRaw, isLoading: moversLoading } = useQuery({
     queryKey: ["pnl-movers"],

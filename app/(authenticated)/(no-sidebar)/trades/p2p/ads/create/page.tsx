@@ -7,9 +7,8 @@ import { Button, Select, NumberInput, Textarea, Checkbox, Tooltip, MultiSelect }
 import { useRouter } from "next/navigation";
 import { useCreateAd } from "@/src/hooks/p2p/use-p2p";
 import { CreateOrder } from "@/src/types/p2p";
-import { useQuery } from "@tanstack/react-query";
-import { assetKeys, asset as assetService } from "@/src/services/asset";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { MdInfoOutline } from "react-icons/md";
 import { getBanksForFiat } from "@/src/lib/banks";
 import { useAdvertiserInfo } from "@/src/hooks/p2p/use-p2p";
@@ -64,13 +63,10 @@ function CreateAdPageInner() {
   const feed = useMarketFeed(wsPair);
   const currentMarketPrice = selectedAsset === "USDT" ? 1 : feed.price;
 
-  // Real balance from funding account
-  const { data: portfolioData } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: () => assetService.fetchPortfolio()
-  });
+  // Real balance from funding account via WebSocket portfolio channel
+  const { coins: portfolioCoins } = usePortfolioWs();
 
-  const balanceArray = Array.isArray(portfolioData?.data) ? portfolioData.data : [];
+  const balanceArray = Array.isArray(portfolioCoins) ? portfolioCoins : [];
   const assetBalanceInfo = balanceArray.find((b: any) => 
     b.coin === selectedAsset || b.symbol === selectedAsset || b.asset === selectedAsset
   );

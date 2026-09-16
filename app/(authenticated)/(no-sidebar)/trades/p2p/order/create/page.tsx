@@ -7,8 +7,8 @@ import { OrderConfirmationModal } from "@/src/components/p2p/order-confirmation-
 import { Button, NumberInput, Loader } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { p2p, p2pKey } from "@/src/services/p2p";
-import { asset, assetKeys } from "@/src/services/asset";
 import { useMatchOrder, usePaymentMethods } from "@/src/hooks/p2p/use-p2p";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import toast from "react-hot-toast";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2PCreateOrderSkeleton } from "@/src/components/skeletons";
@@ -54,14 +54,8 @@ function PreOrderScreenContent() {
   const cryptoAmount = userAction === "Buy" ? numAmount / price : numAmount;
   const fiatAmount = userAction === "Buy" ? numAmount : numAmount * price;
 
-  // Fetch portfolio to get the per-asset funding balance (supports fractional amounts)
-  const { data: portfolio, isLoading: balanceLoading } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: asset.fetchPortfolio,
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
-    staleTime: 30_000,
-    enabled: userAction === "Sell",
-  });
+  // Fetch portfolio (WebSocket channel) to get the per-asset funding balance (supports fractional amounts)
+  const { coins: portfolio, isLoading: balanceLoading } = usePortfolioWs();
 
   const fundingBalance = userAction === "Sell"
     ? parseFloat(

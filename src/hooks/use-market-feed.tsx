@@ -67,7 +67,7 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
     try {
       const normalisedPair = pair.replace("/", "-").toUpperCase();
       const res = await api.get("trading/24_hours_movers", { params: { limit: 100 } });
-      const items = res.data?.data || [];
+      const items: any[] = Array.isArray(res.data?.data) ? res.data.data : [];
       const match = items.find(
         (m: any) => (m.symbol || m.pair || "").replace("/", "-").toUpperCase() === normalisedPair
       );

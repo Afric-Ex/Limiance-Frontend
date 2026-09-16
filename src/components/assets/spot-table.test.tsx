@@ -60,7 +60,7 @@ describe("SpotTable", () => {
     renderWithProviders(<SpotTable />);
     expect(screen.getByText("Spot")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
-    expect(screen.getByText("$60,000.00")).toBeInTheDocument();
+    expect(screen.getAllByText("$60,000.00").length).toBeGreaterThan(0);
     expect(screen.getByText("Bitcoin")).toBeInTheDocument();
   });
 

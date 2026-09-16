@@ -27,6 +27,8 @@ const kycBadge: Record<string, { label: string; color: string }> = {
 function ProfilePageInner() {
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const { data: kycStatus } = useQuery({
     queryKey: userKeys.kycStatus,
@@ -140,6 +142,8 @@ function ProfilePageInner() {
     },
     onError: (err) => errorMessageHandler(err),
   });
+
+  if (!mounted) return <AccountProfileSkeleton />;
 
   return (
     <main className="flex flex-col gap-8 max-w-5xl">

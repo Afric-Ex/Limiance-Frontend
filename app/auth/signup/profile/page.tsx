@@ -3,11 +3,13 @@ import SignupImage from "@/public/signup-image.png";
 import { RegisterForm } from "@/src/components/register/register-form";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { SignUpProfilePageSkeleton } from "@/src/components/skeletons";
+import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function Profile() {
   return (
     <main className="flex items-center flex-1 overflow-auto px-4 justify-center py-10 relative bg-landing bg-cover bg-no-repeat">
-      <div className="grid h-full overflow-auto max-w-auth grid-cols-1 sm:grid-cols-2 gap-5 w-full items-center">
+      <HeroDecorations />
+      <div className="grid h-full overflow-auto max-w-auth grid-cols-1 sm:grid-cols-2 gap-3 w-full items-start">
         <Image
           src={SignupImage}
           alt="Profile image"

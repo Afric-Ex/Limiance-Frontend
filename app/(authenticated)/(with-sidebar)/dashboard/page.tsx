@@ -30,7 +30,7 @@ import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { WalletCard } from "@/src/components/assets/wallet-card";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
@@ -98,6 +98,8 @@ function DashboardInner() {
   const router = useRouter();
 
   const [activeMarketTab, setActiveMarketTab] = useState("Holding");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // Use live WebSocket portfolio — already subscribed globally, no extra fetch needed
   const { coins: wsPortfolio } = usePortfolioWs();
@@ -269,6 +271,8 @@ function DashboardInner() {
       withArrow: true,
     },
   ];
+
+  if (!mounted) return <DashboardSkeleton />;
 
   return (
     <main className="flex flex-col pb-6 gap-6 w-full max-[1150px]:pb-[90px] page-enter max-[1150px]:px-2">

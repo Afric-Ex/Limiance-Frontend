@@ -1,9 +1,13 @@
+"use client";
+
 import { Tabs, TabsList, TabsPanel, TabsTab, TextInput } from "@mantine/core";
 import clsx from "clsx";
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/src/lib/axios";
 import { Search } from "../icons/search";
 
-const languages = [
+const fallbackLanguages = [
   "English",
   "Español",
   "英国人的",
@@ -33,9 +37,28 @@ const currencies = [
   "NGR - #",
 ];
 
+const getLanguageLabel = (item: any): string =>
+  typeof item === "string"
+    ? item
+    : item?.name ?? item?.label ?? item?.code ?? item?.value ?? String(item);
+
 export const LanguageDropdown = ({ isMobile }: { isMobile?: boolean }) => {
   const defaultLanguage = "English";
   const defaultCurrency = "USD - $";
+
+  const { data: apiLanguages } = useQuery({
+    queryKey: ["languages"],
+    queryFn: async () => {
+      const res = await api.get("/languages");
+      return res.data?.data ?? res.data ?? [];
+    },
+  });
+
+  const languages =
+    Array.isArray(apiLanguages) && apiLanguages.length > 0
+      ? apiLanguages
+      : fallbackLanguages;
+
   return (
     <div
       className={clsx(!isMobile && "w-[354px] rounded-lg", "bg-gray-17 p-5")}
@@ -67,24 +90,27 @@ export const LanguageDropdown = ({ isMobile }: { isMobile?: boolean }) => {
                 />
               </svg>
               <span className="text-8px max-w-[257px] text-white/55">
-                Your chosen langauage will be apply to your Afriq email,SMS,
+                Your chosen langauage will be apply to your Limiance email,SMS,
                 in-app notifications, and all devices you&apos;re logged into.
               </span>
             </span>
             <div className="grid grid-cols-3 gap-y-5 gap-2">
-              {languages.map((item) => (
-                <span
-                  className={clsx(
-                    defaultLanguage === item
-                      ? "font-semibold text-primary"
-                      : "text-gray-9 hover:text-white cursor-pointer",
-                    "text-10px"
-                  )}
-                  key={item}
-                >
-                  {item}
-                </span>
-              ))}
+              {languages.map((item) => {
+                const label = getLanguageLabel(item);
+                return (
+                  <span
+                    className={clsx(
+                      defaultLanguage === label
+                        ? "font-semibold text-primary"
+                        : "text-gray-9 hover:text-white cursor-pointer",
+                      "text-10px"
+                    )}
+                    key={label}
+                  >
+                    {label}
+                  </span>
+                );
+              })}
             </div>
           </div>
         </TabsPanel>

@@ -3,11 +3,12 @@
 import { TextInput, PasswordInput, Button, Divider } from "@mantine/core";
 import { useAuth } from "@/src/hooks/queries/use-auth";
 import Link from "next/link";
-import { GoogleLogin } from "@react-oauth/google";
 import dynamic from "next/dynamic";
 import { useRef } from "react";
 import type { GeeTestValidateResult } from "react-geetest-v4";
 import type { Login } from "@/src/types/auth";
+import { Google } from "../icons/google";
+import { useGoogleLogin } from "@react-oauth/google";
 
 const CaptchaButton = dynamic(
   () => import("./captcha-button").then((m) => m.CaptchaButton),
@@ -15,6 +16,7 @@ const CaptchaButton = dynamic(
 );
 
 const captchaId = process.env.NEXT_PUBLIC_GEETEST_CAPTCHA_ID;
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
 const inputStyles = {
   input:
@@ -24,6 +26,15 @@ const inputStyles = {
 
 export const LoginForm = () => {
   const { loginForm: form, submitLogin, loginLoading } = useAuth();
+
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: (tokenResponse) => {
+      console.log(tokenResponse.access_token);
+    },
+    onError: () => {
+      console.log("Login Failed");
+    },
+  });
 
   const showCaptchaRef = useRef<(() => void) | null>(null);
   const pendingLoginValues = useRef<Login | null>(null);
@@ -84,9 +95,9 @@ export const LoginForm = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <form onSubmit={form.onSubmit(submitLoginWithCaptcha)} className="flex flex-col gap-60px">
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-10">
+      <form onSubmit={form.onSubmit(submitLoginWithCaptcha)} className="flex flex-col gap-10px">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-6">
             <TextInput
               classNames={inputStyles}
               label="Email / Number"
@@ -134,29 +145,14 @@ export const LoginForm = () => {
           labelPosition="center"
         />
       </form>
-      {/* <button
+      <button
         type="button"
-        className="flex shadow-4 rounded-6px py-5 px-10 w-full bg-gray-8 items-center justify-between"
+        onClick={() => loginWithGoogle()}
+        className="flex items-center justify-center gap-3 w-full h-[55px] bg-[#181a20] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12] transition-colors rounded-xl"
       >
         <Google />
-        <span className="text-white font-medium">Log In with Google</span>
-        <span />
-      </button> */}
-      {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
-        <GoogleLogin
-          size="large"
-          text="continue_with"
-          width={400}
-          theme="filled_black"
-          onSuccess={(credentialResponse) => {
-            if (credentialResponse.credential)
-              console.log(credentialResponse.credential);
-          }}
-          onError={() => {
-            console.log("Login Failed");
-          }}
-        />
-      )}
+        <span className="text-white/80 font-bold text-sm">Log In with Google</span>
+      </button>
 
       {captchaId ? (
         <CaptchaButton

@@ -28,10 +28,9 @@ describe("SelectDepositMethod", () => {
 
   it("links to the p2p and deposit routes", () => {
     renderWithProviders(<SelectDepositMethod />);
-    const p2p = screen.getByText("P2P Trading").closest("a");
-    expect(p2p).toHaveAttribute("href", "/trades/p2p");
-    const deposit = screen.getByText("Crypto Deposit").closest("a");
-    expect(deposit).toHaveAttribute("href", "/transactions/deposit");
+    const goLinks = screen.getAllByRole("link", { name: /go/i });
+    expect(goLinks[0]).toHaveAttribute("href", "/trades/p2p");
+    expect(goLinks[1]).toHaveAttribute("href", "/transactions/deposit");
   });
 
   it("closes all modals when a Go action or the close button is clicked", () => {
@@ -39,7 +38,12 @@ describe("SelectDepositMethod", () => {
     const goButtons = screen.getAllByRole("button", { name: "Go" });
     fireEvent.click(goButtons[0]);
     expect(mocks.modalsCloseAll).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+
+    const allButtons = screen.getAllByRole("button");
+    const closeBtn = allButtons[0];
+    expect(goButtons).toHaveLength(2);
+    expect(closeBtn).not.toHaveTextContent("Go");
+    fireEvent.click(closeBtn);
     expect(mocks.modalsCloseAll).toHaveBeenCalledTimes(2);
   });
 });

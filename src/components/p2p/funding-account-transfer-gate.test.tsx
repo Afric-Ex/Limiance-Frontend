@@ -2,29 +2,34 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "@/src/test/test-utils";
-import { queryResults } from "@/src/test/react-query-mock";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
-vi.mock("@tanstack/react-query", async () => {
-  const actual = await vi.importActual("@tanstack/react-query");
-  const m = await import("@/src/test/react-query-mock");
-  return { ...actual, ...m.reactQueryMock };
-});
-
-const { fetchPortfolio } = vi.hoisted(() => ({
-  fetchPortfolio: vi.fn(() => Promise.resolve({ data: [] })),
-}));
-
-vi.mock("@/src/services/asset", () => ({
-  asset: { fetchPortfolio },
-  assetKeys: { portfolio: () => ["portfolio"] },
+vi.mock("@/src/hooks/use-portfolio-ws", () => ({
+  usePortfolioWs: vi.fn(),
 }));
 
 import { FundingAccountTransferGate } from "./funding-account-transfer-gate";
 
+const mockUsePortfolioWs = vi.mocked(usePortfolioWs);
+
+function mockWs(coins: any[] = []) {
+  mockUsePortfolioWs.mockReturnValue({
+    coins,
+    balances: {},
+    isLoading: false,
+    isAllocationsLoading: false,
+    allocations: null,
+    marginAccount: null,
+    futuresPositions: [],
+    isConnected: false,
+    refreshBalances: () => {},
+  } as any);
+}
+
 describe("FundingAccountTransferGate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryResults["portfolio"] = { data: [], isLoading: false };
+    mockWs([]);
   });
 
   const makeProps = (overrides = {}) => ({
@@ -43,10 +48,7 @@ describe("FundingAccountTransferGate", () => {
   });
 
   it("shows available balance from portfolio", () => {
-    queryResults["portfolio"] = {
-      data: [{ symbol: "BTC", spotBalance: "1.5", fundingBalance: "0" }],
-      isLoading: false,
-    };
+    mockWs([{ symbol: "BTC", spotBalance: "1.5", fundingBalance: "0" }]);
     renderWithProviders(<FundingAccountTransferGate {...makeProps()} />);
     expect(screen.getByText(/Available: 1.5 BTC/)).toBeInTheDocument();
   });
@@ -63,10 +65,7 @@ describe("FundingAccountTransferGate", () => {
   });
 
   it("calls onTransferComplete and onClose on confirm", () => {
-    queryResults["portfolio"] = {
-      data: [{ symbol: "BTC", spotBalance: "1.5", fundingBalance: "0" }],
-      isLoading: false,
-    };
+    mockWs([{ symbol: "BTC", spotBalance: "1.5", fundingBalance: "0" }]);
     const props = makeProps();
     renderWithProviders(<FundingAccountTransferGate {...props} />);
     const amountInput = screen.getByPlaceholderText("0.00");
@@ -79,10 +78,7 @@ describe("FundingAccountTransferGate", () => {
   });
 
   it("prevents transfer amount exceeding balance", () => {
-    queryResults["portfolio"] = {
-      data: [{ symbol: "BTC", spotBalance: "0.5", fundingBalance: "0" }],
-      isLoading: false,
-    };
+    mockWs([{ symbol: "BTC", spotBalance: "0.5", fundingBalance: "0" }]);
     renderWithProviders(<FundingAccountTransferGate {...makeProps()} />);
     const amountInput = screen.getByPlaceholderText("0.00");
     fireEvent.change(amountInput, { target: { value: "2" } });
