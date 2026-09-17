@@ -7,7 +7,7 @@ import { CapitalFlow } from "@/src/components/orders/capital-flow";
 import { DebtHistory } from "@/src/components/orders/debt-history";
 import { Liquidation } from "@/src/components/orders/liquidation";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { MarginOrdersSkeleton } from "@/src/components/skeletons";
+import { MarginOrdersSkeleton } from "@/src/components/skeletons/orders";
 
 function MarginOrdersInner() {
   return (

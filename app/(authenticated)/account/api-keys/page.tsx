@@ -14,7 +14,7 @@ import { CopyButton } from "@/src/components/shared/copy-button";
 import { MdVisibility, MdVisibilityOff, MdClose } from "react-icons/md";
 import clsx from "clsx";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { AccountApiKeysSkeleton } from "@/src/components/skeletons";
+import { AccountApiKeysSkeleton } from "@/src/components/skeletons/account";
 
 const PERMISSIONS = [
   { id: "read",     label: "Read",     desc: "View balances and orders" },

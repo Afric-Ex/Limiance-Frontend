@@ -1,7 +1,7 @@
 import { WalletCard } from "@/src/components/assets/wallet-card";
 import { FuturesTable } from "@/src/components/assets/futures-table";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { AssetsFuturesSkeleton } from "@/src/components/skeletons";
+import { AssetsFuturesSkeleton } from "@/src/components/skeletons/assets";
 
 function FuturesInner() {
   return (

@@ -11,7 +11,7 @@ import clsx from "clsx";
 import { MdOutlineAddCircleOutline, MdTrendingUp, MdTrendingDown } from "react-icons/md";
 import { LuBot } from "react-icons/lu";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { TradingBotsSkeleton } from "@/src/components/skeletons";
+import { TradingBotsSkeleton } from "@/src/components/skeletons/assets";
 
 type BotType = "spot" | "futures";
 

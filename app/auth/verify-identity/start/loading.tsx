@@ -1,4 +1,4 @@
-import { VerifyIdentityStartPageSkeleton } from "@/src/components/skeletons";
+import { VerifyIdentityStartPageSkeleton } from "@/src/components/skeletons/auth";
 
 export default function Loading() {
   return <VerifyIdentityStartPageSkeleton />;

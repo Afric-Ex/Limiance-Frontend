@@ -11,7 +11,7 @@ import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { MarketsPageSkeleton } from "@/src/components/skeletons";
+import { MarketsPageSkeleton } from "@/src/components/skeletons/with-sidebar";
 
 type TokenRow = {
   symbol: string;

@@ -1,9 +1,10 @@
+@import "../src/styles/animations.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* Global animation system — keyframes, scrollbar, focus rings, button press */
-@import "../src/styles/animations.css";
 
 :root {
   --background: #000000;

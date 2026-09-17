@@ -5,7 +5,7 @@ import { MarginRecords } from "@/src/components/orders/margin-records";
 import { FundingWallet } from "@/src/components/orders/funding-wallet";
 import { Crypto } from "@/src/components/orders/crypto";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { TransactionAnalysisSkeleton } from "@/src/components/skeletons";
+import { TransactionAnalysisSkeleton } from "@/src/components/skeletons/orders";
 
 function TransactionAnalysisInner() {
   return (

@@ -25,7 +25,7 @@ import { CancelOrderModal } from "@/src/components/p2p/cancel-order-modal";
 import { ReleaseCryptoModal } from "@/src/components/p2p/release-crypto-modal";
 import { DisputePanel } from "@/src/components/p2p/dispute-panel";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { P2POrderDetailSkeleton } from "@/src/components/skeletons";
+import { P2POrderDetailSkeleton } from "@/src/components/skeletons/p2p";
 
 function OrderRoomPageInner() {
   const params = useParams();

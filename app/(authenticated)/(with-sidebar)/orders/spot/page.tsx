@@ -4,7 +4,7 @@ import { OpenTab } from "@/src/components/orders/history-tab";
 import { OrderHistory } from "@/src/components/orders/order-history";
 import { OrderDetails } from "@/src/components/orders/order-details";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { SpotOrdersSkeleton } from "@/src/components/skeletons";
+import { SpotOrdersSkeleton } from "@/src/components/skeletons/orders";
 
 function SpotOrdersInner() {
   return (

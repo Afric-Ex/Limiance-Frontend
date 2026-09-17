@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { p2p, p2pKey } from "@/src/services/p2p";
 import { usePaymentMethods } from "@/src/hooks/p2p/use-p2p";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { P2PEditAdSkeleton } from "@/src/components/skeletons";
+import { P2PEditAdSkeleton } from "@/src/components/skeletons/p2p";
 
 function EditAdPageInner() {
   const router = useRouter();

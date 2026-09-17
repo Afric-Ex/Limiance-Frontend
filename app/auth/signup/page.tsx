@@ -8,7 +8,7 @@ import { countryData } from "@/src/utils/countries";
 import { useState } from "react";
 import { useAuthStore } from "@/src/stores/auth-store";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { SignUpPageSkeleton } from "@/src/components/skeletons";
+import { SignUpPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function SignUp() {

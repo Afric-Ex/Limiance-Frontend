@@ -4,7 +4,7 @@ import Pattern from "@/public/pattern.png";
 import Image from "next/image";
 import Link from "next/link";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { VerifyIdentityPageSkeleton } from "@/src/components/skeletons";
+import { VerifyIdentityPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 const instructions = [

@@ -1,4 +1,4 @@
-import { SignUpProfilePageSkeleton } from "@/src/components/skeletons";
+import { SignUpProfilePageSkeleton } from "@/src/components/skeletons/auth";
 
 export default function Loading() {
   return <SignUpProfilePageSkeleton />;

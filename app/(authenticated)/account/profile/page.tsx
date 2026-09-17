@@ -14,7 +14,7 @@ import { errorMessageHandler } from "@/src/lib/error-handler";
 import { CheckMark } from "@/src/components/icons/check-mark";
 import { isKycApproved } from "@/src/lib/normalize-kyc-status";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { AccountProfileSkeleton } from "@/src/components/skeletons";
+import { AccountProfileSkeleton } from "@/src/components/skeletons/account";
 
 const kycBadge: Record<string, { label: string; color: string }> = {
   pending:       { label: "Pending",    color: "bg-yellow-500/20 text-yellow-400" },

@@ -15,7 +15,7 @@ import { userKeys, userService } from "@/src/services/user";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { AccountCreateApiKeySkeleton } from "@/src/components/skeletons";
+import { AccountCreateApiKeySkeleton } from "@/src/components/skeletons/account";
 
 const inputStyles = {
   input: "!h-50px !bg-transparent !rounded",

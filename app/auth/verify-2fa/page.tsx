@@ -4,7 +4,7 @@ import { useAuth } from "@/src/hooks/queries/use-auth";
 import { useAuthStore } from "@/src/stores/auth-store";
 import { PinInput, Loader } from "@mantine/core";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { Verify2FAPageSkeleton } from "@/src/components/skeletons";
+import { Verify2FAPageSkeleton } from "@/src/components/skeletons/auth";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";

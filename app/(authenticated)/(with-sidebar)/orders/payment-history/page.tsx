@@ -17,7 +17,7 @@ import { MOCK_MODE } from "@/src/mocks";
 import { mockTrading } from "@/src/mocks/mock-trading";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { PaymentHistorySkeleton } from "@/src/components/skeletons";
+import { PaymentHistorySkeleton } from "@/src/components/skeletons/orders";
 
 const selectStyles = {
   input: "!h-11 !rounded-lg !bg-transparent",

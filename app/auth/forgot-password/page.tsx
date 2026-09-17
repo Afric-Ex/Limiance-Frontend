@@ -2,7 +2,7 @@ import Image from "next/image";
 import LoginImage from "@/public/login-image.png";
 import { ForgotPasswordForm } from "@/src/components/forgot-password/forgot-form";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { ForgotPasswordPageSkeleton } from "@/src/components/skeletons";
+import { ForgotPasswordPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function ForgotPassword() {

@@ -2,7 +2,7 @@ import Image from "next/image";
 import ResetImage from "@/public/reset-image.png";
 import { ResetPasswordForm } from "@/src/components/reset-password/reset-form";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { ResetPasswordPageSkeleton } from "@/src/components/skeletons";
+import { ResetPasswordPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function ResetPassword() {

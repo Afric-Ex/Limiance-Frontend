@@ -6,7 +6,7 @@ import { Select, Skeleton } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { useAllMatchedOrders } from "@/src/hooks/p2p/use-p2p";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { P2POrdersSkeleton } from "@/src/components/skeletons";
+import { P2POrdersSkeleton } from "@/src/components/skeletons/p2p";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",

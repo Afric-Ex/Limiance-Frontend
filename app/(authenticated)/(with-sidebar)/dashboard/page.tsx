@@ -34,7 +34,7 @@ import { useState, useEffect } from "react";
 import { WalletCard } from "@/src/components/assets/wallet-card";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { DashboardSkeleton } from "@/src/components/skeletons";
+import { DashboardSkeleton } from "@/src/components/skeletons/with-sidebar";
 import { KickstartJourney } from "@/src/components/dashboard/kickstart-journey";
 import { isKycApproved } from "@/src/lib/normalize-kyc-status";
 

@@ -2,7 +2,7 @@ import Image from "next/image";
 import VerifyImage from "@/public/verify-image.png";
 import { VerifyForm } from "@/src/components/verify-email/verify-form";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { VerifyEmailPageSkeleton } from "@/src/components/skeletons";
+import { VerifyEmailPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function VerifyEmail() {

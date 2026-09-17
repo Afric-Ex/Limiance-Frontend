@@ -7,7 +7,7 @@ import { IoSparklesOutline, IoShieldCheckmarkOutline } from "react-icons/io5";
 import { LuRepeat } from "react-icons/lu";
 import { FiCreditCard } from "react-icons/fi";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { BuyCryptoSkeleton } from "@/src/components/skeletons";
+import { BuyCryptoSkeleton } from "@/src/components/skeletons/with-sidebar";
 
 const tabs = [
   { label: "P2P Trading", href: "/trades/p2p" },

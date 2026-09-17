@@ -12,7 +12,7 @@ import { successNotification } from "@/src/lib/notification-handler";
 import { useState } from "react";
 import clsx from "clsx";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { AssetsEarnSkeleton } from "@/src/components/skeletons";
+import { AssetsEarnSkeleton } from "@/src/components/skeletons/assets";
 
 const PRODUCT_TABS = [
   "Simple Earn",

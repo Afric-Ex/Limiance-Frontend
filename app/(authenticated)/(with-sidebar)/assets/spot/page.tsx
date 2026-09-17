@@ -1,7 +1,7 @@
 import { WalletCard } from '@/src/components/assets/wallet-card';
 import { SpotTable } from '@/src/components/assets/spot-table';
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { AssetsSpotSkeleton } from "@/src/components/skeletons";
+import { AssetsSpotSkeleton } from "@/src/components/skeletons/assets";
 
 function SpotInner() {
   return (

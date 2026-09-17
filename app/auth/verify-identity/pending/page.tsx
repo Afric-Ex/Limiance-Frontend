@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/src/services/auth";
 import { isKycApproved } from "@/src/lib/normalize-kyc-status";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { VerifyIdentityPendingPageSkeleton } from "@/src/components/skeletons";
+import { VerifyIdentityPendingPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function VerifyIdentityPendingInner() {

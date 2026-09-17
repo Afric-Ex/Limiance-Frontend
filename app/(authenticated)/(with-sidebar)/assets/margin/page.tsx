@@ -10,7 +10,7 @@ import { MarginTermsInfo } from "@/src/components/assets/margin-terms-info";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { MarginAccountPanel } from "@/src/components/trades/margin-account-panel";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { AssetsMarginSkeleton } from "@/src/components/skeletons";
+import { AssetsMarginSkeleton } from "@/src/components/skeletons/assets";
 
 function MarginInner() {
   const [tradeMode, setTradeMode] = useState<"cross" | "isolated">("cross");

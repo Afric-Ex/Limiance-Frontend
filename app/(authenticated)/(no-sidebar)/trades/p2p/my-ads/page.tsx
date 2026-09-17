@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useUserAds, useDeactivateSingleOrder } from "@/src/hooks/p2p/use-p2p";
 import { UserAds } from "@/src/types/p2p";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { P2PMyAdsSkeleton } from "@/src/components/skeletons";
+import { P2PMyAdsSkeleton } from "@/src/components/skeletons/p2p";
 
 type AdStatus = "ACTIVE" | "INACTIVE" | "ALL";
 

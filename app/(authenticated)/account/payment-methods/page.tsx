@@ -13,7 +13,7 @@ import { Add } from "@/src/components/icons/add";
 import { MdVisibility, MdVisibilityOff, MdAccountBalance } from "react-icons/md";
 import clsx from "clsx";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { AccountPaymentMethodsSkeleton } from "@/src/components/skeletons";
+import { AccountPaymentMethodsSkeleton } from "@/src/components/skeletons/account";
 
 type Step = 1 | 2;
 

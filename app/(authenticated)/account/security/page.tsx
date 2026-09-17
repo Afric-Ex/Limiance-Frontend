@@ -14,7 +14,7 @@ import { MdSmartphone, MdDesktopMac, MdMailOutline } from "react-icons/md";
 import { BiCheck } from "react-icons/bi";
 import { CopyButton } from "@/src/components/shared/copy-button";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { AccountSecuritySkeleton } from "@/src/components/skeletons";
+import { AccountSecuritySkeleton } from "@/src/components/skeletons/account";
 
 type TwoFASetupData = {
   secret: string;

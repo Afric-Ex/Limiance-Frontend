@@ -7,7 +7,7 @@ import { MdVerified } from "react-icons/md";
 import { FaThumbsDown, FaThumbsUp } from "react-icons/fa";
 import { Loader } from "@mantine/core";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { P2PProfileSkeleton } from "@/src/components/skeletons";
+import { P2PProfileSkeleton } from "@/src/components/skeletons/p2p";
 
 function MyAdvertiserProfilePageInner() {
   const { data: advertiserData, isLoading } = useAdvertiserInfo();

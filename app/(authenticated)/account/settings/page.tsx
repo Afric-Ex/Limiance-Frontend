@@ -9,7 +9,7 @@ import { Loader } from "@mantine/core";
 import { MdCheck } from "react-icons/md";
 import clsx from "clsx";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { AccountSettingsSkeleton } from "@/src/components/skeletons";
+import { AccountSettingsSkeleton } from "@/src/components/skeletons/account";
 
 const CURRENCIES = ["USD", "EUR", "GBP", "NGN", "USDT"];
 

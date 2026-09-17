@@ -11,7 +11,7 @@ import { useMatchOrder, usePaymentMethods } from "@/src/hooks/p2p/use-p2p";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import toast from "react-hot-toast";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { P2PCreateOrderSkeleton } from "@/src/components/skeletons";
+import { P2PCreateOrderSkeleton } from "@/src/components/skeletons/p2p";
 
 function PreOrderScreenContent() {
   const router = useRouter();

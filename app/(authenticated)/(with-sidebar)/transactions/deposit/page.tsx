@@ -34,7 +34,7 @@ import { truncateCryptoAddress } from "@/src/utils/truncate-address";
 import { TablePagination } from "@/src/components/shared/table-pagination";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { DepositSkeleton } from "@/src/components/skeletons";
+import { DepositSkeleton } from "@/src/components/skeletons/orders";
 
 const faqs = [
   {

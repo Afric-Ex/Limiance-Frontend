@@ -3,7 +3,7 @@ import classes from "@/src/styles/assets-margin.module.css";
 import { ConvertTable } from "@/src/components/orders/convert-history";
 import { ConvertOpenOrders } from "@/src/components/orders/convert-open-orders";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { ConvertHistorySkeleton } from "@/src/components/skeletons";
+import { ConvertHistorySkeleton } from "@/src/components/skeletons/orders";
 
 function ConvertHistoryInner() {
   return (

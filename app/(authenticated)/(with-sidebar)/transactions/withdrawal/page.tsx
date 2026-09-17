@@ -37,7 +37,7 @@ import { truncateCryptoAddress } from "@/src/utils/truncate-address";
 import { TablePagination } from "@/src/components/shared/table-pagination";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { WithdrawalSkeleton } from "@/src/components/skeletons";
+import { WithdrawalSkeleton } from "@/src/components/skeletons/orders";
 
 const faqs = [
   {

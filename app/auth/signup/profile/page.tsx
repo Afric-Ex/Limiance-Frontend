@@ -2,7 +2,7 @@ import Image from "next/image";
 import SignupImage from "@/public/signup-image.png";
 import { RegisterForm } from "@/src/components/register/register-form";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { SignUpProfilePageSkeleton } from "@/src/components/skeletons";
+import { SignUpProfilePageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function Profile() {

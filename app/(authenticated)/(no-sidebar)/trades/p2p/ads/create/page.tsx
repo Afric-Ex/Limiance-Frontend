@@ -14,7 +14,7 @@ import { getBanksForFiat } from "@/src/lib/banks";
 import { useAdvertiserInfo } from "@/src/hooks/p2p/use-p2p";
 import { NonAdvertiserModal } from "@/src/components/p2p/non-advertiser-modal";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { P2PCreateAdSkeleton } from "@/src/components/skeletons";
+import { P2PCreateAdSkeleton } from "@/src/components/skeletons/p2p";
 
 const FIAT_RATES: Record<string, number> = {
   USD: 1,

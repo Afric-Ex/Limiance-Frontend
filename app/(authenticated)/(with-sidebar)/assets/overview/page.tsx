@@ -5,7 +5,7 @@ import { MyWallet } from "@/src/components/assets/my-wallet";
 import { RecentHistory } from "@/src/components/assets/recent-history";
 import { AssetTrendChart } from "@/src/components/assets/asset-trend-chart";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { AssetsOverviewSkeleton } from "@/src/components/skeletons";
+import { AssetsOverviewSkeleton } from "@/src/components/skeletons/assets";
 
 function OverviewInner() {
   return (

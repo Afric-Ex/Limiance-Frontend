@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { P2POrderListings } from "@/src/types/p2p";
 import { isAdvertiserBlocked } from "@/src/lib/p2p-user-actions";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { P2PMarketplaceSkeleton } from "@/src/components/skeletons";
+import { P2PMarketplaceSkeleton } from "@/src/components/skeletons/p2p";
 
 function P2PMarketplacePageInner() {
   const { adFilters } = useP2PStore();

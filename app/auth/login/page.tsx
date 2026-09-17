@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsPanel, TabsTab } from "@mantine/core";
 import classes from "@/src/styles/login.module.css";
 import { LoginForm } from "@/src/components/login/login-form";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { LoginPageSkeleton } from "@/src/components/skeletons";
+import { LoginPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function Login() {

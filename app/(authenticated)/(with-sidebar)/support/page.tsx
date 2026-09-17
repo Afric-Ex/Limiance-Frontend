@@ -17,7 +17,7 @@ import {
 } from "react-icons/ri";
 import { MdOutlineSupportAgent } from "react-icons/md";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { SupportPageSkeleton } from "@/src/components/skeletons";
+import { SupportPageSkeleton } from "@/src/components/skeletons/with-sidebar";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

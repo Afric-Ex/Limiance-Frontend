@@ -17,7 +17,7 @@ import { XTermOfUse } from "@/src/components/settings/x-term-of-use";
 import { useUserStore } from "@/src/stores/user-store";
 import { useState, useEffect } from "react";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { WithSidebarSettingsSkeleton } from "@/src/components/skeletons";
+import { WithSidebarSettingsSkeleton } from "@/src/components/skeletons/with-sidebar";
 
 function SettingsInner() {
   const user = useUserStore((state) => state.user);

@@ -42,7 +42,7 @@ import { IoChevronDown, IoChevronUp, IoSwapHorizontal, IoBarChartOutline, IoList
 import { MobileBottomSheet } from '@/src/components/shared/mobile-bottom-sheet';
 import { MobileBottomNav } from '@/src/components/shared/mobile-bottom-nav';
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { FuturesTradePageSkeleton } from "@/src/components/skeletons";
+import { FuturesTradePageSkeleton } from "@/src/components/skeletons/trades";
 
 const CandlestickChart = dynamic(
   () => import('@/src/components/trades/candlestick-char'),

@@ -9,7 +9,7 @@ import { useAdvertiserInfo, useBecomeAdvertiser } from "@/src/hooks/p2p/use-p2p"
 import { useUserStore } from "@/src/stores/user-store";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { P2PAdvertiserRegisterSkeleton } from "@/src/components/skeletons";
+import { P2PAdvertiserRegisterSkeleton } from "@/src/components/skeletons/p2p";
 
 const USE_MOCK = true; // Set to false when ready to enforce real rules
 

@@ -6,7 +6,7 @@ import { auth } from "@/src/services/auth";
 import SumsubWebSdk from "@sumsub/websdk-react";
 import { getKycAccessToken } from "@/src/lib/normalize-kyc-status";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { VerifyIdentityStartPageSkeleton } from "@/src/components/skeletons";
+import { VerifyIdentityStartPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function StartInner() {

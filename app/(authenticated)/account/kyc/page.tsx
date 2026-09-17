@@ -12,7 +12,7 @@ import SumsubWebSdk from "@sumsub/websdk-react";
 import { useUserStore } from "@/src/stores/user-store";
 import { getKycAccessToken, isKycApproved } from "@/src/lib/normalize-kyc-status";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
-import { AccountKycSkeleton } from "@/src/components/skeletons";
+import { AccountKycSkeleton } from "@/src/components/skeletons/account";
 
 function KycPageInner() {
   const queryClient = useQueryClient();
