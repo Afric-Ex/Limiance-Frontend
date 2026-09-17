@@ -18,14 +18,8 @@ export default defineConfig({
     exclude: ["node_modules", ".next", ".scratch"],
     testTimeout: 15000,
     teardownTimeout: 5000,
-    pool: "threads",
-    poolOptions: {
-      threads: {
-        isolate: true,
-        maxThreads: 2,
-        minThreads: 1,
-      },
-    },
+    pool: "forks",
+    maxWorkers: 2,
     fileParallelism: true,
     reporters: [
       "default",

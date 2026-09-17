@@ -2,11 +2,15 @@
   "name": "limiance-exchange",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "^22 || ^24"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -22,16 +26,16 @@
     "@react-oauth/google": "^0.12.1",
     "@sumsub/websdk-react": "^2.6.2",
     "@tanstack/react-query": "^5.63.0",
-    "axios": "^1.7.9",
+    "axios": "^1.20.0",
     "boring-avatars": "^2.0.4",
     "clsx": "^2.1.1",
     "cookies-next": "^5.0.2",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
-    "echarts": "^5.6.0",
-    "echarts-for-react": "^3.0.2",
+    "echarts": "^6.1.0",
+    "echarts-for-react": "^3.0.6",
     "firebase": "^12.16.0",
-    "next": "^15.5.14",
+    "next": "^15.5.25",
     "react": "^19.0.0",
     "react-countdown": "^2.3.6",
     "react-dom": "^19.0.0",
@@ -41,6 +45,9 @@
     "ws": "^8.18.0",
     "zod": "^3.24.1",
     "zustand": "^5.0.3"
+  },
+  "overrides": {
+    "postcss": "^8.5.28"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -55,9 +62,9 @@
     "eslint": "^9",
     "eslint-config-next": "15.1.0",
     "jsdom": "^27.0.1",
-    "postcss": "^8",
+    "postcss": "^8.5.28",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
-    "vitest": "^3.2.7"
+    "vitest": "^4.1.11"
   }
 }

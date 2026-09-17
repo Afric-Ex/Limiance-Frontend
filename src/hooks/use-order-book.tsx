@@ -49,7 +49,7 @@ export const useOrderBook = (pair: string): OrderBookData => {
   const fetchHttpFallback = useCallback(async () => {
     try {
       const wsPair = pair.replace("/", "-");
-      const res = await api.get("trading/spot/orderbook", { params: { pair: wsPair } });
+      const res = await api.get("trading/spot/orderbook", { params: { symbol: pair } });
       const payload = res.data?.data || res.data || {};
       
       const rawBids = Array.isArray(payload.bids) ? payload.bids : [];
