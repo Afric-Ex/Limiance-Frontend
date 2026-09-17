@@ -33,7 +33,7 @@ export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex flex-col h-full w-full">
       {/* P2P Header Nav */}
-      <div className="flex items-center space-x-8 border-b border-white/10 pb-4 mb-6 px-4 md:px-0 overflow-x-auto whitespace-nowrap">
+      <div className="flex items-center space-x-8 border-b border-white/10 pb-4 mb-6 px-4 overflow-x-auto whitespace-nowrap w-full max-w-7xl mx-auto">
         {navLinks.map((item) => {
           const isActive = pathname === item.link || (item.link !== "/trades/p2p" && pathname.startsWith(item.link));
           return (
@@ -61,7 +61,7 @@ export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
       {/* Page Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto w-full max-w-7xl mx-auto px-4">
         <GlobalP2PNotification />
         {children}
       </div>
