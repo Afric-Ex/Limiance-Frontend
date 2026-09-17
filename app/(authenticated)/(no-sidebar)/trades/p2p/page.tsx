@@ -13,7 +13,6 @@ import { P2POrderListings } from "@/src/types/p2p";
 import { isAdvertiserBlocked } from "@/src/lib/p2p-user-actions";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2PMarketplaceSkeleton } from "@/src/components/skeletons/p2p";
-import { FiBookOpen, FiClock, FiFileText, FiMessageCircle, FiShield, FiUser, FiRefreshCw } from "react-icons/fi";
 
 function P2PMarketplacePageInner() {
   const { adFilters } = useP2PStore();
@@ -62,46 +61,29 @@ function P2PMarketplacePageInner() {
   };
 
   return (
-    <P2PLayout light>
-      <div className="w-full max-w-[1373px] mx-auto py-2 max-[1150px]:pb-[90px] page-enter">
-        <div className="flex items-center justify-between border-b border-[#e4e8ef] pb-4 mb-7 max-[700px]:items-start max-[700px]:gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-[3px] bg-[#161a1e] text-white font-bold">L</div>
-            <h1 className="text-[28px] leading-none font-semibold tracking-[-0.02em] text-[#161a1e]">Limiance P2P</h1>
+    <P2PLayout>
+      <div className="w-full max-w-7xl mx-auto py-6 max-[1150px]:px-4 max-[1150px]:pb-[90px] max-[1150px]:py-4 page-enter">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-white">P2P Trading</h1>
+            <p className="text-white/50 text-sm mt-1">Buy and sell crypto peer-to-peer</p>
           </div>
-          <div className="flex items-center gap-6 text-sm font-medium text-[#727679] max-[700px]:hidden">
-            <a href="#p2p-guide" className="flex items-center gap-2 hover:text-[#161a1e]"><FiBookOpen size={16} /> User Guide</a>
-            <a href="/trades/p2p/orders" className="flex items-center gap-2 hover:text-[#161a1e]"><FiFileText size={16} /> Orders</a>
-            <a href="/trades/p2p/profile" className="flex items-center gap-2 hover:text-[#161a1e]"><FiUser size={16} /> P2P User Centre</a>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => refetch()}
+              className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10"
+            >
+              <span>⟳</span> Refresh
+            </button>
+            <Button
+              onClick={handlePostAd}
+              className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold"
+            >
+              + Post Ad
+            </Button>
           </div>
         </div>
-
-        <section id="p2p-guide" className="mb-8">
-          <div className="flex items-end justify-between mb-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-[#25ab42] font-semibold mb-2">Peer-to-peer, made simple</p>
-              <h2 className="text-2xl font-semibold text-[#161a1e]">Why use Limiance P2P</h2>
-            </div>
-            <button type="button" onClick={() => refetch()} className="flex items-center gap-2 text-sm font-semibold text-[#727679] hover:text-[#161a1e]">
-              <FiRefreshCw size={15} /> Refresh
-            </button>
-          </div>
-          <div className="grid grid-cols-4 gap-4 max-[900px]:grid-cols-2 max-[520px]:grid-cols-1">
-            {[
-              [FiShield, "Transparent transactions", "Trade directly with other users, with both parties in control of the terms and rates."],
-              [FiMessageCircle, "Competitive rates", "Compare offers from real advertisers and choose the rate that works for you."],
-              [FiFileText, "Flexible payment options", "Choose from a variety of supported payment methods for every trade."],
-              [FiClock, "Escrow protection", "Funds stay protected until both parties have fulfilled their obligations."],
-            ].map(([Icon, title, copy]) => {
-              const BenefitIcon = Icon as typeof FiShield;
-              return <div key={title as string} className="min-h-[150px] border border-[#e4e8ef] bg-white p-5 shadow-[0_4px_14px_rgba(31,45,61,0.04)]">
-                <BenefitIcon size={22} className="text-[#25ab42] mb-5" />
-                <h3 className="text-sm font-semibold capitalize text-[#161a1e] mb-2">{title as string}</h3>
-                <p className="text-xs leading-5 text-[#727679]">{copy as string}</p>
-              </div>;
-            })}
-          </div>
-        </section>
 
         <FilterBar />
 
@@ -143,15 +125,15 @@ function P2PMarketplacePageInner() {
             ))}
           </div>
         ) : listings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-[#727679] bg-white border border-[#e4e8ef]">
-            <div className="text-4xl mb-4">-</div>
-            <div className="text-lg font-semibold text-[#161a1e]">No ads found</div>
+          <div className="flex flex-col items-center justify-center py-20 text-white/50 bg-white/[0.02] border border-white/5 rounded-xl">
+            <div className="text-5xl mb-4">📭</div>
+            <div className="text-lg font-semibold text-white/70">No ads found</div>
             <div className="text-sm mt-1">Try adjusting your filters or check back later</div>
           </div>
         ) : (
           <>
             {/* Table Header */}
-            <div className="max-[1150px]:hidden grid grid-cols-[2fr_1.5fr_1.5fr_1.5fr_auto] gap-4 px-4 py-2 text-xs text-[#727679] uppercase tracking-wider mb-1">
+            <div className="max-[1150px]:hidden grid grid-cols-[2fr_1.5fr_1.5fr_1.5fr_auto] gap-4 px-4 py-2 text-xs text-white/40 uppercase tracking-wider mb-1">
               <span>Advertiser</span>
               <span>Price</span>
               <span>Quantity / Limits</span>
@@ -170,25 +152,25 @@ function P2PMarketplacePageInner() {
                 return (
                   <div
                     key={ad.id}
-                    className={`p-4 border transition-colors ${isOwn ? "border-[#f0c36a] bg-[#fffaf0]" : "border-[#e4e8ef] bg-white hover:border-[#bfd8c4]"} flex flex-col min-[1150px]:grid min-[1150px]:grid-cols-[2fr_1.5fr_1.5fr_1.5fr_auto] gap-4 max-[1150px]:gap-3 items-start min-[1150px]:items-center`}
+                    className={`p-4 rounded-xl border transition-colors ${isOwn ? "border-yellow-500/40 bg-yellow-500/5" : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"} flex flex-col min-[1150px]:grid min-[1150px]:grid-cols-[2fr_1.5fr_1.5fr_1.5fr_auto] gap-4 max-[1150px]:gap-3 items-start min-[1150px]:items-center`}
                   >
                     {/* Advertiser */}
                     <div
                       className="flex items-center gap-3 cursor-pointer group"
                       onClick={() => setSelectedAdvertiser(ad.advertiser)}
                     >
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-semibold text-white shrink-0 ${ad.advertiser?.verified ? "bg-[#25ab42]" : "bg-[#727679]"}`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 ${ad.advertiser?.verified ? "ring-2 ring-primary bg-gradient-to-br from-primary to-blue-600" : "bg-gradient-to-br from-gray-700 to-gray-600"}`}>
                         {advertiserName.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
                         <div className="flex items-center gap-1">
-                          {isOwn && <span className="text-xs bg-[#fff1d6] text-[#a56100] px-1.5 py-0.5 rounded mr-1">You</span>}
-                          <span className="text-[#161a1e] font-semibold text-sm group-hover:text-[#168331] transition-colors">{advertiserName}</span>
-                          {ad.advertiser?.verified && <span className="text-[#25ab42] text-xs">✓</span>}
+                          {isOwn && <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded mr-1">You</span>}
+                          <span className="text-white font-medium text-sm group-hover:text-primary transition-colors">{advertiserName}</span>
+                          {ad.advertiser?.verified && <span className="text-primary text-xs">✓</span>}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-[#727679]">{Math.floor(Number(ad.advertiser?.totalOrdersCompleted ?? 0))} Orders</span>
-                          <span className="text-xs text-[#c7ccd3]">|</span>
+                          <span className="text-xs text-white/40">{Math.floor(Number(ad.advertiser?.totalOrdersCompleted ?? 0))} Orders</span>
+                          <span className="text-xs text-white/40">|</span>
                           <span className={`text-xs font-medium ${completionColor}`}>{completionRate.toFixed(0)} %</span>
                         </div>
                       </div>
@@ -196,34 +178,34 @@ function P2PMarketplacePageInner() {
 
                     {/* Price */}
                     <div>
-                      <div className="text-xl font-bold text-[#161a1e] font-mono">
+                      <div className="text-xl font-bold text-white font-mono">
                         <span className="mr-1">{ad.fiat === "NGN" ? "₦" : ad.fiat === "USD" ? "$" : ad.fiat?.toUpperCase()}</span>
                         {parseFloat(String(ad.price ?? 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                       </div>
                     </div>
 
                     {/* Limits */}
-                    <div className="text-sm text-[#727679]">
+                    <div className="text-sm text-white/60">
                       <div>
-                        <span className="text-[#a1a1aa]">Quantity </span>
+                        <span className="text-white/40">Quantity </span>
                         {parseFloat(String(ad.availableQuantity ?? 0)).toLocaleString()} {ad.asset?.toUpperCase()}
                       </div>
                       <div className="mt-0.5">
-                        <span className="text-[#a1a1aa]">Limits </span>
+                        <span className="text-white/40">Limits </span>
                         {(ad.minQuantity ?? 0).toLocaleString()} – {(ad.maxQuantity ?? 0).toLocaleString()} {ad.asset?.toUpperCase()}
                       </div>
                     </div>
 
                     {/* Payment Methods */}
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[#c7ccd3] text-xs">|</span>
+                      <span className="text-white/20 text-xs">|</span>
                       {paymentMethods.slice(0, 3).map((pm) => (
-                        <span key={pm.id} className="text-xs text-[#161a1e] bg-[#f0f3f7] px-2 py-1 rounded-[2px]">
+                        <span key={pm.id} className="text-xs text-white/70">
                           {pm.method}
                         </span>
                       ))}
                       {paymentMethods.length > 3 && (
-                          <span className="text-xs text-[#727679]">
+                        <span className="text-xs text-white/40">
                           +{paymentMethods.length - 3}
                         </span>
                       )}
@@ -233,10 +215,10 @@ function P2PMarketplacePageInner() {
                     <div className="flex items-center justify-end min-w-[100px] max-[1150px]:w-full max-[1150px]:mt-2">
                       {isOwn ? (
                         <div className="flex min-[1150px]:flex-col items-center min-[1150px]:items-end justify-between w-full gap-1">
-                          <span className="text-xs font-semibold text-[#a56100] bg-[#fff1d6] border border-[#f0c36a] px-2 py-1 rounded">Your Ad</span>
+                          <span className="text-xs font-semibold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded">Your Ad</span>
                           <button
                             onClick={() => handleAdAction(ad, true)}
-                            className="text-xs text-[#727679] hover:text-[#161a1e] transition-colors"
+                            className="text-xs text-white/50 hover:text-white transition-colors"
                           >
                             Edit →
                           </button>
@@ -244,7 +226,7 @@ function P2PMarketplacePageInner() {
                       ) : (
                         <Button
                           size="sm"
-                          className={`max-[1150px]:w-full ${adFilters.type === "BUY" ? "bg-[#25ab42] hover:bg-[#168331] text-white font-semibold" : "bg-[#F6465D] hover:bg-[#d9364d] text-white font-semibold"}`}
+                          className={`max-[1150px]:w-full ${adFilters.type === "BUY" ? "bg-buy hover:bg-buy/90 text-white font-semibold" : "bg-[#F6465D] hover:bg-[#F6465D]/90 text-white font-semibold"}`}
                           onClick={() => handleAdAction(ad, false)}
                         >
                           {adFilters.type === "BUY" ? "Buy" : "Sell"} {ad.asset?.toUpperCase()}
