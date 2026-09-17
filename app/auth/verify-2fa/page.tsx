@@ -3,9 +3,12 @@
 import { useAuth } from "@/src/hooks/queries/use-auth";
 import { useAuthStore } from "@/src/stores/auth-store";
 import { PinInput, Loader } from "@mantine/core";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { Verify2FAPageSkeleton } from "@/src/components/skeletons/auth";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 function TotpCountdown() {
   const [remaining, setRemaining] = useState(() => 30 - (Math.floor(Date.now() / 1000) % 30));
@@ -28,7 +31,7 @@ function TotpCountdown() {
         <circle cx="16" cy="16" r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
         <circle
           cx="16" cy="16" r={r} fill="none"
-          stroke={remaining <= 5 ? "#ef4444" : "#4D77F0"}
+          stroke={remaining <= 5 ? "var(--color-warning-base)" : "var(--color-primary)"}
           strokeWidth="3"
           strokeDasharray={`${dash} ${circ}`}
           strokeLinecap="round"
@@ -42,7 +45,7 @@ function TotpCountdown() {
   );
 }
 
-export default function Verify2FAPage() {
+function Verify2FAPageInner() {
   const { push } = useRouter();
   const {
     emailOrPhone,
@@ -96,7 +99,8 @@ export default function Verify2FAPage() {
   };
 
   return (
-    <main className="flex items-center justify-center px-4 min-h-hero bg-landing bg-cover bg-no-repeat max-[1150px]:bg-none max-[1150px]:bg-black page-enter animate-fade-in">
+    <main className="flex items-center justify-center px-4 min-h-hero relative bg-landing bg-cover bg-no-repeat max-[1150px]:bg-none max-[1150px]:bg-black page-enter animate-fade-in">
+      <HeroDecorations />
       <div className="flex flex-col items-center gap-8 max-w-sm w-full">
         
         {/* Mobile Logo Header */}
@@ -153,5 +157,13 @@ export default function Verify2FAPage() {
         </button>
       </div>
     </main>
+  );
+}
+
+export default function Verify2FAPage() {
+  return (
+    <PageSuspense fallback={<Verify2FAPageSkeleton />}>
+      <Verify2FAPageInner />
+    </PageSuspense>
   );
 }

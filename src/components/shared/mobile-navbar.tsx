@@ -145,8 +145,8 @@ export const MobileNavbar = ({
       }}
       classNames={{
         body: "!flex-1 !overflow-auto !rounded-none",
-        header: "!bg-[#181a20]/90 !backdrop-blur-xl border-b border-b-white/[0.04]",
-        content: "!flex !flex-col !bg-[#181a20]/90 !backdrop-blur-xl",
+        header: "!bg-elevated/90 !backdrop-blur-xl border-b border-b-white/[0.04]",
+        content: "!flex !flex-col !bg-elevated/90 !backdrop-blur-xl",
       }}
       opened={opened}
       onClose={close}

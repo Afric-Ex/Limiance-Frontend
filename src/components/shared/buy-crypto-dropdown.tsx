@@ -2,7 +2,6 @@ import React from "react";
 import { QuickBuy } from "../icons/quick-buy";
 import { P2pTrading } from "../icons/p2p-trading";
 import { FiatOtc } from "../icons/fiat-otc";
-import { ConvertCoin } from "../icons/convert-coin";
 import clsx from "clsx";
 import Link from "next/link";
 

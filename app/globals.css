@@ -1,9 +1,10 @@
+@import "../src/styles/animations.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* Global animation system — keyframes, scrollbar, focus rings, button press */
-@import "../src/styles/animations.css";
 
 :root {
   --background: #000000;
@@ -12,6 +13,86 @@
   --primary: #4d77f0;
 
   --yellow-1: #debe31;
+
+  /* ── Limiance Exchange design tokens (source: Limiance-Exchange-Design-System.md §3) ── */
+
+  /* Brand + surfaces */
+  --color-primary: #4d77f0;
+  /* Darkened primary for filled surfaces that carry white text at AA (4.94:1 — spec §4.2 note 2) */
+  --color-primary-strong: #4168dd;
+  --color-surface: #121212;
+  --color-elevated: #222222;
+  --color-muted: #292929;
+  --color-tint-navy: #293556;
+  --color-border: #343434;
+
+  /* Text */
+  --color-text-primary: #e0e0e0;
+  --color-text-secondary: #727679;
+  --color-text-disabled: #666666;
+
+  /* Neutral */
+  --color-neutral-grey: #666666;
+  --color-neutral-grey-400: #a1a1aa;
+  --color-neutral-grey-200: #e4e4e7;
+  --color-neutral-off-white: #d9d9d9;
+  --color-neutral-white: #ffffff;
+  --color-neutral-black: #000000;
+
+  /* Semantic */
+  --color-buy: #25ab42;
+  --color-buy-tint: #25ab421a;
+  --color-buy-alt: #27ae60; /* unconfirmed duplicate token — see spec §13 */
+  --color-sell: #f6465d;
+  --color-success: #25ab42;
+  --color-error: #f6465d;
+  --color-warning-base: #ff9500;
+  --color-warning-text: #fba42a;
+
+  /* Effects */
+  --shadow-card: 0px 8px 25px rgba(102, 102, 102, 0.2), 8px 0px 20px rgba(0, 0, 0, 0.2);
+  --shadow-glow-primary: 1px 1px 30px -4px #4d77f0;
+
+  /* Spacing (multiples of 4) */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+
+  /* Sizing constants */
+  --size-container-desktop: 1440px;
+  --size-header-height: 72px;
+  --size-header-gutter: 32px;
+  --size-sidebar-width: 281px;
+  --size-sidebar-inner: 265px;
+  --size-auth-panel: 416px;
+  --size-input-standard: 55px;
+  --size-input-compact: 40px;
+  --size-button-primary: 65px;
+  --size-button-secondary: 64px;
+  --size-row-list: 56px;
+  --size-row-nav: 55px;
+
+  /* Typography (inferred ramp — spec §5 typography is unconfirmed; ordering guidance only) */
+  --text-display: 48px;
+  --text-heading: 32px;
+  --text-title: 24px;
+  --text-subtitle: 19px;
+  --text-body: 15px;
+  --text-caption: 13px;
+  --text-micro: 11px;
+
+  /* Radius (inferred — spec §3.5 unconfirmed; preserves observed 4/8/12/16/24 raster) */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
 
   /* ── Mobile Design System Tokens ── */
   --bg-deep: #0a0b0f;
@@ -38,6 +119,16 @@
 body {
   color: var(--foreground) !important;
   background: var(--background) !important;
+}
+
+/* ── Accessibility: visible keyboard focus (spec §11; ticket 10) ── */
+:where(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+:where(.bg-primary-strong, .bg-primary, .bg-buy, .bg-sell) :focus-visible {
+  outline-color: var(--color-neutral-grey-400);
 }
 
 button {

@@ -59,7 +59,7 @@ export const AccountSidebar = () => {
                   <item.icon
                     width={17}
                     height={17}
-                    color={isActive ? "var(--color-primary, #3B82F6)" : undefined}
+                    color={isActive ? "var(--color-primary, #4D77F0)" : undefined}
                     fillOpacity={isActive ? "1" : "0.5"}
                   />
                 </span>

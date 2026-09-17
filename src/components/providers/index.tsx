@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import React, { ReactNode } from "react";
-import { GoogleReCaptchaProvider } from "react19-google-recaptcha-v3";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
@@ -23,23 +22,15 @@ function Providers({ children }: { children: ReactNode }) {
 
   if (!isAuthPage) return <>{children}</>;
 
-  const withRecaptcha = (
-    <GoogleReCaptchaProvider
-      reCaptchaKey={(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string) ?? ""}
-    >
-      {children}
-    </GoogleReCaptchaProvider>
-  );
-
   if (GoogleOAuthProvider && GOOGLE_CLIENT_ID) {
     return (
       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-        {withRecaptcha}
+        {children}
       </GoogleOAuthProvider>
     );
   }
 
-  return withRecaptcha;
+  return <>{children}</>;
 }
 
 export default Providers;

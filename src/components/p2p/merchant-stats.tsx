@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { Avatar } from "@mantine/core";
 import { MdVerified } from "react-icons/md";
 import { FaThumbsUp } from "react-icons/fa";
 
@@ -22,7 +21,7 @@ export const MerchantStats = ({ name, verified, trades, completionRate, response
       <div className="flex flex-col">
         <div className="flex items-center gap-1">
           <span className="text-base font-semibold text-white">{name}</span>
-          {verified && <MdVerified className="text-[#0ECB81] text-sm" />}
+          {verified && <MdVerified className="text-buy text-sm" />}
         </div>
         <div className="flex items-center gap-2 text-xs text-white/50 mt-1">
           <span>{trades} orders</span>

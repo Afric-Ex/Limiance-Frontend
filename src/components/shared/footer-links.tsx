@@ -35,7 +35,7 @@ const footerLinks = [
           link: "",
         },
         {
-          name: "AfriqX app",
+          name: "Limiance X app",
           link: "",
         },
         {
@@ -182,7 +182,7 @@ const footerLinks = [
           link: "",
         },
         {
-          name: "Connect With AfriqX",
+          name: "Connect With Limiance X",
           link: "",
         },
         {

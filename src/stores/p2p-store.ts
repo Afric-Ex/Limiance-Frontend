@@ -110,7 +110,7 @@ interface P2PStore {
   fetchMyAds: () => Promise<void>;
 }
 
-export const useP2PStore = create<P2PStore>((set, get) => ({
+export const useP2PStore = create<P2PStore>((set, _get) => ({
   // Marketplace
   ads: [],
   adsLoading: false,
@@ -131,7 +131,7 @@ export const useP2PStore = create<P2PStore>((set, get) => ({
   // Active Order
   activeOrder: null,
   orderLoading: false,
-  fetchOrder: async (orderId) => {
+  fetchOrder: async (_orderId) => {
     set({ orderLoading: true });
     // TODO: implement API call
     set({ orderLoading: false });
@@ -146,10 +146,10 @@ export const useP2PStore = create<P2PStore>((set, get) => ({
   isChatLoading: false,
   counterpartyTyping: false,
   addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
-  sendMessage: async (content) => {
+  sendMessage: async (_content) => {
     // TODO: implement WebSocket / API
   },
-  sendImage: async (file) => {
+  sendImage: async (_file) => {
     // TODO: implement API upload & WS message
   },
   setIsConnected: (connected) => set({ isConnected: connected }),

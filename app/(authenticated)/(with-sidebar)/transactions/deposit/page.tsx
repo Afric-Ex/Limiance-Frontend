@@ -33,6 +33,8 @@ import { truncateCryptoAddress } from "@/src/utils/truncate-address";
 
 import { TablePagination } from "@/src/components/shared/table-pagination";
 import { IoMdInformationCircleOutline } from "react-icons/io";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { DepositSkeleton } from "@/src/components/skeletons/orders";
 
 const faqs = [
   {
@@ -82,7 +84,7 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-export default function Deposit() {
+function DepositInner() {
   const {
     selectedCoin,
     selectedNetwork,
@@ -475,5 +477,13 @@ export default function Deposit() {
         <TablePagination totalCount={history?.length ?? 0} page={page} setPage={setPage} limit={limit} />
       </div>
     </div>
+  );
+}
+
+export default function Deposit() {
+  return (
+    <PageSuspense fallback={<DepositSkeleton />}>
+      <DepositInner />
+    </PageSuspense>
   );
 }

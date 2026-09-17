@@ -6,8 +6,10 @@ import { MarginOrderDetails } from "@/src/components/orders/margin-order-details
 import { CapitalFlow } from "@/src/components/orders/capital-flow";
 import { DebtHistory } from "@/src/components/orders/debt-history";
 import { Liquidation } from "@/src/components/orders/liquidation";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { MarginOrdersSkeleton } from "@/src/components/skeletons/orders";
 
-export default function SpotOrders() {
+function MarginOrdersInner() {
   return (
     <Tabs classNames={classes} defaultValue="open">
       <TabsList>
@@ -39,5 +41,13 @@ export default function SpotOrders() {
         <Liquidation />
       </TabsPanel>
     </Tabs>
+  );
+}
+
+export default function SpotOrders() {
+  return (
+    <PageSuspense fallback={<MarginOrdersSkeleton />}>
+      <MarginOrdersInner />
+    </PageSuspense>
   );
 }

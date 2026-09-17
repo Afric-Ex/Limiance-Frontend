@@ -4,8 +4,11 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/src/services/auth";
 import { isKycApproved } from "@/src/lib/normalize-kyc-status";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { VerifyIdentityPendingPageSkeleton } from "@/src/components/skeletons/auth";
+import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
-export default function VerifyIdentityPending() {
+function VerifyIdentityPendingInner() {
   const router = useRouter();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -33,6 +36,7 @@ export default function VerifyIdentityPending() {
 
   return (
     <main className="flex flex-col gap-12 min-h-hero pt-10 relative bg-verifyIdentityBg bg-cover bg-no-repeat">
+      <HeroDecorations />
       <div className="flex max-w-1199px w-11/12 mx-auto flex-col gap-8">
         <h1 className="pb-3 border-b border-b-white/25 text-28px font-semibold">
           Identity verification
@@ -51,5 +55,13 @@ export default function VerifyIdentityPending() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function VerifyIdentityPending() {
+  return (
+    <PageSuspense fallback={<VerifyIdentityPendingPageSkeleton />}>
+      <VerifyIdentityPendingInner />
+    </PageSuspense>
   );
 }

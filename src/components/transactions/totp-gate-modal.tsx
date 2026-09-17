@@ -54,7 +54,7 @@ export const TotpGateModal = ({ onComplete }: { onComplete: (code: string) => vo
   };
 
   return (
-    <div className="bg-[#12131A] border border-white/[0.08] w-full max-w-md rounded-3xl p-6 sm:p-8 flex flex-col gap-8 shadow-2xl relative overflow-hidden mx-auto">
+    <div className="bg-elevated border border-white/[0.08] w-full max-w-md rounded-3xl p-6 sm:p-8 flex flex-col gap-8 shadow-2xl relative overflow-hidden mx-auto">
       <div className="flex items-center justify-between">
         <h4 className="text-lg font-bold text-white/90 tracking-tight">Security Verification</h4>
         <ModalClose className="cursor-pointer hover:bg-white/5 p-1 rounded-full transition-colors" onClick={modals.closeAll} />
@@ -63,7 +63,7 @@ export const TotpGateModal = ({ onComplete }: { onComplete: (code: string) => vo
       <div className="flex flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <h2 className="text-3xl font-extrabold tracking-tight">
-            <span className="text-[#3B82F6]">Authenticator</span> Code
+            <span className="text-primary">Authenticator</span> Code
           </h2>
           <p className="text-sm font-medium text-white/60 leading-relaxed">
             Open your authenticator app and enter the<br />6-digit code to confirm this withdrawal
@@ -81,7 +81,7 @@ export const TotpGateModal = ({ onComplete }: { onComplete: (code: string) => vo
             onComplete={(val) => { setCode(val); }}
             size="xl"
             classNames={{
-              input: "!bg-[#1e1f26] !border-white/[0.04] !text-white !text-xl !font-bold focus:!border-[#3B82F6] focus:!bg-[#252730] !rounded-xl !w-12 !h-14",
+              input: "!bg-muted !border-white/[0.04] !text-white !text-xl !font-bold focus:!border-primary focus:!bg-line !rounded-xl !w-12 !h-14",
             }}
           />
         </div>
@@ -91,7 +91,7 @@ export const TotpGateModal = ({ onComplete }: { onComplete: (code: string) => vo
           disabled={code.length !== 6}
           className="w-32 h-[44px] rounded-xl bg-white/10 hover:bg-white/20 transition-all text-sm disabled:bg-white/5 disabled:text-white/30 disabled:border-transparent data-[disabled]:opacity-100"
           style={{
-            backgroundColor: code.length === 6 ? '#3B82F6' : undefined,
+            backgroundColor: code.length === 6 ? 'var(--color-primary)' : undefined,
             color: code.length === 6 ? 'white' : undefined
           }}
         >

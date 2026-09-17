@@ -3,7 +3,7 @@
 import { Select, Table, TableTh, TableTr, TableTd, TableTbody, Skeleton } from "@mantine/core";
 import { EmptyTable } from "../icons/empty-table";
 import { useQuery } from "@tanstack/react-query";
-import { asset, assetKeys } from "@/src/services/asset";
+import { asset } from "@/src/services/asset";
 
 const selectStyles = {
   input: "!h-11 !rounded-xl !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !text-white !bg-[#181a20] !text-sm !font-medium !transition-all !duration-200",

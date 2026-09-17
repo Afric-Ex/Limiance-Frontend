@@ -9,8 +9,10 @@ import { useRouter, useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { p2p, p2pKey } from "@/src/services/p2p";
 import { usePaymentMethods } from "@/src/hooks/p2p/use-p2p";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { P2PEditAdSkeleton } from "@/src/components/skeletons/p2p";
 
-export default function EditAdPage() {
+function EditAdPageInner() {
   const router = useRouter();
   const params = useParams();
   const adId = params.id as string;
@@ -117,7 +119,7 @@ export default function EditAdPage() {
                 rightSection={<span className="text-white/50 pr-4">{fiat}</span>}
                 classNames={{
                   label: "text-white/70 mb-2 font-medium",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-[#0ECB81] transition-all w-64"
+                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all w-64"
                 }}
               />
             </div>
@@ -136,7 +138,7 @@ export default function EditAdPage() {
                 rightSection={<span className="text-white/50 pr-4">{asset}</span>}
                 classNames={{
                   label: "text-white/70 mb-2 font-medium",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-[#0ECB81] transition-all"
+                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all"
                 }}
               />
             </div>
@@ -148,7 +150,7 @@ export default function EditAdPage() {
                 hideControls
                 classNames={{
                   label: "text-white/70 mb-2 font-medium",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-[#0ECB81] transition-all"
+                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all"
                 }}
               />
               <div className="text-white/50 pt-10">~</div>
@@ -160,7 +162,7 @@ export default function EditAdPage() {
                 rightSection={<span className="text-white/50 pr-4">{fiat}</span>}
                 classNames={{
                   label: "text-white/70 mb-2 font-medium",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-[#0ECB81] transition-all"
+                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all"
                 }}
               />
             </div>
@@ -205,9 +207,9 @@ export default function EditAdPage() {
               ]}
               classNames={{
                 label: "text-white/70 mb-2 font-medium",
-                input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-[#0ECB81] transition-all",
-                dropdown: "bg-[#111] border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-                option: "hover:bg-white/10 data-[combobox-selected]:bg-[#0ECB81]/20 data-[combobox-selected]:text-[#0ECB81] rounded-lg mx-1 my-0.5 transition-colors"
+                input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all",
+                dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
+                option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors"
               }}
             />
             <div className="col-span-2">
@@ -218,7 +220,7 @@ export default function EditAdPage() {
                 minRows={3}
                 classNames={{
                   label: "text-white/70 mb-2 font-medium",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white rounded-xl focus:border-[#0ECB81] transition-all p-4"
+                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white rounded-xl focus:border-buy transition-all p-4"
                 }}
               />
             </div>
@@ -230,7 +232,7 @@ export default function EditAdPage() {
                 minRows={2}
                 classNames={{
                   label: "text-white/70 mb-2 font-medium",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white rounded-xl focus:border-[#0ECB81] transition-all p-4"
+                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white rounded-xl focus:border-buy transition-all p-4"
                 }}
               />
             </div>
@@ -250,7 +252,7 @@ export default function EditAdPage() {
             </Button>
             <Button 
               size="lg" 
-              className="flex-1 bg-[#0ECB81] hover:bg-[#0ECB81]/90 shadow-[0_0_20px_rgba(14,203,129,0.3)] text-white rounded-xl h-14 font-bold"
+              className="flex-1 bg-buy hover:bg-buy/90 shadow-[0_0_20px_rgba(14,203,129,0.3)] text-white rounded-xl h-14 font-bold"
               disabled={!price || !totalAmount || !minOrder || !maxOrder || selectedMethods.length === 0}
               onClick={() => router.push("/trades/p2p/my-ads")}
             >
@@ -268,5 +270,13 @@ export default function EditAdPage() {
         onChangeSelected={setSelectedMethods}
       />
     </P2PLayout>
+  );
+}
+
+export default function EditAdPage() {
+  return (
+    <PageSuspense fallback={<P2PEditAdSkeleton />}>
+      <EditAdPageInner />
+    </PageSuspense>
   );
 }

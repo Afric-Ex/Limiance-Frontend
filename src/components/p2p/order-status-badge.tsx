@@ -22,7 +22,7 @@ export const OrderStatusBadge = ({ status, className }: OrderStatusBadgeProps) =
       break;
     case "RELEASED":
     case "COMPLETED":
-      colorClass = "bg-[#0ECB81]/20 text-[#0ECB81] border-[#0ECB81]/30";
+      colorClass = "bg-buy/20 text-buy border-buy/30";
       break;
     case "CANCELLED":
       colorClass = "bg-gray-500/20 text-gray-400 border-gray-500/30";

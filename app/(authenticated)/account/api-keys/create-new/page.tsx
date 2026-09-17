@@ -14,13 +14,15 @@ import { mockApiKeys } from "@/src/mocks/mock-api-keys";
 import { userKeys, userService } from "@/src/services/user";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { AccountCreateApiKeySkeleton } from "@/src/components/skeletons/account";
 
 const inputStyles = {
   input: "!h-50px !bg-transparent !rounded",
   label: "!text-sm",
 };
 
-export default function CreateApiKey() {
+function CreateApiKeyInner() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
@@ -118,7 +120,7 @@ export default function CreateApiKey() {
           </div>
           <ol className="text-xs text-gray-9 list-decimal pl-4">
             <li>
-              Afriq offers a robust API that allows you to access market data,
+              Limiance offers a robust API that allows you to access market data,
               execute trades, transfer assets, and process withdrawals.
             </li>
             <li>
@@ -222,5 +224,13 @@ export default function CreateApiKey() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function CreateApiKeyPage() {
+  return (
+    <PageSuspense fallback={<AccountCreateApiKeySkeleton />}>
+      <CreateApiKeyInner />
+    </PageSuspense>
   );
 }

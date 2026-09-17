@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { ActionIcon, Textarea, Tooltip } from "@mantine/core";
-import { MdSend, MdImage, MdClose } from "react-icons/md";
+import React, { useState } from "react";
+import { ActionIcon, Textarea } from "@mantine/core";
+import { MdSend } from "react-icons/md";
 
 interface ChatInputProps {
   onSendMessage: (content: string) => void;

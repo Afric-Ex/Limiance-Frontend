@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
 import { OrderConfirmationModal } from "@/src/components/p2p/order-confirmation-modal";
 import { Button, NumberInput, Loader } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { p2p, p2pKey } from "@/src/services/p2p";
-import { asset, assetKeys } from "@/src/services/asset";
 import { useMatchOrder, usePaymentMethods } from "@/src/hooks/p2p/use-p2p";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import toast from "react-hot-toast";
-import { Suspense } from "react";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { P2PCreateOrderSkeleton } from "@/src/components/skeletons/p2p";
 
 function PreOrderScreenContent() {
   const router = useRouter();
@@ -53,14 +54,8 @@ function PreOrderScreenContent() {
   const cryptoAmount = userAction === "Buy" ? numAmount / price : numAmount;
   const fiatAmount = userAction === "Buy" ? numAmount : numAmount * price;
 
-  // Fetch portfolio to get the per-asset funding balance (supports fractional amounts)
-  const { data: portfolio, isLoading: balanceLoading } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: asset.fetchPortfolio,
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
-    staleTime: 30_000,
-    enabled: userAction === "Sell",
-  });
+  // Fetch portfolio (WebSocket channel) to get the per-asset funding balance (supports fractional amounts)
+  const { coins: portfolio, isLoading: balanceLoading } = usePortfolioWs();
 
   const fundingBalance = userAction === "Sell"
     ? parseFloat(
@@ -139,7 +134,7 @@ function PreOrderScreenContent() {
           {/* Left: Ad Details */}
           <div className="flex flex-col gap-4">
             {/* Advertiser Card */}
-            <div className="bg-[#111] border border-white/[0.05] shadow-xl rounded-2xl max-[1150px]:rounded-xl p-6 max-[1150px]:p-4">
+            <div className="bg-surface border border-white/[0.05] shadow-xl rounded-2xl max-[1150px]:rounded-xl p-6 max-[1150px]:p-4">
               <div className="flex items-center gap-4 mb-6">
                 <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold text-white ${ad.advertiser?.verified ? "ring-2 ring-blue-500 bg-blue-500/20" : "bg-white/10"}`}>
                   {advertiserName.slice(0, 2).toUpperCase()}
@@ -186,7 +181,7 @@ function PreOrderScreenContent() {
             {/* Remarks */}
             {ad.remark && (
               <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5">
-                <div className="text-white/60 text-sm font-medium mb-2">Advertiser's Remarks</div>
+                <div className="text-white/60 text-sm font-medium mb-2">Advertiser&apos;s Remarks</div>
                 <div className="text-white/80 text-sm whitespace-pre-line leading-relaxed">{ad.remark}</div>
               </div>
             )}
@@ -297,7 +292,7 @@ function PreOrderScreenContent() {
               <Button
                 size="xl"
                 radius="md"
-                className={`w-full font-bold text-base shadow-lg ${userAction === "Buy" ? "bg-[#0ECB81] hover:bg-[#0ECB81]/90 shadow-[#0ECB81]/20" : "bg-[#F6465D] hover:bg-[#F6465D]/90 shadow-[#F6465D]/20"} text-white transition-all`}
+                className={`w-full font-bold text-base shadow-lg ${userAction === "Buy" ? "bg-buy hover:bg-buy/90 shadow-[#0ECB81]/20" : "bg-[#F6465D] hover:bg-[#F6465D]/90 shadow-[#F6465D]/20"} text-white transition-all`}
                 disabled={!canProceed}
                 onClick={() => setIsModalOpen(true)}
               >
@@ -330,14 +325,8 @@ function PreOrderScreenContent() {
 
 export default function PreOrderScreen() {
   return (
-    <Suspense fallback={
-      <P2PLayout>
-        <div className="flex justify-center items-center h-full min-h-[400px]">
-          <Loader color="blue" size="lg" />
-        </div>
-      </P2PLayout>
-    }>
+    <PageSuspense fallback={<P2PCreateOrderSkeleton />}>
       <PreOrderScreenContent />
-    </Suspense>
+    </PageSuspense>
   );
 }

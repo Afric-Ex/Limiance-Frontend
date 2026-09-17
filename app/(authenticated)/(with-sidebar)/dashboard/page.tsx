@@ -30,9 +30,13 @@ import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { WalletCard } from "@/src/components/assets/wallet-card";
 import { Skeleton } from "@/src/components/shared/skeleton";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { DashboardSkeleton } from "@/src/components/skeletons/with-sidebar";
+import { KickstartJourney } from "@/src/components/dashboard/kickstart-journey";
+import { isKycApproved } from "@/src/lib/normalize-kyc-status";
 
 const depositChannels = [
   {
@@ -91,20 +95,24 @@ const marketTabs = [
   "24h Volume",
 ];
 
-function Dashboard() {
+function DashboardInner() {
   const user = useUserStore((state) => state.user);
   const router = useRouter();
 
   const [activeMarketTab, setActiveMarketTab] = useState("Holding");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // Use live WebSocket portfolio — already subscribed globally, no extra fetch needed
   const { coins: wsPortfolio } = usePortfolioWs();
 
-  const { data: kycStatus } = useQuery({
+  const { data: kycStatus, refetch: refetchKycStatus } = useQuery({
     queryKey: userKeys.kycStatus,
     queryFn: () => userService.getKycStatus(),
     select: (res) => res?.data?.status,
   });
+
+  const isKycComplete = Boolean(user?.isIDverified || isKycApproved(kycStatus));
 
   const feed = useMarketFeed("BTC/USDT");
 
@@ -268,6 +276,8 @@ function Dashboard() {
     },
   ];
 
+  if (!mounted) return <DashboardSkeleton />;
+
   return (
     <main className="flex flex-col pb-6 gap-6 w-full max-[1150px]:pb-[90px] page-enter max-[1150px]:px-2">
       {/* Top Bar - Flat design */}
@@ -306,6 +316,14 @@ function Dashboard() {
           ))}
         </div>
       </div>
+
+      {/* Kick Start Your Journey KYC Section - Only shown for users who haven't completed KYC */}
+      {!isKycComplete && (
+        <KickstartJourney
+          kycStatus={kycStatus}
+          onRefreshStatus={() => refetchKycStatus()}
+        />
+      )}
 
       {/* Grid wrapper */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-[1150px]:gap-4 items-start w-full">
@@ -483,4 +501,10 @@ function Dashboard() {
   );
 }
 
-export default Dashboard;
+export default function Dashboard() {
+  return (
+    <PageSuspense fallback={<DashboardSkeleton />}>
+      <DashboardInner />
+    </PageSuspense>
+  );
+}

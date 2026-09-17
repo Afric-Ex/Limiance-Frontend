@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/src/services/auth";
 import SumsubWebSdk from "@sumsub/websdk-react";
 import { getKycAccessToken } from "@/src/lib/normalize-kyc-status";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { VerifyIdentityStartPageSkeleton } from "@/src/components/skeletons/auth";
+import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
-export default function Start() {
+function StartInner() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -54,6 +57,7 @@ export default function Start() {
 
   return (
     <main className="flex flex-col gap-12 min-h-hero pt-10 relative bg-verifyIdentityBg bg-cover bg-no-repeat">
+      <HeroDecorations />
       <div className="flex max-w-1199px w-11/12 mx-auto flex-col gap-8">
         <h1 className="pb-3 border-b border-b-white/25 text-28px font-semibold">
           Identity verification
@@ -92,5 +96,13 @@ export default function Start() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function Start() {
+  return (
+    <PageSuspense fallback={<VerifyIdentityStartPageSkeleton />}>
+      <StartInner />
+    </PageSuspense>
   );
 }

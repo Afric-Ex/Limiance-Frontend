@@ -8,7 +8,6 @@ import { ActionIcon, Badge, Tooltip, Loader } from "@mantine/core";
 import { MdWarning } from "react-icons/md";
 import { useFetchChats, useSendChatMessage } from "@/src/hooks/p2p/use-p2p";
 import { P2PChatMessage } from "@/src/types/p2p";
-import toast from "react-hot-toast";
 
 interface ChatWindowProps {
   chatId: string;
@@ -16,7 +15,7 @@ interface ChatWindowProps {
 }
 
 export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
-  const [isTyping, setIsTyping] = useState(false); // Mock typing for now until WS is fully integrated
+  const [isTyping] = useState(false); // Mock typing for now until WS is fully integrated
   
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -65,7 +64,7 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
 
 
   return (
-    <div className="flex flex-col h-full bg-[#131320]/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden relative">
+    <div className="flex flex-col h-full bg-elevated/80 backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden relative">
       {/* Subtle inner highlight */}
       <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent z-10"></div>
       

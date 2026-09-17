@@ -1,13 +1,12 @@
 "use client";
 
-import { Checkbox, Table, TableTd, TableTh, TableTr } from "@mantine/core";
-import { assetKeys, asset } from "@/src/services/asset";
-import { useQuery } from "@tanstack/react-query";
+import { Table, TableTd, TableTh, TableTr } from "@mantine/core";
 import { InlineLoading } from "../shared/inline-loading";
 import { useState } from "react";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { ConvertAsset } from "../transactions/convert-asset";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 import { useRouter } from "next/navigation";
 
@@ -15,14 +14,7 @@ export const FuturesTable = () => {
   const [hideSmallBalances, setHideSmallBalances] = useState(false);
   const router = useRouter();
 
-  const { data: portfolio, isLoading: portfolioLoading } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: asset.fetchPortfolio,
-    select: (res: any) => (Array.isArray(res) ? res : res?.data) || [],
-    staleTime: 30_000,
-    throwOnError: false,
-    retry: false,
-  });
+  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs();
 
   return (
     <div className="flex flex-col gap-4 animate-fade-up">

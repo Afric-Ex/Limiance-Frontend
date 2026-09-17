@@ -9,7 +9,7 @@ interface TickerItem {
 }
 
 function extractBase(pair: string): string {
-  let sym = pair || "";
+  const sym = pair || "";
   if (sym.includes("/")) return sym.split("/")[0];
   if (sym.includes("_")) return sym.split("_")[0];
   if (sym.includes("-")) return sym.split("-")[0];

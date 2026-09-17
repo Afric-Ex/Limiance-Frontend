@@ -237,7 +237,9 @@ export const usePortfolioWs = (): PortfolioWsData => {
 
   // refreshBalances uses WS when connected, HTTP otherwise
   const refreshBalances = useCallback(() => {
-    const token = getCookie("auth-token");
+    const token =
+      (typeof localStorage !== "undefined" ? localStorage.getItem("auth-token") : null) ||
+      getCookie("auth-token");
     if (!token) {
       applyHttpFallbackData();
       return;
@@ -246,7 +248,7 @@ export const usePortfolioWs = (): PortfolioWsData => {
     if (wsClient.getIsConnected()) {
       wsClient.send({ type: "get_portfolio", data: { page: "1", limit: "100", query: "" } });
       wsClient.send({ type: "get_portfolio_balance_allocations", data: {} });
-      wsClient.send({ type: "get_portfolio_balance", data: {} });
+      wsClient.send({ type: "get_portfolio_balance", data: { account: "spot" } });
       wsClient.send({ type: "get_margin_account", data: {} });
       wsClient.send({ type: "get_futures_positions", data: {} });
     } else {
@@ -255,7 +257,9 @@ export const usePortfolioWs = (): PortfolioWsData => {
   }, [applyHttpFallbackData]);
 
   useEffect(() => {
-    const token = getCookie("auth-token");
+    const token =
+      (typeof localStorage !== "undefined" ? localStorage.getItem("auth-token") : null) ||
+      getCookie("auth-token");
     if (!token) {
       applyHttpFallbackData();
       return;
@@ -310,7 +314,7 @@ export const usePortfolioWs = (): PortfolioWsData => {
     unsubs.push(
       wsClient.subscribe(
         "portfolio_balance",
-        { type: "get_portfolio_balance", data: {} },
+        { type: "get_portfolio_balance", data: { account: "spot" } },
         (rawPayload, fullMsg) => {
           const raw = fullMsg?.data?.data ?? fullMsg?.data ?? rawPayload;
           if (raw && raw.inUsd !== undefined) {

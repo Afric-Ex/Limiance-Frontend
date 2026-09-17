@@ -3,10 +3,10 @@
 import { Search } from "@/src/components/icons/search";
 import { PlaceSpot } from "@/src/components/trades/place-spot";
 import { tradingKeys, tradingService } from "@/src/services/trading";
-import { assetKeys } from "@/src/services/asset";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { useOrderBook } from "@/src/hooks/use-order-book";
 import { Skeleton } from "@/src/components/shared/skeleton";
+import { SpotTradePageSkeleton } from "@/src/components/skeletons/trades";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { MOCK_MODE } from "@/src/mocks";
 import { mockTrading } from "@/src/mocks/mock-trading";
@@ -893,7 +893,7 @@ function SpotTrades() {
 
 export default function SpotTradePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+    <Suspense fallback={<SpotTradePageSkeleton />}>
       <SpotTrades />
     </Suspense>
   );

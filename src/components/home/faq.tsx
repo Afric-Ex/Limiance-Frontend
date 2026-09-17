@@ -8,10 +8,10 @@ import {
 
 const groceries = [
   {
-    value: "What is Afriq?",
+    value: "What is Limiance?",
     description: (
       <span>
-        <span className="text-primary">Afriq</span> is a distributed,
+        <span className="text-primary">Limiance</span> is a distributed,
         cryptographically-secure database structure that allows network
         participants to establish a trusted and immutable record of
         transactional data without the need for intermediaries. A blockchain can
@@ -22,17 +22,17 @@ const groceries = [
     ),
   },
   {
-    value: "How does Afriq works?",
+    value: "How does Limiance works?",
     description:
       "Naturally sweet and potassium-rich fruit. Bananas are a popular choice for their energy-boosting properties and can be enjoyed as a quick snack, added to smoothies, or used in baking.",
   },
   {
-    value: "What are the benefits of using Afriq",
+    value: "What are the benefits of using Limiance",
     description:
       "Nutrient-packed green vegetable. Broccoli is packed with vitamins, minerals, and fiber. It has a distinct flavor and can be enjoyed steamed, roasted, or added to stir-fries.",
   },
   {
-    value: "Is Afriq Free to use?",
+    value: "Is Limiance Free to use?",
     description:
       "Nutrient-packed green vegetable. Broccoli is packed with vitamins, minerals, and fiber. It has a distinct flavor and can be enjoyed steamed, roasted, or added to stir-fries.",
   },

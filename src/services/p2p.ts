@@ -76,12 +76,6 @@ const getWithRootFallback = async <T = unknown>(path: string): Promise<ApiRespon
   }
 };
 
-const isInternalError = (error: any) => {
-  const data = error?.response?.data;
-  const message = `${data?.error ?? ""} ${data?.message ?? ""}`.toLowerCase();
-  return error?.response?.status === 400 && message.includes("internal");
-};
-
 export const p2p = {
   fetchOrderListing: async (params?: {
     type?: string;

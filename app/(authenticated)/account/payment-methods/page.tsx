@@ -10,12 +10,14 @@ import { useState } from "react";
 import { BusinessCard } from "@/src/components/icons/business-card";
 import { Delete as Trash } from "@/src/components/icons/trash";
 import { Add } from "@/src/components/icons/add";
-import { MdVisibility, MdVisibilityOff, MdClose, MdAccountBalance } from "react-icons/md";
+import { MdVisibility, MdVisibilityOff, MdAccountBalance } from "react-icons/md";
 import clsx from "clsx";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { AccountPaymentMethodsSkeleton } from "@/src/components/skeletons/account";
 
 type Step = 1 | 2;
 
-export default function PaymentMethodsPage() {
+function PaymentMethodsPageInner() {
   const queryClient = useQueryClient();
 
   // Queries
@@ -138,7 +140,7 @@ export default function PaymentMethodsPage() {
       {atLimit && (
         <div className="p-4 bg-warning-1/10 border border-warning-1/30 rounded-xl flex items-center gap-3">
           <span className="text-warning-1 shrink-0">⚠</span>
-          <p className="text-sm text-warning-1">You've reached the maximum of 5 payment methods.</p>
+          <p className="text-sm text-warning-1">You&apos;ve reached the maximum of 5 payment methods.</p>
         </div>
       )}
 
@@ -350,5 +352,13 @@ export default function PaymentMethodsPage() {
         </div>
       </Modal>
     </main>
+  );
+}
+
+export default function PaymentMethodsPage() {
+  return (
+    <PageSuspense fallback={<AccountPaymentMethodsSkeleton />}>
+      <PaymentMethodsPageInner />
+    </PageSuspense>
   );
 }

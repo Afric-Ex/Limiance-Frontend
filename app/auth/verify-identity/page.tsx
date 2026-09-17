@@ -3,6 +3,9 @@ import VerifyIcon from "@/public/verify-icon.png";
 import Pattern from "@/public/pattern.png";
 import Image from "next/image";
 import Link from "next/link";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { VerifyIdentityPageSkeleton } from "@/src/components/skeletons/auth";
+import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 
 const instructions = [
   "Identity Documents and Facial Verification",
@@ -12,6 +15,7 @@ const instructions = [
 function VerifyIdentity() {
   return (
     <main className="flex items-center justify-center min-h-hero relative bg-verifyIdentityBg bg-cover bg-no-repeat">
+      <HeroDecorations />
       <div className="flex w-full flex-col max-w-634px gap-10">
         <div className="flex flex-col gap-10">
           <div className="flex flex-col">
@@ -80,4 +84,10 @@ function VerifyIdentity() {
   );
 }
 
-export default VerifyIdentity;
+export default function VerifyIdentityPage() {
+  return (
+    <PageSuspense fallback={<VerifyIdentityPageSkeleton />}>
+      <VerifyIdentity />
+    </PageSuspense>
+  );
+}

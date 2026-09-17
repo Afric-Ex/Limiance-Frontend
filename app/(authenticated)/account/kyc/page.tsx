@@ -2,7 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button, Loader } from "@mantine/core";
 import { MdShield, MdCheckCircle, MdPermIdentity, MdVideocam, MdHourglassEmpty } from "react-icons/md";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -10,12 +11,16 @@ import { successNotification } from "@/src/lib/notification-handler";
 import SumsubWebSdk from "@sumsub/websdk-react";
 import { useUserStore } from "@/src/stores/user-store";
 import { getKycAccessToken, isKycApproved } from "@/src/lib/normalize-kyc-status";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { AccountKycSkeleton } from "@/src/components/skeletons/account";
 
-export default function KycPage() {
+function KycPageInner() {
   const queryClient = useQueryClient();
   const [polling, setPolling] = useState(false);
   const [pollCount, setPollCount] = useState(0);
   const [showBanner, setShowBanner] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const [activeToken, setActiveToken] = useState<string | null>(null);
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
@@ -65,6 +70,17 @@ export default function KycPage() {
   const isApproved = ["approved", "verified"].includes(status);
   const isRejected = ["rejected", "failed"].includes(status);
   const isNotStarted = !isPending && !isApproved && !isRejected;
+
+  const searchParams = useSearchParams();
+  const autoStartRef = useRef(false);
+
+  useEffect(() => {
+    const shouldStart = searchParams?.get("start") === "1" || searchParams?.get("start") === "true";
+    if (mounted && shouldStart && !autoStartRef.current && (isNotStarted || isRejected) && !activeToken && !startingKyc) {
+      autoStartRef.current = true;
+      startKyc();
+    }
+  }, [mounted, searchParams, isNotStarted, isRejected, activeToken, startingKyc, startKyc]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -124,6 +140,8 @@ export default function KycPage() {
     console.error("Sumsub error:", error);
     errorMessageHandler(new Error(error?.message || "An unknown error occurred"));
   };
+
+  if (!mounted) return <AccountKycSkeleton />;
 
   return (
     <main className="flex flex-col gap-6 max-w-2xl mx-auto w-full">
@@ -309,5 +327,13 @@ export default function KycPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function KycPage() {
+  return (
+    <PageSuspense fallback={<AccountKycSkeleton />}>
+      <KycPageInner />
+    </PageSuspense>
   );
 }

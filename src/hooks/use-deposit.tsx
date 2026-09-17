@@ -71,7 +71,6 @@ export const useDeposit = () => {
     data: generatedWallet,
     isLoading: generateWalletLoading,
     isError: generateWalletError,
-    error: generateWalletRawError,
     refetch: retryGenerateWallet,
   } = useQuery({
     queryKey: assetKeys.generateWalletKeys(chainId || "", walletType),

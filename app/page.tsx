@@ -12,12 +12,14 @@ import { FAQ } from "@/src/components/home/faq";
 import { Star } from "@/src/components/icons/star";
 import { Circle } from "@/src/components/icons/circle";
 import { DoubleCircle } from "@/src/components/icons/double-circle";
-import Link from "next/link";
 import { GoogleSign } from "@/src/components/home/google-sign";
+import { AiBot } from "@/src/components/home/ai-bot";
+import { HeroSignup } from "@/src/components/home/hero-signup";
 
 export default function Home() {
   return (
     <main className="flex flex-col">
+      <AiBot />
       <div className="flex flex-col bg-landing bg-cover bg-no-repeat">
         <div className="min-h-hero relative pt-94px flex flex-col">
           <Star className="absolute left-[10%] top-[10%] animate-spin" />
@@ -50,15 +52,7 @@ export default function Home() {
             <div className="flex flex-1 flex-col justify-between items-center gap-8">
               <div className="flex flex-col items-center gap-8">
                 <div className="flex items-center gap-3">
-                  {/* <input
-                    placeholder="Enter your mail/number"
-                    className="text-sm placeholder:text-gray-2 w-295px px-4 bg-gray-3 focus:shadow-2 focus:outline-0 duration-200 border border-primary h-51px rounded-xl text-white"
-                  /> */}
-                  <Link href="/auth/signup">
-                    <button className="bg-primary text-black md:h-51px h-10 rounded-lg md:text-base text-sm md:rounded-2xl font-medium px-4 md:px-7">
-                      Sign Up
-                    </button>
-                  </Link>
+                  <HeroSignup />
                 </div>
                 <div className="flex items-center gap-8">
                   <div className="flex items-center justify-between h-full flex-col gap-2">
@@ -165,7 +159,7 @@ export default function Home() {
               </h3>
               <div className="flex flex-col gap-1">
                 <h4 className="md:text-2xl text-base font-semibold text-primary">
-                  Afriq Trading Hub Awaits
+                  Limiance Trading Hub Awaits
                 </h4>
                 <p className="md:text-18px text-sm">
                   Whether you&apos;re a novice or a seasoned pro, our platform

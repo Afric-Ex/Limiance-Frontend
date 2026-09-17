@@ -2,14 +2,16 @@
 
 import React, { useState } from "react";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
-import { Button, Loader, Skeleton } from "@mantine/core";
+import { Button, Skeleton } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { useUserAds, useDeactivateSingleOrder } from "@/src/hooks/p2p/use-p2p";
 import { UserAds } from "@/src/types/p2p";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { P2PMyAdsSkeleton } from "@/src/components/skeletons/p2p";
 
 type AdStatus = "ACTIVE" | "INACTIVE" | "ALL";
 
-export default function MyAdsPage() {
+function MyAdsPageInner() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<AdStatus>("ALL");
 
@@ -42,7 +44,7 @@ export default function MyAdsPage() {
             <p className="text-white/40 text-sm mt-1">{ads.length} total ads</p>
           </div>
           <Button
-            className="bg-[#0ECB81] hover:bg-[#0ECB81]/90 text-white font-bold"
+            className="bg-buy hover:bg-buy/90 text-white font-bold"
             onClick={() => router.push("/trades/p2p/ads/create")}
           >
             + Post New Ad
@@ -189,5 +191,13 @@ export default function MyAdsPage() {
         )}
       </div>
     </P2PLayout>
+  );
+}
+
+export default function MyAdsPage() {
+  return (
+    <PageSuspense fallback={<P2PMyAdsSkeleton />}>
+      <MyAdsPageInner />
+    </PageSuspense>
   );
 }

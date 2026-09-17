@@ -1,4 +1,4 @@
-import React, { useRef, useState, KeyboardEvent, ClipboardEvent } from 'react';
+import React, { useRef, KeyboardEvent, ClipboardEvent } from 'react';
 import clsx from 'clsx';
 
 interface OtpInputProps {

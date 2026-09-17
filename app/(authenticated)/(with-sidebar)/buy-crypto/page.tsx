@@ -6,6 +6,8 @@ import { MdOutlineSwapHoriz, MdArrowForward } from "react-icons/md";
 import { IoSparklesOutline, IoShieldCheckmarkOutline } from "react-icons/io5";
 import { LuRepeat } from "react-icons/lu";
 import { FiCreditCard } from "react-icons/fi";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { BuyCryptoSkeleton } from "@/src/components/skeletons/with-sidebar";
 
 const tabs = [
   { label: "P2P Trading", href: "/trades/p2p" },
@@ -15,7 +17,7 @@ const tabs = [
 
 
 
-export default function BuyCrypto() {
+function BuyCryptoInner() {
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
 
   return (
@@ -230,5 +232,13 @@ export default function BuyCrypto() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function BuyCrypto() {
+  return (
+    <PageSuspense fallback={<BuyCryptoSkeleton />}>
+      <BuyCryptoInner />
+    </PageSuspense>
   );
 }

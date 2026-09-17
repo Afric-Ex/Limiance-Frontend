@@ -2,6 +2,7 @@
 
 import { Button, PasswordInput } from "@mantine/core";
 import { useAuth } from "@/src/hooks/queries/use-auth";
+import { Info } from "@/src/components/icons/info";
 
 const inputStyles = {
   input:
@@ -29,6 +30,13 @@ export const ResetPasswordForm = () => {
                 placeholder="Enter your password"
                 {...resetForm.getInputProps("confirmPassword")}
               />
+              <div className="text-warning-1 bg-gray-47 rounded-xl px-4 py-3 text-xs leading-relaxed flex items-start gap-2">
+                <Info className="shrink-0 mt-0.5" />
+                <span>
+                  For your security, withdrawals, P2P selling, and payment
+                  services may be disabled for 24 hours after a password change.
+                </span>
+              </div>
             </div>
 
             <Button

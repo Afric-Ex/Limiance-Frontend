@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Modal, Button, Radio, Select, Textarea } from "@mantine/core";
+import { Modal, Button, Select } from "@mantine/core";
 
 interface CancelOrderModalProps {
   opened: boolean;
@@ -47,8 +47,8 @@ export function CancelOrderModal({
       title="Cancel Order"
       centered
       classNames={{
-        content: "bg-[#1A1A2E] border border-white/10",
-        header: "bg-[#1A1A2E] border-b border-white/5",
+        content: "bg-elevated border border-white/10",
+        header: "bg-elevated border-b border-white/5",
         title: "text-white font-bold",
         close: "text-white/50 hover:text-white",
       }}
@@ -90,7 +90,7 @@ export function CancelOrderModal({
             onChange={setReason}
             classNames={{
               input: "bg-white/5 border-white/10 text-white mt-1",
-              dropdown: "bg-[#1A1A2E] border border-white/10 text-white",
+              dropdown: "bg-elevated border border-white/10 text-white",
               option: "hover:bg-white/5",
             }}
           />

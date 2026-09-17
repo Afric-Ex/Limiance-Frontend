@@ -1,21 +1,13 @@
 import { Table, TableTr, TableTh, TableTd, Menu } from "@mantine/core";
 import React from "react";
 import { MdKeyboardArrowDown } from "react-icons/md";
-import { assetKeys, asset } from "@/src/services/asset";
-import { useQuery } from "@tanstack/react-query";
 import { InlineLoading } from "../shared/inline-loading";
 import { useRouter } from "next/navigation";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 export const MarginFunds = () => {
   const router = useRouter();
-  const { data: portfolio, isLoading } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: asset.fetchPortfolio,
-    select: ({ data }) => data ?? [],
-    staleTime: 30_000,
-    throwOnError: false,
-    retry: false,
-  });
+  const { coins: portfolio, isLoading } = usePortfolioWs();
 
   if (isLoading) return <InlineLoading />;
 

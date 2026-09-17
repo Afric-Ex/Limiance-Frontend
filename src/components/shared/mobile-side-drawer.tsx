@@ -13,7 +13,6 @@ import {
   IoSettingsOutline,
   IoHelpCircleOutline,
   IoLogOutOutline,
-  IoSwapHorizontalOutline,
   IoArrowDownOutline,
   IoArrowUpOutline,
 } from "react-icons/io5";
@@ -125,7 +124,7 @@ export const MobileSideDrawer: React.FC<MobileSideDrawerProps> = ({
       <div
         className={clsx(
           "fixed top-0 left-0 bottom-0 w-[300px] z-[60] min-[1150px]:hidden",
-          "bg-[#0f1117] border-r border-white/[0.06] flex flex-col overflow-y-auto",
+          "bg-elevated border-r border-white/[0.06] flex flex-col overflow-y-auto",
           "transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "-translate-x-full"
         )}
@@ -166,7 +165,7 @@ export const MobileSideDrawer: React.FC<MobileSideDrawerProps> = ({
                       className={clsx(
                         "flex items-center gap-3 px-3 py-3 rounded-xl transition-all",
                         isActive
-                          ? "bg-[#6366f1]/10 text-[#6366f1]"
+                          ? "bg-primary/10 text-primary"
                           : "text-white/60 hover:text-white hover:bg-white/[0.04]"
                       )}
                     >

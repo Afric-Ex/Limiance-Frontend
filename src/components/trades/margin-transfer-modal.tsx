@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader, NumberInput } from "@mantine/core";
 import { asset } from "@/src/services/asset";
@@ -16,7 +16,7 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
   const [isSpotToMargin, setIsSpotToMargin] = useState(true);
   const [amount, setAmount] = useState<number | string>("");
 
-  const queryClient = useQueryClient();
+  useQueryClient();
 
   const { coins: portfolioResponse, refreshBalances } = usePortfolioWs();
   const selectedAssetData = portfolioResponse?.find((a: any) => a.symbol === selectedAsset);

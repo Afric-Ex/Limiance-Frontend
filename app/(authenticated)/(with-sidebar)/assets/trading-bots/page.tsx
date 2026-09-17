@@ -10,6 +10,8 @@ import { CreateBotModal } from "@/src/components/assets/create-bot-modal";
 import clsx from "clsx";
 import { MdOutlineAddCircleOutline, MdTrendingUp, MdTrendingDown } from "react-icons/md";
 import { LuBot } from "react-icons/lu";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { TradingBotsSkeleton } from "@/src/components/skeletons/assets";
 
 type BotType = "spot" | "futures";
 
@@ -164,7 +166,7 @@ function BotTab({ type }: { type: BotType }) {
   );
 }
 
-export default function TradingBots() {
+function TradingBotsInner() {
   return (
     <main className="flex flex-col gap-6 pb-20 w-full">
       {/* Premium Hero Header */}
@@ -196,5 +198,13 @@ export default function TradingBots() {
         <TabsPanel value="futures"><BotTab type="futures" /></TabsPanel>
       </Tabs>
     </main>
+  );
+}
+
+export default function TradingBots() {
+  return (
+    <PageSuspense fallback={<TradingBotsSkeleton />}>
+      <TradingBotsInner />
+    </PageSuspense>
   );
 }

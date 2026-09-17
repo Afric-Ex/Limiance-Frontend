@@ -16,6 +16,8 @@ import {
   RiFileTextLine,
 } from "react-icons/ri";
 import { MdOutlineSupportAgent } from "react-icons/md";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { SupportPageSkeleton } from "@/src/components/skeletons/with-sidebar";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -95,12 +97,12 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
               background: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.15))",
               border: "1px solid rgba(59,130,246,0.2)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#60a5fa",
+              color: "var(--color-primary)",
             }}>
               <RiFileTextLine size={18} />
             </div>
             <div>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", margin: 0 }}>New Support Ticket</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>New Support Ticket</h2>
               <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: 0 }}>We typically reply within 24 hours</p>
             </div>
           </div>
@@ -120,7 +122,7 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
               style={{
                 width: "100%", padding: "10px 14px", boxSizing: "border-box",
                 background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 10, color: "#f1f5f9", fontSize: 14, outline: "none",
+                borderRadius: 10, color: "var(--color-text-primary)", fontSize: 14, outline: "none",
                 transition: "border-color 0.2s",
               }}
               onFocus={(e) => (e.target.style.borderColor = "rgba(59,130,246,0.5)")}
@@ -137,7 +139,7 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
               style={{
                 width: "100%", padding: "10px 14px",
                 background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 10, color: "#f1f5f9", fontSize: 14, outline: "none",
+                borderRadius: 10, color: "var(--color-text-primary)", fontSize: 14, outline: "none",
               }}
             >
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -155,7 +157,7 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
               style={{
                 width: "100%", padding: "10px 14px", boxSizing: "border-box",
                 background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 10, color: "#f1f5f9", fontSize: 14, outline: "none",
+                borderRadius: 10, color: "var(--color-text-primary)", fontSize: 14, outline: "none",
                 resize: "vertical", fontFamily: "inherit",
                 transition: "border-color 0.2s",
               }}
@@ -171,7 +173,7 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
             style={{
               width: "100%", padding: "12px 0",
               background: valid && !isPending
-                ? "linear-gradient(135deg, #3b82f6, #6366f1)"
+                ? "var(--color-primary-strong)"
                 : "rgba(255,255,255,0.06)",
               border: "none", borderRadius: 10,
               color: valid && !isPending ? "#fff" : "rgba(255,255,255,0.3)",
@@ -233,7 +235,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
           <RiArrowLeftLine size={18} />
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {thread.subject}
           </div>
           <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 1 }}>
@@ -271,7 +273,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
                     width: 28, height: 28, borderRadius: "50%", flexShrink: 0, marginRight: 8, marginTop: 2,
                     background: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(99,102,241,0.2))",
                     border: "1px solid rgba(59,130,246,0.25)",
-                    display: "flex", alignItems: "center", justifyContent: "center", color: "#60a5fa",
+                    display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-primary)",
                   }}>
                     <MdOutlineSupportAgent size={14} />
                   </div>
@@ -285,10 +287,10 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
                       : "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.15))",
                     border: `1px solid ${isAdmin ? "rgba(255,255,255,0.07)" : "rgba(59,130,246,0.2)"}`,
                   }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: isAdmin ? "rgba(255,255,255,0.3)" : "#60a5fa", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: isAdmin ? "rgba(255,255,255,0.3)" : "var(--color-primary)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.4px" }}>
                       {isAdmin ? "Support Team" : "You"}
                     </div>
-                    <div style={{ fontSize: 13, color: "#e2e8f0", lineHeight: 1.55 }}>{msg.message}</div>
+                    <div style={{ fontSize: 13, color: "var(--color-neutral-off-white)", lineHeight: 1.55 }}>{msg.message}</div>
                     <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 5, textAlign: isAdmin ? "left" : "right" }}>
                       {timeAgo(msg.created_at)}
                     </div>
@@ -316,7 +318,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
             style={{
               flex: 1, padding: "10px 12px",
               background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 10, color: "#f1f5f9", fontSize: 13, outline: "none",
+              borderRadius: 10, color: "var(--color-text-primary)", fontSize: 13, outline: "none",
               resize: "none", fontFamily: "inherit", transition: "border-color 0.2s",
             }}
             onFocus={(e) => (e.target.style.borderColor = "rgba(59,130,246,0.4)")}
@@ -328,7 +330,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
             style={{
               height: 40, width: 40, flexShrink: 0,
               background: reply.trim()
-                ? "linear-gradient(135deg, #3b82f6, #6366f1)"
+                ? "var(--color-primary-strong)"
                 : "rgba(255,255,255,0.06)",
               border: "none", borderRadius: 10,
               color: reply.trim() ? "#fff" : "rgba(255,255,255,0.25)",
@@ -363,14 +365,14 @@ function TicketItem({ ticket, isActive, onClick }: { ticket: SupportTicket; isAc
         padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)",
         cursor: "pointer",
         background: isActive ? "rgba(59,130,246,0.07)" : "transparent",
-        borderLeft: isActive ? "3px solid #3b82f6" : "3px solid transparent",
+        borderLeft: isActive ? "3px solid var(--color-primary)" : "3px solid transparent",
         transition: "all 0.15s",
       }}
       onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
       onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 5 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? "#93c5fd" : "#e2e8f0", flex: 1, paddingRight: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? "var(--color-primary)" : "var(--color-neutral-off-white)", flex: 1, paddingRight: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {ticket.subject}
         </div>
         <span style={{ padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 600, background: st.bg, color: st.color, flexShrink: 0, whiteSpace: "nowrap" }}>
@@ -385,10 +387,10 @@ function TicketItem({ ticket, isActive, onClick }: { ticket: SupportTicket; isAc
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function SupportPage() {
+function SupportPageInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [mobileView, setMobileView] = useState<"list" | "thread">("list");
+  const [, setMobileView] = useState<"list" | "thread">("list");
 
   const { data, isLoading } = useQuery({
     queryKey: supportKeys.tickets(),
@@ -421,12 +423,12 @@ export default function SupportPage() {
             width: 44, height: 44, borderRadius: 14,
             background: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.15))",
             border: "1px solid rgba(59,130,246,0.2)",
-            display: "flex", alignItems: "center", justifyContent: "center", color: "#60a5fa",
+            display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-primary)",
           }}>
             <RiCustomerService2Line size={22} />
           </div>
           <div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: "#f1f5f9", margin: 0 }}>Support Center</h1>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Support Center</h1>
             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: 0 }}>
               {openCount > 0 ? `${openCount} active ticket${openCount !== 1 ? "s" : ""}` : "No open tickets"} · We reply within 24h
             </p>
@@ -437,7 +439,7 @@ export default function SupportPage() {
           style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "10px 18px",
-            background: "linear-gradient(135deg, #3b82f6, #6366f1)",
+            background: "var(--color-primary-strong)",
             border: "none", borderRadius: 10, color: "#fff",
             fontSize: 13, fontWeight: 600, cursor: "pointer",
             boxShadow: "0 4px 16px rgba(59,130,246,0.3)",
@@ -508,7 +510,7 @@ export default function SupportPage() {
                 width: 72, height: 72, borderRadius: 22,
                 background: "linear-gradient(135deg, rgba(59,130,246,0.1), rgba(99,102,241,0.07))",
                 border: "1px solid rgba(59,130,246,0.15)",
-                display: "flex", alignItems: "center", justifyContent: "center", color: "#60a5fa",
+                display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-primary)",
               }}>
                 <RiCustomerService2Line size={32} />
               </div>
@@ -546,5 +548,13 @@ export default function SupportPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function SupportPage() {
+  return (
+    <PageSuspense fallback={<SupportPageSkeleton />}>
+      <SupportPageInner />
+    </PageSuspense>
   );
 }

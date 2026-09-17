@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { modals } from "@mantine/modals";
 import { Tabs, TabsList, TabsTab, TabsPanel, Table, TableTh, TableTr, TableTd } from "@mantine/core";
-import { asset, assetKeys } from "@/src/services/asset";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { MarginBorrowRepayModal } from "./margin-borrow-repay-modal";
@@ -82,7 +81,6 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
   const totalAssetsUsd = marginAccount && parseNum(marginAccount.total_assets_usd ?? marginAccount.totalAssetsUsd) > 0 ? parseNum(marginAccount.total_assets_usd ?? marginAccount.totalAssetsUsd) : fallbackTotalUsd;
   const totalLiabilitiesUsd = marginAccount ? parseNum(marginAccount.total_liability_usd ?? marginAccount.totalLiabilitiesUsd ?? marginAccount.totalLiabilityUsd) : 0;
   const equityUsd = marginAccount && parseNum(marginAccount.equity_usd ?? marginAccount.equityUsd ?? marginAccount.equity) > 0 ? parseNum(marginAccount.equity_usd ?? marginAccount.equityUsd ?? marginAccount.equity) : fallbackTotalUsd;
-  const maxLeverage = marginAccount && parseNum(marginAccount.max_leverage ?? marginAccount.maxLeverage) > 0 ? parseNum(marginAccount.max_leverage ?? marginAccount.maxLeverage) : 3;
 
   const collateralUsd = totalUsd; // the base transfer balance
   
@@ -145,7 +143,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
               className={clsx(
                 "px-4 py-1.5 rounded-md text-sm font-semibold transition-all capitalize",
                 tradeMode === m
-                  ? "bg-primary text-[#0b0c10]"
+                  ? "bg-primary text-surface"
                   : "text-white/50 hover:text-white/80"
               )}
             >
@@ -158,7 +156,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
         <div className="flex items-center gap-2">
           <button
             onClick={() => openBorrow("borrow")}
-            className="px-5 py-2 rounded-lg bg-primary text-[#0b0c10] text-sm font-bold hover:bg-primary/90 transition-colors"
+            className="px-5 py-2 rounded-lg bg-primary text-surface text-sm font-bold hover:bg-primary/90 transition-colors"
           >
             Borrow
           </button>
@@ -362,7 +360,6 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                       // Fetch image and name from portfolio matching coin
                       const pCoin = portfolio?.find(c => c.symbol === a.asset);
                       const bal      = parseNum(a.free) + parseNum(a.locked);
-                      const locked   = parseNum(a.locked);
                       const avail    = parseNum(a.free);
                       const borrowed = parseNum(a.borrowed);
                       const interest = parseNum(a.interest);

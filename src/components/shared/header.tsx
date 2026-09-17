@@ -105,13 +105,43 @@ export default function Header() {
           !pathname.includes("auth")
           ? ""
           : "mb-5",
-        "md:px-8 px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-[100] backdrop-blur-md bg-[#181a20]/80"
+        "h-[var(--size-header-height)] md:px-8 px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-[100] backdrop-blur-md bg-elevated/80"
+
       )}
     >
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-4">
           <Logo />
           {/* <SegmentedControl classNames={classes} data={["Exchange", "DEX"]} /> */}
+          {user && (
+            <ul className="flex max-[1150px]:hidden items-center gap-4">
+              {navList.map((item) => (
+                <li key={item.name}>
+                  {item.children ? (
+                    <PopoverWrapper
+                      target={({ toggle }) => (
+                        <span
+                          onClick={toggle}
+                          className="flex cursor-pointer items-center gap-6px"
+                        >
+                          <span>{item.name}</span>
+                          <IoIosArrowDown size={14} color="white" />
+                        </span>
+                      )}
+                    >
+                      {item.children}
+                    </PopoverWrapper>
+                  ) : (item as any).link ? (
+                    <Link href={(item as any).link} className="cursor-pointer">
+                      <span>{item.name}</span>
+                    </Link>
+                  ) : (
+                    <span>{item.name}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         {user ? (
           <ul className="flex max-[1150px]:hidden items-center gap-4">
@@ -147,7 +177,7 @@ export default function Header() {
         {!user ? (
           <div className="flex items-center gap-6px">
             <Link href="/auth/login">
-              <button className="font-medium py-3 px-5 bg-gray-42 rounded-lg">
+              <button className="font-medium py-3 px-5 bg-muted rounded-lg">
                 Login
               </button>
             </Link>
@@ -209,6 +239,7 @@ export default function Header() {
           <SettingsIcon className={headerActionClasses} />
         </Link>
       </div>
+      
       <div className="hidden max-[1150px]:flex items-center gap-5">
         {user && (
           <PopoverWrapper

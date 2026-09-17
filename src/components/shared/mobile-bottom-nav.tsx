@@ -16,7 +16,6 @@ import {
   IoWallet,
   IoSwapHorizontal,
 } from "react-icons/io5";
-import { MdAutoGraph } from "react-icons/md";
 import { RiBarChartFill } from "react-icons/ri";
 // ─── Trade Sheet ────────────────────────────────────────────────────────────
 
@@ -92,7 +91,7 @@ function TradeSheet({
       />
       {/* Sheet */}
       <div className="fixed bottom-0 left-0 right-0 z-[70] sheet-enter">
-        <div className="bg-[#13151c] rounded-t-3xl border-t border-white/[0.08] pb-safe">
+        <div className="bg-elevated rounded-t-3xl border-t border-white/[0.08] pb-safe">
           {/* Handle */}
           <div className="flex justify-center pt-3 pb-1">
             <div className="w-10 h-1 rounded-full bg-white/20" />
@@ -134,7 +133,7 @@ function TradeSheet({
                         {opt.label}
                       </span>
                       {opt.badge && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 tracking-wider">
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning border border-warning/30 tracking-wider">
                           {opt.badge}
                         </span>
                       )}
@@ -202,7 +201,7 @@ export const MobileBottomNav = () => {
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 min-[1150px]:hidden">
         {/* Glass bar */}
-        <div className="bg-[#0f1117]/90 backdrop-blur-2xl border-t border-white/[0.06] px-2 flex items-center justify-around pb-safe">
+        <div className="bg-elevated/90 backdrop-blur-2xl border-t border-white/[0.06] px-2 flex items-center justify-around pb-safe">
           {/* Tab 1 & 2 */}
           {tabs.slice(0, 2).map((tab) => {
             const isActive =
@@ -217,21 +216,21 @@ export const MobileBottomNav = () => {
               >
                 {/* Active glow dot */}
                 {isActive && (
-                  <span className="absolute top-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#6366f1] shadow-[0_0_6px_2px_rgba(99,102,241,0.6)]" />
+                  <span className="absolute top-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary shadow-[0_0_6px_2px_rgba(77,119,240,0.6)]" />
                 )}
                 <Icon
                   size={22}
                   className={clsx(
                     "transition-all duration-200",
                     isActive
-                      ? "text-[#6366f1] drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]"
+                      ? "text-primary drop-shadow-[0_0_8px_rgba(77,119,240,0.5)]"
                       : "text-white/40"
                   )}
                 />
                 <span
                   className={clsx(
                     "text-[10px] font-medium transition-colors",
-                    isActive ? "text-[#6366f1]" : "text-white/35"
+                    isActive ? "text-primary" : "text-white/35"
                   )}
                 >
                   {tab.name}
@@ -244,7 +243,7 @@ export const MobileBottomNav = () => {
           <div className="flex flex-col items-center -mt-6">
             <button
               onClick={() => setTradeOpen(true)}
-              className="relative w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-transform bg-[#181a20] border border-white/[0.08]"
+              className="relative w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-transform bg-elevated border border-white/[0.08]"
             >
               <IoSwapHorizontal size={24} className="text-white relative z-10" />
             </button>
@@ -266,21 +265,21 @@ export const MobileBottomNav = () => {
                 className="flex flex-col items-center gap-1 px-4 py-3 tap-scale relative"
               >
                 {isActive && (
-                  <span className="absolute top-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#6366f1] shadow-[0_0_6px_2px_rgba(99,102,241,0.6)]" />
+                  <span className="absolute top-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary shadow-[0_0_6px_2px_rgba(77,119,240,0.6)]" />
                 )}
                 <Icon
                   size={22}
                   className={clsx(
                     "transition-all duration-200",
                     isActive
-                      ? "text-[#6366f1] drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]"
+                      ? "text-primary drop-shadow-[0_0_8px_rgba(77,119,240,0.5)]"
                       : "text-white/40"
                   )}
                 />
                 <span
                   className={clsx(
                     "text-[10px] font-medium transition-colors",
-                    isActive ? "text-[#6366f1]" : "text-white/35"
+                    isActive ? "text-primary" : "text-white/35"
                   )}
                 >
                   {tab.name}

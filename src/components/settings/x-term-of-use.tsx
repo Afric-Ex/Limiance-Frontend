@@ -15,8 +15,8 @@ export const XTermOfUse = () => {
         <p>
           After clicking on the Link button below, you will be redirected to the
           X homepage to complete authorization for linking your account.
-          Connecting your X account to your Afriq UID, and then link your X
-          account to your Afriq account, enabling us to access your:
+          Connecting your X account to your Limiance UID, and then link your X
+          account to your Limiance account, enabling us to access your:
         </p>
         <ul className="pl-4 list-disc">
           <li>Twitter profile information</li>

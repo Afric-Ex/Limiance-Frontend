@@ -1,22 +1,25 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
 import { Button, Checkbox, Stepper } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { MdCheckCircle, MdCancel } from "react-icons/md";
 import { useAdvertiserInfo, useBecomeAdvertiser } from "@/src/hooks/p2p/use-p2p";
 import { useUserStore } from "@/src/stores/user-store";
-import { useQuery } from "@tanstack/react-query";
-import { assetKeys, asset as assetService } from "@/src/services/asset";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { P2PAdvertiserRegisterSkeleton } from "@/src/components/skeletons/p2p";
 
 const USE_MOCK = true; // Set to false when ready to enforce real rules
 
-export default function AdvertiserRegisterPage() {
+function AdvertiserRegisterPageInner() {
   const router = useRouter();
   const [activeStep, setActiveStep] = useState(0);
   const [agreed, setAgreed] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // We check if they are already an advertiser. If so, they shouldn't need to register again.
   const { data: advertiserData, isLoading } = useAdvertiserInfo();
@@ -25,13 +28,10 @@ export default function AdvertiserRegisterPage() {
   const { mutate: becomeAdvertiser, isPending: isRegistering } = useBecomeAdvertiser();
   const { user } = useUserStore();
 
-  // Fetch real funding balance
-  const { data: balanceData } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: () => assetService.fetchPortfolio()
-  });
+  // Fetch real funding balance via WebSocket portfolio channel
+  const { coins: portfolioCoins } = usePortfolioWs();
 
-  const balanceArray = Array.isArray(balanceData?.data) ? balanceData.data : [];
+  const balanceArray = Array.isArray(portfolioCoins) ? portfolioCoins : [];
   const fundingBalance = balanceArray.reduce((acc: number, b: any) => 
     acc + parseFloat(b.fundingBalance || "0"), 0
   );
@@ -65,6 +65,12 @@ export default function AdvertiserRegisterPage() {
     });
   };
 
+  if (!mounted) return (
+    <P2PLayout>
+      <P2PAdvertiserRegisterSkeleton />
+    </P2PLayout>
+  );
+
   if (isLoading) {
     return (
       <P2PLayout>
@@ -91,8 +97,8 @@ export default function AdvertiserRegisterPage() {
             onStepClick={setActiveStep} 
             allowNextStepsSelect={false}
             classNames={{
-              stepIcon: "bg-white/10 border-white/20 text-white data-[completed]:bg-[#0ECB81] data-[completed]:border-[#0ECB81]",
-              separator: "bg-white/10 data-[active]:bg-[#0ECB81]",
+              stepIcon: "bg-white/10 border-white/20 text-white data-[completed]:bg-buy data-[completed]:border-buy",
+              separator: "bg-white/10 data-[active]:bg-buy",
               stepLabel: "text-white/70 font-medium"
             }}
           >
@@ -106,7 +112,7 @@ export default function AdvertiserRegisterPage() {
                     <span className="text-sm text-white/50">Complete identity verification.</span>
                   </div>
                   {requirements.kycLevel2 ? (
-                    <MdCheckCircle className="text-[#0ECB81]" size={24} />
+                    <MdCheckCircle className="text-buy" size={24} />
                   ) : (
                     <MdCancel className="text-[#F6465D]" size={24} />
                   )}
@@ -118,7 +124,7 @@ export default function AdvertiserRegisterPage() {
                     <span className="text-sm text-white/50">Your account must be at least 30 days old.</span>
                   </div>
                   {requirements.accountAge ? (
-                    <MdCheckCircle className="text-[#0ECB81]" size={24} />
+                    <MdCheckCircle className="text-buy" size={24} />
                   ) : (
                     <MdCancel className="text-[#F6465D]" size={24} />
                   )}
@@ -130,7 +136,7 @@ export default function AdvertiserRegisterPage() {
                     <span className="text-sm text-white/50">You must have an active Funding Account.</span>
                   </div>
                   {requirements.fundingAccount ? (
-                    <MdCheckCircle className="text-[#0ECB81]" size={24} />
+                    <MdCheckCircle className="text-buy" size={24} />
                   ) : (
                     <div className="flex items-center gap-3">
                       <Button size="xs" color="blue" onClick={() => {}}>Set up</Button>
@@ -172,7 +178,7 @@ export default function AdvertiserRegisterPage() {
                   <p className="mb-4">5. Limiance is not responsible for losses due to user error.</p>
                   {/* Simulate long text */}
                   <div className="h-40"></div>
-                  <p className="mb-4 text-white">By clicking "I Agree", you acknowledge that you have read and understood these terms.</p>
+                  <p className="mb-4 text-white">By clicking &quot;I Agree&quot;, you acknowledge that you have read and understood these terms.</p>
                 </div>
 
                 <Checkbox
@@ -202,7 +208,7 @@ export default function AdvertiserRegisterPage() {
 
             <Stepper.Step label="Complete">
               <div className="py-16 max-w-lg mx-auto flex flex-col items-center text-center gap-6">
-                <div className="w-24 h-24 bg-[#0ECB81]/20 text-[#0ECB81] rounded-full flex items-center justify-center text-5xl">
+                <div className="w-24 h-24 bg-buy/20 text-buy rounded-full flex items-center justify-center text-5xl">
                   ✓
                 </div>
                 <h2 className="text-2xl font-bold text-white">Application Approved</h2>
@@ -214,7 +220,7 @@ export default function AdvertiserRegisterPage() {
                   <Button variant="light" color="gray" className="flex-1 bg-white/5 hover:bg-white/10 text-white" onClick={() => router.push("/trades/p2p/my-ads")}>
                     Go to My Ads
                   </Button>
-                  <Button className="flex-1 bg-[#0ECB81] hover:bg-[#0ECB81]/90 text-white font-semibold" onClick={() => router.push("/trades/p2p/ads/create")}>
+                  <Button className="flex-1 bg-buy hover:bg-buy/90 text-white font-semibold" onClick={() => router.push("/trades/p2p/ads/create")}>
                     Post Ad Now
                   </Button>
                 </div>
@@ -224,5 +230,13 @@ export default function AdvertiserRegisterPage() {
         </div>
       </div>
     </P2PLayout>
+  );
+}
+
+export default function AdvertiserRegisterPage() {
+  return (
+    <PageSuspense fallback={<P2PAdvertiserRegisterSkeleton />}>
+      <AdvertiserRegisterPageInner />
+    </PageSuspense>
   );
 }

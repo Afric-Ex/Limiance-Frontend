@@ -22,10 +22,10 @@ export function SellerPaidPanel({
 }: SellerPaidPanelProps) {
   return (
     <>
-      <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/5 backdrop-blur-md border-l-4 border-yellow-400 p-5 mb-6 rounded-r-2xl mt-6 shadow-[0_4px_24px_rgba(250,204,21,0.15)] relative overflow-hidden">
+      <div className="bg-gradient-to-r from-warning/10 to-warning/5 backdrop-blur-md border-l-4 border-warning p-5 mb-6 rounded-r-2xl mt-6 shadow-[0_4px_24px_rgba(251,164,42,0.15)] relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
         <div className="relative z-10">
-          <div className="text-yellow-400 font-bold text-lg mb-2 flex items-center gap-2">
+          <div className="text-warning font-bold text-lg mb-2 flex items-center gap-2">
             <span className="text-2xl drop-shadow-md">⚠️</span> Buyer Has Confirmed Payment
           </div>
           <p className="text-white/80 text-sm leading-relaxed">

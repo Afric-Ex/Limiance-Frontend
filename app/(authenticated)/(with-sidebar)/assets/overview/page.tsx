@@ -4,8 +4,10 @@ import { WalletCard } from "@/src/components/assets/wallet-card";
 import { MyWallet } from "@/src/components/assets/my-wallet";
 import { RecentHistory } from "@/src/components/assets/recent-history";
 import { AssetTrendChart } from "@/src/components/assets/asset-trend-chart";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { AssetsOverviewSkeleton } from "@/src/components/skeletons/assets";
 
-function Overview() {
+function OverviewInner() {
   return (
     <main className="flex flex-col gap-6 w-full animate-fade-in max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-4">
       <WalletCard />
@@ -27,4 +29,10 @@ function Overview() {
   );
 }
 
-export default Overview;
+export default function Overview() {
+  return (
+    <PageSuspense fallback={<AssetsOverviewSkeleton />}>
+      <OverviewInner />
+    </PageSuspense>
+  );
+}

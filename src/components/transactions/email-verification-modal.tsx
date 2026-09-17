@@ -27,7 +27,7 @@ export const EmailVerificationModal = ({
   });
 
   return (
-    <div className="bg-[#12131A] border border-white/[0.08] w-full max-w-md rounded-3xl p-6 sm:p-8 flex flex-col gap-8 shadow-2xl relative overflow-hidden mx-auto">
+    <div className="bg-elevated border border-white/[0.08] w-full max-w-md rounded-3xl p-6 sm:p-8 flex flex-col gap-8 shadow-2xl relative overflow-hidden mx-auto">
       <div className="flex items-center justify-between relative z-10">
         <h4 className="text-lg font-bold text-white/90 tracking-tight">Security Verification</h4>
         <ModalClose className="cursor-pointer hover:bg-white/5 p-1 rounded-full transition-colors" onClick={modals.closeAll} />
@@ -37,7 +37,7 @@ export const EmailVerificationModal = ({
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3 text-center">
             <h2 className="text-3xl font-extrabold tracking-tight">
-              <span className="text-[#3B82F6]">Email</span> Verification
+              <span className="text-primary">Email</span> Verification
             </h2>
             <p className="text-sm font-medium text-white/60 leading-relaxed">
               A 6-digit verification code has just been sent to<br />your email address <span className="text-white font-semibold">{email}</span>
@@ -60,7 +60,7 @@ export const EmailVerificationModal = ({
             loading={verifyLoading}
             className="w-32 h-[44px] rounded-xl bg-white/10 hover:bg-white/20 transition-all text-sm disabled:bg-white/5 disabled:text-white/30 disabled:border-transparent data-[disabled]:opacity-100"
             style={{
-              backgroundColor: otp.length === 6 ? '#3B82F6' : undefined,
+              backgroundColor: otp.length === 6 ? 'var(--color-primary)' : undefined,
               color: otp.length === 6 ? 'white' : undefined
             }}
             onClick={() => verifyOtp()}
@@ -84,7 +84,7 @@ export const EmailVerificationModal = ({
                     ...DEFAULT_MODAL_SETTINGS,
                   })
                 }
-                className="font-bold cursor-pointer text-[#3B82F6] hover:text-blue-400 transition-colors"
+                className="font-bold cursor-pointer text-primary hover:text-primary transition-colors"
               >
                 Google Authenticator
               </span>

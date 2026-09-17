@@ -34,7 +34,6 @@ export function BuyerPaidPanel({
     return () => clearInterval(interval);
   }, [deadlineStr]);
 
-  const canDispute = secondsLeft <= 0;
   const mins = Math.max(0, Math.floor(secondsLeft / 60));
   const secs = Math.max(0, secondsLeft % 60);
 
@@ -43,8 +42,8 @@ export function BuyerPaidPanel({
       <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/5 backdrop-blur-md border border-green-500/30 rounded-2xl p-5 text-center mt-6 shadow-[0_4px_24px_rgba(16,185,129,0.15)] relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
         <div className="relative z-10">
-          <div className="text-[#0ECB81] font-bold text-lg mb-1 flex items-center justify-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-[#0ECB81]/20 flex items-center justify-center">✓</div>
+          <div className="text-buy font-bold text-lg mb-1 flex items-center justify-center gap-2">
+            <div className="w-5 h-5 rounded-full bg-buy/20 flex items-center justify-center">✓</div>
             Payment Confirmed
           </div>
           <p className="text-white/60 text-sm mt-2">

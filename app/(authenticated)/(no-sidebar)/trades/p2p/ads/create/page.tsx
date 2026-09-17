@@ -7,13 +7,14 @@ import { Button, Select, NumberInput, Textarea, Checkbox, Tooltip, MultiSelect }
 import { useRouter } from "next/navigation";
 import { useCreateAd } from "@/src/hooks/p2p/use-p2p";
 import { CreateOrder } from "@/src/types/p2p";
-import { useQuery } from "@tanstack/react-query";
-import { assetKeys, asset as assetService } from "@/src/services/asset";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
+import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { MdInfoOutline } from "react-icons/md";
 import { getBanksForFiat } from "@/src/lib/banks";
 import { useAdvertiserInfo } from "@/src/hooks/p2p/use-p2p";
 import { NonAdvertiserModal } from "@/src/components/p2p/non-advertiser-modal";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { P2PCreateAdSkeleton } from "@/src/components/skeletons/p2p";
 
 const FIAT_RATES: Record<string, number> = {
   USD: 1,
@@ -22,7 +23,7 @@ const FIAT_RATES: Record<string, number> = {
   GBP: 0.78,
 };
 
-export default function CreateAdPage() {
+function CreateAdPageInner() {
   const router = useRouter();
   
   const { mutate: createAd, isPending: isCreating } = useCreateAd();
@@ -62,13 +63,10 @@ export default function CreateAdPage() {
   const feed = useMarketFeed(wsPair);
   const currentMarketPrice = selectedAsset === "USDT" ? 1 : feed.price;
 
-  // Real balance from funding account
-  const { data: portfolioData } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: () => assetService.fetchPortfolio()
-  });
+  // Real balance from funding account via WebSocket portfolio channel
+  const { coins: portfolioCoins } = usePortfolioWs();
 
-  const balanceArray = Array.isArray(portfolioData?.data) ? portfolioData.data : [];
+  const balanceArray = Array.isArray(portfolioCoins) ? portfolioCoins : [];
   const assetBalanceInfo = balanceArray.find((b: any) => 
     b.coin === selectedAsset || b.symbol === selectedAsset || b.asset === selectedAsset
   );
@@ -144,7 +142,7 @@ export default function CreateAdPage() {
           <div className="flex bg-black/40 rounded-lg p-1">
             <button
               className={`px-8 py-2 rounded-md text-sm font-bold transition-colors ${
-                adMode === "BUY" ? "bg-[#0ECB81] text-white" : "text-white/50 hover:text-white"
+                adMode === "BUY" ? "bg-buy text-white" : "text-white/50 hover:text-white"
               }`}
               onClick={() => setAdMode("BUY")}
             >
@@ -171,9 +169,9 @@ export default function CreateAdPage() {
               data={["USDT", "BTC", "ETH"]}
               classNames={{
                 label: "text-white/70 mb-2 font-medium",
-                input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-[#0ECB81] transition-all",
-                dropdown: "bg-[#111] border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-                option: "hover:bg-white/10 data-[combobox-selected]:bg-[#0ECB81]/20 data-[combobox-selected]:text-[#0ECB81] rounded-lg mx-1 my-0.5 transition-colors"
+                input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all",
+                dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
+                option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors"
               }}
             />
             <Select
@@ -183,9 +181,9 @@ export default function CreateAdPage() {
               data={["USD", "EUR", "NGN", "GBP"]}
               classNames={{
                 label: "text-white/70 mb-2 font-medium",
-                input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-[#0ECB81] transition-all",
-                dropdown: "bg-[#111] border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-                option: "hover:bg-white/10 data-[combobox-selected]:bg-[#0ECB81]/20 data-[combobox-selected]:text-[#0ECB81] rounded-lg mx-1 my-0.5 transition-colors"
+                input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all",
+                dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
+                option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors"
               }}
             />
           </div>
@@ -238,7 +236,7 @@ export default function CreateAdPage() {
                 rightSection={<span className="text-white/50 pr-4">{priceType === "FIXED" ? fiat : "%"}</span>}
                 classNames={{
                   label: "text-white/70 mb-2 font-medium",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-[#0ECB81] transition-all w-64"
+                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all w-64"
                 }}
               />
               <div className="text-sm text-white/50 pb-3">
@@ -293,7 +291,7 @@ export default function CreateAdPage() {
                 classNames={{
                   label: "text-white/70 mb-2 font-medium",
                   description: "text-white/30 text-xs",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-[#0ECB81] transition-all"
+                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all"
                 }}
               />
               <div className="flex gap-3 items-end">
@@ -306,7 +304,7 @@ export default function CreateAdPage() {
                 placeholder="0"
                 classNames={{
                   label: "text-white/70 text-sm mb-1 font-medium",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-[#0ECB81] transition-all"
+                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all"
                 }}
               />
               <div className="text-white/50 pt-8 hidden sm:block">—</div>
@@ -319,7 +317,7 @@ export default function CreateAdPage() {
                 hideControls
                   classNames={{
                     label: "text-white/70 mb-2 font-medium",
-                    input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-[#0ECB81] transition-all"
+                    input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all"
                   }}
                 />
               </div>
@@ -368,9 +366,9 @@ export default function CreateAdPage() {
                 searchable
                 placeholder="Select up to 3 payment methods"
                 classNames={{
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white min-h-[48px] rounded-xl focus:border-[#0ECB81] transition-all",
-                  dropdown: "bg-[#111] border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-                  option: "hover:bg-white/10 data-[combobox-selected]:bg-[#0ECB81]/20 data-[combobox-selected]:text-[#0ECB81] rounded-lg mx-1 my-0.5 transition-colors",
+                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white min-h-[48px] rounded-xl focus:border-buy transition-all",
+                  dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
+                  option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors",
                   pill: "bg-yellow-500 text-black font-semibold rounded-md"
                 }}
               />
@@ -379,7 +377,7 @@ export default function CreateAdPage() {
                 You must select at least one payment method.
               </div>
             ) : (
-              <div className="text-sm text-[#0ECB81] bg-[#0ECB81]/10 p-4 rounded-lg border border-[#0ECB81]/20">
+              <div className="text-sm text-buy bg-buy/10 p-4 rounded-lg border border-buy/20">
                 ✓ {selectedMethodIds.length} payment method(s) selected
               </div>
             )}
@@ -400,9 +398,9 @@ export default function CreateAdPage() {
               ]}
               classNames={{
                 label: "text-white/70 mb-2 font-medium",
-                input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-[#0ECB81] transition-all",
-                dropdown: "bg-[#111] border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-                option: "hover:bg-white/10 data-[combobox-selected]:bg-[#0ECB81]/20 data-[combobox-selected]:text-[#0ECB81] rounded-lg mx-1 my-0.5 transition-colors"
+                input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all",
+                dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
+                option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors"
               }}
             />
             <div className="col-span-2">
@@ -414,7 +412,7 @@ export default function CreateAdPage() {
                 minRows={3}
                 classNames={{
                   label: "text-white/70 mb-2 font-medium",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white rounded-xl focus:border-[#0ECB81] transition-all p-4"
+                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white rounded-xl focus:border-buy transition-all p-4"
                 }}
               />
             </div>
@@ -436,7 +434,7 @@ export default function CreateAdPage() {
 
             <Button 
               size="lg" 
-              className={`w-full ${adMode === "BUY" ? "bg-[#0ECB81] hover:bg-[#0ECB81]/90 shadow-[0_0_20px_rgba(14,203,129,0.3)]" : "bg-[#F6465D] hover:bg-[#F6465D]/90 shadow-[0_0_20px_rgba(246,70,93,0.3)]"} text-white font-bold text-lg rounded-xl h-14`}
+              className={`w-full ${adMode === "BUY" ? "bg-buy hover:bg-buy/90 shadow-[0_0_20px_rgba(14,203,129,0.3)]" : "bg-[#F6465D] hover:bg-[#F6465D]/90 shadow-[0_0_20px_rgba(246,70,93,0.3)]"} text-white font-bold text-lg rounded-xl h-14`}
               disabled={!price || !totalAmount || !minOrder || !maxOrder || selectedMethodIds.length === 0 || !agreed || isOverBalance}
               loading={isCreating}
               onClick={handleSubmit}
@@ -458,5 +456,13 @@ export default function CreateAdPage() {
       </div>
       )}
     </P2PLayout>
+  );
+}
+
+export default function CreateAdPage() {
+  return (
+    <PageSuspense fallback={<P2PCreateAdSkeleton />}>
+      <CreateAdPageInner />
+    </PageSuspense>
   );
 }

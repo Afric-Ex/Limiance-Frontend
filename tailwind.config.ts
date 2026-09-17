@@ -11,8 +11,31 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        /* ── Design-system semantic aliases (Limiance-Exchange-Design-System.md §3) ── */
+        surface: "var(--color-surface)",
+        elevated: "var(--color-elevated)",
+        muted: "var(--color-muted)",
+        navy: "var(--color-tint-navy)",
+        line: "var(--color-border)",
+        secondary: "var(--color-text-secondary)",
+        disabled: "var(--color-text-disabled)",
+        offwhite: "var(--color-neutral-off-white)",
+        grey400: "var(--color-neutral-grey-400)",
+        grey200: "var(--color-neutral-grey-200)",
+        buy: {
+          DEFAULT: "var(--color-buy)",
+          tint: "var(--color-buy-tint)",
+          alt: "var(--color-buy-alt)",
+        },
+        sell: "var(--color-sell)",
+        warning: {
+          DEFAULT: "var(--color-warning-base)",
+          text: "var(--color-warning-text)",
+          1: "#FBA42A",
+        },
         primary: {
-          DEFAULT: "#4d77f0",
+          DEFAULT: "var(--color-primary)",
+          strong: "var(--color-primary-strong)",
           lighter: "#162244",
         },
         blue: {
@@ -32,9 +55,6 @@ export default {
         },
         error: {
           1: "#F6465D",
-        },
-        warning: {
-          1: "#FBA42A",
         },
         yellow: {
           1: "#DEBE31",
@@ -129,6 +149,9 @@ export default {
           "linear-gradient(90deg, #7142DD 30.53%, #131414 77.51%)",
       },
       boxShadow: {
+        /* ── Design-system effects (spec §3.2) ── */
+        card: "var(--shadow-card)",
+        glow: "var(--shadow-glow-primary)",
         1: "1px 1px 30px -4px #4D77F0",
         2: "1px 1px 20px -4px #4D77F0CC",
         3: "-11.43px 7.62px 23.81px 0px #00000014 inset,7.62px -11.43px 23.81px 0px #00000014 inset",

@@ -136,8 +136,8 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
       size="lg"
       padding={0}
       classNames={{
-        content: "!bg-[#181a20] !border !border-white/[0.06] !rounded-2xl !overflow-hidden",
-        header: "!bg-[#181a20] !border-b !border-white/[0.06] !px-6 !py-4",
+        content: "!bg-elevated !border !border-white/[0.06] !rounded-2xl !overflow-hidden",
+        header: "!bg-elevated !border-b !border-white/[0.06] !px-6 !py-4",
         title: "!text-white !font-bold !text-base",
         close: "!text-white/40 hover:!text-white hover:!bg-white/[0.06] !rounded-lg",
         body: "!p-0",

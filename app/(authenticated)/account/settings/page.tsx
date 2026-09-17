@@ -8,12 +8,14 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Loader } from "@mantine/core";
 import { MdCheck } from "react-icons/md";
 import clsx from "clsx";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { AccountSettingsSkeleton } from "@/src/components/skeletons/account";
 
 const CURRENCIES = ["USD", "EUR", "GBP", "NGN", "USDT"];
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-export default function SettingsPage() {
+function SettingsPageInner() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevValuesRef = useRef<Record<string, any>>({});
@@ -294,5 +296,13 @@ export default function SettingsPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <PageSuspense fallback={<AccountSettingsSkeleton />}>
+      <SettingsPageInner />
+    </PageSuspense>
   );
 }

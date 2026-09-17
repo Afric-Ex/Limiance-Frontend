@@ -49,7 +49,7 @@ export function SellerPendingPanel({
               <div className="flex items-center gap-2">
                 <span className="text-white font-mono tracking-wide">{paymentMethod?.data?.accountNumber ?? "—"}</span>
                 {paymentMethod?.data?.accountNumber && (
-                  <button onClick={() => copyToClipboard(paymentMethod.data.accountNumber)} className="text-[#0ECB81] hover:text-emerald-400 text-xs font-semibold uppercase">Copy</button>
+                  <button onClick={() => copyToClipboard(paymentMethod.data.accountNumber)} className="text-buy hover:text-emerald-400 text-xs font-semibold uppercase">Copy</button>
                 )}
               </div>
             </div>

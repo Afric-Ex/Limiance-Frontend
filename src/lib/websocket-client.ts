@@ -1,6 +1,56 @@
 "use client";
 
+import { handleLogout } from "./handle-logout";
+
+/** Check if JWT token has expired based on its 'exp' claim */
+function isTokenExpired(token: string): boolean {
+  if (!token) return false;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    const decoded = JSON.parse(jsonPayload);
+    if (decoded.exp && typeof decoded.exp === "number") {
+      const isExpired = Date.now() >= decoded.exp * 1000;
+      if (isExpired) {
+        console.warn(
+          `[WebSocketClient] Token expired at ${new Date(decoded.exp * 1000).toLocaleString()}`
+        );
+      }
+      return isExpired;
+    }
+  } catch {
+    // If parsing fails, proceed without assuming expired
+  }
+  return false;
+}
+
 import { getCookie } from "cookies-next";
+
+/** Mirror axios.ts: localStorage first (raw token), then cookies-next/document.cookie (URL-decoded). */
+function getAuthToken(): string {
+  if (typeof localStorage !== "undefined") {
+    const lsToken = localStorage.getItem("auth-token");
+    if (lsToken && lsToken !== "undefined" && lsToken !== "null") return lsToken;
+  }
+  try {
+    const nextCookie = getCookie("auth-token");
+    if (nextCookie && typeof nextCookie === "string" && nextCookie !== "undefined" && nextCookie !== "null") {
+      return decodeURIComponent(nextCookie);
+    }
+  } catch {}
+  if (typeof document === "undefined") return "";
+  const match = document.cookie.match(/(?:^|;\s*)auth-token=([^;]*)/);
+  const cookieToken = match ? decodeURIComponent(match[1]) : "";
+  return cookieToken && cookieToken !== "undefined" && cookieToken !== "null" ? cookieToken : "";
+}
 
 export type WsMessageHandler = (data: any, rawMessage: any) => void;
 export type WsStatusHandler = (connected: boolean) => void;
@@ -79,7 +129,12 @@ class WebSocketClient {
 
     const isHttps = window.location.protocol === "https:";
     const safeUrl = isHttps ? explicitUrl.replace(/^ws:\/\//, "wss://") : explicitUrl;
-    const token = getCookie("auth-token") || "";
+    const token = getAuthToken();
+    if (token && isTokenExpired(token)) {
+      console.warn("[WebSocketClient] Current auth token is expired. Triggering session refresh/logout.");
+      handleLogout();
+      return;
+    }
 
     this.isConnecting = true;
     this.intentionalClose = false;
@@ -135,7 +190,7 @@ class WebSocketClient {
           this.ws.close();
         }
       };
-    } catch (err) {
+    } catch {
       this.isConnecting = false;
       this.notifyStatus(false);
       this.scheduleReconnect();

@@ -15,9 +15,14 @@ import { TradeReminder } from "@/src/components/settings/trade-reminder";
 import { TransactionNotifications } from "@/src/components/settings/transaction-notifications";
 import { XTermOfUse } from "@/src/components/settings/x-term-of-use";
 import { useUserStore } from "@/src/stores/user-store";
+import { useState, useEffect } from "react";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { WithSidebarSettingsSkeleton } from "@/src/components/skeletons/with-sidebar";
 
-export default function Settings() {
+function SettingsInner() {
   const user = useUserStore((state) => state.user);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const settingsList = [
     {
@@ -47,7 +52,7 @@ export default function Settings() {
           rightSection: (
             <span className="flex text-sm font-medium flex-col text-right">
               Activities, Trade Notification, <br />
-              Afriq News, System Messages
+              Limiance News, System Messages
             </span>
           ),
           modal: <NotificationPreference />,
@@ -144,6 +149,9 @@ export default function Settings() {
       modal: <XTermOfUse />,
     },
   ];
+
+  if (!mounted) return <WithSidebarSettingsSkeleton />;
+
   return (
     <main className="flex pb-10 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter flex-col gap-8 max-[1150px]:gap-4">
       <h3 className="text-2xl font-semibold">Preferences</h3>
@@ -163,5 +171,13 @@ export default function Settings() {
         ))}
       </div>
     </main>
+  );
+}
+
+export default function Settings() {
+  return (
+    <PageSuspense fallback={<WithSidebarSettingsSkeleton />}>
+      <SettingsInner />
+    </PageSuspense>
   );
 }

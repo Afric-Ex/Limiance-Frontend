@@ -66,7 +66,7 @@ export const OrderCompletedOverlay = ({
       <div className="max-w-xl w-full flex flex-col gap-8 mt-10">
         
         <div className="text-center">
-          <div className="w-20 h-20 bg-[#0ECB81]/20 text-[#0ECB81] rounded-full flex items-center justify-center text-4xl mx-auto mb-6">
+          <div className="w-20 h-20 bg-buy/20 text-buy rounded-full flex items-center justify-center text-4xl mx-auto mb-6">
             ✓
           </div>
           <h2 className="text-3xl font-bold text-white mb-2">Trade Completed!</h2>
@@ -75,13 +75,13 @@ export const OrderCompletedOverlay = ({
             {isBuyer ? (
               <>
                 <p className="text-white text-lg mb-4">
-                  <span className="font-bold text-[#0ECB81]">{cryptoAmount.toLocaleString()} {asset}</span> has been added to your Funding Account.
+                  <span className="font-bold text-buy">{cryptoAmount.toLocaleString()} {asset}</span> has been added to your Funding Account.
                 </p>
                 <p className="text-white/50 text-sm mb-6">
                   Transfer to Spot Account to trade, or leave in Funding Account to withdraw.
                 </p>
                 <Button 
-                  className="w-full bg-[#0ECB81] hover:bg-[#0ECB81]/90 text-white" 
+                  className="w-full bg-buy hover:bg-buy/90 text-white" 
                   size="md"
                   onClick={onGoToWallet}
                 >
@@ -91,7 +91,7 @@ export const OrderCompletedOverlay = ({
             ) : (
               <>
                 <p className="text-white text-lg mb-2">
-                  <span className="font-bold text-[#0ECB81]">{fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {fiat}</span> received. 
+                  <span className="font-bold text-buy">{fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {fiat}</span> received. 
                 </p>
                 <p className="text-white text-lg mb-4">
                   <span className="font-bold text-[#F6465D]">{cryptoAmount.toLocaleString()} {asset}</span> released.
@@ -115,7 +115,7 @@ export const OrderCompletedOverlay = ({
             <div className="flex gap-4 mb-6">
               <button 
                 className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
-                  rating === "POSITIVE" ? "bg-[#0ECB81]/20 border-[#0ECB81] text-[#0ECB81]" : "bg-black/20 border-white/10 text-white/50 hover:bg-white/5"
+                  rating === "POSITIVE" ? "bg-buy/20 border-buy text-buy" : "bg-black/20 border-white/10 text-white/50 hover:bg-white/5"
                 }`}
                 onClick={() => { setRating("POSITIVE"); setSelectedTags([]); }}
               >
@@ -144,7 +144,7 @@ export const OrderCompletedOverlay = ({
                       className={`px-3 py-1.5 rounded-full text-sm transition-all border ${
                         selectedTags.includes(tag)
                           ? rating === "POSITIVE"
-                            ? "bg-[#0ECB81]/20 border-[#0ECB81] text-[#0ECB81]"
+                            ? "bg-buy/20 border-buy text-buy"
                             : "bg-[#F6465D]/20 border-[#F6465D] text-[#F6465D]"
                           : "bg-black/20 border-white/10 text-white/50 hover:text-white"
                       }`}

@@ -11,6 +11,8 @@ import { Skeleton } from "@/src/components/shared/skeleton";
 import { successNotification } from "@/src/lib/notification-handler";
 import { useState } from "react";
 import clsx from "clsx";
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { LimianceEarnSkeleton } from "@/src/components/skeletons/with-sidebar";
 
 const PRODUCT_TABS = [
   "Simple Earn",
@@ -22,7 +24,7 @@ const PRODUCT_TABS = [
   "Smart Trend",
 ];
 
-export default function LimianceEarn() {
+function LimianceEarnInner() {
   const queryClient = useQueryClient();
   const [mainTab, setMainTab] = useState<"products" | "positions">("products");
   const [productTab, setProductTab] = useState(PRODUCT_TABS[0]);
@@ -79,7 +81,7 @@ export default function LimianceEarn() {
     <div className="flex flex-col gap-6 w-full min-h-[80vh] p-4 sm:p-6 lg:p-8 pb-24 overflow-y-auto">
 
       {/* ── Hero Banner ── */}
-      <div className="relative rounded-2xl overflow-hidden border border-white/[0.05] bg-gradient-to-br from-[#12141c] via-[#181a20] to-[#0d0e12]">
+      <div className="relative rounded-2xl overflow-hidden border border-white/[0.05] bg-gradient-to-br from-surface via-elevated to-black">
         {/* Glow blobs */}
         <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-primary/20 blur-[100px] pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-blue-600/10 blur-[80px] pointer-events-none" />
@@ -356,5 +358,13 @@ export default function LimianceEarn() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LimianceEarn() {
+  return (
+    <PageSuspense fallback={<LimianceEarnSkeleton />}>
+      <LimianceEarnInner />
+    </PageSuspense>
   );
 }

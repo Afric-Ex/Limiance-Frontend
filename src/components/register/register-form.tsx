@@ -8,9 +8,11 @@ import {
   Divider,
 } from "@mantine/core";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Google } from "../icons/google";
 import { useAuth } from "@/src/hooks/queries/use-auth";
+import { useAuthStore } from "@/src/stores/auth-store";
+import { useGoogleLogin } from "@react-oauth/google";
 
 const inputStyles = {
   input:
@@ -22,6 +24,26 @@ const inputStyles = {
 export const RegisterForm = () => {
   const [isAgreed, setIsAgreed] = useState(false);
   const { handleRegister, registerLoading, registerForm: form } = useAuth();
+  const storeEmail = useAuthStore((state) => state.email);
+  const storePhone = useAuthStore((state) => state.phone);
+
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: (tokenResponse) => {
+      console.log(tokenResponse.access_token);
+    },
+    onError: () => {
+      console.log("Login Failed");
+    },
+  });
+
+  useEffect(() => {
+    if (storeEmail && !form.values.email) {
+      form.setFieldValue("email", storeEmail);
+    }
+    if (storePhone && !form.values.phone) {
+      form.setFieldValue("phone", storePhone);
+    }
+  }, [storeEmail, storePhone, form]);
 
   return (
     <form onSubmit={handleRegister} className="flex flex-col gap-4 animate-fade-in-up">
@@ -95,7 +117,7 @@ export const RegisterForm = () => {
           <Button
             disabled={!isAgreed}
             type="submit"
-            className="!h-[55px] !rounded-xl !bg-primary hover:!bg-primary/90 hover:!shadow-[0_0_16px_rgba(77,119,240,0.3)] !text-white !font-bold !transition-all active:!scale-[0.98] disabled:!bg-white/[0.04] disabled:!text-white/30"
+            className="!h-[55px] !rounded-xl !bg-primary hover:!bg-primary/90 hover:!shadow-[0_0_16px_rgba(77,119,240,0.3)] !text-white !font-bold !transition-all active:!scale-[0.98] disabled:!bg-gray-9 disabled:!text-white"
             fullWidth
             loading={registerLoading}
           >
@@ -122,6 +144,7 @@ export const RegisterForm = () => {
       
       <button
         type="button"
+        onClick={() => loginWithGoogle()}
         className="flex items-center justify-center gap-3 w-full h-[55px] bg-[#181a20] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12] transition-colors rounded-xl"
       >
         <Google />

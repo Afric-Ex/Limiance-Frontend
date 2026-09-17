@@ -8,6 +8,8 @@ interface AuthState {
   setCountry: (value: string) => void;
   email: string;
   setEmail: (value: string) => void;
+  phone: string;
+  setPhone: (value: string) => void;
   otp: string;
   setOtp: (value: string) => void;
   pending2FAUserId: string | null;
@@ -26,6 +28,8 @@ export const useAuthStore = create<AuthState>()(
       setCountry: (value) => set({ country: value }),
       email: "",
       setEmail: (value) => set({ email: value }),
+      phone: "",
+      setPhone: (value) => set({ phone: value }),
       otp: "",
       setOtp: (value) => set({ otp: value }),
       setRememberMe: (value) => set({ rememberMe: value }),
@@ -44,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
         rememberMe: state.rememberMe,
         country: state.country,
         email: state.email,
+        phone: state.phone,
         otp: state.otp,
         pending2FAUserId: state.pending2FAUserId,
         pending2FAChallengeToken: state.pending2FAChallengeToken,

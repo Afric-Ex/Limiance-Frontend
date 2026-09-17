@@ -74,7 +74,7 @@ export const ReleaseModal = ({ isOpen, onClose, onCodeVerified }: ReleaseModalPr
         />
 
         <div className="text-sm">
-          <span className="text-white/50">Didn't receive it? </span>
+          <span className="text-white/50">Didn&apos;t receive it? </span>
           {canResend ? (
             <button onClick={handleResend} className="text-blue-400 hover:text-blue-300 transition-colors">
               Resend Code

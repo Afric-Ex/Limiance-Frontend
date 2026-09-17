@@ -10,7 +10,6 @@ import { errorMessageHandler } from '@/src/lib/error-handler';
 import { successNotification } from '@/src/lib/notification-handler';
 import { MOCK_MODE } from '@/src/mocks';
 import { mockTrading } from '@/src/mocks/mock-trading';
-import { asset, assetKeys } from '@/src/services/asset';
 import { useUserStore } from '@/src/stores/user-store';
 import { tradingService } from '@/src/services/trading';
 import { DEFAULT_MODAL_SETTINGS } from '@/src/utils/constants';
@@ -42,13 +41,14 @@ import { MobileTopBar } from '@/src/components/shared/mobile-top-bar';
 import { IoChevronDown, IoChevronUp, IoSwapHorizontal, IoBarChartOutline, IoListOutline } from 'react-icons/io5';
 import { MobileBottomSheet } from '@/src/components/shared/mobile-bottom-sheet';
 import { MobileBottomNav } from '@/src/components/shared/mobile-bottom-nav';
+import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { FuturesTradePageSkeleton } from "@/src/components/skeletons/trades";
 
 const CandlestickChart = dynamic(
   () => import('@/src/components/trades/candlestick-char'),
   { ssr: false, loading: () => <Skeleton variant="chart" height="100%" /> }
 );
 
-const FUTURES_ACCOUNT_KEY = 'futures-account-enabled';
 const LEVERAGE_PRESETS = [1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100];
 const PERCENT_MARKS = [{ value: 25 }, { value: 50 }, { value: 75 }];
 
@@ -56,7 +56,9 @@ type OrderType = 'limit' | 'market' | 'stop';
 type TradeSide = 'buy' | 'sell';
 type MarginMode = 'cross' | 'isolated';
 
-function FuturesTrades() {
+function FuturesTradesInner() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const [selectedPair, setSelectedPair] = useState('BTC/USDT');
   const [pairSearch, setPairSearch] = useState('');
   const [futuresPrice, setFuturesPrice] = useState<number | string>('');
@@ -141,7 +143,7 @@ function FuturesTrades() {
     onError: (err: any) => errorMessageHandler(err),
   });
 
-  const { mutate: updateTPSL, isPending: updatingTPSL } = useMutation({
+  const { mutate: updateTPSL } = useMutation({
     mutationFn: (data: { positionId: string; take_profit_price?: string; stop_loss_price?: string }) => 
       tradingService.updateFuturesPositionTPSL(data),
     onSuccess: () => {
@@ -594,6 +596,8 @@ function FuturesTrades() {
       </div>
     </div>
   );
+
+  if (!mounted) return <FuturesTradePageSkeleton />;
 
   return (
     <div className="flex gap-1 flex-col h-full bg-black min-h-screen page-enter">
@@ -1596,4 +1600,10 @@ function FuturesTrades() {
   );
 }
 
-export default FuturesTrades;
+export default function FuturesTrades() {
+  return (
+    <PageSuspense fallback={<FuturesTradePageSkeleton />}>
+      <FuturesTradesInner />
+    </PageSuspense>
+  );
+}

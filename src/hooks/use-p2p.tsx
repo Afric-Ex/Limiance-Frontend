@@ -1,7 +1,7 @@
 import { useForm } from "@mantine/form";
 import { useQuery } from "@tanstack/react-query";
-import { asset, assetKeys } from "../services/asset";
 import { tradingService } from "../services/trading";
+import { usePortfolioWs } from "./use-portfolio-ws";
 
 export const useP2P = () => {
   const addPaymentMethodForm = useForm({
@@ -36,12 +36,7 @@ export const useP2P = () => {
     },
   });
 
-  const { data: portfolio } = useQuery({
-    queryKey: assetKeys.portfolio(),
-    queryFn: asset.fetchPortfolio,
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
-    staleTime: 30_000,
-  });
+  const { coins: portfolio } = usePortfolioWs();
 
   const { data: tokensRaw, isLoading: isLoadingTokens } = useQuery({
     queryKey: ["listed-tokens"],

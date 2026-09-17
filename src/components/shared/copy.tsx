@@ -25,7 +25,7 @@ export const Copy = ({
     <Tooltip
       label={isCopied ? "Copied!" : "Copy"}
       withArrow
-      color="#181a20"
+      color="var(--color-elevated)"
       classNames={{ tooltip: "!text-xs !font-semibold !border !border-white/[0.08]" }}
     >
       <button

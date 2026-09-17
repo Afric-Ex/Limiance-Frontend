@@ -1,12 +1,8 @@
 "use client";
 
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { asset, assetKeys } from "@/src/services/asset";
-import { MdKeyboardArrowRight, MdOutlineQrCode } from "react-icons/md";
-import { IoCheckmarkCircle, IoTimeOutline } from "react-icons/io5";
+import { MdOutlineQrCode } from "react-icons/md";
 import { PiBellFill } from "react-icons/pi";
-import { InlineLoading } from "./inline-loading";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -28,7 +24,7 @@ export const NotificationsDropdown = () => {
   const hasItems = notifications && notifications.length > 0;
 
   return (
-    <div className="bg-[#181a20] border border-white/[0.06] w-[360px] rounded-2xl overflow-hidden shadow-xl">
+    <div className="bg-elevated border border-white/[0.06] w-[360px] rounded-2xl overflow-hidden shadow-xl">
       <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
         <span className="text-sm font-bold text-white">Notifications</span>
         {hasItems && (
