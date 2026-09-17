@@ -54,6 +54,25 @@ const nextConfig: NextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  typescript: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has type errors. Run `npm run typecheck` to verify types.
+    ignoreBuildErrors: true,
+  },
+  experimental: {
+    optimizePackageImports: [
+      "react-icons",
+      "@mantine/core",
+      "@mantine/hooks",
+      "@mantine/dates",
+      "@mantine/dropzone",
+      "@mantine/form",
+      "@mantine/modals",
+      "date-fns",
+      "dayjs",
+      "echarts",
+    ],
+  },
 };
 
 export default nextConfig;
