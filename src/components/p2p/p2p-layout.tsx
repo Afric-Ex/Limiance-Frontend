@@ -14,7 +14,7 @@ const p2pNavLinks = [
   // Profile will be dynamically injected if the user is an advertiser
 ];
 
-export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
+export const P2PLayout = ({ children, light = false }: { children: React.ReactNode; light?: boolean }) => {
   const pathname = usePathname();
   const { data } = useAllMatchedOrders();
   const allOrders = (data as any)?.data?.data ?? [];
@@ -31,9 +31,12 @@ export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className={clsx("flex flex-col h-full w-full", light ? "bg-[#f7f9fc] text-[#161a1e]" : "bg-transparent")}>
       {/* P2P Header Nav */}
-      <div className="flex items-center space-x-8 border-b border-white/10 pb-4 mb-6 px-4 overflow-x-auto whitespace-nowrap w-full max-w-7xl mx-auto">
+      <div className={clsx(
+        "flex items-center gap-8 border-b pb-4 mb-6 px-4 overflow-x-auto whitespace-nowrap w-full max-w-7xl mx-auto",
+        light ? "border-[#e4e8ef]" : "border-white/10"
+      )}>
         {navLinks.map((item) => {
           const isActive = pathname === item.link || (item.link !== "/trades/p2p" && pathname.startsWith(item.link));
           return (
@@ -41,16 +44,16 @@ export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
               key={item.name}
               href={item.link}
               className={clsx(
-                "text-lg font-medium transition-colors pb-4 -mb-4 border-b-2",
-                isActive 
-                  ? "text-white border-primary" 
-                  : "text-white/55 border-transparent hover:text-white"
+                "text-sm font-semibold transition-colors pb-4 -mb-4 border-b-2",
+                isActive
+                  ? light ? "text-[#161a1e] border-[#25ab42]" : "text-white border-primary"
+                  : light ? "text-[#727679] border-transparent hover:text-[#161a1e]" : "text-white/55 border-transparent hover:text-white"
               )}
             >
               <div className="flex items-center">
                 {item.name}
                 {item.name === "Orders" && processingCount > 0 && (
-                  <span className="ml-2 inline-flex items-center justify-center bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px]">
+                    <span className={clsx("ml-2 inline-flex items-center justify-center text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px]", light ? "bg-[#fff1d6] text-[#a56100]" : "bg-yellow-500 text-black")}>
                     {processingCount}
                   </span>
                 )}
@@ -61,7 +64,7 @@ export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
       {/* Page Content */}
-      <div className="flex-1 overflow-auto w-full max-w-7xl mx-auto px-4">
+      <div className={clsx("flex-1 overflow-auto w-full max-w-7xl mx-auto px-4", light && "pb-12")}>
         <GlobalP2PNotification />
         {children}
       </div>

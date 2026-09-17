@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://s3.tradingview.com https://static.tradingview.com https://www.gstatic.com https://accounts.google.com https://static.geetest.com https://*.geetest.com https://static.sumsub.com https://*.sumsub.com",
       "connect-src 'self' https: wss: ws:",
       "img-src 'self' data: blob: https:",
-      "style-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://static.geetest.com https://*.geetest.com",
       "font-src 'self' data:",
       "frame-src 'self' https://accounts.google.com https://*.geetest.com https://*.sumsub.com",
       "worker-src 'self' blob:",
