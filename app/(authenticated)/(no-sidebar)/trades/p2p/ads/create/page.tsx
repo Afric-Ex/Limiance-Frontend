@@ -300,7 +300,8 @@ function CreateAdPageInner() {
                 value={minOrder}
                 onChange={(val) => setMinOrder(val === "" ? "" : Number(val))}
                 min={0}
-                max={maxOrder === "" ? (totalAmount === "" ? undefined : Number(totalAmount)) : Number(maxOrder)}
+                max={maxOrder !== "" && Number(maxOrder) > 0 ? Number(maxOrder) : undefined}
+                clampBehavior="blur"
                 placeholder="0"
                 classNames={{
                   label: "text-white/70 text-sm mb-1 font-medium",
@@ -312,8 +313,9 @@ function CreateAdPageInner() {
                 label={`Max Order (${selectedAsset})`}
                 value={maxOrder}
                 onChange={(val) => setMaxOrder(val === "" ? "" : Number(val))}
-                min={minOrder === "" ? 0 : Number(minOrder)}
-                max={totalAmount === "" ? undefined : Number(totalAmount)}
+                min={minOrder !== "" && Number(minOrder) > 0 ? Number(minOrder) : 0}
+                max={totalAmount !== "" && Number(totalAmount) > 0 ? Number(totalAmount) : undefined}
+                clampBehavior="blur"
                 hideControls
                   classNames={{
                     label: "text-white/70 mb-2 font-medium",

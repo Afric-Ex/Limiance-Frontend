@@ -129,9 +129,9 @@ export const SupportedListingsDropdown = ({
               {supportedTokensLoading ? (
                 <InlineLoading />
               ) : (
-                supportedTokens?.map((item: any) => (
+                supportedTokens?.map((item: any, index: number) => (
                   <div
-                    key={item.name}
+                    key={`${item.symbol}-${item.blockchain ?? "native"}-${index}`}
                     className="py-3 px-2 flex cursor-pointer border-b border-b-gray-49 bg-gray-48 hover:bg-gray-48/50 items-center gap-2"
                     onClick={() => {
                       setSelectedCoin({

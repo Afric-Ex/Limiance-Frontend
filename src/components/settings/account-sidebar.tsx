@@ -23,11 +23,11 @@ export const AccountSidebar = () => {
   const pathname = usePathname();
 
   return (
-    <div className="flex flex-col gap-1 w-full">
+    <div className="flex flex-col gap-1 w-full rounded-2xl border border-white/[0.06] bg-[#181a20] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
       {/* Header */}
-      <div className="px-3 pb-3 mb-1 border-b border-white/[0.05]">
+      <div className="px-3 pb-4 mb-1 border-b border-white/[0.06]">
         <h2 className="text-base font-bold text-white">Account</h2>
-        <p className="text-[11px] text-white/35 mt-0.5">Manage your account settings</p>
+        <p className="text-[11px] text-white/40 mt-1">Manage your account settings</p>
       </div>
 
       {/* Nav Links */}
@@ -50,7 +50,7 @@ export const AccountSidebar = () => {
               className={clsx(
                 "group flex items-center justify-between w-full ml-[3px] rounded-xl px-3 py-2.5 transition-all duration-200 text-left",
                 isActive
-                  ? "bg-primary/[0.08] text-white"
+                  ? "bg-white/[0.07] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
                   : "bg-transparent hover:bg-white/[0.04] text-white/45 hover:text-white"
               )}
             >

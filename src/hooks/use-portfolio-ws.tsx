@@ -83,6 +83,44 @@ interface PortfolioWsData {
   refreshBalances: () => void;
 }
 
+const numericValue = (value: unknown): number => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+/** Merge duplicate API rows so consumers always receive one row per asset. */
+export function normalizePortfolioCoins(coins: any[]): PortfolioCoin[] {
+  const merged = new Map<string, PortfolioCoin>();
+
+  coins.forEach((coin) => {
+    const symbol = String(coin?.symbol ?? "").trim();
+    if (!symbol) return;
+
+    const key = symbol.toUpperCase();
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, {
+        ...coin,
+        symbol,
+        spotBalance: String(coin.spotBalance ?? coin.spot_balance ?? "0"),
+        futuresBalance: String(coin.futuresBalance ?? coin.futures_balance ?? "0"),
+        fundingBalance: String(coin.fundingBalance ?? coin.funding_balance ?? "0"),
+        marginBalance: String(coin.marginBalance ?? coin.margin_balance ?? "0"),
+      });
+      return;
+    }
+
+    existing.spotBalance = String(numericValue(existing.spotBalance) + numericValue(coin.spotBalance ?? coin.spot_balance));
+    existing.futuresBalance = String(numericValue(existing.futuresBalance) + numericValue(coin.futuresBalance ?? coin.futures_balance));
+    existing.fundingBalance = String(numericValue(existing.fundingBalance) + numericValue(coin.fundingBalance ?? coin.funding_balance));
+    existing.marginBalance = String(numericValue(existing.marginBalance) + numericValue(coin.marginBalance ?? coin.margin_balance));
+    existing.lockedBalance = String(numericValue(existing.lockedBalance) + numericValue(coin.lockedBalance ?? coin.locked_balance));
+    existing.pnlBalance = String(numericValue(existing.pnlBalance) + numericValue(coin.pnlBalance ?? coin.pnl_balance));
+  });
+
+  return Array.from(merged.values());
+}
+
 /** Derive per-account USD totals from per-coin portfolio data */
 function deriveAccountBalances(coins: any[]): Record<string, AccountBalance> {
   const totals: Record<string, number> = { spot: 0, funding: 0, futures: 0, margin: 0 };
@@ -137,11 +175,16 @@ const fetchHttpFallbackData = async () => {
       ]);
 
       const result: any = {};
+      const responseBody = (settled: PromiseSettledResult<any>) =>
+        settled.status === "fulfilled"
+          ? settled.value?.data
+          : settled.reason?.response?.data;
 
-      if (portfolioRes.status === "fulfilled" && portfolioRes.value.data?.data) {
-        result.coins = portfolioRes.value.data.data;
-      } else if (portfolioRes.status === "fulfilled" && Array.isArray(portfolioRes.value.data)) {
-        result.coins = portfolioRes.value.data;
+      const portfolioBody = responseBody(portfolioRes);
+      if (Array.isArray(portfolioBody?.data)) {
+        result.coins = normalizePortfolioCoins(portfolioBody.data);
+      } else if (Array.isArray(portfolioBody)) {
+        result.coins = normalizePortfolioCoins(portfolioBody);
       }
 
       if (allocRes.status === "fulfilled" && allocRes.value.data?.data) {
@@ -290,11 +333,11 @@ export const usePortfolioWs = (): PortfolioWsData => {
         { type: "get_portfolio", data: { page: "1", limit: "100", query: "" } },
         (rawPayload, fullMsg) => {
           const payload = fullMsg?.data ?? rawPayload;
-          const items: PortfolioCoin[] = Array.isArray(payload?.data)
+          const items: PortfolioCoin[] = normalizePortfolioCoins(Array.isArray(payload?.data)
             ? payload.data
             : Array.isArray(payload)
             ? payload
-            : [];
+            : []);
           if (items.length > 0) {
             wsHasDataRef.current = true;
             if (wsTimeoutRef.current) clearTimeout(wsTimeoutRef.current);

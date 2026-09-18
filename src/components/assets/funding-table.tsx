@@ -94,12 +94,12 @@ export const FundingTable = () => {
                   </TableTd>
                 </TableTr>
               ) : (
-                visibleAssets.map((item) => {
+                visibleAssets.map((item, index) => {
                   const bal = parseFloat(item.fundingBalance);
                   const price = parseFloat(item.currencyPrice ?? "0");
                   const usdVal = (bal * price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                   return (
-                    <TableTr key={item.symbol}>
+                    <TableTr key={`${item.symbol}-${item.name ?? "asset"}-${index}`}>
                       <TableTd className="!pl-6">
                         <span className="flex items-center gap-3">
                           {item.image ? (

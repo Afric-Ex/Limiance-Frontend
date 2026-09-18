@@ -360,7 +360,7 @@ function SecurityPageInner() {
       </div>
 
       {/* Card 1 — Two-Factor Authentication (2FA) */}
-      <div className="p-8 max-[1150px]:p-4 bg-primary/10 border border-primary/25 rounded-20px max-[1150px]:rounded-xl backdrop-blur-8px flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 max-[1150px]:gap-4">
+      <div className="account-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 max-[1150px]:gap-4">
         <div className="flex items-start gap-4">
           <div className="mt-1"><Authenticator /></div>
           <div className="flex flex-col gap-1">
@@ -400,7 +400,7 @@ function SecurityPageInner() {
       </div>
 
       {/* Card 1.5 — Email OTP Login */}
-      <div className="p-8 max-[1150px]:p-4 bg-primary/10 border border-primary/25 rounded-20px max-[1150px]:rounded-xl backdrop-blur-8px flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 max-[1150px]:gap-4">
+      <div className="account-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 max-[1150px]:gap-4">
         <div className="flex items-start gap-4">
           <div className="mt-1 flex items-center justify-center w-[30px] h-[30px] rounded bg-white/5"><MdMailOutline size={20} className="text-white" /></div>
           <div className="flex flex-col gap-1">
@@ -442,7 +442,7 @@ function SecurityPageInner() {
       </div>
 
       {/* Card 2 — Change Password */}
-      <div className="p-8 max-[1150px]:p-4 bg-primary/10 border border-primary/25 rounded-20px max-[1150px]:rounded-xl backdrop-blur-8px flex flex-col gap-6 max-[1150px]:gap-4">
+      <div className="account-card flex flex-col gap-6 max-[1150px]:gap-4">
         <h3 className="text-lg font-semibold">Change Password</h3>
         <div className="flex flex-col gap-5 max-w-md">
           <TextInput
@@ -503,7 +503,7 @@ function SecurityPageInner() {
       </div>
 
       {/* Card 3 — Active Sessions */}
-      <div className="p-8 max-[1150px]:p-4 bg-primary/10 border border-primary/25 rounded-20px max-[1150px]:rounded-xl backdrop-blur-8px flex flex-col gap-6 max-[1150px]:gap-4">
+      <div className="account-card flex flex-col gap-6 max-[1150px]:gap-4">
         <h3 className="text-lg font-semibold">Active Sessions</h3>
         {sessionsLoading ? (
           <div className="flex justify-center py-6"><Loader color="blue" /></div>
@@ -560,7 +560,7 @@ function SecurityPageInner() {
       </div>
 
       {/* Card 4 — Login History */}
-      <div className="p-8 max-[1150px]:p-4 bg-primary/10 border border-primary/25 rounded-20px max-[1150px]:rounded-xl backdrop-blur-8px flex flex-col gap-6 max-[1150px]:gap-4">
+      <div className="account-card flex flex-col gap-6 max-[1150px]:gap-4">
         <h3 className="text-lg font-semibold">Login History</h3>
         {logsLoading ? (
           <div className="flex justify-center py-6"><Loader color="blue" /></div>

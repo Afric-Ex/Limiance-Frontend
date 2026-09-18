@@ -68,7 +68,7 @@ export const FuturesTable = () => {
                     </TableTd>
                   </TableTr>
                 ) : (
-                  portfolio.map((item: any) => {
+                  portfolio.map((item: any, index: number) => {
                     const balStr = String(item.futuresBalance || "0").replace(/,/g, "");
                     const balNum = parseFloat(balStr);
                     const priceStr = String(item.currencyPrice || "0").replace(/,/g, "");
@@ -78,7 +78,7 @@ export const FuturesTable = () => {
                     if (hideSmallBalances && valueUsd < 1) return null;
 
                     return (
-                      <TableTr key={item.name}>
+                      <TableTr key={`${item.symbol ?? item.name}-${index}`}>
                         <TableTd className="!pl-6">
                           <span className="flex items-center gap-3">
                             {item.image ? (

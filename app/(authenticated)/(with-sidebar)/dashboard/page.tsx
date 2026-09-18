@@ -65,7 +65,7 @@ function formatVolume(val: number) {
 function PriceCell({ value, change }: { value: number; change: number }) {
   const numValue = Number(value) || 0;
   return (
-    <span className={clsx("text-sm max-[1150px]:text-base font-semibold tabular-nums", change >= 0 ? "text-success-2 max-[1150px]:text-white/90" : "text-error-1 max-[1150px]:text-white/90")}>
+    <span className={clsx("text-sm max-[768px]:text-base font-semibold tabular-nums", change >= 0 ? "text-success-2 max-[768px]:text-white/90" : "text-error-1 max-[768px]:text-white/90")}>
       ${numValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: numValue > 100 ? 2 : 6 })}
     </span>
   );
@@ -78,7 +78,7 @@ function ChangeCell({ value, mobile }: { value: number; mobile?: boolean }) {
     <span className={clsx(
       "font-semibold px-2 py-0.5 rounded inline-flex items-center justify-center gap-1 min-w-[72px]",
       isUp ? "bg-success-2/10 text-success-2" : "bg-error-1/10 text-error-1",
-      mobile ? "text-xs min-[1150px]:hidden" : "text-sm max-[1150px]:hidden"
+      mobile ? "text-xs min-[769px]:hidden" : "text-sm max-[768px]:hidden"
     )}>
       {!mobile && (isUp ? <MdTrendingUp size={14} /> : <MdTrendingDown size={14} />)}
       {isUp ? "+" : ""}{numValue.toFixed(2)}%
@@ -369,9 +369,9 @@ function DashboardInner() {
       </div>
 
       {/* Markets Section */}
-      <div className="animate-fade-up stagger-3 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:p-0 max-[1150px]:bg-transparent max-[1150px]:border-0 flex flex-col gap-4 max-[1150px]:gap-2">
-        <div className="flex items-center justify-between max-[1150px]:px-1">
-          <span className="text-lg max-[1150px]:text-base font-bold text-white/90">Markets</span>
+      <div className="animate-fade-up stagger-3 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[768px]:p-0 max-[768px]:bg-transparent max-[768px]:border-0 flex flex-col gap-4 max-[768px]:gap-2">
+        <div className="flex items-center justify-between max-[768px]:px-1">
+          <span className="text-lg max-[768px]:text-base font-bold text-white/90">Markets</span>
           <Link href="/markets" className="flex items-center gap-1 text-xs font-medium text-white/50 hover:text-white transition-colors">
             View All <MdKeyboardArrowRight />
           </Link>
@@ -418,13 +418,13 @@ function DashboardInner() {
               >
                 <thead>
                   <TableTr>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] pl-4 max-[1150px]:pl-2">Coin</TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[1150px]:text-right max-[1150px]:pr-2">Price</TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[1150px]:hidden">
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] pl-4 max-[768px]:pl-2">Coin</TableTh>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[768px]:text-right max-[768px]:pr-2">Price</TableTh>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[768px]:hidden">
                       <span>{item === "Holding" ? "Balance" : "24h Volume"}</span>
                     </TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[1150px]:hidden">24h Change</TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] text-right pr-4 max-[1150px]:hidden">Action</TableTh>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[768px]:hidden">24h Change</TableTh>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] text-right pr-4 max-[768px]:hidden">Action</TableTh>
                   </TableTr>
                 </thead>
                 <tbody>
@@ -444,30 +444,30 @@ function DashboardInner() {
                     </TableTr>
                   ) : getFilteredTokens().slice(0, 10).map((token: any) => (
                     <TableTr key={token.pair} className="row-hover cursor-pointer border-b border-transparent transition-colors" onClick={() => router.push(`/trades/spot?pair=${token.pair}`)}>
-                      <TableTd className="py-1.5 pl-4 max-[1150px]:pl-2 max-[1150px]:py-4">
-                        <span className="flex items-center gap-2.5 max-[1150px]:gap-2.5">
+                      <TableTd className="py-1.5 pl-4 max-[768px]:pl-2 max-[768px]:py-4">
+                        <span className="flex items-center gap-2.5 max-[768px]:gap-2.5">
                           {token.image ? (
-                            <img src={token.image} alt={token.symbol} className="w-6 h-6 max-[1150px]:w-9 max-[1150px]:h-9 rounded-full object-cover shrink-0" />
+                            <img src={token.image} alt={token.symbol} className="w-6 h-6 max-[768px]:w-9 max-[768px]:h-9 rounded-full object-cover shrink-0" />
                           ) : (
-                            <span className="w-6 h-6 max-[1150px]:w-9 max-[1150px]:h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] max-[1150px]:text-sm font-bold text-white/80 shrink-0">
+                            <span className="w-6 h-6 max-[768px]:w-9 max-[768px]:h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] max-[768px]:text-sm font-bold text-white/80 shrink-0">
                               {token.symbol.charAt(0)}
                             </span>
                           )}
-                          <span className="flex items-baseline max-[1150px]:flex-col max-[1150px]:items-start gap-1.5 max-[1150px]:gap-0">
-                            <span className="text-[13px] max-[1150px]:text-base font-bold text-white/90">
+                          <span className="flex items-baseline max-[768px]:flex-col max-[768px]:items-start gap-1.5 max-[768px]:gap-0">
+                            <span className="text-[13px] max-[768px]:text-base font-bold text-white/90">
                               {token.symbol}
                             </span>
-                            <span className="text-[10px] max-[1150px]:text-xs font-medium text-white/30 max-[1150px]:text-white/40">{token.pair.split('/')[1]}</span>
+                            <span className="text-[10px] max-[768px]:text-xs font-medium text-white/30 max-[768px]:text-white/40">{token.pair.split('/')[1]}</span>
                           </span>
                         </span>
                       </TableTd>
-                      <TableTd className="max-[1150px]:text-right max-[1150px]:pr-2 py-1.5 max-[1150px]:py-4">
-                        <span className="flex flex-col min-[1150px]:block max-[1150px]:items-end gap-1">
+                      <TableTd className="max-[768px]:text-right max-[768px]:pr-2 py-1.5 max-[768px]:py-4">
+                        <span className="flex flex-col min-[769px]:block max-[768px]:items-end gap-1">
                           <PriceCell value={token.price} change={token.changePercent24h} />
                           <ChangeCell value={token.changePercent24h} mobile={true} />
                         </span>
                       </TableTd>
-                      <TableTd className="max-[1150px]:hidden py-1.5">
+                      <TableTd className="max-[768px]:hidden py-1.5">
                         <span className="text-[13px] font-medium text-white/90 tabular-nums">
                           {item === "Holding" && token.balance != null
                             ? `${Number(token.balance).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${token.symbol}`
@@ -475,10 +475,10 @@ function DashboardInner() {
                           }
                         </span>
                       </TableTd>
-                      <TableTd className="max-[1150px]:hidden py-1.5">
+                      <TableTd className="max-[768px]:hidden py-1.5">
                         <ChangeCell value={token.changePercent24h} />
                       </TableTd>
-                      <TableTd className="text-right pr-4 max-[1150px]:hidden py-1.5">
+                      <TableTd className="text-right pr-4 max-[768px]:hidden py-1.5">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

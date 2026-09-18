@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Logo from "./logo";
 import clsx from "clsx";
 import { IoIosArrowDown } from "react-icons/io";
@@ -91,6 +91,23 @@ export default function Header() {
   const pathname = usePathname();
   const user = useUserStore((state) => state.user);
   const { handleOpenDepositModal } = useAssets();
+  const [authHydrated, setAuthHydrated] = useState(false);
+
+  useEffect(() => {
+    const persist = useUserStore.persist;
+
+    if (!persist) {
+      setAuthHydrated(true);
+      return;
+    }
+
+    if (persist.hasHydrated()) {
+      setAuthHydrated(true);
+      return;
+    }
+
+    return persist.onFinishHydration(() => setAuthHydrated(true));
+  }, []);
 
   const [opened, { open, close }] = useDisclosure(false);
 
@@ -114,7 +131,7 @@ export default function Header() {
           <Logo />
           {/* <SegmentedControl classNames={classes} data={["Exchange", "DEX"]} /> */}
         </div>
-        {user ? (
+        {authHydrated && user ? (
           <ul className="flex max-[1150px]:hidden items-center gap-4">
             {navList.map((item) => (
               <li key={item.name}>
@@ -145,7 +162,7 @@ export default function Header() {
         ) : null}
       </div>
       <div className="flex max-[1150px]:hidden items-center gap-6">
-        {!user ? (
+        {!authHydrated ? null : !user ? (
           <div className="flex items-center gap-6px">
             <Link href="/auth/login">
               <button className="font-medium py-3 px-5 bg-muted rounded-lg">
@@ -212,7 +229,7 @@ export default function Header() {
       </div>
       
       <div className="hidden max-[1150px]:flex items-center gap-5">
-        {user && (
+        {authHydrated && user && (
           <PopoverWrapper
             target={({ toggle }) => (
               <span onClick={toggle}>

@@ -26,8 +26,8 @@ export const CoinAssets = () => {
       {portfolioLoading ? (
         <InlineLoading />
       ) : (
-        portfolio?.map((item: any) => (
-          <TableTr key={item.name}>
+        portfolio?.map((item: any, index: number) => (
+          <TableTr key={`${item.symbol ?? item.name}-${index}`}>
             <TableTd>
               <span className="flex items-center gap-2">
                 <img src={item.image} alt={item.name} width={26} height={26} />
