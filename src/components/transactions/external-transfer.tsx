@@ -16,7 +16,7 @@ import { IoChevronDown } from "react-icons/io5";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 export const ExternalTransfer = () => {
-  const { refreshBalances } = usePortfolioWs();
+  const { coins: portfolio, refreshBalances } = usePortfolioWs();
   const [activeStep, setActiveStep] = useState<"request" | "transfer">("request");
   const [selectedCoin, setSelectedCoin] = useState<SelectedCoin>({
     name: "",
@@ -43,6 +43,16 @@ export const ExternalTransfer = () => {
   const selectedToLabel =
     balanceOptions.find((item) => item.value === toBalance)?.label ?? toBalance;
   const assetSymbol = selectedCoin.symbol.split(":")[0];
+
+  const walletBalanceKey = fromBalance === "spot_balance" ? "spotBalance" : "fundingBalance";
+  const coinEntry = portfolio?.find(
+    (p: any) =>
+      p.symbol?.toLowerCase() === assetSymbol?.toLowerCase() ||
+      p.symbol?.toLowerCase() === selectedCoin?.symbol?.toLowerCase()
+  );
+  const availableBalance = coinEntry
+    ? String(coinEntry[walletBalanceKey as keyof typeof coinEntry] ?? "0")
+    : "0";
 
   const { mutate: requestCode, isPending: requestingCode } = useMutation({
     mutationFn: () => asset.getExternalTransferCode(assetSymbol),
@@ -83,6 +93,9 @@ export const ExternalTransfer = () => {
 
   const inputClass =
     "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 focus:!shadow-[0_0_10px_rgba(77,119,240,0.12)] !rounded-xl !h-[56px] !text-white !text-sm !transition-all !duration-200 placeholder:!text-white/20";
+
+  const sectionClass =
+    "flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4";
 
   const BalanceSelector = ({
     label,
@@ -133,9 +146,15 @@ export const ExternalTransfer = () => {
   );
 
   return (
-    <div className="w-full max-w-[540px] bg-elevated rounded-2xl flex flex-col p-8 gap-6 border border-white/[0.06] relative animate-fade-in-up">
+    <div className="w-full max-w-[540px] max-[600px]:max-w-[calc(100vw-2rem)] bg-[#181a20] rounded-2xl max-[600px]:rounded-xl flex flex-col p-8 max-[600px]:p-5 gap-6 max-[600px]:gap-5 border border-white/[0.06] relative animate-fade-in-up">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h4 className="text-xl font-bold text-white">External Transfer</h4>
+        <div>
+          <h4 className="text-xl font-bold text-white">External Transfer</h4>
+          <p className="text-sm text-white/40 mt-1">
+            Request a one-time release code, then review and confirm the transfer
+          </p>
+        </div>
         <button
           onClick={() => modals.closeAll()}
           className="w-8 h-8 rounded-full flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1] transition-all active:scale-95 text-white/60 hover:text-white"
@@ -144,10 +163,7 @@ export const ExternalTransfer = () => {
         </button>
       </div>
 
-      <p className="text-sm text-white/40 -mt-3">
-        Request a one-time release code, then review and confirm the transfer
-      </p>
-
+      {/* Step switcher */}
       <div className="grid grid-cols-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
         <button
           type="button"
@@ -173,26 +189,30 @@ export const ExternalTransfer = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <BalanceSelector
-          label="From Wallet"
-          value={fromBalance}
-          opened={fromOpen}
-          toggle={fromHandlers.toggle}
-          close={fromHandlers.close}
-          onSelect={setFromBalance}
-        />
-        <BalanceSelector
-          label="Recipient Wallet"
-          value={toBalance}
-          opened={toOpen}
-          toggle={toHandlers.toggle}
-          close={toHandlers.close}
-          onSelect={setToBalance}
-        />
+      {/* From / Recipient Wallets */}
+      <div className={sectionClass}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <BalanceSelector
+            label="From Wallet"
+            value={fromBalance}
+            opened={fromOpen}
+            toggle={fromHandlers.toggle}
+            close={fromHandlers.close}
+            onSelect={setFromBalance}
+          />
+          <BalanceSelector
+            label="Recipient Wallet"
+            value={toBalance}
+            opened={toOpen}
+            toggle={toHandlers.toggle}
+            close={toHandlers.close}
+            onSelect={setToBalance}
+          />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
+      {/* Asset */}
+      <div className={sectionClass}>
         <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
           Asset
         </label>
@@ -202,10 +222,20 @@ export const ExternalTransfer = () => {
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-          Amount
-        </label>
+      {/* Amount */}
+      <div className={sectionClass}>
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Amount</label>
+          {assetSymbol && (
+            <span className="text-xs text-white/40">
+              Available:{" "}
+              <span className="font-bold text-primary">
+                {(+availableBalance).toLocaleString("en-US", { maximumFractionDigits: 8 })}{" "}
+                {assetSymbol}
+              </span>
+            </span>
+          )}
+        </div>
         <NumberInput
           hideControls
           classNames={{
@@ -214,22 +244,31 @@ export const ExternalTransfer = () => {
           }}
           placeholder="0.00"
           rightSection={
-            selectedCoin.symbol ? (
-              <span className="flex items-center gap-1.5 pr-2">
-                {selectedCoin.image && (
-                  <img
-                    src={selectedCoin.image}
-                    alt={selectedCoin.symbol}
-                    width={16}
-                    height={16}
-                    className="rounded-full"
-                  />
-                )}
-                <span className="text-xs font-bold text-white">
-                  {selectedCoin.symbol}
+            <span className="flex items-center gap-2 pr-2">
+              {selectedCoin.symbol && (
+                <span className="flex items-center gap-1.5">
+                  {selectedCoin.image && (
+                    <img
+                      src={selectedCoin.image}
+                      alt={selectedCoin.symbol}
+                      width={16}
+                      height={16}
+                      className="rounded-full"
+                    />
+                  )}
+                  <span className="text-xs font-bold text-white">
+                    {selectedCoin.symbol}
+                  </span>
                 </span>
-              </span>
-            ) : null
+              )}
+              <button
+                type="button"
+                onClick={() => setAmount(availableBalance)}
+                className="px-2 py-1 bg-primary/15 hover:bg-primary/30 rounded-md text-xs text-primary font-bold transition-colors"
+              >
+                MAX
+              </button>
+            </span>
           }
           thousandSeparator=","
           value={amount}
@@ -237,7 +276,8 @@ export const ExternalTransfer = () => {
         />
       </div>
 
-      <div className="flex flex-col gap-2">
+      {/* Recipient User ID */}
+      <div className={sectionClass}>
         <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
           Recipient User ID
         </label>
@@ -253,7 +293,7 @@ export const ExternalTransfer = () => {
       </div>
 
       {activeStep === "request" && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 flex flex-col gap-4">
+        <div className={sectionClass}>
           <div className="flex flex-col gap-1">
             <span className="text-sm font-semibold text-white">Code Request</span>
             <span className="text-xs text-white/40">
@@ -300,7 +340,8 @@ export const ExternalTransfer = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
+      {/* Release Code */}
+      <div className={sectionClass}>
         <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
           Release Code
         </label>
@@ -332,7 +373,7 @@ export const ExternalTransfer = () => {
       </div>
 
       {activeStep === "transfer" && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 flex flex-col gap-3">
+        <div className={sectionClass}>
           <span className="text-sm font-semibold text-white">Transfer Receipt</span>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="rounded-lg bg-white/[0.03] px-3 py-2">

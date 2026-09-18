@@ -88,20 +88,16 @@ export const WalletCard = ({ title }: { title?: string }) => {
       isPrimary: false,
       action: handleOpenExternalTransferModal,
     },
-    ...(title !== "Funding Account"
-      ? [
-          {
-            icon: Convert,
-            text: "Convert",
-            isPrimary: false,
-            action: () =>
-              modals.open({
-                children: <ConvertAsset />,
-                ...DEFAULT_MODAL_SETTINGS,
-              }),
-          },
-        ]
-      : []),
+    {
+      icon: Convert,
+      text: "Convert",
+      isPrimary: false,
+      action: () =>
+        modals.open({
+          children: <ConvertAsset />,
+          ...DEFAULT_MODAL_SETTINGS,
+        }),
+    },
   ];
 
   return (
@@ -114,13 +110,13 @@ export const WalletCard = ({ title }: { title?: string }) => {
           </h3>
           <BalanceRevealControl />
         </div>
-        <div className="flex flex-wrap items-center gap-2 max-[1150px]:grid max-[1150px]:grid-cols-4 max-[1150px]:w-full">
+        <div className="flex flex-wrap items-center gap-1.5 max-[1150px]:grid max-[1150px]:grid-cols-4 max-[1150px]:w-full">
           {buttons.map((item) => (
             <button
               key={item.text}
               onClick={item.action}
               className={clsx(
-                "flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 max-[1150px]:flex-col max-[1150px]:p-2 max-[1150px]:justify-center max-[1150px]:text-[10px]",
+                "flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-all duration-200 max-[1150px]:flex-col max-[1150px]:p-2 max-[1150px]:justify-center max-[1150px]:text-[10px]",
                 item.isPrimary
                   ? "bg-primary text-white hover:brightness-110 max-[1150px]:bg-white/5 max-[1150px]:border max-[1150px]:border-white/10"
                   : "border border-white/10 bg-transparent text-white hover:border-white/25 hover:bg-white/[0.04]"

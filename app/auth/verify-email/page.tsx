@@ -4,6 +4,7 @@ import { VerifyForm } from "@/src/components/verify-email/verify-form";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { VerifyEmailPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
+import { AuthMobileBrand } from "@/src/components/shared/auth-mobile-brand";
 
 function VerifyEmail() {
   return (
@@ -11,11 +12,7 @@ function VerifyEmail() {
       <HeroDecorations />
       <div className="grid max-w-auth grid-cols-1 sm:grid-cols-2 gap-5 w-full items-center animate-fade-in max-[1150px]:flex max-[1150px]:flex-col max-[1150px]:justify-center">
         
-        {/* Mobile Logo Header */}
-        <div className="min-[1150px]:hidden flex flex-col items-center justify-center gap-4 mb-8 w-full">
-          <Image src="/logo.png" alt="Limiance" width={48} height={48} className="w-12 h-12" />
-          <h1 className="text-2xl font-bold text-white tracking-tight">Limiance Exchange</h1>
-        </div>
+        <AuthMobileBrand />
 
         <Image
           src={VerifyImage}

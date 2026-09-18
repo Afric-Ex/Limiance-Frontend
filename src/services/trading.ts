@@ -136,8 +136,8 @@ export const tradingService = {
       symbol: compactSymbol(data.base, data.quote),
       side: data.side.toUpperCase(),
       type: "LIMIT",
-      quantity: String(data.quantity),
-      price: String(data.price),
+      quantity: Number(data.quantity),
+      price: Number(data.price),
       leverage: data.leverage,
     });
     return response.data;
@@ -157,9 +157,9 @@ export const tradingService = {
       symbol: compactSymbol(data.base, data.quote),
       side: data.side.toUpperCase(),
       type: "MARKET",
-      quantity: String(data.quantity),
+      quantity: Number(data.quantity),
       leverage: data.leverage,
-      ...(data.price && data.price > 0 ? { price: String(data.price) } : {}),
+      ...(data.price && data.price > 0 ? { price: Number(data.price) } : {}),
     });
     return response.data;
   },
@@ -178,8 +178,8 @@ export const tradingService = {
       symbol: compactSymbol(data.base, data.quote),
       side: data.side.toUpperCase(),
       type: "STOP",
-      quantity: String(data.quantity),
-      stopPrice: String(data.stopPrice),
+      quantity: Number(data.quantity),
+      stopPrice: Number(data.stopPrice),
       leverage: data.leverage,
     });
     return response.data;

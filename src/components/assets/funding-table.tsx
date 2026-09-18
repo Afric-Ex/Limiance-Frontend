@@ -10,6 +10,13 @@ import { Skeleton } from "../shared/skeleton";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { ConvertAsset } from "../transactions/convert-asset";
+import { getCryptoIcon } from "@/src/utils/crypto-icons";
+
+/** Safely parse a value to a finite number, defaulting to 0. */
+const safeNum = (v: unknown): number => {
+  const n = parseFloat(String(v ?? "0").replace(/,/g, ""));
+  return Number.isFinite(n) ? n : 0;
+};
 
 export const FundingTable = () => {
   const [hideZero, setHideZero] = useState(false);
@@ -95,18 +102,19 @@ export const FundingTable = () => {
                 </TableTr>
               ) : (
                 visibleAssets.map((item, index) => {
-                  const bal = parseFloat(item.fundingBalance);
-                  const price = parseFloat(item.currencyPrice ?? "0");
+                  const bal = safeNum(item.fundingBalance);
+                  const price = safeNum(item.currencyPrice ?? item.usdPrice ?? item.price);
                   const usdVal = (bal * price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  const iconSrc = getCryptoIcon(item.symbol, item.image ?? item.logo ?? item.icon);
                   return (
                     <TableTr key={`${item.symbol}-${item.name ?? "asset"}-${index}`}>
                       <TableTd className="!pl-6">
                         <span className="flex items-center gap-3">
-                          {item.image ? (
-                            <img src={item.image} alt={item.symbol} width={32} height={32} className="rounded-full shrink-0" />
+                          {iconSrc ? (
+                            <img src={iconSrc} alt={item.symbol} width={32} height={32} className="rounded-full shrink-0 object-cover" />
                           ) : (
-                            <span className="w-8 h-8 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center shrink-0">
-                              {item.symbol[0]}
+                            <span className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-white/80 shrink-0">
+                              {item.symbol?.[0] ?? "?"}
                             </span>
                           )}
                           <span className="flex flex-col gap-0.5">
@@ -122,7 +130,7 @@ export const FundingTable = () => {
                         <span className="text-sm font-semibold text-white/80">${usdVal}</span>
                       </TableTd>
                       <TableTd>
-                        <span className="text-sm text-white/60">${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-sm text-white/60">${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span>
                       </TableTd>
                       <TableTd className="!pr-6 !text-right">
                         <div className="flex items-center justify-end gap-2">

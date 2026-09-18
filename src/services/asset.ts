@@ -111,13 +111,19 @@ export const asset = {
     limit?: number;
     transaction_type?: "deposit" | "withdrawal";
   }) => {
-    const response = await api.get<DepositHistory>(
-      `wallet/user/transactions_history`,
-      {
-        params,
-      }
-    );
-    return response.data;
+    try {
+      const response = await api.get<DepositHistory>(
+        `wallet/user/transactions_history`,
+        {
+          params,
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      // The backend may return a usable history body with an incorrect 502 status.
+      if (error?.response?.data) return error.response.data;
+      throw error;
+    }
   },
   allTransactionHistory: async () => {
     const response = await api.get<Balance>(`wallet/all_transaction_history`);

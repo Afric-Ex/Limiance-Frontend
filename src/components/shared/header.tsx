@@ -24,7 +24,7 @@ import { WalletDropdown } from "./wallet-dropdown";
 import { LanguageDropdown } from "./language-dropdown";
 import { NotificationsDropdown, useNotificationCount } from "./notifications-dropdown";
 import { ProfileDropdown } from "./profile-dropdown";
-import { MobileNavbar } from "./mobile-navbar";
+import { MobileSideDrawer } from "./mobile-side-drawer";
 import { useDisclosure } from "@mantine/hooks";
 
 const navList = [
@@ -112,20 +112,22 @@ export default function Header() {
   const [opened, { open, close }] = useDisclosure(false);
 
   return (
-    <header
-      className={clsx(
-        noShadowHeaderPages.includes(pathname) ||
-          noShadowHeaderInnerPages.some((each) => pathname.includes(each))
-          ? ""
-          : "shadow-1",
-        noMarginBottomInnerPages.some((each) => pathname.includes(each)) ||
-          !pathname.includes("auth")
-          ? ""
-          : "mb-5",
-        "h-[var(--size-header-height)] md:px-8 px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-[100] backdrop-blur-md bg-elevated/80"
-
-      )}
-    >
+<header
+        className={clsx(
+          noShadowHeaderPages.includes(pathname) ||
+            noShadowHeaderInnerPages.some((each) => pathname.includes(each))
+            ? ""
+            : "shadow-1",
+          noMarginBottomInnerPages.some((each) => pathname.includes(each)) ||
+            !pathname.includes("auth")
+            ? ""
+            : "mb-5",
+          "h-[var(--size-header-height)] md:px-8 px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-[100] backdrop-blur-xl bg-[#181a20]/90",
+          authHydrated && user
+            ? "border-b border-white/[0.06]"
+            : ""
+        )}
+      >
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-4">
           <Logo />
@@ -247,7 +249,7 @@ export default function Header() {
           onClick={open}
         />
       </div>
-      <MobileNavbar opened={opened} close={close} />
+      <MobileSideDrawer open={opened} onClose={close} />
     </header>
   );
 }

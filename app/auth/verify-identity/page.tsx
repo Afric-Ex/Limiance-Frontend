@@ -6,6 +6,7 @@ import Link from "next/link";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { VerifyIdentityPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
+import { AuthMobileBrand } from "@/src/components/shared/auth-mobile-brand";
 
 const instructions = [
   "Identity Documents and Facial Verification",
@@ -14,9 +15,10 @@ const instructions = [
 
 function VerifyIdentity() {
   return (
-    <main className="flex items-center justify-center min-h-hero relative bg-verifyIdentityBg bg-cover bg-no-repeat">
+    <main className="flex items-center justify-center overflow-x-hidden px-4 min-h-hero relative bg-verifyIdentityBg bg-cover bg-no-repeat">
       <HeroDecorations />
       <div className="flex w-full flex-col max-w-634px gap-10">
+        <AuthMobileBrand className="mb-0" />
         <div className="flex flex-col gap-10">
           <div className="flex flex-col">
             <div className="relative w-fit h-fit self-center">

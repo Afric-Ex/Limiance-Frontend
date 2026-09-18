@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
+import { AuthMobileBrand } from "@/src/components/shared/auth-mobile-brand";
 
 function TotpCountdown() {
   const [remaining, setRemaining] = useState(() => 30 - (Math.floor(Date.now() / 1000) % 30));
@@ -103,11 +104,7 @@ function Verify2FAPageInner() {
       <HeroDecorations />
       <div className="flex flex-col items-center gap-8 max-w-sm w-full">
         
-        {/* Mobile Logo Header */}
-        <div className="min-[1150px]:hidden flex flex-col items-center justify-center gap-4 mb-4 w-full">
-          <Image src="/logo.png" alt="Limiance" width={48} height={48} className="w-12 h-12" />
-          <h1 className="text-2xl font-bold text-white tracking-tight">Limiance Exchange</h1>
-        </div>
+        <AuthMobileBrand className="mb-4" />
 
         <div className="flex flex-col items-center gap-2 text-center">
           <h2 className="text-3xl font-bold">{isTotp ? "Authenticator Verification" : "Email Verification"}</h2>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/src/lib/axios";
 import { MOCK_MODE } from "@/src/mocks";
 import { MOCK_PRICES } from "@/src/mocks/data/market-data";
@@ -63,7 +63,16 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
     markets: [],
   });
 
+  // Throttle the HTTP fallback so it fires at most once every 30 seconds.
+  // The WS disconnect handler fires on every reconnect attempt (backoff schedule),
+  // which can hammer the endpoint and hit a backend account-status check failure.
+  const lastFallbackAt = useRef<number>(0);
+
   const fetchHttpFallback = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastFallbackAt.current < 30_000) return; // throttle: max once per 30s
+    lastFallbackAt.current = now;
+
     try {
       const normalisedPair = pair.replace("/", "-").toUpperCase();
       const res = await api.get("trading/24_hours_movers", { params: { limit: 100 } });
