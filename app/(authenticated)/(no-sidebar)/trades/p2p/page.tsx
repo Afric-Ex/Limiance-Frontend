@@ -72,13 +72,13 @@ function P2PMarketplacePageInner() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => refetch()}
-              className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10"
+              className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors px-3 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1]"
             >
               <span>⟳</span> Refresh
             </button>
             <Button
               onClick={handlePostAd}
-              className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold"
+              className="!bg-primary hover:!bg-primary/90 !text-white font-semibold"
             >
               + Post Ad
             </Button>
@@ -98,7 +98,7 @@ function P2PMarketplacePageInner() {
               <Skeleton height={14} width={40} />
             </div>
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="p-4 rounded-xl border border-white/5 bg-white/[0.02] flex flex-col min-[1150px]:grid min-[1150px]:grid-cols-[2fr_1.5fr_1.5fr_1.5fr_auto] gap-4 max-[1150px]:gap-3 items-start min-[1150px]:items-center">
+              <div key={i} className="p-4 rounded-xl border border-white/[0.06] bg-[#181a20] flex flex-col min-[1150px]:grid min-[1150px]:grid-cols-[2fr_1.5fr_1.5fr_1.5fr_auto] gap-4 max-[1150px]:gap-3 items-start min-[1150px]:items-center">
                 <div className="flex gap-3 items-center">
                   <Skeleton height={40} circle />
                   <div className="flex flex-col gap-2">
@@ -125,7 +125,7 @@ function P2PMarketplacePageInner() {
             ))}
           </div>
         ) : listings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-white/50 bg-white/[0.02] border border-white/5 rounded-xl">
+          <div className="flex flex-col items-center justify-center py-20 text-white/50 bg-[#181a20] border border-white/[0.06] rounded-2xl">
             <div className="text-5xl mb-4">📭</div>
             <div className="text-lg font-semibold text-white/70">No ads found</div>
             <div className="text-sm mt-1">Try adjusting your filters or check back later</div>
@@ -152,7 +152,7 @@ function P2PMarketplacePageInner() {
                 return (
                   <div
                     key={ad.id}
-                    className={`p-4 rounded-xl border transition-colors ${isOwn ? "border-yellow-500/40 bg-yellow-500/5" : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"} flex flex-col min-[1150px]:grid min-[1150px]:grid-cols-[2fr_1.5fr_1.5fr_1.5fr_auto] gap-4 max-[1150px]:gap-3 items-start min-[1150px]:items-center`}
+                    className={`p-4 rounded-xl border transition-colors ${isOwn ? "border-primary/40 bg-primary/[0.08]" : "border-white/[0.06] bg-[#181a20] hover:bg-white/[0.03]"} flex flex-col min-[1150px]:grid min-[1150px]:grid-cols-[2fr_1.5fr_1.5fr_1.5fr_auto] gap-4 max-[1150px]:gap-3 items-start min-[1150px]:items-center`}
                   >
                     {/* Advertiser */}
                     <div

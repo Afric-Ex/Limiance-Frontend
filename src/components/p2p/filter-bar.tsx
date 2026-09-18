@@ -8,9 +8,9 @@ export const FilterBar = () => {
   const { adFilters, setAdFilters } = useP2PStore();
 
   return (
-    <div className="flex flex-wrap items-center gap-4 max-[1150px]:gap-3 bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] shadow-[0_4px_30px_rgba(0,0,0,0.1)] p-4 max-[1150px]:p-3 rounded-2xl max-[1150px]:rounded-xl mb-6 max-[1150px]:mb-4">
+    <div className="flex flex-wrap items-center gap-4 max-[1150px]:gap-3 bg-[#181a20] border border-white/[0.06] p-6 max-[1150px]:p-4 rounded-2xl max-[1150px]:rounded-xl mb-6 max-[1150px]:mb-4">
       {/* Buy/Sell Tabs */}
-      <div className="flex bg-black/40 backdrop-blur-md rounded-xl p-1.5 border border-white/[0.05] max-[1150px]:w-full">
+      <div className="flex bg-black/30 rounded-xl p-1.5 border border-white/[0.06] max-[1150px]:w-full">
         <button
           className={`px-8 py-2 rounded-lg text-sm font-bold transition-all duration-300 max-[1150px]:flex-1 ${
             adFilters.type === "BUY" ? "bg-buy text-white shadow-[0_0_15px_rgba(14,203,129,0.3)]" : "text-white/50 hover:text-white hover:bg-white/5"

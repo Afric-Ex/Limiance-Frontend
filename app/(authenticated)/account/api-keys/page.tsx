@@ -135,7 +135,7 @@ function ApiKeysPageInner() {
       )}
 
       {/* Keys Table */}
-      <div className="bg-primary/10 border border-primary/25 rounded-20px overflow-hidden">
+      <div className="account-card !p-0 overflow-hidden">
         {isLoading ? (
           <div className="flex justify-center py-16"><Loader color="blue" /></div>
         ) : apiKeys?.length > 0 ? (

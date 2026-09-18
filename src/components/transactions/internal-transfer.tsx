@@ -43,7 +43,7 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
   const user = useUserStore((state) => state.user);
 
   // Use WebSocket for real-time portfolio balances (REST endpoint unreliable)
-  const { coins: portfolio, isLoading: balanceLoading, refreshBalances } = usePortfolioWs();
+  const { coins: portfolio, refreshBalances } = usePortfolioWs();
 
   const walletBalanceKey = form.values.sourceWallet === "spot" ? "spotBalance" : form.values.sourceWallet === "futures" ? "futuresBalance" : form.values.sourceWallet === "margin" ? "marginBalance" : "fundingBalance";
   const coinEntry = portfolio?.find((p: any) => p.symbol === selectedCoin.symbol || p.symbol?.toLowerCase() === selectedCoin.symbol?.toLowerCase());
@@ -169,10 +169,13 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
   );
 
   return (
-    <div className="w-full max-w-[540px] bg-elevated rounded-2xl flex flex-col p-8 gap-6 border border-white/[0.06] relative animate-fade-in-up">
+    <div className="w-full max-w-[540px] max-[600px]:max-w-[calc(100vw-2rem)] bg-[#181a20] rounded-2xl max-[600px]:rounded-xl flex flex-col p-8 max-[600px]:p-5 gap-6 max-[600px]:gap-5 border border-white/[0.06] relative animate-fade-in-up">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h4 className="text-xl font-bold text-white">Internal Transfer</h4>
+        <div>
+          <h4 className="text-xl font-bold text-white">Internal Transfer</h4>
+          <p className="text-sm text-white/40 mt-1">Move funds between your accounts</p>
+        </div>
         <button
           onClick={() => modals.closeAll()}
           className="w-8 h-8 rounded-full flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1] transition-all active:scale-95 text-white/60 hover:text-white"
@@ -181,39 +184,39 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
         </button>
       </div>
 
-      <p className="text-sm text-white/40 -mt-3">Move funds between your accounts</p>
-
       {/* From / To Row */}
-      <div className="flex items-end gap-3">
-        <AccountSelector
-          label="From"
-          value={form.values.sourceWallet}
-          isOpen={opened}
-          onToggle={toggle}
-          onClose={close}
-          fieldName="sourceWallet"
-        />
+      <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
+        <div className="flex items-end gap-3">
+          <AccountSelector
+            label="From"
+            value={form.values.sourceWallet}
+            isOpen={opened}
+            onToggle={toggle}
+            onClose={close}
+            fieldName="sourceWallet"
+          />
 
-        {/* Swap button */}
-        <button
-          onClick={handleSwapWallets}
-          className="w-10 h-10 mb-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-primary hover:bg-primary/10 hover:border-primary/30 transition-all active:scale-90 shrink-0"
-        >
-          <MdSwapHoriz size={20} />
-        </button>
+          {/* Swap button */}
+          <button
+            onClick={handleSwapWallets}
+            className="w-10 h-10 mb-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-primary hover:bg-primary/10 hover:border-primary/30 transition-all active:scale-90 shrink-0"
+          >
+            <MdSwapHoriz size={20} />
+          </button>
 
-        <AccountSelector
-          label="To"
-          value={form.values.destinationWallet}
-          isOpen={destinationOpened}
-          onToggle={toggleDest}
-          onClose={closeDest}
-          fieldName="destinationWallet"
-        />
+          <AccountSelector
+            label="To"
+            value={form.values.destinationWallet}
+            isOpen={destinationOpened}
+            onToggle={toggleDest}
+            onClose={closeDest}
+            fieldName="destinationWallet"
+          />
+        </div>
       </div>
 
       {/* Select Coin */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
         <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Select Coin</label>
         <SupportedListingsDropdown
           selectedCoin={selectedCoin}
@@ -222,8 +225,19 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
       </div>
 
       {/* Amount */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Amount</label>
+      <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Amount</label>
+          {selectedCoin.symbol && (
+            <span className="text-xs text-white/40">
+              Available:{" "}
+              <span className="font-bold text-primary">
+                {(+availableBalance).toLocaleString("en-US", { maximumFractionDigits: 8 })}{" "}
+                {selectedCoin.symbol}
+              </span>
+            </span>
+          )}
+        </div>
         <NumberInput
           hideControls
           classNames={{
@@ -260,19 +274,6 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
           clampBehavior="strict"
           {...form.getInputProps("amount")}
         />
-      </div>
-
-      {/* Available Balance */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border border-white/[0.04] rounded-xl">
-        <span className="text-xs text-white/40">Available for transfer</span>
-        {balanceLoading ? (
-          <InlineLoading />
-        ) : (
-          <span className="text-xs font-bold text-primary">
-            {(+availableBalance).toLocaleString("en-US", { maximumFractionDigits: 8 })}{" "}
-            <span className="text-white/40 font-medium">{selectedCoin.symbol || "—"}</span>
-          </span>
-        )}
       </div>
 
       {/* Submit */}

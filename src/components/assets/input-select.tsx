@@ -72,14 +72,14 @@ export const InputSelect = ({
               <div className="flex flex-col gap-2">
                 <h4 className="text-xs text-gray-14 pl-2">Currency</h4>
                 <ul className="bg-gray-7 rounded-lg flex flex-col px-2 py-1.5 max-w-[234px] overflow-auto h-[200px]">
-                  {data.map((item) => (
+                  {data.map((item, index) => (
                     <li
                       onClick={() => {
                         setCurrency(item);
                         handleCurrencyUpdate?.(item.short.toLocaleLowerCase());
                         close();
                       }}
-                      key={item.name}
+                      key={`${item.short}-${item.name}-${index}`}
                       className={
                         "pl-[13px] flex  gap-6px pr-[61px] py-4 border-b-[0.5px] border-b-gray-19 hover:bg-gray-18 cursor-pointer"
                       }

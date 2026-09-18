@@ -153,7 +153,7 @@ function ProfilePageInner() {
       </div>
 
       {/* Section A — Avatar & Identity */}
-      <div className="p-8 bg-primary/10 border border-primary/25 rounded-20px backdrop-blur-8px flex flex-col sm:flex-row items-center sm:items-start gap-6">
+      <div className="account-card flex flex-col sm:flex-row items-center sm:items-start gap-6">
         <div className="relative w-20 h-20 rounded-full flex items-center justify-center overflow-hidden bg-primary/20 shrink-0">
           {user?.photo && !imgError ? (
             <img 
@@ -198,7 +198,7 @@ function ProfilePageInner() {
 
       {/* Section B — Edit Profile Form */}
       <div className="grid grid-cols-1 xl:grid-cols-[1.3fr_0.9fr] gap-6">
-        <div className="p-8 bg-primary/10 border border-primary/25 rounded-20px backdrop-blur-8px flex flex-col gap-6">
+        <div className="account-card flex flex-col gap-6">
           <div>
             <h3 className="text-lg font-semibold">Profile Details</h3>
             <p className="text-sm text-white/45 mt-1">
@@ -229,7 +229,7 @@ function ProfilePageInner() {
           </div>
         </div>
 
-        <div className="p-8 bg-primary/10 border border-primary/25 rounded-20px backdrop-blur-8px flex flex-col gap-6">
+        <div className="account-card flex flex-col gap-6">
           <div>
             <h3 className="text-lg font-semibold">Account Status</h3>
             <p className="text-sm text-white/45 mt-1">
@@ -253,7 +253,7 @@ function ProfilePageInner() {
         </div>
       </div>
 
-      <div className="p-8 bg-primary/10 border border-primary/25 rounded-20px backdrop-blur-8px flex flex-col gap-6">
+      <div className="account-card flex flex-col gap-6">
         <h3 className="text-lg font-semibold">Edit Profile</h3>
         <form onSubmit={form.onSubmit((values) => updateProfile(values))} className="flex flex-col gap-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

@@ -80,9 +80,9 @@ export const NetworksDropdown = ({
               Network
             </span>
             <div className="flex flex-1 overflow-auto flex-col">
-              {supportedChains?.map((item: any) => (
+              {supportedChains?.map((item: any, index: number) => (
                 <span
-                  key={item.name}
+                  key={`${item.symbol}-${item.name}-${index}`}
                   onClick={() => {
                     setSelectedNetwork({
                       name: item.name,

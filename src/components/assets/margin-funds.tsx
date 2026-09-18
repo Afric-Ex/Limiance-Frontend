@@ -41,14 +41,14 @@ export const MarginFunds = () => {
                 </TableTd>
               </TableTr>
             ) : (
-              portfolio.map((item: any) => {
+              portfolio.map((item: any, index: number) => {
                 const balStr = String(item.marginBalance || "0").replace(/,/g, "");
                 const balNum = parseFloat(balStr);
                 const lockStr = String(item.lockedBalance || "0").replace(/,/g, "");
                 const lockNum = parseFloat(lockStr);
 
                 return (
-                  <TableTr key={item.symbol}>
+                  <TableTr key={`${item.symbol}-${item.name ?? "asset"}-${index}`}>
                     <TableTd className="!pl-6">
                       <span className="flex items-center gap-3">
                         {item.image ? (

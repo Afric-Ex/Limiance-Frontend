@@ -47,7 +47,7 @@ export const SpotTable = () => {
                   <TableTh className="max-[1150px]:hidden">Price</TableTh>
                   <TableTh className="max-[1150px]:hidden">Action</TableTh>
                 </TableTr>
-                {portfolio?.map((item: any) => {
+                {portfolio?.map((item: any, index: number) => {
                   const balStr = String(item.spotBalance || item.spot_balance || item.balance || item.free || "0").replace(/,/g, "");
                   const balNum = parseFloat(balStr);
                   const priceStr = String(item.currencyPrice || "0").replace(/,/g, "");
@@ -58,7 +58,7 @@ export const SpotTable = () => {
                   if (hideSmallBalances && valueUsd < 1) return null;
 
                   return (
-                    <TableTr key={item.name}>
+                    <TableTr key={`${item.symbol ?? item.name}-${index}`}>
                       <TableTd>
                         <span className="flex items-center gap-3">
                           {getCryptoIcon(item.symbol, item.image ?? item.logo ?? item.icon) ? (

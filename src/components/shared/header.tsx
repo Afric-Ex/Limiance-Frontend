@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Logo from "./logo";
 import clsx from "clsx";
 import { IoIosArrowDown } from "react-icons/io";
@@ -24,7 +24,7 @@ import { WalletDropdown } from "./wallet-dropdown";
 import { LanguageDropdown } from "./language-dropdown";
 import { NotificationsDropdown, useNotificationCount } from "./notifications-dropdown";
 import { ProfileDropdown } from "./profile-dropdown";
-import { MobileNavbar } from "./mobile-navbar";
+import { MobileSideDrawer } from "./mobile-side-drawer";
 import { useDisclosure } from "@mantine/hooks";
 
 const navList = [
@@ -91,30 +91,49 @@ export default function Header() {
   const pathname = usePathname();
   const user = useUserStore((state) => state.user);
   const { handleOpenDepositModal } = useAssets();
+  const [authHydrated, setAuthHydrated] = useState(false);
+
+  useEffect(() => {
+    const persist = useUserStore.persist;
+
+    if (!persist) {
+      setAuthHydrated(true);
+      return;
+    }
+
+    if (persist.hasHydrated()) {
+      setAuthHydrated(true);
+      return;
+    }
+
+    return persist.onFinishHydration(() => setAuthHydrated(true));
+  }, []);
 
   const [opened, { open, close }] = useDisclosure(false);
 
   return (
-    <header
-      className={clsx(
-        noShadowHeaderPages.includes(pathname) ||
-          noShadowHeaderInnerPages.some((each) => pathname.includes(each))
-          ? ""
-          : "shadow-1",
-        noMarginBottomInnerPages.some((each) => pathname.includes(each)) ||
-          !pathname.includes("auth")
-          ? ""
-          : "mb-5",
-        "h-[var(--size-header-height)] md:px-8 px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-[100] backdrop-blur-md bg-elevated/80"
-
-      )}
-    >
+<header
+        className={clsx(
+          noShadowHeaderPages.includes(pathname) ||
+            noShadowHeaderInnerPages.some((each) => pathname.includes(each))
+            ? ""
+            : "shadow-1",
+          noMarginBottomInnerPages.some((each) => pathname.includes(each)) ||
+            !pathname.includes("auth")
+            ? ""
+            : "mb-5",
+          "h-[var(--size-header-height)] md:px-8 px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-[100] backdrop-blur-xl bg-[#181a20]/90",
+          authHydrated && user
+            ? "border-b border-white/[0.06]"
+            : ""
+        )}
+      >
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-4">
           <Logo />
           {/* <SegmentedControl classNames={classes} data={["Exchange", "DEX"]} /> */}
         </div>
-        {user ? (
+        {authHydrated && user ? (
           <ul className="flex max-[1150px]:hidden items-center gap-4">
             {navList.map((item) => (
               <li key={item.name}>
@@ -145,7 +164,7 @@ export default function Header() {
         ) : null}
       </div>
       <div className="flex max-[1150px]:hidden items-center gap-6">
-        {!user ? (
+        {!authHydrated ? null : !user ? (
           <div className="flex items-center gap-6px">
             <Link href="/auth/login">
               <button className="font-medium py-3 px-5 bg-muted rounded-lg">
@@ -212,7 +231,7 @@ export default function Header() {
       </div>
       
       <div className="hidden max-[1150px]:flex items-center gap-5">
-        {user && (
+        {authHydrated && user && (
           <PopoverWrapper
             target={({ toggle }) => (
               <span onClick={toggle}>
@@ -230,7 +249,7 @@ export default function Header() {
           onClick={open}
         />
       </div>
-      <MobileNavbar opened={opened} close={close} />
+      <MobileSideDrawer open={opened} onClose={close} />
     </header>
   );
 }

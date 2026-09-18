@@ -37,8 +37,8 @@ export const WalletAssets = () => {
         {isLoading ? (
           <InlineLoading />
         ) : allocations?.allocations?.length ? (
-          allocations.allocations.map((item) => (
-            <TableTr key={item.symbol}>
+          allocations.allocations.map((item, index) => (
+            <TableTr key={`${item.symbol}-${item.name ?? "asset"}-${index}`}>
               <TableTd>
                 <span className="flex flex-col gap-2px">
                   <span className="text-base uppercase font-bold">{item.symbol}</span>

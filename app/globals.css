@@ -217,6 +217,21 @@ button {
   -webkit-backdrop-filter: blur(20px);
 }
 
+/* Account surfaces use the same quiet panel language as the dashboard. */
+.account-card {
+  background: #181a20;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 32px;
+}
+
+@media (max-width: 1149px) {
+  .account-card {
+    border-radius: 12px;
+    padding: 16px;
+  }
+}
+
 /* ── Mobile input style ── */
 .mobile-input {
   height: 52px;
@@ -303,4 +318,4 @@ button {
   position: relative;
   overflow: hidden;
   transition: transform 0.3s ease;
-}
+}

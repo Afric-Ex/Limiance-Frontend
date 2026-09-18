@@ -67,6 +67,7 @@ class WebSocketClient {
   private isConnecting = false;
   private retryCount = 0;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private heartbeatInterval: NodeJS.Timeout | null = null;
   private subscriptions = new Map<string, Subscription>();
   private statusHandlers = new Set<WsStatusHandler>();
   private intentionalClose = false;
@@ -104,6 +105,24 @@ class WebSocketClient {
     return () => {
       this.statusHandlers.delete(handler);
     };
+  }
+
+  /**
+   * Keep the connection alive so idle servers don't drop it (backends commonly
+   * terminate sockets that send no frames for ~120s). Also detects dead sockets.
+   */
+  private startHeartbeat() {
+    this.stopHeartbeat();
+    this.heartbeatInterval = setInterval(() => {
+      this.send({ type: "ping" });
+    }, 30000);
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
   }
 
   private notifyStatus(status: boolean) {
@@ -148,6 +167,7 @@ class WebSocketClient {
         this.isConnecting = false;
         this.retryCount = 0;
         this.notifyStatus(true);
+        this.startHeartbeat();
 
         // Re-subscribe all active topics on connection / reconnection
         this.resubscribeAll();
@@ -178,6 +198,7 @@ class WebSocketClient {
       socket.onclose = () => {
         this.isConnecting = false;
         this.notifyStatus(false);
+        this.stopHeartbeat();
         this.ws = null;
 
         if (!this.intentionalClose && this.subscriptions.size > 0) {
@@ -193,6 +214,7 @@ class WebSocketClient {
     } catch {
       this.isConnecting = false;
       this.notifyStatus(false);
+      this.stopHeartbeat();
       this.scheduleReconnect();
     }
   }
@@ -292,6 +314,7 @@ class WebSocketClient {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
     }
+    this.stopHeartbeat();
     if (this.ws) {
       this.ws.close();
       this.ws = null;

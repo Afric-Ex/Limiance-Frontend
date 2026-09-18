@@ -167,7 +167,7 @@ function KycPageInner() {
       )}
 
       {!activeToken && (isNotStarted || isRejected) && (
-        <div className="p-10 bg-primary/10 border border-primary/25 rounded-2xl backdrop-blur-8px flex flex-col items-center text-center gap-8">
+        <div className="account-card !p-10 flex flex-col items-center text-center gap-8">
           <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center">
             <MdShield size={40} className="text-primary" />
           </div>
@@ -227,7 +227,7 @@ function KycPageInner() {
       )}
 
       {!activeToken && isPending && (
-        <div className="p-10 bg-primary/10 border border-primary/25 rounded-2xl backdrop-blur-8px flex flex-col items-center text-center gap-8">
+        <div className="account-card !p-10 flex flex-col items-center text-center gap-8">
           <div className="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center">
             <MdHourglassEmpty size={40} className="text-yellow-500 animate-pulse" />
           </div>
@@ -255,7 +255,7 @@ function KycPageInner() {
 
       {!activeToken && isApproved && (
         <div className="flex flex-col gap-6">
-          <div className="p-8 bg-primary/10 border border-primary/25 rounded-20px flex flex-col sm:flex-row justify-between items-center text-center sm:text-left gap-6">
+          <div className="account-card flex flex-col sm:flex-row justify-between items-center text-center sm:text-left gap-6">
             <div className="flex items-center gap-6 flex-col sm:flex-row">
               <div className="w-16 h-16 rounded-full bg-success-6/20 flex items-center justify-center">
                 <MdCheckCircle size={32} className="text-success-6" />

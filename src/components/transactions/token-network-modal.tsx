@@ -192,9 +192,9 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
                 <span className="text-sm">No coins found</span>
               </div>
             ) : (
-              filteredTokens.map((token: any) => (
+                filteredTokens.map((token: any, index: number) => (
                 <button
-                  key={token.symbol}
+                  key={`${token.symbol}-${token.blockchain ?? "native"}-${index}`}
                   onClick={() => handleCoinClick(token)}
                   className="w-full flex items-center gap-3 px-6 py-3.5 hover:bg-white/[0.03] transition-colors border-b border-white/[0.03] last:border-0 text-left"
                 >
@@ -221,10 +221,11 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
                 <span className="text-sm">No networks found</span>
               </div>
             ) : (
-              filteredChains.map((chain: any) => (
+                filteredChains.map((chain: any, index: number) => (
                 <button
-                  key={chain.name}
+                  key={`${chain.symbol}-${chain.name}-${index}`}
                   onClick={() => handleNetworkClick(chain)}
+                  type="button"
                   className="w-full flex items-center gap-3 px-6 py-3.5 hover:bg-white/[0.03] transition-colors border-b border-white/[0.03] last:border-0 text-left"
                 >
                   <span className="flex flex-col flex-1 min-w-0">

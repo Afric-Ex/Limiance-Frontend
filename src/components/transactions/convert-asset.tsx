@@ -138,10 +138,13 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
   };
 
   return (
-    <div className="w-full max-w-[540px] bg-elevated rounded-2xl flex flex-col p-8 gap-6 border border-white/[0.06] relative animate-fade-in-up">
+    <div className="w-full max-w-[540px] max-[600px]:max-w-[calc(100vw-2rem)] bg-[#181a20] rounded-2xl max-[600px]:rounded-xl flex flex-col p-8 max-[600px]:p-5 gap-6 max-[600px]:gap-5 border border-white/[0.06] relative animate-fade-in-up">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h4 className="text-xl font-bold text-white">Convert</h4>
+        <div>
+          <h4 className="text-xl font-bold text-white">Convert</h4>
+          <p className="text-sm text-white/40 mt-1">Swap one asset for another instantly</p>
+        </div>
         <button
           onClick={() => modals.closeAll()}
           className="w-8 h-8 rounded-full flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1] transition-all active:scale-95 text-white/60 hover:text-white"
@@ -150,10 +153,8 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
         </button>
       </div>
 
-      <p className="text-sm text-white/40 -mt-3">Swap one asset for another instantly</p>
-
       {/* From */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
         <div className="flex items-center justify-between">
           <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">From</label>
           {fromCoin.symbol && (
@@ -177,7 +178,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
       </div>
 
       {/* Account Selector */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
         <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Source Account</label>
         <Select
           data={[
@@ -211,7 +212,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
       </div>
 
       {/* To */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
         <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">To</label>
         <SupportedListingsDropdown
           selectedCoin={toCoin}
@@ -220,7 +221,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
       </div>
 
       {/* Amount */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
         <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Amount</label>
         <NumberInput
           hideControls

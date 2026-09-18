@@ -135,7 +135,7 @@ function SettingsPageInner() {
       </div>
 
       {/* Section A — Display Preferences */}
-      <div className="p-8 max-[1150px]:p-4 bg-primary/10 border border-primary/25 rounded-20px max-[1150px]:rounded-xl backdrop-blur-8px flex flex-col gap-6 max-[1150px]:gap-4">
+      <div className="account-card flex flex-col gap-6 max-[1150px]:gap-4">
 
         {isLoading ? (
           <div className="flex justify-center py-6"><Loader color="blue" /></div>
@@ -275,7 +275,7 @@ function SettingsPageInner() {
 
       {/* Section B — Notifications (conditional) */}
       {settings && Object.keys(settings).some((k) => k.toLowerCase().includes("notif") || k.toLowerCase().includes("alert") || k.toLowerCase().includes("email")) && (
-        <div className="p-8 max-[1150px]:p-4 bg-primary/10 border border-primary/25 rounded-20px max-[1150px]:rounded-xl backdrop-blur-8px flex flex-col gap-6 max-[1150px]:gap-4">
+        <div className="account-card flex flex-col gap-6 max-[1150px]:gap-4">
           <div className="flex flex-col gap-4">
             {Object.entries(settings)
               .filter(([k]) => k.toLowerCase().includes("notif") || k.toLowerCase().includes("alert") || k.toLowerCase().includes("email"))

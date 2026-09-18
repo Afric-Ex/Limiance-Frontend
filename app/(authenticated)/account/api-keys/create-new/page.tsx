@@ -113,7 +113,7 @@ function CreateApiKeyInner() {
             Create APIs
           </button>
         </div>
-        <div className="flex flex-col gap-4 p-5 bg-gray-15/5 rounded-20px">
+        <div className="account-card !p-5 flex flex-col gap-4">
           <div className="flex items-center gap-6px">
             <InfoWhite />
             <span className="font-semibold">Note</span>
@@ -138,8 +138,8 @@ function CreateApiKeyInner() {
           </ol>
         </div>
       </div>
-      <div className="grid grid-cols-[1fr_2fr] gap-8">
-        <div className="py-30px px-5 bg-gray-7 rounded-2xl">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-8">
+        <div className="account-card !py-30px !px-5">
           <div className="flex flex-col gap-7">
             <div className="flex flex-col gap-30px">
               <div className="flex items-center justify-between">
@@ -149,7 +149,7 @@ function CreateApiKeyInner() {
                   <span className="text-xs text-orange-1">Incomplete</span>
                 </span>
               </div>
-              <div className="py-4 px-2 border border-white rounded-lg flex flex-col gap-2">
+              <div className="py-4 px-2 border border-white/[0.06] rounded-lg flex flex-col gap-2">
                 <span className="text-sm font-medium">{form.values.label || "New API"}</span>
                 <div className="flex items-center gap-2">
                   <span className="bg-gray-9/25 py-2px px-5px text-gray-9 text-xs">
@@ -162,7 +162,7 @@ function CreateApiKeyInner() {
                 </div>
               </div>
             </div>
-            <div className="py-3 text-center px-2 border border-white rounded-lg cursor-pointer">
+            <div className="py-3 text-center px-2 border border-white/[0.06] rounded-lg cursor-pointer">
               Add another
             </div>
             <button
@@ -175,7 +175,7 @@ function CreateApiKeyInner() {
             </button>
           </div>
         </div>
-        <div className="bg-gray-16 py-30px px-5 flex flex-col gap-6">
+        <div className="account-card !py-30px !px-5 flex flex-col gap-6">
           <TextInput
             classNames={inputStyles}
             label="API name"

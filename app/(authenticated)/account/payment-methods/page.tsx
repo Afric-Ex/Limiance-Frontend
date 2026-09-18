@@ -154,7 +154,7 @@ function PaymentMethodsPageInner() {
             const revealed = revealedIds.has(id);
             const acctNum = method.data?.accountNumber ?? method.accountNumber ?? method.account_number ?? "";
             return (
-              <div key={id} className="p-6 max-[1150px]:p-4 bg-primary/10 border border-primary/25 rounded-20px max-[1150px]:rounded-xl backdrop-blur-8px flex flex-col min-[1150px]:flex-row justify-between items-start min-[1150px]:items-center gap-5 max-[1150px]:gap-4">
+              <div key={id} className="account-card !p-6 max-[1150px]:!p-4 flex flex-col min-[1150px]:flex-row justify-between items-start min-[1150px]:items-center gap-5 max-[1150px]:gap-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
                     <MdAccountBalance size={24} />
@@ -194,7 +194,7 @@ function PaymentMethodsPageInner() {
           })}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center gap-5 py-20 px-8 bg-primary/10 border border-primary/25 rounded-20px">
+        <div className="account-card flex flex-col items-center justify-center gap-5 !py-20 !px-8">
           <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary">
             <MdAccountBalance size={32} />
           </div>
