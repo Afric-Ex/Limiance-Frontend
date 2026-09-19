@@ -47,6 +47,16 @@ export function GlobalP2PNotification() {
           toast.success(`You have a new ${orderType} order!\n\nA user has started a new trade with you.`, {
             duration: 10000,
           });
+
+          // Also surface it in the bell/store so it isn't lost once the toast expires
+          import("@/src/stores/notification-store").then(({ useNotificationStore }) => {
+            useNotificationStore.getState().addNotification({
+              title: `New ${orderType} order`,
+              body: `A user has started a new trade with you${o.amount ? ` for ${o.amount}` : ""}.`,
+              type: "p2p_order",
+              link: `/trades/p2p/order/${o.id}`,
+            });
+          });
         }
       });
       setKnownOrderIds(currentOrderIds);

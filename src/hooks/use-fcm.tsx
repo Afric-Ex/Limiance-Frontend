@@ -75,7 +75,12 @@ export function useFCM() {
 
           // Add to local notification store so the bell can show it
           import("@/src/stores/notification-store").then(({ useNotificationStore }) => {
-            useNotificationStore.getState().addNotification({ title, body, type: "push" });
+            useNotificationStore.getState().addNotification({
+              title,
+              body,
+              type: "push",
+              link: typeof payload.data?.url === "string" ? payload.data.url : undefined,
+            });
           });
 
           toast.custom(

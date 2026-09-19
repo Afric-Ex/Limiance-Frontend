@@ -18,7 +18,6 @@ export interface SupportMessage {
 
 export interface CreateTicketPayload {
   subject: string;
-  category: string;
   message: string;
 }
 

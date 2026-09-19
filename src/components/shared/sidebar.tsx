@@ -99,7 +99,15 @@ const transactionLinks: NavItem[] = [
 
 // --- Expandable dropdown ------------------------------------------------------
 
-function NavDropdown({ item, pathname }: { item: NavItem; pathname: string }) {
+function NavDropdown({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: NavItem;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
   const isActive = pathname.includes(item.routeIdentifier ?? "");
   const [open, setOpen] = useState(isActive);
   const Icon = item.icon;
@@ -150,9 +158,10 @@ function NavDropdown({ item, pathname }: { item: NavItem; pathname: string }) {
             const childActive =
               pathname === child.link || pathname.startsWith(child.link + "/");
             return (
-              <Link
+<Link
                 key={child.name}
                 href={child.link}
+                onClick={onNavigate}
                 className={clsx(
                   "text-[12.5px] py-1.5 px-3 rounded-lg transition-all duration-150 font-medium",
                   childActive
@@ -172,7 +181,15 @@ function NavDropdown({ item, pathname }: { item: NavItem; pathname: string }) {
 
 // --- Single link --------------------------------------------------------------
 
-function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
+function NavLink({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: NavItem;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
   const isActive =
     pathname === item.link || pathname.startsWith((item.link ?? "") + "/");
   const Icon = item.icon;
@@ -180,6 +197,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
   return (
     <Link
       href={item.link!}
+      onClick={onNavigate}
       className={clsx(
         "group flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200",
         isActive
@@ -223,7 +241,7 @@ function SectionLabel({ label }: { label: string }) {
 
 // --- User profile card --------------------------------------------------------
 
-function UserProfileCard() {
+export function UserProfileCard() {
   const user = useUserStore((s) => s.user);
   const { data: kycStatus } = useQuery({
     queryKey: userKeys.kycStatus,
@@ -281,68 +299,110 @@ function UserProfileCard() {
   );
 }
 
-// --- Main sidebar -------------------------------------------------------------
+// --- Main sidebar content (shared between desktop nav & mobile drawer) ----------
 
-export const Sidebar = () => {
+export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const isTransactions = pathname.includes("transactions");
   const links = isTransactions ? transactionLinks : mainNavLinks;
 
   return (
+    <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 flex flex-col scrollbar-none">
+      {isTransactions ? (
+        <>
+          <SectionLabel label="Transactions" />
+          <div className="flex flex-col gap-0.5">
+            {links.map((item) =>
+              item.link ? (
+                <NavLink
+                  key={item.name}
+                  item={item}
+                  pathname={pathname}
+                  onNavigate={onNavigate}
+                />
+              ) : null
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <SectionLabel label="Overview" />
+          <div className="flex flex-col gap-0.5">
+            {mainNavLinks.slice(0, 2).map((item) => (
+              <NavLink
+                key={item.name}
+                item={item}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+
+          <SectionLabel label="Trading" />
+          <div className="flex flex-col gap-0.5">
+            {mainNavLinks.slice(2, 7).map((item) =>
+              item.children ? (
+                <NavDropdown
+                  key={item.name}
+                  item={item}
+                  pathname={pathname}
+                  onNavigate={onNavigate}
+                />
+              ) : (
+                <NavLink
+                  key={item.name}
+                  item={item}
+                  pathname={pathname}
+                  onNavigate={onNavigate}
+                />
+              )
+            )}
+          </div>
+
+          <SectionLabel label="Finance" />
+          <div className="flex flex-col gap-0.5">
+            {mainNavLinks.slice(7, 9).map((item) => (
+              <NavLink
+                key={item.name}
+                item={item}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+
+          <SectionLabel label="Profile" />
+          <div className="flex flex-col gap-0.5">
+            {mainNavLinks.slice(9).map((item) =>
+              item.children ? (
+                <NavDropdown
+                  key={item.name}
+                  item={item}
+                  pathname={pathname}
+                  onNavigate={onNavigate}
+                />
+              ) : (
+                <NavLink
+                  key={item.name}
+                  item={item}
+                  pathname={pathname}
+                  onNavigate={onNavigate}
+                />
+              )
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// --- Main sidebar -------------------------------------------------------------
+
+export const Sidebar = () => {
+  return (
     <nav className="max-[1150px]:hidden flex flex-col h-full overflow-hidden bg-[#181a20] border-r border-white/[0.06]">
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 flex flex-col scrollbar-none">
-        {isTransactions ? (
-          <>
-            <SectionLabel label="Transactions" />
-            <div className="flex flex-col gap-0.5">
-              {links.map((item) =>
-                item.link ? (
-                  <NavLink key={item.name} item={item} pathname={pathname} />
-                ) : null
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <SectionLabel label="Overview" />
-            <div className="flex flex-col gap-0.5">
-              {mainNavLinks.slice(0, 2).map((item) => (
-                <NavLink key={item.name} item={item} pathname={pathname} />
-              ))}
-            </div>
-
-            <SectionLabel label="Trading" />
-            <div className="flex flex-col gap-0.5">
-              {mainNavLinks.slice(2, 7).map((item) =>
-                item.children ? (
-                  <NavDropdown key={item.name} item={item} pathname={pathname} />
-                ) : (
-                  <NavLink key={item.name} item={item} pathname={pathname} />
-                )
-              )}
-            </div>
-
-            <SectionLabel label="Finance" />
-            <div className="flex flex-col gap-0.5">
-              {mainNavLinks.slice(7, 9).map((item) => (
-                <NavLink key={item.name} item={item} pathname={pathname} />
-              ))}
-            </div>
-
-            <SectionLabel label="Profile" />
-            <div className="flex flex-col gap-0.5">
-              {mainNavLinks.slice(9).map((item) =>
-                item.children ? (
-                  <NavDropdown key={item.name} item={item} pathname={pathname} />
-                ) : (
-                  <NavLink key={item.name} item={item} pathname={pathname} />
-                )
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
+      <SidebarContent />
       <UserProfileCard />
     </nav>
   );

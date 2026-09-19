@@ -31,13 +31,13 @@ export const supportService = {
     return response;
   },
 
-  /** POST /trading/support/tickets/:id/reply — Reply to a ticket */
+  /** POST /trading/support/tickets/:id/messages — Reply to a ticket */
   replyTicket: async (
     ticketId: string,
     data: ReplyTicketPayload
   ): Promise<ApiResponse<any>> => {
     const response = await api.post(
-      `trading/support/tickets/${ticketId}/reply`,
+      `trading/support/tickets/${ticketId}/messages`,
       data
     );
     return response;

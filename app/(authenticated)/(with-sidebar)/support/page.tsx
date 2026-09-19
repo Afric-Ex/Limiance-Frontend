@@ -21,15 +21,6 @@ import { SupportPageSkeleton } from "@/src/components/skeletons/with-sidebar";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
-  "Account Issue",
-  "Deposit / Withdrawal",
-  "Trade Problem",
-  "KYC / Verification",
-  "Security",
-  "Other",
-];
-
 const STATUS_STYLES: Record<string, { label: string; bg: string; color: string }> = {
   open:         { label: "Open",         bg: "rgba(239,68,68,0.12)",   color: "#ef4444" },
   in_progress:  { label: "In Progress",  bg: "rgba(245,158,11,0.12)",  color: "#f59e0b" },
@@ -53,11 +44,10 @@ function timeAgo(iso: string) {
 function CreateTicketModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [subject, setSubject] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0]);
   const [message, setMessage] = useState("");
 
   const { mutate: create, isPending } = useMutation({
-    mutationFn: () => supportService.createTicket({ subject, category, message }),
+    mutationFn: () => supportService.createTicket({ subject, message }),
     onSuccess: () => {
       successNotification("Support ticket created!");
       qc.invalidateQueries({ queryKey: supportKeys.tickets() });
@@ -130,22 +120,6 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          {/* Category */}
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Category</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              style={{
-                width: "100%", padding: "10px 14px",
-                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 10, color: "var(--color-text-primary)", fontSize: 14, outline: "none",
-              }}
-            >
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
           {/* Message */}
           <div>
             <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Description</label>
@@ -167,22 +141,30 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Submit */}
-          <button
-            onClick={() => create()}
-            disabled={!valid || isPending}
-            style={{
-              width: "100%", padding: "12px 0",
-              background: valid && !isPending
-                ? "var(--color-primary-strong)"
-                : "rgba(255,255,255,0.06)",
-              border: "none", borderRadius: 10,
-              color: valid && !isPending ? "#fff" : "rgba(255,255,255,0.3)",
-              fontSize: 14, fontWeight: 600, cursor: valid && !isPending ? "pointer" : "not-allowed",
-              transition: "all 0.2s",
-            }}
-          >
-            {isPending ? "Submitting…" : "Submit Ticket"}
-          </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <button
+              type="button"
+              onClick={() => create()}
+              disabled={!valid || isPending}
+              style={{
+                width: "100%", padding: "12px 0",
+                background: valid && !isPending
+                  ? "var(--color-primary-strong)"
+                  : "rgba(255,255,255,0.06)",
+                border: "none", borderRadius: 10,
+                color: valid && !isPending ? "#fff" : "rgba(255,255,255,0.3)",
+                fontSize: 14, fontWeight: 600, cursor: valid && !isPending ? "pointer" : "not-allowed",
+                transition: "all 0.2s",
+              }}
+            >
+              {isPending ? "Submitting…" : "Submit Ticket"}
+            </button>
+            {!valid && !isPending && (
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", textAlign: "center" }}>
+                Subject needs 4+ characters and description 10+ characters
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -239,7 +221,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
             {thread.subject}
           </div>
           <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 1 }}>
-            #{thread.id} · {thread.category}
+            #{thread.id}{thread.category ? ` · ${thread.category}` : ""}
           </div>
         </div>
         <span style={{
@@ -379,7 +361,7 @@ function TicketItem({ ticket, isActive, onClick }: { ticket: SupportTicket; isAc
           {st.label}
         </span>
       </div>
-      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{ticket.category}</div>
+      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{ticket.category ?? "General"}</div>
       <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", marginTop: 4 }}>{timeAgo(ticket.updated_at || ticket.created_at)}</div>
     </div>
   );
@@ -390,7 +372,7 @@ function TicketItem({ ticket, isActive, onClick }: { ticket: SupportTicket; isAc
 function SupportPageInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [, setMobileView] = useState<"list" | "thread">("list");
+  const [mobileView, setMobileView] = useState<"list" | "thread">("list");
 
   const { data, isLoading } = useQuery({
     queryKey: supportKeys.tickets(),
@@ -466,7 +448,9 @@ function SupportPageInner() {
           background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
           border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16,
           display: "flex", flexDirection: "column", overflow: "hidden",
-        }}>
+        }}
+        className={`support-list-pane ${mobileView === "thread" ? "support-hidden-mobile" : ""}`}
+        >
           <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Your Tickets ({tickets.length})
@@ -501,7 +485,9 @@ function SupportPageInner() {
           background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
           border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16,
           display: "flex", flexDirection: "column", overflow: "hidden",
-        }}>
+        }}
+        className={`support-thread-pane ${mobileView === "list" && selected ? "support-hidden-mobile" : ""}`}
+        >
           {selected ? (
             <TicketThread ticket={selected} onBack={handleBack} />
           ) : (
@@ -545,6 +531,7 @@ function SupportPageInner() {
         }
         @media (max-width: 768px) {
           .support-grid { grid-template-columns: 1fr !important; }
+          .support-hidden-mobile { display: none !important; }
         }
       `}</style>
     </div>

@@ -12,6 +12,7 @@ import { AppContainer } from "@/src/components/shared/app-container";
 import QueryProvider from "@/src/providers/query-provider";
 import { Toaster } from "react-hot-toast";
 import Providers from "@/src/components/providers";
+import { NotificationsProvider } from "@/src/components/shared/notifications-provider";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -44,6 +45,7 @@ export default function RootLayout({
           <Providers>
             <QueryProvider>
               <ModalsProvider>
+                <NotificationsProvider />
                 <AppContainer>
                   <Header />
                   {children}

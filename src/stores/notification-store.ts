@@ -8,15 +8,20 @@ export interface AppNotification {
   createdAt: number;
   read: boolean;
   type?: string;
+  link?: string;
 }
 
 interface NotificationState {
   notifications: AppNotification[];
   unreadCount: number;
+  viewing: AppNotification | null;
   addNotification: (notification: Omit<AppNotification, "id" | "createdAt" | "read">) => void;
+  setNotifications: (notifications: AppNotification[]) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearAll: () => void;
+  openNotification: (notification: AppNotification) => void;
+  closeNotification: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>()(
@@ -24,22 +29,49 @@ export const useNotificationStore = create<NotificationState>()(
     (set) => ({
       notifications: [],
       unreadCount: 0,
+      viewing: null,
 
       addNotification: (notification) =>
         set((state) => {
+          // Dedupe by title+body so re-delivered FCM pushes don't pile up
+          const isDuplicate = state.notifications.some(
+            (n) => n.title === notification.title && n.body === notification.body
+          );
+          if (isDuplicate) return state;
+
           const newNotification: AppNotification = {
             ...notification,
             id: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
             createdAt: Date.now(),
             read: false,
           };
-          
+
           // Keep a maximum of 50 notifications to avoid bloating local storage
           const updatedNotifications = [newNotification, ...state.notifications].slice(0, 50);
-          
+
           return {
             notifications: updatedNotifications,
             unreadCount: state.unreadCount + 1,
+          };
+        }),
+
+      // Merge server-fetched notifications with anything added locally via FCM.
+      // Server items win by id; local-only items (e.g. foreground pushes not yet
+      // persisted on the backend) are preserved. Unread count is recomputed.
+      setNotifications: (serverNotifications) =>
+        set((state) => {
+          if (!serverNotifications.length) return state;
+
+          const serverIds = new Set(serverNotifications.map((n) => n.id));
+          const localOnly = state.notifications.filter((n) => !serverIds.has(n.id));
+
+          const merged = [...serverNotifications, ...localOnly]
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .slice(0, 100);
+
+          return {
+            notifications: merged,
+            unreadCount: merged.filter((n) => !n.read).length,
           };
         }),
 
@@ -71,9 +103,19 @@ export const useNotificationStore = create<NotificationState>()(
           notifications: [],
           unreadCount: 0,
         }),
+
+      openNotification: (notification) =>
+        set({ viewing: notification }),
+
+      closeNotification: () =>
+        set({ viewing: null }),
     }),
     {
       name: "limiance-notifications",
+      partialize: (state) => ({
+        notifications: state.notifications,
+        unreadCount: state.unreadCount,
+      }),
     }
   )
 );
