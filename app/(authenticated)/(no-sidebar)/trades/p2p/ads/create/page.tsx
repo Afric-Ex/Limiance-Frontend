@@ -1,20 +1,23 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
 import { PaymentMethodManager } from "@/src/components/p2p/payment-method-manager";
+import { PaymentMethodBadge } from "@/src/components/p2p/payment-method-badge";
 import { Button, Select, NumberInput, Textarea, Checkbox, Tooltip, MultiSelect } from "@mantine/core";
 import { useRouter } from "next/navigation";
-import { useCreateAd } from "@/src/hooks/p2p/use-p2p";
+import { useCreateAd, useAdvertiserInfo, usePaymentMethods } from "@/src/hooks/p2p/use-p2p";
 import { CreateOrder } from "@/src/types/p2p";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
-import { MdInfoOutline } from "react-icons/md";
+import { IoMdInformationCircleOutline } from "react-icons/io";
+import { IoChevronBack } from "react-icons/io5";
 import { getBanksForFiat } from "@/src/lib/banks";
-import { useAdvertiserInfo } from "@/src/hooks/p2p/use-p2p";
 import { NonAdvertiserModal } from "@/src/components/p2p/non-advertiser-modal";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2PCreateAdSkeleton } from "@/src/components/skeletons/p2p";
+import clsx from "clsx";
 
 const FIAT_RATES: Record<string, number> = {
   USD: 1,
@@ -23,9 +26,59 @@ const FIAT_RATES: Record<string, number> = {
   GBP: 0.78,
 };
 
+// ─── Shared piece styles (matches withdrawal / account flows) ─────────────────
+
+const StepBadge = ({ num }: { num: number }) => (
+  <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-[0_0_10px_rgba(77,119,240,0.4)]">
+    {num}
+  </div>
+);
+
+const InfoTooltip = ({ label }: { label: string }) => (
+  <Tooltip withArrow multiline w={260} arrowSize={8} color="#181a20" label={label}
+    classNames={{ tooltip: "!text-xs !font-medium !border !border-white/[0.08]" }}>
+    <span className="cursor-help text-white/30 hover:text-white/60 transition-colors">
+      <IoMdInformationCircleOutline size={15} />
+    </span>
+  </Tooltip>
+);
+
+function StepCard({
+  num,
+  title,
+  right,
+  children,
+}: {
+  num: number;
+  title: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl flex flex-col gap-5 max-[1150px]:gap-4">
+      <div className="flex items-center gap-3">
+        <StepBadge num={num} />
+        <h3 className="text-base font-bold text-white">{title}</h3>
+        {right && <div className="ml-auto">{right}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+const labelClass = "!text-xs !font-semibold !text-white/40 !uppercase !tracking-wider !mb-2";
+const inputClass =
+  "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 focus:!shadow-[0_0_10px_rgba(77,119,240,0.12)] !rounded-xl !h-[56px] !text-white !text-sm !transition-all !duration-200 placeholder:!text-white/20";
+const descriptionClass = "!text-xs !text-white/30 !mt-1.5";
+const dropdownClass = "!bg-[#1c1e27] !border !border-white/[0.1] !shadow-2xl !rounded-xl";
+const optionClass =
+  "hover:!bg-white/10 data-[combobox-selected]:!bg-primary/20 data-[combobox-selected]:!text-primary !rounded-lg !mx-1 !my-0.5 !transition-colors";
+const pillBuy = "!bg-buy !text-white !font-semibold !rounded-md";
+const pillSell = "!bg-sell !text-white !font-semibold !rounded-md";
+
 function CreateAdPageInner() {
   const router = useRouter();
-  
+
   const { mutate: createAd, isPending: isCreating } = useCreateAd();
 
   // Advertiser guard
@@ -45,7 +98,7 @@ function CreateAdPageInner() {
   const [fiat, setFiat] = useState("NGN");
   const [priceType, setPriceType] = useState<"FLOATING" | "FIXED">("FIXED");
   const [price, setPrice] = useState<number | "">("");
-  
+
   const [totalAmount, setTotalAmount] = useState<number | "">("");
   const [minOrder, setMinOrder] = useState<number | "">("");
   const [maxOrder, setMaxOrder] = useState<number | "">("");
@@ -57,6 +110,14 @@ function CreateAdPageInner() {
   const [isMethodManagerOpen, setIsMethodManagerOpen] = useState(false);
   const [agreed, setAgreed] = useState(false);
 
+  // Resolve selected method names for SELL chips (matches edit-ad flow)
+  const { data: pmData } = usePaymentMethods();
+  const paymentMethodsList = (pmData as any)?.data?.data ?? [];
+  const methodName = (id: string) => {
+    const m = paymentMethodsList.find((pm: any) => pm.id === id);
+    return m?.data?.bankName || m?.method || id;
+  };
+
   // Live market price from WebSocket — backend streams crypto/USDT pairs
   // For USDT itself, price is always 1. For others (BTC, ETH), we get the live USDT price.
   const wsPair = selectedAsset === "USDT" ? "BTC/USDT" : `${selectedAsset}/USDT`;
@@ -67,15 +128,25 @@ function CreateAdPageInner() {
   const { coins: portfolioCoins } = usePortfolioWs();
 
   const balanceArray = Array.isArray(portfolioCoins) ? portfolioCoins : [];
-  const assetBalanceInfo = balanceArray.find((b: any) => 
+  const assetBalanceInfo = balanceArray.find((b: any) =>
     b.coin === selectedAsset || b.symbol === selectedAsset || b.asset === selectedAsset
   );
-  const fundingBalance = assetBalanceInfo 
-    ? parseFloat(assetBalanceInfo.fundingBalance || "0") 
+  const balanceAvailable = !!assetBalanceInfo;
+  const fundingBalance = assetBalanceInfo
+    ? parseFloat(assetBalanceInfo.fundingBalance || "0")
     : 0;
 
-  // Validation: for SELL ads, total amount can't exceed balance
-  const isOverBalance = adMode === "SELL" && totalAmount !== "" && Number(totalAmount) > fundingBalance;
+  // Validation: for SELL ads, total amount can't exceed balance.
+  // Only enforced when the coin's balance is actually known — if the portfolio
+  // feed hasn't loaded (or the coin has no record), don't block submission.
+  const isOverBalance =
+    adMode === "SELL" &&
+    balanceAvailable &&
+    totalAmount !== "" &&
+    Number(totalAmount) > fundingBalance;
+
+  const marketPriceInFiat =
+    currentMarketPrice !== null ? currentMarketPrice * (FIAT_RATES[fiat] || 1) : null;
 
   const handleSubmit = () => {
     if (!price || !totalAmount || !minOrder || !maxOrder || selectedMethodIds.length === 0 || !agreed) return;
@@ -134,329 +205,348 @@ function CreateAdPageInner() {
           </Button>
         </div>
       ) : (
-      <div className="w-full max-w-3xl mx-auto py-6 flex flex-col gap-8">
-        
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-white">Post Ad</h1>
-          {/* Buy/Sell Toggle */}
-          <div className="flex bg-black/40 rounded-lg p-1">
-            <button
-              className={`px-8 py-2 rounded-md text-sm font-bold transition-colors ${
-                adMode === "BUY" ? "bg-buy text-white" : "text-white/50 hover:text-white"
-              }`}
-              onClick={() => setAdMode("BUY")}
+        <div className="w-full max-w-3xl mx-auto py-6 flex flex-col gap-5 max-[1150px]:gap-4 page-enter">
+
+          {/* Back + Header */}
+          <div className="flex flex-col gap-4 mb-1">
+            <Link
+              href="/trades/p2p/my-ads"
+              className="flex items-center gap-1 w-fit text-sm font-medium text-white/40 hover:text-primary transition-colors"
             >
-              I want to Buy
-            </button>
-            <button
-              className={`px-8 py-2 rounded-md text-sm font-bold transition-colors ${
-                adMode === "SELL" ? "bg-[#F6465D] text-white" : "text-white/50 hover:text-white"
-              }`}
-              onClick={() => setAdMode("SELL")}
-            >
-              I want to Sell
-            </button>
-          </div>
-        </div>
+              <IoChevronBack size={16} />
+              Back to My Ads
+            </Link>
 
-        <div className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] shadow-[0_4px_30px_rgba(0,0,0,0.1)] rounded-2xl p-8 flex flex-col gap-8">
-          {/* Step 1: Asset & Fiat */}
-          <div className="grid grid-cols-2 gap-6">
-            <Select
-              label="Asset"
-              value={selectedAsset}
-              onChange={(v) => setSelectedAsset(v || "USDT")}
-              data={["USDT", "BTC", "ETH"]}
-              classNames={{
-                label: "text-white/70 mb-2 font-medium",
-                input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all",
-                dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-                option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors"
-              }}
-            />
-            <Select
-              label="Fiat"
-              value={fiat}
-              onChange={(v) => setFiat(v || "NGN")}
-              data={["USD", "EUR", "NGN", "GBP"]}
-              classNames={{
-                label: "text-white/70 mb-2 font-medium",
-                input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all",
-                dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-                option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors"
-              }}
-            />
-          </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <h1 className="text-2xl font-bold text-white">Post Ad</h1>
+                <p className="text-sm text-white/40">
+                  Advertise your price to buy or sell crypto on the P2P marketplace
+                </p>
+              </div>
 
-          {/* Balance Info for SELL mode */}
-          {adMode === "SELL" && (
-            <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
-              <span className="text-sm text-white/60">
-                Available {selectedAsset} Balance
-              </span>
-              <span className="text-sm font-mono font-semibold text-white">
-                {fundingBalance.toLocaleString(undefined, { maximumFractionDigits: 8 })} {selectedAsset}
-              </span>
-            </div>
-          )}
-
-          <div className="w-full h-px bg-white/10" />
-
-          {/* Step 2: Price Settings */}
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-white/70 font-medium">Price Type</span>
-              <div className="flex bg-black/40 rounded-lg p-0.5">
+              {/* Buy/Sell Toggle */}
+              <div className="flex bg-black/40 border border-white/[0.06] rounded-xl p-1 self-start sm:self-center">
                 <button
-                  className={`px-5 py-1.5 rounded-md text-sm font-semibold transition-colors ${
-                    priceType === "FIXED" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
-                  }`}
-                  onClick={() => setPriceType("FIXED")}
+                  className={clsx(
+                    "px-6 py-2 rounded-lg text-sm font-bold transition-colors",
+                    adMode === "BUY" ? "bg-buy text-white shadow-[0_0_20px_rgba(37,171,66,0.35)]" : "text-white/50 hover:text-white"
+                  )}
+                  onClick={() => setAdMode("BUY")}
                 >
-                  Fixed
+                  Buy
                 </button>
                 <button
-                  className={`px-5 py-1.5 rounded-md text-sm font-semibold transition-colors ${
-                    priceType === "FLOATING" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
-                  }`}
-                  onClick={() => setPriceType("FLOATING")}
+                  className={clsx(
+                    "px-6 py-2 rounded-lg text-sm font-bold transition-colors",
+                    adMode === "SELL" ? "bg-sell text-white shadow-[0_0_20px_rgba(246,70,93,0.35)]" : "text-white/50 hover:text-white"
+                  )}
+                  onClick={() => setAdMode("SELL")}
                 >
-                  Floating
+                  Sell
                 </button>
               </div>
             </div>
-            
-            <div className="flex gap-6 items-end">
+          </div>
+
+          {/* Step 1: Asset & Fiat */}
+          <StepCard num={1} title="Asset & Fiat">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                label="Asset"
+                value={selectedAsset}
+                onChange={(v) => setSelectedAsset(v || "USDT")}
+                data={["USDT", "BTC", "ETH"]}
+                classNames={{ label: labelClass, input: inputClass, dropdown: dropdownClass, option: optionClass }}
+              />
+              <Select
+                label="Fiat Currency"
+                value={fiat}
+                onChange={(v) => setFiat(v || "NGN")}
+                data={["USD", "EUR", "NGN", "GBP"]}
+                classNames={{ label: labelClass, input: inputClass, dropdown: dropdownClass, option: optionClass }}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 py-3">
+                <span className="text-xs font-medium text-white/40">Market Price</span>
+                <span className="text-sm font-bold text-white">
+                  {marketPriceInFiat !== null
+                    ? `${marketPriceInFiat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${fiat}`
+                    : "—"}
+                </span>
+              </div>
+
+              {adMode === "SELL" ? (
+                <div className="flex items-center justify-between bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 py-3">
+                  <span className="text-xs font-medium text-white/40">Available Balance</span>
+                  <span className="text-sm font-bold text-white">
+                    {balanceAvailable
+                      ? `${fundingBalance.toLocaleString(undefined, { maximumFractionDigits: 8 })} ${selectedAsset}`
+                      : "—"}
+                  </span>
+                </div>
+              ) : (
+                <div className="hidden sm:flex items-center justify-between bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 py-3">
+                  <span className="text-xs font-medium text-white/40">You're buying</span>
+                  <span className="text-sm font-bold text-buy">
+                    {selectedAsset} in {fiat}
+                  </span>
+                </div>
+              )}
+            </div>
+          </StepCard>
+
+          {/* Step 2: Price Settings */}
+          <StepCard num={2} title="Price Settings">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+                  Price Type
+                  <InfoTooltip
+                    label="Fixed lets you set a set price for each trade. Floating automatically adjusts your price against the live market price by the margin you set."
+                  />
+                </span>
+                <div className="flex bg-black/40 border border-white/[0.06] rounded-xl p-1 w-fit">
+                  <button
+                    className={clsx(
+                      "px-5 py-1.5 rounded-lg text-sm font-semibold transition-colors",
+                      priceType === "FIXED" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
+                    )}
+                    onClick={() => setPriceType("FIXED")}
+                  >
+                    Fixed
+                  </button>
+                  <button
+                    className={clsx(
+                      "px-5 py-1.5 rounded-lg text-sm font-semibold transition-colors",
+                      priceType === "FLOATING" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
+                    )}
+                    onClick={() => setPriceType("FLOATING")}
+                  >
+                    Floating
+                  </button>
+                </div>
+              </div>
+
               <NumberInput
-                label={priceType === "FIXED" ? "Fixed Price" : "Floating Margin %"}
+                label={priceType === "FIXED" ? "Price" : "Floating Margin (Premium %)"}
+                description={
+                  priceType === "FIXED"
+                    ? marketPriceInFiat !== null
+                      ? `Market price is ${marketPriceInFiat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${fiat}`
+                      : undefined
+                    : "Positive value adds a premium, negative applies a discount to the live market price."
+                }
                 value={price}
                 onChange={(val) => setPrice(val === "" ? "" : Number(val))}
                 decimalScale={priceType === "FIXED" ? 4 : 2}
                 hideControls
                 rightSection={<span className="text-white/50 pr-4">{priceType === "FIXED" ? fiat : "%"}</span>}
                 classNames={{
-                  label: "text-white/70 mb-2 font-medium",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all w-64"
+                  label: labelClass,
+                  description: descriptionClass,
+                  input: inputClass,
                 }}
               />
-              <div className="text-sm text-white/50 pb-3">
-                Market Price:{" "}
-                <strong className="text-white">
-                  {currentMarketPrice !== null 
-                    ? (currentMarketPrice * (FIAT_RATES[fiat] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) 
-                    : "—"
-                  } {fiat}
-                </strong>
-                {fiat !== "USD" && currentMarketPrice !== null && (
-                  <span className="text-white/30 text-xs ml-1">(~{currentMarketPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USD)</span>
-                )}
+            </div>
+          </StepCard>
+
+          {/* Step 3: Order Limits */}
+          <StepCard num={3} title="Order Limits">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">
+                  Min / Max sets the fiat range a buyer can trade per order
+                </span>
+                <InfoTooltip
+                  label="Min/Max Order sets the range a buyer can trade per order. E.g. Min ₦5,000 and Max ₦500,000 means each trade must be within that range."
+                />
               </div>
-            </div>
-          </div>
 
-          <div className="w-full h-px bg-white/10" />
-
-          {/* Step 3: Trade Limits */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-white/70 font-medium">Order Limits</span>
-              <Tooltip 
-                multiline 
-                w={300}
-                label="Min/Max Order sets the fiat range a buyer can trade per order. E.g. Min ₦5,000 and Max ₦500,000 means each trade must be within that range."
-              >
-                <span className="text-white/30 cursor-help"><MdInfoOutline size={16} /></span>
-              </Tooltip>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              <NumberInput
-                label={`Total Trading Amount (${selectedAsset})`}
-                description={adMode === "SELL" ? `Max: ${fundingBalance.toLocaleString()} ${selectedAsset}` : undefined}
-                value={totalAmount}
-                onChange={(val) => setTotalAmount(val === "" ? "" : Number(val))}
-                hideControls
-                error={isOverBalance ? `Exceeds your balance of ${fundingBalance.toLocaleString()} ${selectedAsset}` : undefined}
-                rightSection={
-                  adMode === "SELL" ? (
-                    <button 
-                      className="text-xs font-bold text-yellow-400 hover:text-yellow-300 pr-3"
-                      onClick={() => setTotalAmount(fundingBalance)}
-                    >
-                      MAX
-                    </button>
-                  ) : (
-                    <span className="text-white/50 pr-4">{selectedAsset}</span>
-                  )
-                }
-                classNames={{
-                  label: "text-white/70 mb-2 font-medium",
-                  description: "text-white/30 text-xs",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all"
-                }}
-              />
-              <div className="flex gap-3 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <NumberInput
-                label={`Min Order (${selectedAsset})`}
-                value={minOrder}
-                onChange={(val) => setMinOrder(val === "" ? "" : Number(val))}
-                min={0}
-                max={maxOrder !== "" && Number(maxOrder) > 0 ? Number(maxOrder) : undefined}
-                clampBehavior="blur"
-                placeholder="0"
-                classNames={{
-                  label: "text-white/70 text-sm mb-1 font-medium",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all"
-                }}
-              />
-              <div className="text-white/50 pt-8 hidden sm:block">—</div>
-              <NumberInput
-                label={`Max Order (${selectedAsset})`}
-                value={maxOrder}
-                onChange={(val) => setMaxOrder(val === "" ? "" : Number(val))}
-                min={minOrder !== "" && Number(minOrder) > 0 ? Number(minOrder) : 0}
-                max={totalAmount !== "" && Number(totalAmount) > 0 ? Number(totalAmount) : undefined}
-                clampBehavior="blur"
-                hideControls
+                  label={`Total Amount (${selectedAsset})`}
+                  description={adMode === "SELL" && balanceAvailable ? `Max ${fundingBalance.toLocaleString()} ${selectedAsset}` : undefined}
+                  value={totalAmount}
+                  onChange={(val) => setTotalAmount(val === "" ? "" : Number(val))}
+                  hideControls
+                  error={isOverBalance ? `Exceeds your balance of ${fundingBalance.toLocaleString()} ${selectedAsset}` : undefined}
+                  rightSection={
+                    adMode === "SELL" && balanceAvailable ? (
+                      <button
+                        className="text-xs font-bold text-warning-1 hover:text-warning-1/80 pr-3"
+                        onClick={() => setTotalAmount(fundingBalance)}
+                      >
+                        MAX
+                      </button>
+                    ) : (
+                      <span className="text-white/50 pr-4">{selectedAsset}</span>
+                    )
+                  }
                   classNames={{
-                    label: "text-white/70 mb-2 font-medium",
-                    input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all"
+                    label: labelClass,
+                    description: descriptionClass,
+                    input: inputClass,
+                    section: "!w-fit !right-3",
+                  }}
+                />
+
+                <NumberInput
+                  label={`Min Order (${selectedAsset})`}
+                  value={minOrder}
+                  onChange={(val) => setMinOrder(val === "" ? "" : Number(val))}
+                  min={0}
+                  max={maxOrder !== "" && Number(maxOrder) > 0 ? Number(maxOrder) : undefined}
+                  clampBehavior="blur"
+                  placeholder="0"
+                  classNames={{
+                    label: labelClass,
+                    input: inputClass,
+                  }}
+                />
+
+                <NumberInput
+                  label={`Max Order (${selectedAsset})`}
+                  value={maxOrder}
+                  onChange={(val) => setMaxOrder(val === "" ? "" : Number(val))}
+                  min={minOrder !== "" && Number(minOrder) > 0 ? Number(minOrder) : 0}
+                  max={totalAmount !== "" && Number(totalAmount) > 0 ? Number(totalAmount) : undefined}
+                  clampBehavior="blur"
+                  hideControls
+                  classNames={{
+                    label: labelClass,
+                    input: inputClass,
                   }}
                 />
               </div>
             </div>
-          </div>
-
-          <div className="w-full h-px bg-white/10" />
+          </StepCard>
 
           {/* Step 4: Payment Methods */}
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-white/70 font-medium">Payment Methods (Max 3)</span>
-                <Tooltip 
-                  multiline 
-                  w={300}
-                  label={adMode === "SELL" 
-                    ? "Select the bank/payment accounts where you want to receive fiat payment. Buyers will see your account details."
-                    : "Select the payment methods you can pay with. Sellers will see which methods you support."
-                  }
+          <StepCard
+            num={4}
+            title="Payment Methods"
+            right={
+              adMode === "SELL" ? (
+                <Button
+                  variant="outline"
+                  className="border-white/20 text-white hover:bg-white/10"
+                  size="xs"
+                  onClick={() => setIsMethodManagerOpen(true)}
                 >
-                  <span className="text-white/30 cursor-help"><MdInfoOutline size={16} /></span>
-                </Tooltip>
-              </div>
-              {adMode === "SELL" && (
-                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" size="xs" onClick={() => setIsMethodManagerOpen(true)}>
-                  Select Accounts
+                  Manage Accounts
                 </Button>
+              ) : undefined
+            }
+          >
+            <div className="flex flex-col gap-3">
+              <p className="text-xs text-white/40 leading-relaxed">
+                {adMode === "SELL"
+                  ? "Choose the accounts where buyers will send fiat payment. Your account details (name, number, bank) will be visible to the buyer."
+                  : "Choose the payment methods you support. Sellers with matching methods will appear in the marketplace."}
+                {" "}(Max 3)
+              </p>
+
+              {adMode === "BUY" ? (
+                <MultiSelect
+                  data={getBanksForFiat(fiat)}
+                  value={selectedMethodIds}
+                  onChange={(val) => {
+                    if (val.length <= 3) setSelectedMethodIds(val);
+                  }}
+                  searchable
+                  placeholder="Select up to 3 payment methods"
+                  classNames={{
+                    input: "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !text-white !text-sm !transition-all !duration-200 !rounded-xl !min-h-[56px]",
+                    dropdown: dropdownClass,
+                    option: optionClass,
+                    pill: pillBuy,
+                  }}
+                />
+              ) : selectedMethodIds.length === 0 ? (
+                <div className="text-sm text-sell bg-sell/10 p-4 rounded-xl border border-sell/20">
+                  You must select at least one payment method.
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {selectedMethodIds.map((id) => (
+                    <PaymentMethodBadge key={id} method={methodName(id)} className="px-4 py-2 text-sm" />
+                  ))}
+                </div>
               )}
             </div>
-            
-            <p className="text-white/40 text-xs mb-3">
-              {adMode === "SELL" 
-                ? "Choose the accounts where buyers will send fiat payment. Your account details (name, number, bank) will be visible to the buyer."
-                : "Choose the payment methods you support. Sellers with matching methods will appear in the marketplace."
-              }
-            </p>
+          </StepCard>
 
-            {adMode === "BUY" ? (
-              <MultiSelect
-                data={getBanksForFiat(fiat)}
-                value={selectedMethodIds}
-                onChange={(val) => {
-                  if (val.length <= 3) setSelectedMethodIds(val);
-                }}
-                searchable
-                placeholder="Select up to 3 payment methods"
-                classNames={{
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white min-h-[48px] rounded-xl focus:border-buy transition-all",
-                  dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-                  option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors",
-                  pill: "bg-yellow-500 text-black font-semibold rounded-md"
-                }}
-              />
-            ) : selectedMethodIds.length === 0 ? (
-              <div className="text-sm text-[#F6465D] bg-[#F6465D]/10 p-4 rounded-lg border border-[#F6465D]/20">
-                You must select at least one payment method.
+          {/* Step 5: Payment Window & Remarks */}
+          <StepCard num={5} title="Payment Window & Remarks">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Select
+                  label="Payment Time Limit"
+                  value={paymentWindow}
+                  onChange={(v) => setPaymentWindow(v || "15")}
+                  data={[
+                    { value: "15", label: "15 Minutes" },
+                    { value: "30", label: "30 Minutes" },
+                    { value: "45", label: "45 Minutes" },
+                  ]}
+                  classNames={{ label: labelClass, input: inputClass, dropdown: dropdownClass, option: optionClass }}
+                />
               </div>
-            ) : (
-              <div className="text-sm text-buy bg-buy/10 p-4 rounded-lg border border-buy/20">
-                ✓ {selectedMethodIds.length} payment method(s) selected
-              </div>
-            )}
-          </div>
-
-          <div className="w-full h-px bg-white/10" />
-
-          {/* Step 5: Remarks & Payment Window */}
-          <div className="grid grid-cols-2 gap-6">
-            <Select
-              label="Payment Time Limit"
-              value={paymentWindow}
-              onChange={(v) => setPaymentWindow(v || "15")}
-              data={[
-                { value: "15", label: "15 Minutes" },
-                { value: "30", label: "30 Minutes" },
-                { value: "45", label: "45 Minutes" }
-              ]}
+            </div>
+            <Textarea
+              label="Remarks (Optional)"
+              placeholder="Terms of trade..."
+              value={remarks}
+              onChange={(e) => setRemarks(e.currentTarget.value)}
+              minRows={3}
               classNames={{
-                label: "text-white/70 mb-2 font-medium",
-                input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-12 rounded-xl focus:border-buy transition-all",
-                dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-                option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors"
+                label: labelClass,
+                input: "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 focus:!shadow-[0_0_10px_rgba(77,119,240,0.12)] !text-white !text-sm !transition-all !duration-200 !rounded-xl !p-4 placeholder:!text-white/20",
               }}
             />
-            <div className="col-span-2">
-              <Textarea
-                label="Remarks (Optional)"
-                placeholder="Terms of trade..."
-                value={remarks}
-                onChange={(e) => setRemarks(e.currentTarget.value)}
-                minRows={3}
-                classNames={{
-                  label: "text-white/70 mb-2 font-medium",
-                  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white rounded-xl focus:border-buy transition-all p-4"
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="w-full h-px bg-white/10" />
+          </StepCard>
 
           {/* Step 6: Review & Publish */}
-          <div className="flex flex-col gap-6">
-            <Checkbox
-              label="I have read and agree to the Limiance P2P Trading Rules."
-              checked={agreed}
-              onChange={(e) => setAgreed(e.currentTarget.checked)}
-              color="yellow"
-              classNames={{
-                label: "text-white/80"
-              }}
-            />
+          <StepCard num={6} title="Review & Publish">
+            <div className="flex flex-col gap-5">
+              <Checkbox
+                label="I have read and agree to the Limiance P2P Trading Rules."
+                checked={agreed}
+                onChange={(e) => setAgreed(e.currentTarget.checked)}
+                color="green"
+                classNames={{ label: "!text-white/80 !text-sm" }}
+              />
 
-            <Button 
-              size="lg" 
-              className={`w-full ${adMode === "BUY" ? "bg-buy hover:bg-buy/90 shadow-[0_0_20px_rgba(14,203,129,0.3)]" : "bg-[#F6465D] hover:bg-[#F6465D]/90 shadow-[0_0_20px_rgba(246,70,93,0.3)]"} text-white font-bold text-lg rounded-xl h-14`}
-              disabled={!price || !totalAmount || !minOrder || !maxOrder || selectedMethodIds.length === 0 || !agreed || isOverBalance}
-              loading={isCreating}
-              onClick={handleSubmit}
-            >
-              Post {adMode} Ad
-            </Button>
-          </div>
-
+              <Button
+                size="lg"
+                className={clsx(
+                  "w-full text-white font-bold text-lg rounded-xl h-14 transition-all",
+                  adMode === "BUY"
+                    ? "bg-buy hover:bg-buy/90"
+                    : "bg-sell hover:bg-sell/90"
+                )}
+                disabled={!price || !totalAmount || !minOrder || !maxOrder || selectedMethodIds.length === 0 || !agreed || isOverBalance}
+                loading={isCreating}
+                onClick={handleSubmit}
+              >
+                Post {adMode === "BUY" ? "Buy" : "Sell"} Ad
+              </Button>
+            </div>
+          </StepCard>
         </div>
-
-        <PaymentMethodManager 
-          isOpen={isMethodManagerOpen}
-          onClose={() => setIsMethodManagerOpen(false)}
-          selectedMethodIds={selectedMethodIds}
-          onChangeSelected={setSelectedMethodIds}
-          fiat={fiat}
-          adMode={adMode}
-        />
-      </div>
       )}
+
+      <PaymentMethodManager
+        isOpen={isMethodManagerOpen}
+        onClose={() => setIsMethodManagerOpen(false)}
+        selectedMethodIds={selectedMethodIds}
+        onChangeSelected={setSelectedMethodIds}
+        fiat={fiat}
+        adMode={adMode}
+      />
     </P2PLayout>
   );
 }

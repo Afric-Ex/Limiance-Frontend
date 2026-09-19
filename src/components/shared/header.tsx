@@ -22,7 +22,7 @@ import { SettingsIcon } from "../icons/settings-icon";
 import { UserAvatar } from "./user-avatar";
 import { WalletDropdown } from "./wallet-dropdown";
 import { LanguageDropdown } from "./language-dropdown";
-import { NotificationsDropdown, useNotificationCount } from "./notifications-dropdown";
+import { NotificationsDropdown, NotificationDetailModal, useNotificationCount } from "./notifications-dropdown";
 import { ProfileDropdown } from "./profile-dropdown";
 import { MobileSideDrawer } from "./mobile-side-drawer";
 import { useDisclosure } from "@mantine/hooks";
@@ -250,6 +250,7 @@ export default function Header() {
         />
       </div>
       <MobileSideDrawer open={opened} onClose={close} />
+      <NotificationDetailModal />
     </header>
   );
 }

@@ -1,6 +1,7 @@
 import { api } from "../lib/axios";
 import {
   SupportTicket,
+  SupportMessage,
   CreateTicketPayload,
   ReplyTicketPayload,
 } from "../types/support";
@@ -31,17 +32,93 @@ export const supportService = {
     return response;
   },
 
-  /** POST /trading/support/tickets/:id/reply — Reply to a ticket */
+  /** POST /trading/support/tickets/:id/messages — Reply to a ticket */
   replyTicket: async (
     ticketId: string,
     data: ReplyTicketPayload
   ): Promise<ApiResponse<any>> => {
     const response = await api.post(
-      `trading/support/tickets/${ticketId}/reply`,
+      `trading/support/tickets/${ticketId}/messages`,
       data
     );
     return response;
   },
+};
+
+/**
+ * The backend returns Go-style fields (camelCase, UPPER_SNAKE statuses,
+ * "2026-09-19 11:34:31.898292 +0000 UTC" timestamps). Normalize into the
+ * UI model so status chips, dates and messages render correctly.
+ */
+
+const toIso = (value?: string): string | undefined => {
+  if (!value) return undefined;
+  const src = value.trim();
+  const iso = src
+    .replace(/ \+0000 UTC$/, "Z")
+    .replace(/ UTC$/, "Z")
+    .replace(" ", "T");
+  return Number.isFinite(new Date(iso).getTime()) ? iso : undefined;
+};
+
+const normalizeMessages = (list: any[] | undefined): SupportMessage[] | undefined => {
+  if (!Array.isArray(list)) return undefined;
+  return list.map((m) => ({
+    id: String(m.id ?? m._id ?? ""),
+    sender: ["admin", "support", "agent", "staff"].includes(
+      String(m.senderType ?? m.sender_class ?? m.sender ?? "").toLowerCase()
+    )
+      ? "admin"
+      : "user",
+    message: String(m.message ?? m.body ?? ""),
+    created_at: toIso(m.createdAt ?? m.created_at) ?? new Date().toISOString(),
+  }));
+};
+
+export const normalizeTicket = (raw: any): SupportTicket => ({
+  id: String(raw.id ?? raw._id ?? ""),
+  subject: String(raw.subject ?? raw.title ?? ""),
+  category: raw.category ?? raw.category_name ?? undefined,
+  status: String(raw.status ?? "open").toLowerCase() as SupportTicket["status"],
+  priority: String(raw.priority ?? "low").toLowerCase(),
+  created_at: toIso(raw.createdAt ?? raw.created_at) ?? new Date().toISOString(),
+  updated_at: toIso(raw.updatedAt ?? raw.updated_at),
+  messages: normalizeMessages(raw.messages ?? raw.thread),
+});
+
+/** Unwrap the list envelope: response.data.tickets | .tickets | []. */
+export const normalizeTicketList = (res: any): SupportTicket[] => {
+  const list =
+    Array.isArray(res?.data?.tickets)
+      ? res.data.tickets
+      : Array.isArray(res?.tickets)
+        ? res.tickets
+        : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res)
+            ? res
+            : [];
+  return list.map(normalizeTicket);
+};
+
+/** Unwrap the detail envelope: response.data.ticket | .ticket | flat object. */
+export const normalizeTicketDetail = (res: any, fallback: SupportTicket): SupportTicket => {
+  const raw =
+    res?.data?.ticket ??
+    res?.ticket ??
+    (res?.messages && typeof res === "object" && res.id ? res : null) ??
+    fallback;
+
+  const normalized = normalizeTicket(raw);
+
+  // Messages come at the envelope top level, not nested in the ticket
+  const rawMessages = res?.data?.messages ?? res?.messages ?? raw?.messages;
+  const messages = normalizeMessages(rawMessages);
+  if (messages) {
+    normalized.messages = messages;
+  }
+
+  return normalized;
 };
 
 export const supportKeys = {

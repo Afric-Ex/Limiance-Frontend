@@ -9,7 +9,7 @@ export const notificationKeys = {
 export const notificationService = {
   /** Fetch all notifications for the current user */
   getNotifications: async (): Promise<ApiResponse<any>> => {
-    const response = await api.get("notifications/");
+    const response = await api.get("notifications/history");
     return response.data;
   },
 

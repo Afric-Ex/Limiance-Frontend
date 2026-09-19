@@ -14,6 +14,7 @@ const NO_FOOTER_ROUTES = [
   "/orders",
   "/account",
   "/settings",
+  "/support",
   "/trades",
   "/transactions",
   "/buy-crypto",

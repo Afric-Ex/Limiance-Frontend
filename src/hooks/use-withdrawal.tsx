@@ -171,7 +171,7 @@ export const useWithdrawal = () => {
             onConfirm={(otpCode) =>
               confirmWithdrawal({ otpCode, totpCode: totpCodeRef.current })
             }
-            isPending={false}
+            isPending={confirmPending}
           />
         ),
         ...DEFAULT_MODAL_SETTINGS,

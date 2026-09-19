@@ -15,6 +15,7 @@ import { TradeReminder } from "@/src/components/settings/trade-reminder";
 import { TransactionNotifications } from "@/src/components/settings/transaction-notifications";
 import { XTermOfUse } from "@/src/components/settings/x-term-of-use";
 import { useUserStore } from "@/src/stores/user-store";
+import { MdOutlineSettings } from "react-icons/md";
 import { useState, useEffect } from "react";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { WithSidebarSettingsSkeleton } from "@/src/components/skeletons/with-sidebar";
@@ -154,7 +155,20 @@ function SettingsInner() {
 
   return (
     <main className="flex pb-10 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter flex-col gap-8 max-[1150px]:gap-4">
-      <h3 className="text-2xl font-semibold">Preferences</h3>
+      {/* Page header */}
+      <div className="flex items-center gap-3.5">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
+          <MdOutlineSettings size={22} />
+        </div>
+        <div>
+          <h1 className="text-[20px] font-bold text-[var(--color-text-primary)] leading-tight">
+            Preferences
+          </h1>
+          <p className="text-xs text-[var(--color-text-secondary)]">
+            Manage notifications, trading, and profile preferences
+          </p>
+        </div>
+      </div>
       <div className="flex flex-col gap-7">
         {settingsList.map((item, index) => (
           <div key={item.title || index} className="animate-fade-in-up" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}>

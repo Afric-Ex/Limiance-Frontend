@@ -2,40 +2,44 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supportService, supportKeys } from "@/src/services/support";
+import clsx from "clsx";
+import { ActionIcon, Button, Modal, TextInput, Textarea } from "@mantine/core";
+import {
+  supportService,
+  supportKeys,
+  normalizeTicketList,
+  normalizeTicketDetail,
+} from "@/src/services/support";
 import { SupportTicket, SupportMessage } from "@/src/types/support";
 import { errorNotification, successNotification } from "@/src/lib/notification-handler";
 import {
   RiCustomerService2Line,
   RiSendPlaneFill,
   RiAddLine,
-  RiCloseLine,
   RiArrowLeftLine,
   RiTimeLine,
   RiCheckDoubleLine,
-  RiFileTextLine,
 } from "react-icons/ri";
 import { MdOutlineSupportAgent } from "react-icons/md";
+import { EmptyState } from "@/src/components/ui/empty-state";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { SupportPageSkeleton } from "@/src/components/skeletons/with-sidebar";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
-  "Account Issue",
-  "Deposit / Withdrawal",
-  "Trade Problem",
-  "KYC / Verification",
-  "Security",
-  "Other",
-];
+const STATUS_STYLES: Record<string, { label: string; className: string }> = {
+  open: { label: "Open", className: "bg-error-1/10 text-error-1" },
+  in_progress: { label: "In Progress", className: "bg-warning-1/10 text-warning-1" },
+  pending_user: { label: "Pending You", className: "bg-primary/10 text-primary" },
+  resolved: { label: "Resolved", className: "bg-success-6/10 text-success-6" },
+  closed: { label: "Closed", className: "bg-white/10 text-white/50" },
+};
 
-const STATUS_STYLES: Record<string, { label: string; bg: string; color: string }> = {
-  open:         { label: "Open",         bg: "rgba(239,68,68,0.12)",   color: "#ef4444" },
-  in_progress:  { label: "In Progress",  bg: "rgba(245,158,11,0.12)",  color: "#f59e0b" },
-  pending_user: { label: "Pending You",  bg: "rgba(99,102,241,0.12)",  color: "#818cf8" },
-  resolved:     { label: "Resolved",     bg: "rgba(16,185,129,0.12)",  color: "#10b981" },
-  closed:       { label: "Closed",       bg: "rgba(107,114,128,0.12)", color: "#6b7280" },
+const inputClassNames = {
+  label: "!text-white/70 !mb-1.5 !text-sm",
+  input:
+    "!bg-surface !border-line !text-[var(--color-text-primary)] placeholder:!text-[var(--color-text-disabled)] focus:!border-primary",
+  description: "!text-white/50 !text-xs",
 };
 
 function timeAgo(iso: string) {
@@ -48,16 +52,29 @@ function timeAgo(iso: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+function StatusBadge({ status }: { status: string }) {
+  const st = STATUS_STYLES[status] ?? STATUS_STYLES.open;
+  return (
+    <span
+      className={clsx(
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold leading-4 whitespace-nowrap",
+        st.className
+      )}
+    >
+      {st.label}
+    </span>
+  );
+}
+
 // ─── Create Ticket Modal ──────────────────────────────────────────────────────
 
 function CreateTicketModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [subject, setSubject] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0]);
   const [message, setMessage] = useState("");
 
   const { mutate: create, isPending } = useMutation({
-    mutationFn: () => supportService.createTicket({ subject, category, message }),
+    mutationFn: () => supportService.createTicket({ subject, message }),
     onSuccess: () => {
       successNotification("Support ticket created!");
       qc.invalidateQueries({ queryKey: supportKeys.tickets() });
@@ -69,123 +86,57 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
   const valid = subject.trim().length > 3 && message.trim().length > 10;
 
   return (
-    <div
-      style={{
-        position: "fixed", inset: 0, zIndex: 1000,
-        background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "1rem",
+    <Modal
+      opened
+      onClose={onClose}
+      title="New Support Ticket"
+      centered
+      classNames={{
+        content: "bg-elevated border border-line text-[var(--color-text-primary)] shadow-[var(--shadow-card)]",
+        header: "bg-elevated border-b border-line",
+        title: "text-[var(--text-title)] font-semibold text-[var(--color-text-primary)]",
+        close: "text-[var(--color-text-secondary)] hover:bg-muted hover:text-[var(--color-text-primary)]",
       }}
-      onClick={onClose}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "100%", maxWidth: 520,
-          background: "linear-gradient(145deg, #131621, #0e1018)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: 20, padding: "28px 28px 24px",
-          boxShadow: "0 32px 64px rgba(0,0,0,0.6)",
-          animation: "slideUp 0.25s ease",
-        }}
-      >
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: 12,
-              background: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.15))",
-              border: "1px solid rgba(59,130,246,0.2)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "var(--color-primary)",
-            }}>
-              <RiFileTextLine size={18} />
-            </div>
-            <div>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>New Support Ticket</h2>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: 0 }}>We typically reply within 24 hours</p>
-            </div>
-          </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", padding: 4 }}>
-            <RiCloseLine size={20} />
-          </button>
-        </div>
+      <div className="flex flex-col gap-4 pt-2">
+        <TextInput
+          label="Subject"
+          placeholder="Briefly describe your issue…"
+          maxLength={80}
+          value={subject}
+          onChange={(e) => setSubject(e.currentTarget.value)}
+          classNames={inputClassNames}
+        />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Subject */}
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Subject</label>
-            <input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Briefly describe your issue…"
-              style={{
-                width: "100%", padding: "10px 14px", boxSizing: "border-box",
-                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 10, color: "var(--color-text-primary)", fontSize: 14, outline: "none",
-                transition: "border-color 0.2s",
-              }}
-              onFocus={(e) => (e.target.style.borderColor = "rgba(59,130,246,0.5)")}
-              onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
-            />
-          </div>
+        <Textarea
+          label="Description"
+          placeholder="Please describe your issue in detail…"
+          minRows={4}
+          maxRows={7}
+          autosize
+          value={message}
+          onChange={(e) => setMessage(e.currentTarget.value)}
+          classNames={inputClassNames}
+        />
 
-          {/* Category */}
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Category</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              style={{
-                width: "100%", padding: "10px 14px",
-                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 10, color: "var(--color-text-primary)", fontSize: 14, outline: "none",
-              }}
-            >
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
+        {!valid && !isPending && (
+          <p className="text-[11px] text-[var(--color-text-secondary)] -mt-1">
+            Subject needs 4+ characters and description 10+ characters
+          </p>
+        )}
 
-          {/* Message */}
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Description</label>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={5}
-              placeholder="Please describe your issue in detail…"
-              style={{
-                width: "100%", padding: "10px 14px", boxSizing: "border-box",
-                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 10, color: "var(--color-text-primary)", fontSize: 14, outline: "none",
-                resize: "vertical", fontFamily: "inherit",
-                transition: "border-color 0.2s",
-              }}
-              onFocus={(e) => (e.target.style.borderColor = "rgba(59,130,246,0.5)")}
-              onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
-            />
-          </div>
-
-          {/* Submit */}
-          <button
-            onClick={() => create()}
-            disabled={!valid || isPending}
-            style={{
-              width: "100%", padding: "12px 0",
-              background: valid && !isPending
-                ? "var(--color-primary-strong)"
-                : "rgba(255,255,255,0.06)",
-              border: "none", borderRadius: 10,
-              color: valid && !isPending ? "#fff" : "rgba(255,255,255,0.3)",
-              fontSize: 14, fontWeight: 600, cursor: valid && !isPending ? "pointer" : "not-allowed",
-              transition: "all 0.2s",
-            }}
-          >
-            {isPending ? "Submitting…" : "Submit Ticket"}
-          </button>
-        </div>
+        <Button
+          size="md"
+          fullWidth
+          disabled={!valid}
+          loading={isPending}
+          onClick={() => create()}
+          classNames={{ root: "bg-primary-strong hover:bg-primary-strong/90" }}
+        >
+          {isPending ? "Submitting…" : "Submit Ticket"}
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -199,7 +150,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
   const { data, isLoading } = useQuery({
     queryKey: supportKeys.ticket(ticket.id),
     queryFn: () => supportService.getTicket(ticket.id),
-    select: (r) => (r as any)?.data?.ticket ?? (r as any)?.ticket ?? ticket,
+    select: (r) => normalizeTicketDetail(r, ticket),
     refetchInterval: 15000,
   });
 
@@ -207,7 +158,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
   const messages: SupportMessage[] = thread.messages ?? [];
 
   const { mutate: sendReply, isPending: sending } = useMutation({
-    mutationFn: () => supportService.replyTicket(ticket.id, { message: reply }),
+    mutationFn: () => supportService.replyTicket(ticket.id, { body: reply }),
     onSuccess: () => {
       setReply("");
       qc.invalidateQueries({ queryKey: supportKeys.ticket(ticket.id) });
@@ -219,134 +170,128 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
-  const st = STATUS_STYLES[thread.status] ?? STATUS_STYLES.open;
+  const open = thread.status !== "closed" && thread.status !== "resolved";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className="flex h-full flex-col min-h-0">
       {/* Thread header */}
-      <div style={{
-        padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)",
-        display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
-      }}>
+      <div className="flex items-center gap-3 px-4 py-3.5 border-b border-line flex-shrink-0">
         <button
           onClick={onBack}
-          style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", padding: 4, display: "flex" }}
+          aria-label="Back to tickets"
+          className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-line transition-colors"
         >
           <RiArrowLeftLine size={18} />
         </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
             {thread.subject}
           </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 1 }}>
-            #{thread.id} · {thread.category}
+          <div className="text-[11px] text-[var(--color-text-secondary)] mt-0.5 truncate">
+            #{thread.id}
+            {thread.category ? ` · ${thread.category}` : ""}
           </div>
         </div>
-        <span style={{
-          padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-          background: st.bg, color: st.color, flexShrink: 0,
-        }}>
-          {st.label}
-        </span>
+        <StatusBadge status={thread.status} />
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>
-        {isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} style={{
-              height: 64, borderRadius: 12, background: "rgba(255,255,255,0.04)",
-              animation: "pulse 1.5s ease-in-out infinite",
-            }} />
-          ))
-        ) : messages.length === 0 ? (
-          <div style={{ textAlign: "center", color: "rgba(255,255,255,0.25)", paddingTop: 40, fontSize: 13 }}>
-            No messages yet
-          </div>
-        ) : (
-          messages.map((msg, i) => {
-            const isAdmin = msg.sender === "admin";
-            return (
-              <div key={i} style={{ display: "flex", justifyContent: isAdmin ? "flex-start" : "flex-end" }}>
-                {isAdmin && (
-                  <div style={{
-                    width: 28, height: 28, borderRadius: "50%", flexShrink: 0, marginRight: 8, marginTop: 2,
-                    background: "linear-gradient(135deg, rgba(59,130,246,0.3), rgba(99,102,241,0.2))",
-                    border: "1px solid rgba(59,130,246,0.25)",
-                    display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-primary)",
-                  }}>
-                    <MdOutlineSupportAgent size={14} />
-                  </div>
-                )}
-                <div style={{ maxWidth: "72%" }}>
-                  <div style={{
-                    padding: "10px 14px",
-                    borderRadius: isAdmin ? "4px 14px 14px 14px" : "14px 4px 14px 14px",
-                    background: isAdmin
-                      ? "rgba(255,255,255,0.05)"
-                      : "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.15))",
-                    border: `1px solid ${isAdmin ? "rgba(255,255,255,0.07)" : "rgba(59,130,246,0.2)"}`,
-                  }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: isAdmin ? "rgba(255,255,255,0.3)" : "var(--color-primary)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 min-h-0">
+        {isLoading
+          ? Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-16 rounded-xl bg-muted animate-pulse"
+              />
+            ))
+          : messages.length === 0
+            ? (
+              <EmptyState
+                icon={<RiCustomerService2Line size={36} />}
+                caption="No messages yet"
+              />
+            )
+            : messages.map((msg, i) => {
+              const isAdmin = msg.sender === "admin";
+              return (
+                <div
+                  key={msg.id || i}
+                  className={clsx("flex w-full", isAdmin ? "justify-start" : "justify-end")}
+                >
+                  <div
+                    className={clsx(
+                      "max-w-[75%] px-4 py-2.5 rounded-2xl shadow-md",
+                      isAdmin
+                        ? "bg-white/[0.06] border border-white/5 text-[var(--color-neutral-off-white)] rounded-bl-sm"
+                        : "bg-gradient-to-br from-[#0ECB81] to-emerald-600 text-white rounded-br-sm shadow-[0_4px_15px_rgba(14,203,129,0.25)]"
+                    )}
+                  >
+                    <div
+                      className={clsx(
+                        "flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider mb-1",
+                        isAdmin ? "text-white/40" : "text-white/85"
+                      )}
+                    >
+                      {isAdmin && <MdOutlineSupportAgent size={12} />}
                       {isAdmin ? "Support Team" : "You"}
                     </div>
-                    <div style={{ fontSize: 13, color: "var(--color-neutral-off-white)", lineHeight: 1.55 }}>{msg.message}</div>
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 5, textAlign: isAdmin ? "left" : "right" }}>
+                    <p className="text-[13px] leading-relaxed break-words whitespace-pre-wrap">
+                      {msg.message}
+                    </p>
+                    <div
+                      className={clsx(
+                        "text-[10px] mt-1.5",
+                        isAdmin ? "text-white/35" : "text-white/75"
+                      )}
+                    >
                       {timeAgo(msg.created_at)}
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })}
         <div ref={bottomRef} />
       </div>
 
       {/* Reply input */}
-      {thread.status !== "closed" && thread.status !== "resolved" ? (
-        <div style={{
-          padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,0.06)",
-          display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0,
-        }}>
-          <textarea
-            value={reply}
-            onChange={(e) => setReply(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) sendReply(); }}
-            placeholder="Type your reply… (Ctrl+Enter to send)"
-            rows={2}
-            style={{
-              flex: 1, padding: "10px 12px",
-              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 10, color: "var(--color-text-primary)", fontSize: 13, outline: "none",
-              resize: "none", fontFamily: "inherit", transition: "border-color 0.2s",
-            }}
-            onFocus={(e) => (e.target.style.borderColor = "rgba(59,130,246,0.4)")}
-            onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
-          />
-          <button
-            onClick={() => sendReply()}
-            disabled={sending || !reply.trim()}
-            style={{
-              height: 40, width: 40, flexShrink: 0,
-              background: reply.trim()
-                ? "var(--color-primary-strong)"
-                : "rgba(255,255,255,0.06)",
-              border: "none", borderRadius: 10,
-              color: reply.trim() ? "#fff" : "rgba(255,255,255,0.25)",
-              cursor: reply.trim() ? "pointer" : "not-allowed",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              transition: "all 0.2s",
-            }}
-          >
-            <RiSendPlaneFill size={16} />
-          </button>
+      {open ? (
+        <div className="border-t border-line p-3 flex flex-col gap-2 flex-shrink-0 bg-black/20">
+          <div className="flex items-end gap-2">
+            <Textarea
+              className="flex-1"
+              placeholder="Type your reply…"
+              minRows={1}
+              maxRows={4}
+              autosize
+              value={reply}
+              onChange={(e) => setReply(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (reply.trim()) sendReply();
+                }
+              }}
+              classNames={{ input: "!bg-surface !border-line !text-[var(--color-text-primary)] placeholder:!text-[var(--color-text-disabled)] focus:!border-primary resize-none" }}
+            />
+            <ActionIcon
+              size="lg"
+              variant="filled"
+              className={clsx(
+                "mb-0.5 text-white transition-colors",
+                reply.trim()
+                  ? "bg-primary-strong hover:bg-primary-strong/90"
+                  : "bg-muted text-[var(--color-text-disabled)]"
+              )}
+              disabled={sending || !reply.trim()}
+              onClick={() => sendReply()}
+              aria-label="Send reply"
+            >
+              <RiSendPlaneFill size={18} />
+            </ActionIcon>
+          </div>
         </div>
       ) : (
-        <div style={{
-          padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,0.06)",
-          textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.25)", flexShrink: 0,
-        }}>
+        <div className="border-t border-line px-4 py-3 text-center text-xs text-[var(--color-text-secondary)] flex-shrink-0">
           This ticket is {thread.status}
         </div>
       )}
@@ -357,30 +302,35 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
 // ─── Ticket List Item ─────────────────────────────────────────────────────────
 
 function TicketItem({ ticket, isActive, onClick }: { ticket: SupportTicket; isActive: boolean; onClick: () => void }) {
-  const st = STATUS_STYLES[ticket.status] ?? STATUS_STYLES.open;
   return (
     <div
       onClick={onClick}
-      style={{
-        padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)",
-        cursor: "pointer",
-        background: isActive ? "rgba(59,130,246,0.07)" : "transparent",
-        borderLeft: isActive ? "3px solid var(--color-primary)" : "3px solid transparent",
-        transition: "all 0.15s",
-      }}
-      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
-      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+      className={clsx(
+        "flex flex-col gap-1 px-4 py-3.5 border-b border-line bg-transparent border-l-2 cursor-pointer transition-colors",
+        isActive
+          ? "bg-primary/10 border-l-primary"
+          : "border-l-transparent hover:bg-white/[0.04]"
+      )}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 5 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? "var(--color-primary)" : "var(--color-neutral-off-white)", flex: 1, paddingRight: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <div className="flex items-start justify-between gap-2">
+        <span
+          className={clsx(
+            "flex-1 text-[13px] font-semibold truncate",
+            isActive
+              ? "text-primary"
+              : "text-[var(--color-neutral-off-white)]"
+          )}
+        >
           {ticket.subject}
-        </div>
-        <span style={{ padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 600, background: st.bg, color: st.color, flexShrink: 0, whiteSpace: "nowrap" }}>
-          {st.label}
         </span>
+        <StatusBadge status={ticket.status} />
       </div>
-      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>{ticket.category}</div>
-      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", marginTop: 4 }}>{timeAgo(ticket.updated_at || ticket.created_at)}</div>
+      <span className="text-[11px] text-[var(--color-text-secondary)]">
+        {ticket.category ?? "General"}
+      </span>
+      <span className="text-[10px] text-[var(--color-text-disabled)]">
+        {timeAgo(ticket.updated_at || ticket.created_at)}
+      </span>
     </div>
   );
 }
@@ -390,12 +340,12 @@ function TicketItem({ ticket, isActive, onClick }: { ticket: SupportTicket; isAc
 function SupportPageInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [, setMobileView] = useState<"list" | "thread">("list");
+  const [mobileView, setMobileView] = useState<"list" | "thread">("list");
 
   const { data, isLoading } = useQuery({
     queryKey: supportKeys.tickets(),
     queryFn: () => supportService.listTickets(),
-    select: (r) => (r as any)?.data?.tickets ?? (r as any)?.tickets ?? [],
+    select: (r) => normalizeTicketList(r),
     refetchInterval: 30000,
   });
 
@@ -415,38 +365,27 @@ function SupportPageInner() {
   const openCount = tickets.filter((t) => t.status === "open" || t.status === "in_progress").length;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 100px)", minHeight: 0 }}>
+    <div className="flex h-[calc(100dvh-150px)] min-h-[480px] flex-col gap-5 page-enter">
       {/* Page header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 14,
-            background: "linear-gradient(135deg, rgba(59,130,246,0.2), rgba(99,102,241,0.15))",
-            border: "1px solid rgba(59,130,246,0.2)",
-            display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-primary)",
-          }}>
+      <div className="flex items-center justify-between gap-4 flex-shrink-0">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
             <RiCustomerService2Line size={22} />
           </div>
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Support Center</h1>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: 0 }}>
-              {openCount > 0 ? `${openCount} active ticket${openCount !== 1 ? "s" : ""}` : "No open tickets"} · We reply within 24h
+          <div className="min-w-0">
+            <h1 className="text-[20px] font-bold text-[var(--color-text-primary)] leading-tight truncate">
+              Support Center
+            </h1>
+            <p className="text-xs text-[var(--color-text-secondary)] truncate">
+              {openCount > 0
+                ? `${openCount} active ticket${openCount !== 1 ? "s" : ""} · We reply within 24h`
+                : "No open tickets · We reply within 24h"}
             </p>
           </div>
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "10px 18px",
-            background: "var(--color-primary-strong)",
-            border: "none", borderRadius: 10, color: "#fff",
-            fontSize: 13, fontWeight: 600, cursor: "pointer",
-            boxShadow: "0 4px 16px rgba(59,130,246,0.3)",
-            transition: "transform 0.15s, box-shadow 0.15s",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(59,130,246,0.4)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(59,130,246,0.3)"; }}
+          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] bg-primary-strong px-4 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(77,119,240,0.3)] transition-all hover:bg-primary-strong/90 hover:shadow-[0_6px_20px_rgba(77,119,240,0.4)] active:scale-[0.98]"
         >
           <RiAddLine size={16} />
           New Ticket
@@ -454,35 +393,36 @@ function SupportPageInner() {
       </div>
 
       {/* Main panel */}
-      <div style={{
-        flex: 1, minHeight: 0,
-        display: "grid", gridTemplateColumns: "320px 1fr", gap: 16,
-        overflow: "hidden",
-      }}
-      className="support-grid"
-      >
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[330px_1fr] gap-4">
         {/* Left — ticket list */}
-        <div style={{
-          background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
-          border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16,
-          display: "flex", flexDirection: "column", overflow: "hidden",
-        }}>
-          <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+        <div
+          className={clsx(
+            "flex flex-col min-h-0 overflow-hidden rounded-xl border border-line bg-elevated shadow-card",
+            mobileView === "thread" && "max-lg:hidden"
+          )}
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-line flex-shrink-0">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
               Your Tickets ({tickets.length})
             </span>
           </div>
-          <div style={{ flex: 1, overflowY: "auto" }}>
+          <div className="flex-1 overflow-y-auto min-h-0">
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} style={{ margin: 12, height: 72, borderRadius: 10, background: "rgba(255,255,255,0.04)" }} />
+                <div key={i} className="mx-3 my-3 h-[72px] rounded-lg bg-muted animate-pulse" />
               ))
             ) : tickets.length === 0 ? (
-              <div style={{ padding: 40, textAlign: "center" }}>
-                <RiCustomerService2Line size={36} style={{ color: "rgba(255,255,255,0.1)", marginBottom: 12 }} />
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", margin: 0 }}>No tickets yet</p>
-                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", margin: "4px 0 0" }}>Open one if you need help</p>
-              </div>
+              <EmptyState
+                icon={<RiCustomerService2Line size={36} />}
+                caption={
+                  <>
+                    No tickets yet
+                    <span className="mt-1 block text-xs text-[var(--color-text-secondary)]">
+                      Open one if you need help
+                    </span>
+                  </>
+                }
+              />
             ) : (
               tickets.map((t) => (
                 <TicketItem
@@ -497,37 +437,38 @@ function SupportPageInner() {
         </div>
 
         {/* Right — thread or empty state */}
-        <div style={{
-          background: "linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
-          border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16,
-          display: "flex", flexDirection: "column", overflow: "hidden",
-        }}>
+        <div
+          className={clsx(
+            "flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-elevated shadow-card",
+            mobileView !== "thread" && "max-lg:hidden"
+          )}
+        >
           {selected ? (
             <TicketThread ticket={selected} onBack={handleBack} />
           ) : (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
-              <div style={{
-                width: 72, height: 72, borderRadius: 22,
-                background: "linear-gradient(135deg, rgba(59,130,246,0.1), rgba(99,102,241,0.07))",
-                border: "1px solid rgba(59,130,246,0.15)",
-                display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-primary)",
-              }}>
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+              <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[22px] bg-primary/10 border border-primary/15 text-primary">
                 <RiCustomerService2Line size={32} />
               </div>
-              <div style={{ textAlign: "center" }}>
-                <p style={{ fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.5)", margin: 0 }}>Select a ticket</p>
-                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", margin: "4px 0 0" }}>
+              <div>
+                <p className="text-[15px] font-semibold text-white/60 m-0">
+                  Select a ticket
+                </p>
+                <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
                   or create a new one to get help
                 </p>
               </div>
-              <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
+              <div className="flex flex-wrap justify-center gap-4">
                 {[
                   { icon: <RiTimeLine size={14} />, label: "24h response time" },
                   { icon: <RiCheckDoubleLine size={14} />, label: "Real-time updates" },
                 ].map(({ icon, label }) => (
-                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "rgba(255,255,255,0.25)" }}>
+                  <span
+                    key={label}
+                    className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-secondary)]"
+                  >
                     {icon} {label}
-                  </div>
+                  </span>
                 ))}
               </div>
             </div>
@@ -537,16 +478,6 @@ function SupportPageInner() {
 
       {/* Create modal */}
       {showCreate && <CreateTicketModal onClose={() => setShowCreate(false)} />}
-
-      <style>{`
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(20px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @media (max-width: 768px) {
-          .support-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </div>
   );
 }
