@@ -57,7 +57,7 @@ function SpotTrades() {
   // Mobile chart toggle
   const [chartExpanded, setChartExpanded] = useState(false);
   const [, setOrderBookOpen] = useState(false);
-  const [mobileMode, setMobileMode] = useState<"trade" | "chart">("trade");
+  const [mobileMode, setMobileMode] = useState<"trade" | "chart">("chart");
   const [quickOrderOpen, setQuickOrderOpen] = useState(false);
   const [quickOrderSide, setQuickOrderSide] = useState<"buy" | "sell">("buy");
 
