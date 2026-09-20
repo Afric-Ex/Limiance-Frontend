@@ -5,8 +5,6 @@ import { modals } from "@mantine/modals";
 import { ModalClose } from "../icons/modal-close";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockUser } from "@/src/mocks/mock-user";
 import { userKeys, userService } from "@/src/services/user";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -29,9 +27,7 @@ export const EditLanguage = ({ initialLanguage }: { initialLanguage?: string }) 
 
   const { mutate: saveLanguage, isPending } = useMutation({
     mutationFn: (): Promise<any> =>
-      MOCK_MODE.settings
-        ? mockUser.saveSettings({ language: selected })
-        : userService.saveSettings({ language: selected }),
+      userService.saveSettings({ language: selected }),
     onSuccess: () => {
       successNotification("Language updated");
       queryClient.invalidateQueries({ queryKey: userKeys.settings });

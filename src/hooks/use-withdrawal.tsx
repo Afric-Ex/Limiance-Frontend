@@ -4,8 +4,6 @@ import { mapSymbolToWalletChain, mapSymbolToWithdrawalChain } from "../utils/net
 import { useForm } from "@mantine/form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { assetKeys, asset } from "../services/asset";
-import { MOCK_MODE } from "../mocks";
-import { mockAsset } from "../mocks/mock-asset";
 import { useUserStore } from "../stores/user-store";
 import { errorMessageHandler } from "../lib/error-handler";
 import { modals } from "@mantine/modals";
@@ -226,9 +224,7 @@ export const useWithdrawal = () => {
   const { data: networkFeeData, isLoading: networkFeeLoading } = useQuery({
     queryKey: ["network-fee", chainId, selectedCoin?.symbol],
     queryFn: () =>
-      MOCK_MODE.networkFee
-        ? mockAsset.networkFee({ chain: chainId, token: selectedCoin?.symbol })
-        : asset.networkFee({ chain: chainId, token: selectedCoin?.symbol }),
+      asset.networkFee({ chain: chainId, token: selectedCoin?.symbol }),
     enabled: !!chainId && !!selectedCoin?.symbol,
     select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []),
   });
@@ -236,9 +232,7 @@ export const useWithdrawal = () => {
   const { data: minWithdrawData, isLoading: minWithdrawLoading } = useQuery({
     queryKey: ["minimum-withdrawal", selectedCoin?.symbol, chainId],
     queryFn: () =>
-      MOCK_MODE.minimumWithdrawal
-        ? mockAsset.minimumWithdrawal({ token: selectedCoin?.symbol })
-        : asset.minimumWithdrawal({ token: selectedCoin?.symbol, chain: chainId }),
+      asset.minimumWithdrawal({ token: selectedCoin?.symbol, chain: chainId }),
     enabled: !!selectedCoin?.symbol && !!chainId,
     select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []),
   });

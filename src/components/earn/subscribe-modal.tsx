@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { NumberInput, Loader } from "@mantine/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockEarn } from "@/src/mocks/mock-earn";
 import { earnService, earnKeys } from "@/src/services/earn";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -28,9 +26,7 @@ export const SubscribeModal = ({ product }: { product: Product }) => {
     mutationFn: async () => {
       if (!amount || +amount <= 0) throw new Error("Enter a valid amount");
       const payload = { productId: product.id, amount: amount.toString() };
-      return MOCK_MODE.earnInfo 
-        ? mockEarn.subscribe(payload)
-        : earnService.subscribe(payload);
+      return earnService.subscribe(payload);
     },
     onSuccess: () => {
       successNotification(`Successfully staked ${amount} ${product.asset}`);

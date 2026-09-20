@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/src/lib/axios";
-import { MOCK_MODE } from "@/src/mocks";
-import { MOCK_PRICES } from "@/src/mocks/data/market-data";
 import { wsClient } from "@/src/lib/websocket-client";
 
 interface MarketItem {
@@ -97,55 +95,8 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
     }
   }, [pair]);
 
-  // --- mock mode: simulate live feed with setInterval ---
-  useEffect(() => {
-    if (!MOCK_MODE.marketFeed) return;
-
-    const base = MOCK_PRICES[pair];
-    if (!base) return;
-
-    setData({
-      price: base.price,
-      change24h: base.change24h,
-      changePercent24h: base.changePercent24h,
-      high24h: base.high24h,
-      low24h: base.low24h,
-      volume24h: base.volume24h,
-      fundingRate: null,
-      nextFundingTime: null,
-      isConnected: true,
-      lastUpdated: new Date(),
-      markets: [],
-    });
-
-    const interval = setInterval(() => {
-      setData((prev) => {
-        const currentPrice = prev.price ?? base.price;
-        const drift = currentPrice * (Math.random() - 0.5) * 0.002;
-        const newPrice = +(currentPrice + drift).toFixed(
-          currentPrice > 100 ? 2 : 4
-        );
-        return {
-          ...prev,
-          price: newPrice,
-          change24h: +(newPrice - (base.price - base.change24h)).toFixed(2),
-          changePercent24h: +(
-            ((newPrice - (base.price - base.change24h)) /
-              (base.price - base.change24h)) *
-            100
-          ).toFixed(2),
-          lastUpdated: new Date(),
-        };
-      });
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [pair]);
-
   // --- real mode: single shared WebSocket connection via wsClient ---
   useEffect(() => {
-    if (MOCK_MODE.marketFeed) return;
-
     fetchHttpFallback();
 
     const normalisedPair = pair.replace("/", "-").toUpperCase();

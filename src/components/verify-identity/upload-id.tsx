@@ -7,9 +7,6 @@ import Qr from "@/public/limiance-qr.png";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { Dispatch, SetStateAction, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockUser } from "@/src/mocks/mock-user";
-import { convertFileToBase64 } from "@/src/lib/convert-file-to-base64";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -24,14 +21,8 @@ export const UploadId = ({
 
   const { mutate: uploadFront, isPending: frontLoading } = useMutation({
     mutationFn: async (file: File): Promise<any> => {
-      const base64 = await convertFileToBase64(file);
-      if (!MOCK_MODE.kycUpload) {
-        errorNotification("Direct document upload is no longer supported here. Please use the Persona verification flow.");
-        throw new Error("Legacy KYC upload flow is disabled");
-      }
-      return MOCK_MODE.kycUpload
-        ? mockUser.uploadKycDocument({ type: "id_front", file: base64 })
-        : Promise.reject(new Error("Legacy KYC upload flow is disabled"));
+      errorNotification("Direct document upload is no longer supported here. Please use the Persona verification flow.");
+      throw new Error("Legacy KYC upload flow is disabled");
     },
     onSuccess: () => {
       setFrontUploaded(true);
@@ -42,14 +33,8 @@ export const UploadId = ({
 
   const { mutate: uploadBack, isPending: backLoading } = useMutation({
     mutationFn: async (file: File): Promise<any> => {
-      const base64 = await convertFileToBase64(file);
-      if (!MOCK_MODE.kycUpload) {
-        errorNotification("Direct document upload is no longer supported here. Please use the Persona verification flow.");
-        throw new Error("Legacy KYC upload flow is disabled");
-      }
-      return MOCK_MODE.kycUpload
-        ? mockUser.uploadKycDocument({ type: "id_back", file: base64 })
-        : Promise.reject(new Error("Legacy KYC upload flow is disabled"));
+      errorNotification("Direct document upload is no longer supported here. Please use the Persona verification flow.");
+      throw new Error("Legacy KYC upload flow is disabled");
     },
     onSuccess: () => {
       setBackUploaded(true);

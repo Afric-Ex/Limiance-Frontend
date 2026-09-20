@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/src/lib/axios";
-import { MOCK_MODE } from "@/src/mocks";
-import { MOCK_PRICES } from "@/src/mocks/data/market-data";
 import { wsClient } from "@/src/lib/websocket-client";
 
 export interface OrderBookEntry {
@@ -20,18 +18,6 @@ interface OrderBookData {
   totalSellVolume: number | null;
   isConnected: boolean;
   lastUpdated: Date | null;
-}
-
-function generateMockBook(basePrice: number): Pick<OrderBookData, "buyOrders" | "sellOrders"> {
-  const buyOrders = Array.from({ length: 9 }, (_, i) => ({
-    price: +(basePrice - (i + 1) * basePrice * 0.0005).toFixed(basePrice > 100 ? 2 : 4),
-    quantity: +(Math.random() * 1.8 + 0.05).toFixed(4),
-  }));
-  const sellOrders = Array.from({ length: 9 }, (_, i) => ({
-    price: +(basePrice + (i + 1) * basePrice * 0.0005).toFixed(basePrice > 100 ? 2 : 4),
-    quantity: +(Math.random() * 1.8 + 0.05).toFixed(4),
-  }));
-  return { buyOrders, sellOrders };
 }
 
 export const useOrderBook = (pair: string): OrderBookData => {
@@ -83,32 +69,8 @@ export const useOrderBook = (pair: string): OrderBookData => {
     }
   }, [pair]);
 
-  // --- mock mode ---
-  useEffect(() => {
-    if (!MOCK_MODE.orderBook) return;
-
-    const basePrice = MOCK_PRICES[pair]?.price ?? 67000;
-    const { buyOrders, sellOrders } = generateMockBook(basePrice);
-    const totalBuy = buyOrders.reduce((s, o) => s + o.quantity, 0);
-    const totalSell = sellOrders.reduce((s, o) => s + o.quantity, 0);
-    const total = totalBuy + totalSell;
-
-    setData({
-      buyOrders,
-      sellOrders,
-      buyPercentage: total > 0 ? +((totalBuy / total) * 100).toFixed(1) : null,
-      sellPercentage: total > 0 ? +((totalSell / total) * 100).toFixed(1) : null,
-      totalBuyVolume: +totalBuy.toFixed(4),
-      totalSellVolume: +totalSell.toFixed(4),
-      isConnected: true,
-      lastUpdated: new Date(),
-    });
-  }, [pair]);
-
   // --- real mode: single shared WebSocket connection via wsClient ---
   useEffect(() => {
-    if (MOCK_MODE.orderBook) return;
-
     fetchHttpFallback();
 
     const wsPair = pair.replace("/", "-");

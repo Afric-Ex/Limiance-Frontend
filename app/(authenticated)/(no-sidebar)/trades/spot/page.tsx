@@ -8,8 +8,6 @@ import { useOrderBook } from "@/src/hooks/use-order-book";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { SpotTradePageSkeleton } from "@/src/components/skeletons/trades";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockTrading } from "@/src/mocks/mock-trading";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import {
@@ -59,7 +57,7 @@ function SpotTrades() {
   // Mobile chart toggle
   const [chartExpanded, setChartExpanded] = useState(false);
   const [, setOrderBookOpen] = useState(false);
-  const [mobileMode, setMobileMode] = useState<"trade" | "chart">("trade");
+  const [mobileMode, setMobileMode] = useState<"trade" | "chart">("chart");
   const [quickOrderOpen, setQuickOrderOpen] = useState(false);
   const [quickOrderSide, setQuickOrderSide] = useState<"buy" | "sell">("buy");
 
@@ -70,10 +68,7 @@ function SpotTrades() {
 
   const { data: openOrders, isLoading: openOrdersLoading } = useQuery({
     queryKey: tradingKeys.openOrders(selectedPair),
-    queryFn: () =>
-      MOCK_MODE.openOrders
-        ? mockTrading.fetchOpenOrders({ pair: selectedPair })
-        : tradingService.fetchOpenOrders({ pair: selectedPair }),
+    queryFn: () => tradingService.fetchOpenOrders({ pair: selectedPair }),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
@@ -95,9 +90,7 @@ function SpotTrades() {
 
   const { mutate: closeOrder, isPending: closeOrderPending } = useMutation({
     mutationFn: (orderId: string) =>
-      MOCK_MODE.openOrders
-        ? mockTrading.cancelSpotOrder(orderId)
-        : tradingService.closeSpotOrder(orderId, selectedPair),
+      tradingService.closeSpotOrder(orderId, selectedPair),
     onSuccess: () => {
       successNotification("Order cancelled");
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });

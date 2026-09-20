@@ -5,8 +5,6 @@ import { modals } from "@mantine/modals";
 import { MdOutlineClose, MdOutlineNotificationsActive } from "react-icons/md";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockUser } from "@/src/mocks/mock-user";
 import { userKeys, userService } from "@/src/services/user";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -37,9 +35,7 @@ export const NotificationPreference = () => {
 
   const { mutate: saveNotifications, isPending } = useMutation({
     mutationFn: (): Promise<any> =>
-      MOCK_MODE.settings
-        ? mockUser.saveSettings({ notificationPreference: { activities: selected.includes("Activities"), tradeNotification: selected.includes("Trade Notification"), news: selected.includes("Limiance News"), systemMessages: selected.includes("System Messages") } })
-        : userService.saveSettings({ notificationPreference: selected }),
+      userService.saveSettings({ notificationPreference: selected }),
     onSuccess: () => {
       successNotification("Notification preferences saved");
       queryClient.invalidateQueries({ queryKey: userKeys.settings });

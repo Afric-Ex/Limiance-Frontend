@@ -8,8 +8,6 @@ import { icons } from "../assets/icons";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockTrading } from "@/src/mocks/mock-trading";
 import { tradingService, tradingKeys } from "@/src/services/trading";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { successNotification } from "@/src/lib/notification-handler";
@@ -184,8 +182,6 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
   const placeOrder = async (side: "buy" | "sell") => {
     const payload = buildPayload(side);
-
-    if (MOCK_MODE.spotOrder) return mockTrading.placeSpotOrder(payload);
 
     if (mode !== "spot") {
       // margin endpoints support leverage

@@ -8,8 +8,6 @@ import { useOrderBook } from '@/src/hooks/use-order-book';
 import { usePortfolioWs } from '@/src/hooks/use-portfolio-ws';
 import { errorMessageHandler } from '@/src/lib/error-handler';
 import { successNotification } from '@/src/lib/notification-handler';
-import { MOCK_MODE } from '@/src/mocks';
-import { mockTrading } from '@/src/mocks/mock-trading';
 import { useUserStore } from '@/src/stores/user-store';
 import { tradingService } from '@/src/services/trading';
 import { DEFAULT_MODAL_SETTINGS } from '@/src/utils/constants';
@@ -395,9 +393,7 @@ function FuturesTradesInner() {
         ...(tpslEnabled && Number(stopLoss) ? { stopLoss: Number(stopLoss) } : {}),
       };
 
-      return MOCK_MODE.futuresOrder
-        ? mockTrading.placeFuturesOrder(payload)
-        : tradingService.placeFuturesOrder(payload);
+      return tradingService.placeFuturesOrder(payload);
     },
     onSuccess: (_, side) => {
       successNotification(`Futures ${side} order placed successfully`);

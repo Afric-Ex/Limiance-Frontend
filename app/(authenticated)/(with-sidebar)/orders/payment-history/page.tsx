@@ -13,8 +13,6 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockTrading } from "@/src/mocks/mock-trading";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { PaymentHistorySkeleton } from "@/src/components/skeletons/orders";
@@ -27,10 +25,7 @@ const selectStyles = {
 function PaymentHistoryInner() {
   const { data: history } = useQuery({
     queryKey: tradingKeys.paymentHistory,
-    queryFn: () =>
-      MOCK_MODE.paymentHistory
-        ? mockTrading.paymentHistory()
-        : tradingService.paymentHistory(),
+    queryFn: () => tradingService.paymentHistory(),
     select: (res) => res.data,
   });
 

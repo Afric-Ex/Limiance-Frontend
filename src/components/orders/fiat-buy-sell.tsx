@@ -4,8 +4,6 @@ import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextI
 import { EmptyTable } from "../icons/empty-table";
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockTrading } from "@/src/mocks/mock-trading";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 
 const selectStyles = {
@@ -17,9 +15,7 @@ export const FiatBuySell = () => {
   const { data: history } = useQuery({
     queryKey: tradingKeys.fiatOrderHistory,
     queryFn: () =>
-      MOCK_MODE.fiatHistory
-        ? mockTrading.fiatOrderHistory()
-        : tradingService.fiatOrderHistory(),
+      tradingService.fiatOrderHistory(),
     select: (res) => res.data,
   });
 

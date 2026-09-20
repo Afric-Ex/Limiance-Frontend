@@ -4,8 +4,6 @@ import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr } from
 import React from "react";
 import { EmptyTable } from "../icons/empty-table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockTrading } from "@/src/mocks/mock-trading";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -49,17 +47,13 @@ export const OpenTab = () => {
   const { data: orders } = useQuery({
     queryKey: tradingKeys.openOrders(),
     queryFn: () =>
-      MOCK_MODE.openOrders
-        ? mockTrading.fetchOpenOrders()
-        : tradingService.fetchOpenOrders(),
+      tradingService.fetchOpenOrders(),
     select: (res) => res.data,
   });
 
   const { mutate: cancelOrder } = useMutation({
     mutationFn: (orderId: string): Promise<any> =>
-      MOCK_MODE.openOrders
-        ? mockTrading.cancelSpotOrder(orderId)
-        : tradingService.closeSpotOrder(orderId),
+      tradingService.closeSpotOrder(orderId),
     onSuccess: () => {
       successNotification("Order cancelled");
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });

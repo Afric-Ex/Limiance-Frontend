@@ -28,7 +28,7 @@ const nextConfig: NextConfig = {
       "img-src 'self' data: blob: https:",
       "style-src 'self' 'unsafe-inline' https://static.geetest.com https://*.geetest.com",
       "font-src 'self' data:",
-      "frame-src 'self' https://accounts.google.com https://*.geetest.com https://*.sumsub.com",
+      "frame-src 'self' https://accounts.google.com https://*.geetest.com https://*.sumsub.com https://*.tradingview-widget.com",
       "worker-src 'self' blob:",
       "object-src 'none'",
       "base-uri 'self'",

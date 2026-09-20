@@ -57,17 +57,18 @@ export const useNotificationStore = create<NotificationState>()(
 
       // Merge server-fetched notifications with anything added locally via FCM.
       // Server items win by id; local-only items (e.g. foreground pushes not yet
-      // persisted on the backend) are preserved. Unread count is recomputed.
+      // persisted on the backend) are preserved. An empty server list is
+      // authoritative: it means the backend has no records, so drop local-only
+      // items too.
       setNotifications: (serverNotifications) =>
         set((state) => {
-          if (!serverNotifications.length) return state;
-
           const serverIds = new Set(serverNotifications.map((n) => n.id));
-          const localOnly = state.notifications.filter((n) => !serverIds.has(n.id));
 
-          const merged = [...serverNotifications, ...localOnly]
-            .sort((a, b) => b.createdAt - a.createdAt)
-            .slice(0, 100);
+          const merged = serverNotifications.length
+            ? [...serverNotifications, ...state.notifications.filter((n) => !serverIds.has(n.id))]
+                .sort((a, b) => b.createdAt - a.createdAt)
+                .slice(0, 100)
+            : [];
 
           return {
             notifications: merged,

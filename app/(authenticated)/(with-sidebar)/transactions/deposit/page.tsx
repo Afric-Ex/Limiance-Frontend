@@ -27,8 +27,6 @@ import { WalletDropdown } from "@/src/components/assets/wallet-dropdown";
 import { assetKeys, asset } from "@/src/services/asset";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockAsset } from "@/src/mocks/mock-asset";
 import { truncateCryptoAddress } from "@/src/utils/truncate-address";
 
 import { TablePagination } from "@/src/components/shared/table-pagination";
@@ -103,10 +101,7 @@ function DepositInner() {
 
   const { data: minDepositData } = useQuery({
     queryKey: ["minimum-deposit", selectedCoin?.symbol, selectedNetwork?.name],
-    queryFn: () =>
-      MOCK_MODE.minimumDeposit
-        ? mockAsset.minimumDeposit({ token: selectedCoin?.symbol })
-        : asset.minimumDeposit({ token: selectedCoin?.symbol, chain: selectedNetwork?.name }),
+    queryFn: () => asset.minimumDeposit({ token: selectedCoin?.symbol, chain: selectedNetwork?.name }),
     enabled: !!selectedCoin?.symbol && !!selectedNetwork?.name,
     select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
     retry: false,
