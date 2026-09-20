@@ -4,8 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { earnKeys, earnService } from "@/src/services/earn";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockEarn } from "@/src/mocks/mock-earn";
 import { SubscribeModal } from "@/src/components/earn/subscribe-modal";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { successNotification } from "@/src/lib/notification-handler";
@@ -31,8 +29,7 @@ function EarnInner() {
 
   const { data: products, isLoading: isLoadingProducts } = useQuery({
     queryKey: earnKeys.products,
-    queryFn: () =>
-      MOCK_MODE.earnInfo ? mockEarn.fetchProducts() : earnService.fetchProducts(),
+    queryFn: () => earnService.fetchProducts(),
     select: (res: any) => res.data,
     throwOnError: false,
     retry: false,
@@ -40,8 +37,7 @@ function EarnInner() {
 
   const { data: positions, isLoading: isLoadingPositions } = useQuery({
     queryKey: earnKeys.myPositions,
-    queryFn: () =>
-      MOCK_MODE.earnInfo ? mockEarn.myPositions() : earnService.myPositions(),
+    queryFn: () => earnService.myPositions(),
     select: (res: any) => res.data,
     throwOnError: false,
     retry: false,
@@ -49,9 +45,7 @@ function EarnInner() {
 
   const { mutate: unstake, isPending: unstakePending } = useMutation({
     mutationFn: (id: string) =>
-      MOCK_MODE.earnInfo
-        ? mockEarn.unstake({ subscriptionId: id })
-        : earnService.unstake({ subscriptionId: id }),
+      earnService.unstake({ subscriptionId: id }),
     onSuccess: () => {
       successNotification("Position successfully unstaked!");
       queryClient.invalidateQueries({ queryKey: earnKeys.myPositions });

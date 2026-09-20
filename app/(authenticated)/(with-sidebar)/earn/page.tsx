@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { earnKeys, earnService } from "@/src/services/earn";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockEarn } from "@/src/mocks/mock-earn";
 import { SubscribeModal } from "@/src/components/earn/subscribe-modal";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { successNotification } from "@/src/lib/notification-handler";
@@ -31,7 +29,7 @@ function LimianceEarnInner() {
 
   const { data: products, isLoading: isLoadingProducts } = useQuery({
     queryKey: earnKeys.products,
-    queryFn: () => MOCK_MODE.earnInfo ? mockEarn.fetchProducts() : earnService.fetchProducts(),
+    queryFn: () => earnService.fetchProducts(),
     select: (res: any) => res.data,
     throwOnError: false,
     retry: false,
@@ -39,17 +37,14 @@ function LimianceEarnInner() {
 
   const { data: positions, isLoading: isLoadingPositions } = useQuery({
     queryKey: earnKeys.myPositions,
-    queryFn: () => MOCK_MODE.earnInfo ? mockEarn.myPositions() : earnService.myPositions(),
+    queryFn: () => earnService.myPositions(),
     select: (res: any) => res.data,
     throwOnError: false,
     retry: false,
   });
 
   const { mutate: unstake, isPending: unstakePending } = useMutation({
-    mutationFn: (id: string) =>
-      MOCK_MODE.earnInfo
-        ? mockEarn.unstake({ subscriptionId: id })
-        : earnService.unstake({ subscriptionId: id }),
+    mutationFn: (id: string) => earnService.unstake({ subscriptionId: id }),
     onSuccess: () => {
       successNotification("Position successfully unstaked!");
       queryClient.invalidateQueries({ queryKey: earnKeys.myPositions });
@@ -80,7 +75,7 @@ function LimianceEarnInner() {
   return (
     <div className="flex flex-col gap-6 w-full min-h-[80vh] p-4 sm:p-6 lg:p-8 pb-24 overflow-y-auto">
 
-      {/* ── Hero Banner ── */}
+      {/* â”€â”€ Hero Banner â”€â”€ */}
       <div className="relative rounded-2xl overflow-hidden border border-white/[0.05] bg-gradient-to-br from-surface via-elevated to-black">
         {/* Glow blobs */}
         <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-primary/20 blur-[100px] pointer-events-none" />
@@ -96,7 +91,7 @@ function LimianceEarnInner() {
                 Make your crypto <span className="text-primary">work for you</span>
               </h1>
               <p className="text-sm text-white/50 leading-relaxed">
-                Lock idle assets into flexible or fixed-term staking products and earn industry-leading APY rewards — safely and transparently.
+                Lock idle assets into flexible or fixed-term staking products and earn industry-leading APY rewards â€” safely and transparently.
               </p>
             </div>
 
@@ -119,7 +114,7 @@ function LimianceEarnInner() {
         </div>
       </div>
 
-      {/* ── Main Tabs ── */}
+      {/* â”€â”€ Main Tabs â”€â”€ */}
       <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.05] rounded-xl p-1 w-fit">
         {(["products", "positions"] as const).map((tab) => (
           <button
@@ -144,7 +139,7 @@ function LimianceEarnInner() {
         ))}
       </div>
 
-      {/* ── Products Tab ── */}
+      {/* â”€â”€ Products Tab â”€â”€ */}
       {mainTab === "products" && (
         <div className="flex flex-col gap-4 animate-fade-up">
           {/* Product type sub-tabs */}
@@ -214,7 +209,7 @@ function LimianceEarnInner() {
                             <div className="flex flex-col">
                               <span className="text-sm font-bold text-white">{prod.asset}</span>
                               <span className="text-[10px] text-white/40">
-                                {prod.type === "fixed" ? `Fixed · ${prod.lockDays} days` : "Flexible"}
+                                {prod.type === "fixed" ? `Fixed Â· ${prod.lockDays} days` : "Flexible"}
                               </span>
                             </div>
                           </div>
@@ -257,7 +252,7 @@ function LimianceEarnInner() {
         </div>
       )}
 
-      {/* ── Positions Tab ── */}
+      {/* â”€â”€ Positions Tab â”€â”€ */}
       {mainTab === "positions" && (
         <div className="animate-fade-up">
           {isLoadingPositions ? (

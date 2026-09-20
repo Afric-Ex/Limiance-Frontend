@@ -5,8 +5,6 @@ import React from "react";
 import { EmptyTable } from "../icons/empty-table";
 import { DateInput } from "@mantine/dates";
 import { useQuery } from "@tanstack/react-query";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockTrading } from "@/src/mocks/mock-trading";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 
 const selectStyles = {
@@ -61,10 +59,7 @@ const getTotal = (order: any) => {
 export const OrderHistory = () => {
   const { data: orders, isLoading } = useQuery({
     queryKey: tradingKeys.orderHistory(),
-    queryFn: () =>
-      MOCK_MODE.spotOrderHistory
-        ? mockTrading.spotOrderHistory()
-        : tradingService.spotOrderHistory(),
+    queryFn: () => tradingService.spotOrderHistory(),
     select: (res) => res.data,
   });
 

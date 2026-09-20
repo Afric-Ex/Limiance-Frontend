@@ -9,8 +9,6 @@ import { useForm } from "@mantine/form";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockApiKeys } from "@/src/mocks/mock-api-keys";
 import { userKeys, userService } from "@/src/services/user";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -39,9 +37,7 @@ function CreateApiKeyInner() {
 
   const { mutate: createKey, isPending } = useMutation({
     mutationFn: (): Promise<any> =>
-      MOCK_MODE.apiKeys
-        ? mockApiKeys.createApiKey({ label: form.values.label, permissions })
-        : userService.createApiKey({ label: form.values.label, permissions }),
+      userService.createApiKey({ label: form.values.label, permissions }),
     onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: userKeys.apiKeys });
       if (res.data?.fullKey) {

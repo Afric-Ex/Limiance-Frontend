@@ -7,8 +7,6 @@ import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { useOrderBook } from "@/src/hooks/use-order-book";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { MarginTradePageSkeleton } from "@/src/components/skeletons/trades";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockTrading } from "@/src/mocks/mock-trading";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import {
@@ -92,10 +90,7 @@ function MarginTrades() {
 
   const { data: openOrders, isLoading: openOrdersLoading } = useQuery({
     queryKey: tradingKeys.openOrders(selectedPair),
-    queryFn: () =>
-      MOCK_MODE.openOrders
-        ? mockTrading.fetchOpenOrders({ pair: selectedPair })
-        : tradingService.fetchMarginOpenOrders({ pair: selectedPair }),
+    queryFn: () => tradingService.fetchMarginOpenOrders({ pair: selectedPair }),
     select: (res: any) => res.data,
     retry: false,
     throwOnError: false,
@@ -114,9 +109,7 @@ function MarginTrades() {
 
   const { mutate: closeOrder, isPending: closeOrderPending } = useMutation({
     mutationFn: (orderId: string) =>
-      MOCK_MODE.openOrders
-        ? mockTrading.cancelSpotOrder(orderId)
-        : tradingService.closeMarginOrder(orderId, selectedPair),
+      tradingService.closeMarginOrder(orderId, selectedPair),
     onSuccess: () => {
       successNotification("Order cancelled");
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });

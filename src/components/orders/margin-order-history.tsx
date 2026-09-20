@@ -7,8 +7,6 @@ import clsx from "clsx";
 import { Search } from "../icons/search";
 import { DateInput } from "@mantine/dates";
 import { useQuery } from "@tanstack/react-query";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockTrading } from "@/src/mocks/mock-trading";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 
 const selectStyles = {
@@ -23,9 +21,7 @@ export const MarginOrderHistory = () => {
   const { data: history } = useQuery({
     queryKey: tradingKeys.marginOrderHistory,
     queryFn: () =>
-      MOCK_MODE.marginOrderHistory
-        ? mockTrading.marginOrderHistory()
-        : tradingService.marginOrderHistory(),
+      tradingService.marginOrderHistory(),
     select: (res) => res.data,
   });
 

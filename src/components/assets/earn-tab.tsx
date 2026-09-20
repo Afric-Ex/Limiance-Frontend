@@ -19,8 +19,6 @@ import { useState } from "react";
 import { WithCurvedImageBorder } from "../shared/with-curved-image-border";
 import { EmptyTable } from "../icons/empty-table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockEarn } from "@/src/mocks/mock-earn";
 import { earnKeys, earnService } from "@/src/services/earn";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -60,9 +58,7 @@ function StakeModal({
 
   const { mutate: subscribe, isPending } = useMutation({
     mutationFn: (): Promise<any> =>
-      MOCK_MODE.earn
-        ? mockEarn.subscribe({ productId: product.id, amount })
-        : earnService.subscribe({ productId: product.id, amount }),
+      earnService.subscribe({ productId: product.id, amount }),
     onSuccess: () => {
       successNotification("Staking subscription created");
       queryClient.invalidateQueries({ queryKey: earnKeys.myPositions });
@@ -119,21 +115,19 @@ export const EarnTab = () => {
 
   const { data: products } = useQuery({
     queryKey: earnKeys.products,
-    queryFn: () => MOCK_MODE.earn ? mockEarn.fetchProducts() : earnService.fetchProducts(),
+    queryFn: () => earnService.fetchProducts(),
     select: (res) => res.data as StakingProduct[],
   });
 
   const { data: positions } = useQuery({
     queryKey: earnKeys.myPositions,
-    queryFn: () => MOCK_MODE.earn ? mockEarn.myPositions() : earnService.myPositions(),
+    queryFn: () => earnService.myPositions(),
     select: (res) => res.data as StakingPosition[],
   });
 
   const { mutate: unstake, isPending: unstaking } = useMutation({
     mutationFn: (subscriptionId: string): Promise<any> =>
-      MOCK_MODE.earn
-        ? mockEarn.unstake({ subscriptionId })
-        : earnService.unstake({ subscriptionId }),
+      earnService.unstake({ subscriptionId }),
     onSuccess: () => {
       successNotification("Unstaked successfully");
       queryClient.invalidateQueries({ queryKey: earnKeys.myPositions });

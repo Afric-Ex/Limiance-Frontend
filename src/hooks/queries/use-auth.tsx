@@ -1,7 +1,5 @@
 import { auth, findAuthToken } from "@/src/services/auth";
 import { authDebug, describeAuthPayload } from "@/src/lib/auth-debug";
-import { mockAuth } from "@/src/mocks/mock-auth";
-import { MOCK_MODE } from "@/src/mocks";
 import { Login, LoginResponse } from "@/src/types/auth";
 import { mutate } from "../use-query-factory";
 import { useRouter } from "next/navigation";
@@ -208,7 +206,7 @@ export const useAuth = () => {
     validate: zodResolver(resetSchema),
   });
 
-  const { mutate: register, isPending } = mutate(MOCK_MODE.auth ? mockAuth.register : auth.register, {
+  const { mutate: register, isPending } = mutate(auth.register, {
     onSuccess: (_data: any, variables) => {
       if (typeof window !== "undefined" && _data?.accessToken) {
         sessionStorage.setItem("verify-token", _data.accessToken);
@@ -220,7 +218,7 @@ export const useAuth = () => {
     },
   })();
 
-  const { mutate: login, isPending: loginLoading } = mutate(MOCK_MODE.auth ? mockAuth.login : auth.login, {
+  const { mutate: login, isPending: loginLoading } = mutate(auth.login, {
     onSuccess: (data: LoginResponse, variables) => {
       const requiresSecondFactor = requiresLoginSecondFactor(data);
       const challengeToken = getLoginChallengeToken(data);
@@ -291,7 +289,7 @@ export const useAuth = () => {
   })();
 
   const { mutate: reset, isPending: resetLoading } = mutate(
-    MOCK_MODE.auth ? mockAuth.resetPassword : auth.resetPassword,
+    auth.resetPassword,
     {
       onSuccess: () => {
         // Clear the temporary verify token
@@ -337,7 +335,7 @@ export const useAuth = () => {
   };
 
   const { mutate: verify, isPending: verifyLoading } = mutate(
-    MOCK_MODE.auth ? mockAuth.verifyEmail : auth.verifyEmail,
+    auth.verifyEmail,
     {
       onSuccess: () => {
         modals.open({
@@ -363,7 +361,7 @@ export const useAuth = () => {
   )();
 
   const { mutate: forgotPassword, isPending: forgotLoading } = mutate(
-    MOCK_MODE.auth ? mockAuth.forgotPassword : auth.forgotPassword,
+    auth.forgotPassword,
     {
       onSuccess: (_data: any) => {
         modals.closeAll();

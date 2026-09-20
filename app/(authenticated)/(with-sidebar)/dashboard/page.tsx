@@ -23,8 +23,6 @@ import { Copy } from "@/src/components/shared/copy";
 import { getCryptoIcon } from "@/src/utils/crypto-icons";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { userKeys, userService } from "@/src/services/user";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockTrading } from "@/src/mocks/mock-trading";
 import { useQuery } from "@tanstack/react-query";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
@@ -126,10 +124,7 @@ function DashboardInner() {
 
   const { data: movers } = useQuery({
     queryKey: tradingKeys.gainersLosers,
-    queryFn: () =>
-      MOCK_MODE.gainersLosers
-        ? mockTrading.gainersLosers(10)
-        : tradingService.gainersLosers(10),
+    queryFn: () => tradingService.gainersLosers(10),
     staleTime: 60000,
     select: (res: any) => res.data,
   });

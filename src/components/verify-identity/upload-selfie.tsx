@@ -9,9 +9,6 @@ import { useState } from "react";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { Loader } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockUser } from "@/src/mocks/mock-user";
-import { convertFileToBase64 } from "@/src/lib/convert-file-to-base64";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { errorNotification } from "@/src/lib/notification-handler";
 
@@ -22,14 +19,8 @@ export const UploadSelfie = () => {
   const { mutate: confirmSelfie, isPending } = useMutation({
     mutationFn: async (): Promise<any> => {
       if (!selfieFile) throw new Error("No selfie selected");
-      const base64 = await convertFileToBase64(selfieFile);
-      if (!MOCK_MODE.kycUpload) {
-        errorNotification("Direct selfie upload is no longer supported here. Please use the Persona verification flow.");
-        throw new Error("Legacy KYC upload flow is disabled");
-      }
-      return MOCK_MODE.kycUpload
-        ? mockUser.uploadKycDocument({ type: "selfie", file: base64 })
-        : Promise.reject(new Error("Legacy KYC upload flow is disabled"));
+      errorNotification("Direct selfie upload is no longer supported here. Please use the Persona verification flow.");
+      throw new Error("Legacy KYC upload flow is disabled");
     },
     onSuccess: () => {
       modals.open({

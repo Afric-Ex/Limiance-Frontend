@@ -4,8 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Table, TableTr, TableTh, TableTd, Menu } from "@mantine/core";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { tradingService } from "@/src/services/trading";
-import { MOCK_MODE } from "@/src/mocks";
-import { mockTrading } from "@/src/mocks/mock-trading";
 import { InlineLoading } from "../shared/inline-loading";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
@@ -14,10 +12,7 @@ export const MarginPositions = () => {
   const router = useRouter();
   const { data: positions, isLoading } = useQuery({
     queryKey: ["margin-positions"],
-    queryFn: () =>
-      MOCK_MODE.marginTrading
-        ? mockTrading.marginPositions()
-        : tradingService.marginPositions(),
+    queryFn: () => tradingService.marginPositions(),
     select: (res) => res.data ?? [],
     staleTime: 30_000,
     throwOnError: false,
