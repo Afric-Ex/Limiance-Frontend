@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader, NumberInput } from "@mantine/core";
 import { asset } from "@/src/services/asset";
@@ -9,9 +9,9 @@ import { MdSwapVert } from "react-icons/md";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: () => void }) => {
-  const [base, quote] = pair.split("/");
-  const [selectedAsset, setSelectedAsset] = useState<string>(quote);
-  
+  const delimiter = pair.includes("/") ? "/" : "_";
+  const [pairBase, pairQuote] = pair.split(delimiter);
+
   // Directions: true = Spot -> Margin, false = Margin -> Spot
   const [isSpotToMargin, setIsSpotToMargin] = useState(true);
   const [amount, setAmount] = useState<number | string>("");
@@ -19,18 +19,52 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
   useQueryClient();
 
   const { coins: portfolioResponse, refreshBalances } = usePortfolioWs();
-  const selectedAssetData = portfolioResponse?.find((a: any) => a.symbol === selectedAsset);
-  
+
   const parseNum = (val: any) => {
     if (!val) return 0;
     const num = parseFloat(String(val).replace(/,/g, ''));
     return isNaN(num) ? 0 : num;
   };
 
+  // Dynamic asset list — only tokens the user actually holds (spot or margin balance > 0)
+  const availableAssets = (portfolioResponse ?? [])
+    .map((c: any) => ({
+      symbol: c.symbol,
+      spot: parseNum(c.spotBalance),
+      margin: parseNum(c.marginBalance),
+    }))
+    .filter((a: any) => a.spot > 0 || a.margin > 0)
+    .sort((x: any, y: any) => y.spot + y.margin - (x.spot + x.margin));
+
+  // Keep the previously-defaulted token if the user still holds it, otherwise pick the largest balance
+  const defaultAsset =
+    availableAssets.find((a: any) => a.symbol === pairQuote)?.symbol ||
+    availableAssets.find((a: any) => a.symbol === pairBase)?.symbol ||
+    availableAssets[0]?.symbol ||
+    pairQuote ||
+    pairBase ||
+    "USDT";
+
+  const [selectedAsset, setSelectedAsset] = useState<string>(defaultAsset);
+
+  // Once balances load, steer the selection to an asset the user actually holds
+  useEffect(() => {
+    if (availableAssets.length === 0) return;
+    setSelectedAsset((current) => {
+      if (current && availableAssets.some((a: any) => a.symbol === current)) return current;
+      return availableAssets[0].symbol;
+    });
+  }, [availableAssets]);
+
+  const selectedAssetData = portfolioResponse?.find((a: any) => a.symbol === selectedAsset);
+
   const spotBalance = selectedAssetData ? parseNum(selectedAssetData.spotBalance) : 0;
   const marginBalance = selectedAssetData ? parseNum(selectedAssetData.marginBalance) : 0;
-  
+
   const availableBalance = isSpotToMargin ? spotBalance : marginBalance;
+
+  const fmtBalance = (v: number) =>
+    v === 0 ? "0" : v.toLocaleString("en-US", { maximumFractionDigits: 6 });
 
   const { mutate: handleTransfer, isPending: transferLoading } = useMutation({
     mutationFn: () => asset.internalTransfer({
@@ -49,7 +83,7 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
 
   return (
     <div className="flex flex-col gap-4">
-      
+
       {/* Direction Toggle */}
       <div className="flex flex-col items-center gap-2 relative">
         <div className="w-full flex items-center justify-between bg-white/[0.03] border border-white/[0.06] rounded-lg p-3">
@@ -58,8 +92,8 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
             {isSpotToMargin ? "Spot Wallet" : "Margin Wallet"}
           </span>
         </div>
-        
-        <button 
+
+        <button
           onClick={() => setIsSpotToMargin(!isSpotToMargin)}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#181a20] border border-white/[0.08] flex items-center justify-center hover:bg-white/5 transition-colors z-10 text-primary"
         >
@@ -77,26 +111,34 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
       {/* Asset Selection */}
       <div className="flex flex-col gap-1.5 mt-2">
         <label className="text-xs text-white/50">Asset</label>
-        <div className="flex bg-white/[0.03] border border-white/[0.06] rounded-lg p-1">
-          <button
-            onClick={() => { setSelectedAsset(quote); setAmount(""); }}
-            className={clsx(
-              "flex-1 text-sm font-semibold py-2 rounded-md transition-all",
-              selectedAsset === quote ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
-            )}
-          >
-            {quote}
-          </button>
-          <button
-            onClick={() => { setSelectedAsset(base); setAmount(""); }}
-            className={clsx(
-              "flex-1 text-sm font-semibold py-2 rounded-md transition-all",
-              selectedAsset === base ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
-            )}
-          >
-            {base}
-          </button>
-        </div>
+        {availableAssets.length === 0 ? (
+          <div className="py-6 flex items-center justify-center rounded-lg bg-white/[0.02] border border-white/[0.06]">
+            <span className="text-xs text-white/30">No assets with a balance to transfer</span>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {availableAssets.map((a: any) => {
+              const active = selectedAsset === a.symbol;
+              return (
+                <button
+                  key={a.symbol}
+                  onClick={() => { setSelectedAsset(a.symbol); setAmount(""); }}
+                  className={clsx(
+                    "px-3 py-2 rounded-lg text-sm font-semibold transition-all border flex flex-col items-start leading-tight",
+                    active
+                      ? "bg-primary/15 border-primary/40 text-white"
+                      : "bg-white/[0.03] border-white/[0.06] text-white/40 hover:text-white/70 hover:bg-white/[0.05]"
+                  )}
+                >
+                  {a.symbol}
+                  <span className={clsx("text-[10px] font-medium", active ? "text-primary/80" : "text-white/30")}>
+                    {fmtBalance(isSpotToMargin ? a.spot : a.margin)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Amount Input */}
@@ -129,7 +171,7 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
 
       <button
         onClick={() => handleTransfer()}
-        disabled={transferLoading || !amount || +amount <= 0 || +amount > availableBalance}
+        disabled={transferLoading || !amount || +amount <= 0 || +amount > availableBalance || availableBalance <= 0}
         className="mt-4 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-all text-[#181a20] font-bold text-sm py-3 rounded-lg flex items-center justify-center gap-2"
       >
         {transferLoading && <Loader size={14} color="#181a20" />}

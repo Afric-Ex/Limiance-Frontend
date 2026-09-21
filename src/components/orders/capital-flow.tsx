@@ -1,108 +1,80 @@
 "use client";
 
-import { Select, Table, TableTh, TableTr, TextInput } from "@mantine/core";
+import { Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } from "@mantine/core";
 import React, { useState } from "react";
-import { EmptyTable } from "../icons/empty-table";
-import clsx from "clsx";
 import { Search } from "../icons/search";
-import { DateInput } from "@mantine/dates";
+import { useQuery } from "@tanstack/react-query";
+import { tradingKeys, tradingService } from "@/src/services/trading";
+import {
+  fmtDate,
+  fmtNum,
+  searchInputClass,
+  StatusPill,
+  TableCard,
+  tableClassNames,
+  ChipToggle,
+} from "./orders-shared";
 
-const selectStyles = {
-  input: "!h-11 !rounded-lg !bg-transparent",
-  label: "!text-xs !font-medium",
-};
 const filters = ["Capital Flow", "Transfer"];
-const filters2 = ["Cross", "Isolated"];
 
 export const CapitalFlow = () => {
   const [filter, setFilter] = useState("Capital Flow");
-  const [filter2, setFilter2] = useState("Cross");
+
+  const { data: records, isLoading } = useQuery({
+    queryKey: tradingKeys.marginBorrowHistory,
+    queryFn: () => tradingService.marginBorrowHistory(),
+    select: (res) => res.data,
+  });
+
+  const allRecords: any[] = Array.isArray(records) ? records : [];
+
+  const coin = (r: any) => r.coin ?? r.asset ?? r.symbol ?? "—";
+  const amount = (r: any) => r.amount ?? r.quantity ?? r.borrowed ?? 0;
+  const typeName = (r: any) => r.type ?? r.transactionType ?? (r.isRepay ? "Repayment" : "Borrow");
 
   return (
-    <div className="flex flex-col gap-9">
-      <div className="flex items-center gap-10">
-        <div className="flex gap-4">
-          <div className="flex bg-black/[42%] border border-gray-9/25 rounded-md gap-1 p-1">
-            {filters.map((item) => (
-              <span
-                key={item}
-                onClick={() => setFilter(item)}
-                className={clsx(
-                  filter === item
-                    ? "bg-gray-13 rounded-md border-gray-9"
-                    : "border-black bg-black",
-                  "py-2 cursor-pointer text-xs px-4  border "
-                )}
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-          <div className="flex bg-black/[42%] border border-gray-9/25 rounded-md gap-1 p-1">
-            {filters2.map((item) => (
-              <span
-                key={item}
-                onClick={() => setFilter2(item)}
-                className={clsx(
-                  filter2 === item
-                    ? "bg-gray-13 rounded-md border-gray-9"
-                    : "border-black bg-black",
-                  "py-2 cursor-pointer text-xs px-4  border "
-                )}
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-5">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
+        <ChipToggle value={filter} options={filters} onChange={setFilter} />
+        <div className="flex items-center gap-4">
           <TextInput
-            classNames={{
-              input: "!h-11 !bg-gray-13 !border-0 !w-[386px] !rounded-full",
-            }}
-            placeholder="Search"
-            leftSection={<Search />}
+            classNames={searchInputClass}
+            placeholder="Search coin..."
+            leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
           />
-          <span className="text-xs font-medium cursor-pointer">Reset</span>
+          <button
+            className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
+            onClick={() => setFilter("Capital Flow")}
+          >
+            Reset
+          </button>
         </div>
       </div>
-      <div className="flex gap-3">
-        <DateInput label="Date" classNames={selectStyles} />
-        <Select
-          label="Coin"
-          data={["All"]}
-          defaultValue="All"
-          classNames={selectStyles}
-        />
-        <Select
-          label="Search Type"
-          data={["All"]}
-          defaultValue="All"
-          classNames={selectStyles}
-        />
-      </div>
-      <div className="py-5 h-292px rounded-32px bg-gray-7 px-7 pb-9 ">
-        <Table
-          classNames={{
-            th: "!text-gray-9 !text-sm",
-          }}
-        >
-          <TableTr>
-            <TableTh>Date</TableTh>
-            <TableTh>Coin</TableTh>
-            <TableTh>Margin Account (IN/OUT)</TableTh>
-            <TableTh>Amount</TableTh>
-            <TableTh>Type</TableTh>
-            <TableTh>Status</TableTh>
-          </TableTr>
+
+      <TableCard loading={isLoading} hasData={allRecords.length > 0} emptyTitle="No capital flow records found.">
+        <Table classNames={tableClassNames}>
+          <TableThead>
+            <TableTr>
+              <TableTh className="pl-5">Date</TableTh>
+              <TableTh>Coin</TableTh>
+              <TableTh>Amount</TableTh>
+              <TableTh>Type</TableTh>
+              <TableTh>Status</TableTh>
+            </TableTr>
+          </TableThead>
+          <TableTbody>
+            {allRecords.map((r: any, idx: number) => (
+              <TableTr key={r.id ?? idx}>
+                <TableTd className="pl-5 text-white/50">{fmtDate(r.createdAt)}</TableTd>
+                <TableTd className="!text-white !font-bold">{coin(r)}</TableTd>
+                <TableTd className="!text-white tabular-nums">{fmtNum(amount(r))}</TableTd>
+                <TableTd className="capitalize">{typeName(r)}</TableTd>
+                <TableTd><StatusPill status={r.status} fallback="Completed" /></TableTd>
+              </TableTr>
+            ))}
+          </TableTbody>
         </Table>
-        <div className="h-full flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <EmptyTable />
-            <span className="text-xs font-medium text-gray-9">No Records</span>
-          </div>
-        </div>
-      </div>
+      </TableCard>
     </div>
   );
 };

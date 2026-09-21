@@ -24,18 +24,18 @@ export const MarginOpenOrders = () => {
   const queryClient = useQueryClient();
 
   const { data: orders, isLoading } = useQuery({
-    queryKey: tradingKeys.openOrders(),
+    queryKey: tradingKeys.marginOpenOrders,
     queryFn: () =>
-      tradingService.fetchOpenOrders(),
+      tradingService.fetchMarginOpenOrders(),
     select: (res) => res.data,
   });
 
   const { mutate: cancelOrder } = useMutation({
     mutationFn: (orderId: string): Promise<any> =>
-      tradingService.closeSpotOrder(orderId),
+      tradingService.closeMarginOrder(orderId),
     onSuccess: () => {
       successNotification("Order cancelled");
-      queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
+      queryClient.invalidateQueries({ queryKey: tradingKeys.marginOpenOrders });
     },
     onError: (e: any) => errorMessageHandler(e),
   });

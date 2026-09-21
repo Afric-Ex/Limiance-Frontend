@@ -1,59 +1,38 @@
 "use client";
 
-import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr } from "@mantine/core";
-import React from "react";
-import { EmptyTable } from "../icons/empty-table";
+import { Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput, Select } from "@mantine/core";
+import React, { useState } from "react";
+import { Search } from "../icons/search";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
-
-const selectStyles = {
-  input: "!h-11 !rounded-lg !bg-transparent",
-  label: "!text-xs !font-medium",
-};
-
-const toNumber = (value: unknown): number | null => {
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : null;
-};
-
-const formatNumber = (value: unknown, fallback = "—") => {
-  const numberValue = toNumber(value);
-  return numberValue === null ? fallback : numberValue.toLocaleString();
-};
-
-const formatDate = (value: unknown) => {
-  if (!value) return "—";
-  const date = new Date(String(value));
-  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
-};
-
-const getPair = (order: any) =>
-  order.pair || (order.base && order.quote ? `${order.base}/${order.quote}` : "—");
-
-const getAmount = (order: any) => order.amount ?? order.quantity;
-
-const getTotal = (order: any) => {
-  if (order.total !== undefined && order.total !== null) return order.total;
-  const price = toNumber(order.price);
-  const amount = toNumber(getAmount(order));
-  return price !== null && amount !== null ? price * amount : null;
-};
+import {
+  fmtDate,
+  fmtNum,
+  getAmount,
+  getPair,
+  getTotal,
+  selectStyles,
+  searchInputClass,
+  sideTone,
+  TableCard,
+  tableClassNames,
+} from "./orders-shared";
 
 export const OpenTab = () => {
   const queryClient = useQueryClient();
+  const [side, setSide] = useState("All");
+  const [pair, setPair] = useState("");
 
-  const { data: orders } = useQuery({
+  const { data: orders, isLoading } = useQuery({
     queryKey: tradingKeys.openOrders(),
-    queryFn: () =>
-      tradingService.fetchOpenOrders(),
+    queryFn: () => tradingService.fetchOpenOrders(),
     select: (res) => res.data,
   });
 
   const { mutate: cancelOrder } = useMutation({
-    mutationFn: (orderId: string): Promise<any> =>
-      tradingService.closeSpotOrder(orderId),
+    mutationFn: (orderId: string): Promise<any> => tradingService.cancelSpotOrder(orderId),
     onSuccess: () => {
       successNotification("Order cancelled");
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
@@ -61,88 +40,83 @@ export const OpenTab = () => {
     onError: (e: any) => errorMessageHandler(e),
   });
 
-  const hasOrders = orders && orders.length > 0;
+  const allOrders: any[] = Array.isArray(orders) ? orders : [];
+  const filtered = allOrders.filter((o) => {
+    const pairMatch = !pair || String(getPair(o)).toUpperCase().includes(pair.toUpperCase());
+    const sideMatch = side === "All" || String(o.side ?? "").toLowerCase() === side.toLowerCase();
+    return pairMatch && sideMatch;
+  });
 
   return (
-    <div className="flex flex-col gap-9">
-      <div className="flex gap-3">
-        <Select
-          label="Order"
-          data={["All"]}
-          defaultValue="All"
-          classNames={selectStyles}
-        />
-        <Select
-          label="Base"
-          data={["All"]}
-          defaultValue="All"
-          classNames={selectStyles}
-        />
-        <Select
-          label="Qoute"
-          data={["All"]}
-          defaultValue="All"
-          classNames={selectStyles}
-        />
-        <Select
-          label="Trade"
-          data={["Side"]}
-          defaultValue="Side"
-          classNames={selectStyles}
-        />
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
+        <div className="flex flex-wrap gap-4 items-end">
+          <Select
+            label="Trade Side"
+            data={["All", "Buy", "Sell"]}
+            value={side}
+            onChange={(v) => setSide(v || "All")}
+            classNames={selectStyles}
+            className="w-[140px]"
+          />
+        </div>
+        <div className="flex items-center gap-4">
+          <TextInput
+            classNames={searchInputClass}
+            placeholder="Search pair..."
+            leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
+            onChange={(e) => setPair(e.currentTarget.value)}
+          />
+          <button
+            className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
+            onClick={() => { setPair(""); setSide("All"); }}
+          >
+            Reset
+          </button>
+        </div>
       </div>
-      <div className="py-5 min-h-292px rounded-32px bg-gray-7 px-7 pb-9">
-        {hasOrders ? (
-          <Table classNames={{ th: "!text-gray-9 !text-sm", td: "!text-sm !py-4 !border-white/[8%]" }}>
-            <TableThead>
-              <TableTr>
-                <TableTh>Pair</TableTh>
-                <TableTh>Side</TableTh>
-                <TableTh>Type</TableTh>
-                <TableTh>Price</TableTh>
-                <TableTh>Amount</TableTh>
-                <TableTh>Filled</TableTh>
-                <TableTh>Total</TableTh>
-                <TableTh>Status</TableTh>
-                <TableTh>Time</TableTh>
-                <TableTh>Action</TableTh>
+
+      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No open orders right now.">
+        <Table classNames={tableClassNames}>
+          <TableThead>
+            <TableTr>
+              <TableTh className="pl-5">Pair</TableTh>
+              <TableTh>Side</TableTh>
+              <TableTh>Type</TableTh>
+              <TableTh>Price</TableTh>
+              <TableTh>Amount</TableTh>
+              <TableTh>Filled</TableTh>
+              <TableTh>Total</TableTh>
+              <TableTh>Time</TableTh>
+              <TableTh className="pr-5 text-right">Action</TableTh>
+            </TableTr>
+          </TableThead>
+          <TableTbody>
+            {filtered.map((order: any) => (
+              <TableTr key={order.id}>
+                <TableTd className="pl-5 !text-white !font-bold">{getPair(order)}</TableTd>
+                <TableTd className={sideTone(order.side)}>
+                  {String(order.side ?? "—").toUpperCase()}
+                </TableTd>
+                <TableTd>{order.type ?? "—"}</TableTd>
+                <TableTd>{fmtNum(order.price)}</TableTd>
+                <TableTd>{fmtNum(getAmount(order))}</TableTd>
+                <TableTd>{fmtNum(order.filled ?? order.filledQuantity ?? 0)}</TableTd>
+                <TableTd>{fmtNum(getTotal(order))}</TableTd>
+                <TableTd className="text-white/50">{fmtDate(order.createdAt)}</TableTd>
+                <TableTd className="pr-5 text-right">
+                  <button
+                    className="text-[#F6465D] hover:text-[#F6465D]/80 bg-[#F6465D]/10 hover:bg-[#F6465D]/20 transition-all font-semibold text-xs px-3 py-1.5 rounded-lg active:scale-95"
+                    onClick={() => cancelOrder(order.id)}
+                  >
+                    Cancel
+                  </button>
+                </TableTd>
               </TableTr>
-            </TableThead>
-            <TableTbody>
-              {orders.map((order: any) => (
-                <TableTr key={order.id}>
-                  <TableTd>{getPair(order)}</TableTd>
-                  <TableTd className={order.side === "buy" ? "!text-green-400" : "!text-red-400"}>
-                    {order.side?.toUpperCase() ?? "—"}
-                  </TableTd>
-                  <TableTd>{order.type ?? "—"}</TableTd>
-                  <TableTd>{formatNumber(order.price)}</TableTd>
-                  <TableTd>{formatNumber(getAmount(order))}</TableTd>
-                  <TableTd>{formatNumber(order.filled ?? order.filledQuantity ?? 0)}</TableTd>
-                  <TableTd>{formatNumber(getTotal(order))}</TableTd>
-                  <TableTd>{order.status ?? "—"}</TableTd>
-                  <TableTd>{formatDate(order.createdAt)}</TableTd>
-                  <TableTd>
-                    <span
-                      className="text-red-400 cursor-pointer text-xs"
-                      onClick={() => cancelOrder(order.id)}
-                    >
-                      Cancel
-                    </span>
-                  </TableTd>
-                </TableTr>
-              ))}
-            </TableTbody>
-          </Table>
-        ) : (
-          <div className="h-full flex items-center justify-center py-10">
-            <div className="flex flex-col items-center gap-4">
-              <EmptyTable />
-              <span className="text-xs font-medium text-gray-9">No Records</span>
-            </div>
-          </div>
-        )}
-      </div>
+            ))}
+          </TableTbody>
+        </Table>
+      </TableCard>
     </div>
   );
 };

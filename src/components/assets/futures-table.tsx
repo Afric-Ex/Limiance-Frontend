@@ -7,6 +7,7 @@ import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { ConvertAsset } from "../transactions/convert-asset";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { getCryptoIcon } from "@/src/utils/crypto-icons";
 
 import { useRouter } from "next/navigation";
 
@@ -81,14 +82,14 @@ export const FuturesTable = () => {
                       <TableTr key={`${item.symbol ?? item.name}-${index}`}>
                         <TableTd className="!pl-6">
                           <span className="flex items-center gap-3">
-                            {item.image ? (
+                            {getCryptoIcon(item.symbol, item.image ?? item.logo ?? item.icon) ? (
                               <img
-                                src={item.image}
+                                src={getCryptoIcon(item.symbol, item.image ?? item.logo ?? item.icon)}
                                 alt={item.name}
-                                className="w-8 h-8 rounded-full shrink-0"
+                                className="w-8 h-8 rounded-full object-cover shrink-0"
                               />
                             ) : (
-                              <span className="w-8 h-8 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center shrink-0">
+                              <span className="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold text-white/80 flex items-center justify-center shrink-0">
                                 {item.symbol?.[0]}
                               </span>
                             )}

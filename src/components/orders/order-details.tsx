@@ -1,65 +1,95 @@
-import { Select, Table, TableTh, TableTr } from "@mantine/core";
-import React from "react";
-import { EmptyTable } from "../icons/empty-table";
-import { DateInput } from "@mantine/dates";
+"use client";
 
-const selectStyles = {
-  input: "!h-11 !rounded-lg !text-white !bg-transparent",
-  label: "!text-xs !font-medium",
-};
+import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } from "@mantine/core";
+import React, { useState } from "react";
+import { Search } from "../icons/search";
+import { useQuery } from "@tanstack/react-query";
+import { tradingKeys, tradingService } from "@/src/services/trading";
+import {
+  fmtDate,
+  fmtDateTime,
+  fmtNum,
+  getPair,
+  selectStyles,
+  searchInputClass,
+  sideTone,
+  TableCard,
+  tableClassNames,
+} from "./orders-shared";
 
 export const OrderDetails = () => {
+  const [pair, setPair] = useState("");
+
+  const { data: trades, isLoading } = useQuery({
+    queryKey: tradingKeys.spotRecentTrades,
+    queryFn: () => tradingService.spotRecentTrades(),
+    select: (res) => res.data,
+  });
+
+  const allTrades: any[] = Array.isArray(trades) ? trades : [];
+  const filtered = pair
+    ? allTrades.filter((t) => String(getPair(t)).toUpperCase().includes(pair.toUpperCase()))
+    : allTrades;
+
+  const fee = (t: any) =>
+    t.fee ?? t.commission ?? (t.feeAmount !== undefined ? t.feeAmount : null);
+
   return (
-    <div className="flex flex-col gap-9">
-      <div className="flex gap-3">
-        <DateInput label="Date" classNames={selectStyles} />
-        <div className="flex items-center">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
+        <div className="flex flex-wrap gap-4 items-end">
           <Select
-            label="Base"
-            data={["All"]}
+            label="Time"
+            data={["All", "Last 7 Days", "Last 30 Days"]}
             defaultValue="All"
             classNames={selectStyles}
-          />
-          <span className="mt-3"> - </span>
-          <Select
-            label="Qoute"
-            data={["All"]}
-            defaultValue="All"
-            classNames={selectStyles}
+            className="w-[140px]"
           />
         </div>
-        <Select
-          label="Time"
-          data={["Last 7 Days"]}
-          defaultValue="Last 7 Days"
-          classNames={selectStyles}
-        />
+        <div className="flex items-center gap-4">
+          <TextInput
+            classNames={searchInputClass}
+            placeholder="Search pair..."
+            leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
+            onChange={(e) => setPair(e.currentTarget.value)}
+          />
+          <button
+            className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
+            onClick={() => setPair("")}
+          >
+            Reset
+          </button>
+        </div>
       </div>
-      <div className="py-5 h-292px rounded-32px bg-gray-7 pb-9 ">
-        <Table
-          classNames={{
-            th: "!text-gray-9 !text-sm",
-          }}
-        >
-          <TableTr>
-            <TableTh>Date</TableTh>
-            <TableTh>Trading Pair</TableTh>
-            <TableTh>Side</TableTh>
-            <TableTh>Price</TableTh>
-            <TableTh>Role</TableTh>
-            <TableTh>Filled</TableTh>
-            <TableTh>Fee</TableTh>
-            <TableTh>Total</TableTh>
-            <TableTh>Total in USDT</TableTh>
-          </TableTr>
+
+      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No trade records found.">
+        <Table classNames={tableClassNames}>
+          <TableThead>
+            <TableTr>
+              <TableTh className="pl-5">Time</TableTh>
+              <TableTh>Trading Pair</TableTh>
+              <TableTh>Side</TableTh>
+              <TableTh>Price</TableTh>
+              <TableTh>Filled</TableTh>
+              <TableTh>Fee</TableTh>
+              <TableTh>Total</TableTh>
+            </TableTr>
+          </TableThead>
+          <TableTbody>
+            {filtered.map((t: any, idx: number) => (
+              <TableTr key={t.id ?? t.tradeId ?? idx}>
+                <TableTd className="pl-5 text-white/50">{fmtDateTime(t.createdAt ?? t.time ?? t.ts)}</TableTd>
+                <TableTd className="!text-white !font-bold">{getPair(t) ?? t.symbol}</TableTd>
+                <TableTd className={sideTone(t.side)}>{String(t.side ?? "—").toUpperCase()}</TableTd>
+                <TableTd>{fmtNum(t.price)}</TableTd>
+                <TableTd>{fmtNum(t.quantity ?? t.qty ?? t.filled)}</TableTd>
+                <TableTd>{fmtNum(fee(t))}</TableTd>
+                <TableTd>{fmtNum(t.total ?? (t.price && t.quantity ? t.price * t.quantity : null))}</TableTd>
+              </TableTr>
+            ))}
+          </TableTbody>
         </Table>
-        <div className="h-full px-7 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <EmptyTable />
-            <span className="text-xs font-medium text-gray-9">No Records</span>
-          </div>
-        </div>
-      </div>
+      </TableCard>
     </div>
   );
 };

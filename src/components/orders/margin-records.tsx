@@ -1,119 +1,85 @@
 "use client";
 
-import { Select, Table, TableTh, TableTr, TableTd, TableTbody, Skeleton } from "@mantine/core";
-import { EmptyTable } from "../icons/empty-table";
-import { DateInput } from "@mantine/dates";
-import { useState } from "react";
-import clsx from "clsx";
+import { Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } from "@mantine/core";
+import React, { useState } from "react";
+import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
-import { tradingService } from "@/src/services/trading";
-
-const selectStyles = {
-  input: "!h-11 !rounded-lg !bg-transparent",
-  label: "!text-xs !font-medium",
-};
+import { tradingKeys, tradingService } from "@/src/services/trading";
+import {
+  fmtDateTime,
+  fmtNum,
+  getPair,
+  searchInputClass,
+  sideTone,
+  StatusPill,
+  TableCard,
+  tableClassNames,
+  ChipToggle,
+} from "./orders-shared";
 
 const filters = ["Cross", "Isolated"];
 
 export const MarginRecords = () => {
   const [filter, setFilter] = useState("Cross");
+  const [pair, setPair] = useState("");
 
   const { data: records, isLoading } = useQuery({
-    queryKey: ['margin-order-history'],
+    queryKey: tradingKeys.marginOrderHistory,
     queryFn: () => tradingService.marginOrderHistory(),
     select: (res) => res?.data ?? [],
   });
 
+  const allRecords: any[] = Array.isArray(records) ? records : [];
+  const filtered = pair
+    ? allRecords.filter((r) => String(getPair(r)).toUpperCase().includes(pair.toUpperCase()))
+    : allRecords;
+
   return (
-    <div className="flex flex-col gap-9">
-      <div className="flex flex-col gap-3">
-        <div className="flex w-fit bg-black/[42%] border border-gray-9/25 rounded-md gap-1 p-1">
-          {filters.map((item) => (
-            <span
-              key={item}
-              onClick={() => setFilter(item)}
-              className={clsx(
-                filter === item
-                  ? "bg-gray-13 rounded-md border-gray-9"
-                  : "border-black bg-black",
-                "py-2 cursor-pointer text-xs px-4  border "
-              )}
-            >
-              {item}
-            </span>
-          ))}
-        </div>
-        <div className="flex gap-3">
-          <DateInput label="Date" classNames={selectStyles} />
-          <Select
-            label="Time"
-            data={["Last 7 Days"]}
-            defaultValue="Last 7 Days"
-            classNames={selectStyles}
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
+        <ChipToggle value={filter} options={filters} onChange={setFilter} />
+        <div className="flex items-center gap-4">
+          <TextInput
+            classNames={searchInputClass}
+            placeholder="Search pair..."
+            leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
+            onChange={(e) => setPair(e.currentTarget.value)}
           />
-          <Select
-            label="Coin"
-            data={["All"]}
-            defaultValue="All"
-            classNames={selectStyles}
-          />
-          <Select
-            label="Category"
-            data={["All"]}
-            defaultValue="All"
-            classNames={selectStyles}
-          />
+          <button
+            className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
+            onClick={() => setPair("")}
+          >
+            Reset
+          </button>
         </div>
       </div>
-      <div className="py-5 h-292px rounded-32px bg-gray-7 px-7 pb-9 ">
-        <Table
-          classNames={{
-            th: "!text-gray-9 !text-sm",
-          }}
-        >
-          <TableTr>
-            <TableTh className="pl-6">Pair</TableTh>
-            <TableTh>Side</TableTh>
-            <TableTh>Time</TableTh>
-            <TableTh>Price</TableTh>
-            <TableTh>Quantity</TableTh>
-            <TableTh>Status</TableTh>
-          </TableTr>
+
+      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No margin records found.">
+        <Table classNames={tableClassNames}>
+          <TableThead>
+            <TableTr>
+              <TableTh className="pl-5">Pair</TableTh>
+              <TableTh>Side</TableTh>
+              <TableTh>Time</TableTh>
+              <TableTh>Price</TableTh>
+              <TableTh>Quantity</TableTh>
+              <TableTh>Status</TableTh>
+            </TableTr>
+          </TableThead>
           <TableTbody>
-            {isLoading ? (
-              Array(5).fill(0).map((_, i) => (
-                <TableTr key={i}>
-                  <TableTd colSpan={6}><Skeleton height={30} radius="md" className="!bg-white/[0.02]" /></TableTd>
-                </TableTr>
-              ))
-            ) : records && records.length > 0 ? (
-              records.map((rec: any, idx: number) => {
-                const isBuy = rec.side?.toLowerCase() === 'buy';
-                return (
-                  <TableTr key={rec.id || idx}>
-                    <TableTd className="pl-6 font-bold text-white">{rec.pair || `${rec.base || ''}/${rec.quote || ''}`}</TableTd>
-                    <TableTd>
-                      <span className={isBuy ? "text-emerald-400" : "text-red-400"}>{rec.side}</span>
-                    </TableTd>
-                    <TableTd>{rec.createdAt ? new Date(rec.createdAt).toLocaleString() : '—'}</TableTd>
-                    <TableTd className="font-mono">{Number(rec.price || 0).toLocaleString()}</TableTd>
-                    <TableTd className="font-mono">{Number(rec.quantity || rec.amount || 0).toLocaleString()}</TableTd>
-                    <TableTd className="capitalize">{rec.status || 'Closed'}</TableTd>
-                  </TableTr>
-                );
-              })
-            ) : null}
+            {filtered.map((rec: any, idx: number) => (
+              <TableTr key={rec.id ?? idx}>
+                <TableTd className="pl-5 !text-white !font-bold">{getPair(rec)}</TableTd>
+                <TableTd className={sideTone(rec.side)}>{rec.side ?? "—"}</TableTd>
+                <TableTd className="text-white/50">{fmtDateTime(rec.createdAt)}</TableTd>
+                <TableTd className="tabular-nums">{fmtNum(rec.price)}</TableTd>
+                <TableTd className="tabular-nums">{fmtNum(rec.quantity ?? rec.amount)}</TableTd>
+                <TableTd><StatusPill status={rec.status} fallback="Closed" /></TableTd>
+              </TableTr>
+            ))}
           </TableTbody>
         </Table>
-        {!isLoading && (!records || records.length === 0) && (
-          <div className="h-full flex items-center justify-center pt-8">
-            <div className="flex flex-col items-center gap-4">
-              <EmptyTable />
-              <span className="text-xs font-medium text-gray-9">No Records</span>
-            </div>
-          </div>
-        )}
-      </div>
+      </TableCard>
     </div>
   );
 };
