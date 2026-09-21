@@ -7,7 +7,7 @@ import type { OrderBookEntry } from "@/src/hooks/use-order-book";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import type { KlineCandle } from "@/src/types/trading";
 
-const INTERVALS = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const;
+const INTERVALS = ["1s", "1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const;
 type Interval = (typeof INTERVALS)[number];
 type View = "chart" | "depth";
 
@@ -103,6 +103,9 @@ function formatTime(t: number, interval: Interval) {
   const d = new Date(t);
   if (interval === "1D" || interval === "1W") {
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+  if (interval === "1s") {
+    return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
   }
   return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
