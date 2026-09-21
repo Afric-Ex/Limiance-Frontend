@@ -1,16 +1,19 @@
 "use client";
 
-import { Select, Table, TableTh, TableTr, TableTd, TableTbody, TextInput, Skeleton } from "@mantine/core";
-import { EmptyTable } from "../icons/empty-table";
+import { Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } from "@mantine/core";
+import React, { useState } from "react";
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
 import { asset, assetKeys } from "@/src/services/asset";
-import { useState } from "react";
-
-const selectStyles = {
-  input: "!h-11 !rounded-lg !bg-transparent",
-  label: "!text-xs !font-medium",
-};
+import {
+  fmtDateTime,
+  fmtNum,
+  searchInputClass,
+  StatusPill,
+  TableCard,
+  tableClassNames,
+  ChipToggle,
+} from "./orders-shared";
 
 export const Crypto = () => {
   const [type, setType] = useState<"Deposit" | "Withdrawal">("Deposit");
@@ -21,85 +24,59 @@ export const Crypto = () => {
     select: (res) => res?.data ?? [],
   });
 
+  const allHistory: any[] = Array.isArray(history) ? history : [];
+
   return (
-    <div className="flex flex-col gap-9">
-      <div className="flex gap-3">
-        <Select
-          label="Time"
-          data={["Last 7 Days"]}
-          defaultValue="Last 7 Days"
-          classNames={selectStyles}
-        />
-        <Select
-          label="Coin"
-          data={["All"]}
-          defaultValue="All"
-          classNames={selectStyles}
-        />
-        <Select
-          label="Type"
-          data={["Deposit", "Withdrawal"]}
-          value={type}
-          onChange={(val) => setType(val as "Deposit" | "Withdrawal")}
-          classNames={selectStyles}
-        />
-        <div className="flex self-end items-center gap-5">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
+        <ChipToggle value={type} options={["Deposit", "Withdrawal"]} onChange={(v) => setType(v as "Deposit" | "Withdrawal")} />
+        <div className="flex items-center gap-4">
           <TextInput
-            classNames={{
-              input: "!h-11 !bg-gray-13 !border-0 !w-[386px] !rounded-full",
-            }}
-            placeholder="Search"
-            leftSection={<Search />}
+            classNames={searchInputClass}
+            placeholder="Search..."
+            leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
           />
-          <span className="text-xs font-medium cursor-pointer">Reset</span>
+          <button
+            className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
+            onClick={() => setType("Deposit")}
+          >
+            Reset
+          </button>
         </div>
       </div>
-      <div className="py-5 h-292px rounded-32px bg-gray-7 px-7 pb-9 ">
-        <Table
-          classNames={{
-            th: "!text-gray-9 !text-sm",
-          }}
-        >
-          <TableTr>
-            <TableTh>Time</TableTh>
-            <TableTh>Type</TableTh>
-            <TableTh>Wallet</TableTh>
-            <TableTh>Coin</TableTh>
-            <TableTh>Amount</TableTh>
-            <TableTh>Destination</TableTh>
-            <TableTh>Status</TableTh>
-          </TableTr>
+
+      <TableCard
+        loading={isLoading}
+        hasData={allHistory.length > 0}
+        emptyTitle="No transaction records found."
+      >
+        <Table classNames={tableClassNames}>
+          <TableThead>
+            <TableTr>
+              <TableTh className="pl-5">Time</TableTh>
+              <TableTh>Type</TableTh>
+              <TableTh>Wallet</TableTh>
+              <TableTh>Coin</TableTh>
+              <TableTh>Amount</TableTh>
+              <TableTh>Destination</TableTh>
+              <TableTh>Status</TableTh>
+            </TableTr>
+          </TableThead>
           <TableTbody>
-            {isLoading ? (
-              Array(5).fill(0).map((_, i) => (
-                <TableTr key={i}>
-                  <TableTd colSpan={7}><Skeleton height={30} radius="md" /></TableTd>
-                </TableTr>
-              ))
-            ) : history && history.length > 0 ? (
-              history.map((tx: any, idx: number) => (
-                <TableTr key={tx.id || idx}>
-                  <TableTd>{tx.createdAt ? new Date(tx.createdAt).toLocaleString() : '—'}</TableTd>
-                  <TableTd className="capitalize">{tx.type || type}</TableTd>
-                  <TableTd>{tx.wallet || '—'}</TableTd>
-                  <TableTd className="font-bold">{tx.coin || tx.asset || '—'}</TableTd>
-                  <TableTd className="font-mono">{Number(tx.amount || 0).toLocaleString()}</TableTd>
-                  <TableTd>{tx.destination || tx.address || '—'}</TableTd>
-                  <TableTd className="capitalize">{tx.status || 'Completed'}</TableTd>
-                </TableTr>
-              ))
-            ) : null}
+            {allHistory.map((tx: any, idx: number) => (
+              <TableTr key={tx.id ?? idx}>
+                <TableTd className="pl-5 text-white/50">{fmtDateTime(tx.createdAt)}</TableTd>
+                <TableTd className="capitalize">{tx.type ?? type}</TableTd>
+                <TableTd>{tx.wallet ?? "—"}</TableTd>
+                <TableTd className="!text-white !font-bold">{tx.coin ?? tx.asset ?? "—"}</TableTd>
+                <TableTd className="tabular-nums !text-white">{fmtNum(tx.amount)}</TableTd>
+                <TableTd className="font-mono text-xs !text-white/60">{tx.destination ?? tx.address ?? "—"}</TableTd>
+                <TableTd><StatusPill status={tx.status} fallback="Completed" /></TableTd>
+              </TableTr>
+            ))}
           </TableTbody>
         </Table>
-        {!isLoading && (!history || history.length === 0) && (
-          <div className="h-full flex items-center justify-center pt-8">
-            <div className="flex flex-col items-center gap-4">
-              <EmptyTable />
-              <span className="text-xs font-medium text-gray-9">No Records</span>
-            </div>
-          </div>
-        )}
-      </div>
+      </TableCard>
     </div>
   );
 };

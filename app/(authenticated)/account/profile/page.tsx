@@ -6,9 +6,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
 import { auth } from "@/src/services/auth";
 import Avatar from "boring-avatars";
-import { TextInput, Button } from "@mantine/core";
+import { TextInput, Button, FileInput, Loader } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useEffect, useState } from "react";
+import { BiEdit } from "react-icons/bi";
+import { convertFileToBase64 } from "@/src/lib/convert-file-to-base64";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { CheckMark } from "@/src/components/icons/check-mark";
@@ -93,11 +95,13 @@ function ProfilePageInner() {
       lastName: "",
       phone: "",
       email: "",
+      username: "",
     },
     validate: {
       firstName: (value) => (value.length < 2 ? "First name must be at least 2 characters" : null),
       lastName: (value) => (value.length < 2 ? "Last name must be at least 2 characters" : null),
       phone: (value) => (/^\+?[1-9]\d{7,14}$/.test(value) ? null : "Invalid international phone format"),
+      username: (value) => (value.length > 0 && value.length < 4 ? "Username must be at least 4 characters" : null),
     },
   });
 
@@ -108,6 +112,7 @@ function ProfilePageInner() {
         lastName: user.lastName || "",
         phone: user.phone || "",
         email: user.email || "",
+        username: user.username || "",
       });
     }
   }, [form, user]);
@@ -124,7 +129,7 @@ function ProfilePageInner() {
         firstName: values.firstName,
         lastName: values.lastName,
         phone: values.phone,
-        username: user?.username || "",
+        username: values.username || user?.username || "",
         password: "",
         photo: user?.photo || "",
         country: user?.country || "",
@@ -137,11 +142,53 @@ function ProfilePageInner() {
           firstName: variables.firstName,
           lastName: variables.lastName,
           phone: variables.phone,
+          username: variables.username,
         });
       }
     },
     onError: (err) => errorMessageHandler(err),
   });
+
+  // Avatar upload → persisted via users/update_user, reflected immediately in store
+  const [photoDraft, setPhotoDraft] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+
+  const { mutate: updatePhoto, isPending: photoUpdating } = useMutation({
+    mutationFn: (photo: string) =>
+      userService.updateUser({
+        firstName: user?.firstName || "",
+        lastName: user?.lastName || "",
+        phone: user?.phone || "",
+        username: user?.username || "",
+        password: "",
+        photo,
+        country: user?.country || "",
+      }),
+    onSuccess: (_, photo) => {
+      setPhotoDraft(photo);
+      setImgError(false);
+      if (user) setUser({ ...user, photo });
+      successNotification("Profile picture updated");
+    },
+    onError: (err) => errorMessageHandler(err),
+  });
+
+  useEffect(() => {
+    setImgError(false);
+  }, [photoDraft]);
+
+  const handleAvatarSelect = async (file: File | null) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      errorMessageHandler({ message: "Image must be smaller than 5MB" } as any);
+      return;
+    }
+    setAvatarFile(file);
+    const base64 = await convertFileToBase64(file);
+    setPhotoDraft(base64); // optimistic preview
+    setImgError(false);
+    updatePhoto(base64);
+  };
 
   if (!mounted) return <AccountProfileSkeleton />;
 
@@ -154,24 +201,39 @@ function ProfilePageInner() {
 
       {/* Section A — Avatar & Identity */}
       <div className="account-card flex flex-col sm:flex-row items-center sm:items-start gap-6">
-        <div className="relative w-20 h-20 rounded-full flex items-center justify-center overflow-hidden bg-primary/20 shrink-0">
-          {user?.photo && !imgError ? (
-            <img 
-              src={user.photo} 
-              alt="Avatar" 
-              className="w-full h-full object-cover" 
-              onError={() => setImgError(true)} 
-            />
-          ) : (
-            <Avatar
-              size={80}
-              name={user?.id || user?.username || user?.email || "User"}
-              variant="beam"
-              colors={["#4d77f0", "#181a20", "#3354c4", "#0ECB81", "#F6465D"]}
-            />
-          )}
-        </div>
-        
+        <label className="relative cursor-pointer group shrink-0">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden bg-primary/20 border-2 border-white/10 group-hover:border-primary/50 transition-colors">
+            {photoDraft || (user?.photo && !imgError) ? (
+              <img
+                src={photoDraft || user.photo}
+                alt="Avatar"
+                className="w-full h-full object-cover"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <Avatar
+                size={80}
+                name={user?.id || user?.username || user?.email || "User"}
+                variant="beam"
+                colors={["#4d77f0", "#181a20", "#3354c4", "#0ECB81", "#F6465D"]}
+              />
+            )}
+          </div>
+          <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            {photoUpdating ? (
+              <Loader size={18} color="#fff" />
+            ) : (
+              <BiEdit size={20} className="text-white" />
+            )}
+          </div>
+          <FileInput
+            value={avatarFile}
+            hidden
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            onChange={handleAvatarSelect}
+          />
+        </label>
+
         <div className="flex flex-col gap-3 items-center sm:items-start flex-1">
           <div className="flex flex-col gap-1 items-center sm:items-start">
             <h2 className="text-xl font-semibold">{user?.username || user?.firstName || "User"}</h2>
@@ -279,6 +341,20 @@ function ProfilePageInner() {
             />
           </div>
           
+          <TextInput
+            label="Username"
+            placeholder="Enter username"
+            description="Username can only be changed after 30 days"
+            maxLength={40}
+            classNames={{
+              input: "!bg-gray-1 !border-gray-9/40 !text-white focus:!border-primary",
+              label: "!text-white/70 !mb-1.5 !text-sm",
+              description: "!text-white/40 !mb-2 !text-xs",
+              error: "!mt-1.5 !text-xs !text-error-1",
+            }}
+            {...form.getInputProps("username")}
+          />
+
           <TextInput
             label="Phone Number"
             placeholder="+1234567890"

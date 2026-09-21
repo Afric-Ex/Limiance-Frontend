@@ -77,6 +77,8 @@ export interface LoginResponse {
     loginChallengeToken?: string;
     challengeToken?: string;
     emailOtpEnabled?: boolean;
+    createdAt?: string | number;
+    accountCreatedAt?: string | number;
   };
 }
 

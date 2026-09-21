@@ -1,105 +1,97 @@
 "use client";
 
-import { Select, Table, TableTh, TableTr, TextInput } from "@mantine/core";
+import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } from "@mantine/core";
 import React, { useState } from "react";
-import { EmptyTable } from "../icons/empty-table";
-import clsx from "clsx";
 import { Search } from "../icons/search";
-import { DateInput } from "@mantine/dates";
+import { useQuery } from "@tanstack/react-query";
+import { tradingKeys, tradingService } from "@/src/services/trading";
+import {
+  fmtDate,
+  fmtNum,
+  getPair,
+  searchInputClass,
+  selectStyles,
+  sideTone,
+  TableCard,
+  tableClassNames,
+  ChipToggle,
+} from "./orders-shared";
 
-const selectStyles = {
-  input: "!h-11 !rounded-lg !bg-transparent",
-  label: "!text-xs !font-medium",
-};
-const filters = ["Liquidation Orders", "Liquidation Order"];
-const filters2 = ["Cross", "Isolated"];
+const filters = ["Liquidation Orders", "Liquidation History"];
 
 export const Liquidation = () => {
   const [filter, setFilter] = useState("Liquidation Orders");
-  const [filter2, setFilter2] = useState("Cross");
+
+  const { data: records, isLoading } = useQuery({
+    queryKey: tradingKeys.marginLiquidationHistory,
+    queryFn: () => tradingService.marginLiquidationHistory(),
+    select: (res) => res.data,
+  });
+
+  const allRecords: any[] = Array.isArray(records) ? records : [];
 
   return (
-    <div className="flex flex-col gap-9">
-      <div className="flex items-center gap-10">
-        <div className="flex gap-4">
-          <div className="flex bg-black/[42%] border border-gray-9/25 rounded-md gap-1 p-1">
-            {filters.map((item) => (
-              <span
-                key={item}
-                onClick={() => setFilter(item)}
-                className={clsx(
-                  filter === item
-                    ? "bg-gray-13 rounded-md border-gray-9"
-                    : "border-black bg-black",
-                  "py-2 cursor-pointer text-xs px-4  border "
-                )}
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-          <div className="flex bg-black/[42%] border border-gray-9/25 rounded-md gap-1 p-1">
-            {filters2.map((item) => (
-              <span
-                key={item}
-                onClick={() => setFilter2(item)}
-                className={clsx(
-                  filter2 === item
-                    ? "bg-gray-13 rounded-md border-gray-9"
-                    : "border-black bg-black",
-                  "py-2 cursor-pointer text-xs px-4  border "
-                )}
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-5">
-          <TextInput
-            classNames={{
-              input: "!h-11 !bg-gray-13 !border-0 !w-[386px] !rounded-full",
-            }}
-            placeholder="Search"
-            leftSection={<Search />}
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
+        <div className="flex flex-wrap gap-4 items-end">
+          <ChipToggle value={filter} options={filters} onChange={setFilter} />
+          <Select
+            label="Trading Pair"
+            data={["All"]}
+            defaultValue="All"
+            classNames={selectStyles}
+            className="w-[140px]"
           />
-          <span className="text-xs font-medium cursor-pointer">Reset</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <TextInput
+            classNames={searchInputClass}
+            placeholder="Search pair..."
+            leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
+          />
+          <button
+            className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
+            onClick={() => setFilter("Liquidation Orders")}
+          >
+            Reset
+          </button>
         </div>
       </div>
-      <div className="flex gap-3">
-        <DateInput label="Date" classNames={selectStyles} />
-        <Select
-          label="Trading Pair"
-          data={["All"]}
-          defaultValue="All"
-          classNames={selectStyles}
-        />
-      </div>
-      <div className="py-5 h-292px rounded-32px bg-gray-7 px-7 pb-9 ">
-        <Table
-          classNames={{
-            th: "!text-gray-9 !text-sm",
-          }}
-        >
-          <TableTr>
-            <TableTh>Coin</TableTh>
-            <TableTh>Trading Pair</TableTh>
-            <TableTh>Type</TableTh>
-            <TableTh>Date</TableTh>
-            <TableTh>Average</TableTh>
-            <TableTh>Price</TableTh>
-            <TableTh>Executed</TableTh>
-            <TableTh>Amount</TableTh>
-            <TableTh>Total </TableTh>
-          </TableTr>
+
+      <TableCard loading={isLoading} hasData={allRecords.length > 0} emptyTitle="No liquidation records found.">
+        <Table classNames={tableClassNames}>
+          <TableThead>
+            <TableTr>
+              <TableTh className="pl-5">Coin</TableTh>
+              <TableTh>Trading Pair</TableTh>
+              <TableTh>Type</TableTh>
+              <TableTh>Date</TableTh>
+              <TableTh>Price</TableTh>
+              <TableTh>Executed</TableTh>
+              <TableTh>Amount</TableTh>
+              <TableTh>Total</TableTh>
+            </TableTr>
+          </TableThead>
+          <TableTbody>
+            {allRecords.map((r: any, idx: number) => {
+              const price = Number(r.price ?? r.liquidationPrice ?? 0) || 0;
+              const qty = Number(r.quantity ?? r.executed ?? r.filled ?? 0) || 0;
+              return (
+                <TableTr key={r.id ?? idx}>
+                  <TableTd className="pl-5 !text-white !font-bold">{r.coin ?? r.asset ?? getPair(r)}</TableTd>
+                  <TableTd>{getPair(r)}</TableTd>
+                  <TableTd className={sideTone(r.side)}>{String(r.side ?? "LIQUIDATED").toUpperCase()}</TableTd>
+                  <TableTd className="text-white/50">{fmtDate(r.createdAt ?? r.time)}</TableTd>
+                  <TableTd className="tabular-nums">{fmtNum(price)}</TableTd>
+                  <TableTd className="tabular-nums">{fmtNum(qty)}</TableTd>
+                  <TableTd className="tabular-nums">{fmtNum(r.amount ?? qty)}</TableTd>
+                  <TableTd className="tabular-nums">{fmtNum(price * qty)}</TableTd>
+                </TableTr>
+              );
+            })}
+          </TableTbody>
         </Table>
-        <div className="h-full flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <EmptyTable />
-            <span className="text-xs font-medium text-gray-9">No Records</span>
-          </div>
-        </div>
-      </div>
+      </TableCard>
     </div>
   );
 };

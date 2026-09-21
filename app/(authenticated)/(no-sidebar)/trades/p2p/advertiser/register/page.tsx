@@ -8,10 +8,28 @@ import { MdCheckCircle, MdCancel } from "react-icons/md";
 import { useAdvertiserInfo, useBecomeAdvertiser } from "@/src/hooks/p2p/use-p2p";
 import { useUserStore } from "@/src/stores/user-store";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { isKycApproved } from "@/src/lib/normalize-kyc-status";
+import { userKeys, userService } from "@/src/services/user";
+import { useQuery } from "@tanstack/react-query";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2PAdvertiserRegisterSkeleton } from "@/src/components/skeletons/p2p";
 
-const USE_MOCK = true; // Set to false when ready to enforce real rules
+const MIN_ACCOUNT_AGE_DAYS = 30;
+
+function getAccountAgeDays(raw: string | number | undefined | null): number | null {
+  if (raw === undefined || raw === null || raw === "") return null;
+  const digits = String(raw).trim();
+  const num = Number(digits);
+  let ts: number;
+  if (digits !== "" && Number.isFinite(num)) {
+    ts = digits.length <= 10 ? num * 1000 : num; // Unix seconds vs milliseconds
+  } else {
+    ts = Date.parse(digits);
+  }
+  if (!Number.isFinite(ts) || ts <= 0) return null;
+  const days = (Date.now() - ts) / 86_400_000;
+  return days >= 0 ? days : null;
+}
 
 function AdvertiserRegisterPageInner() {
   const router = useRouter();
@@ -25,31 +43,43 @@ function AdvertiserRegisterPageInner() {
   const { data: advertiserData, isLoading } = useAdvertiserInfo();
   const isAdvertiser = !!advertiserData?.data?.data?.id;
 
+  useEffect(() => {
+    if (isAdvertiser) setActiveStep(2);
+  }, [isAdvertiser]);
+
   const { mutate: becomeAdvertiser, isPending: isRegistering } = useBecomeAdvertiser();
   const { user } = useUserStore();
+
+  // Real KYC status from the backend (users/kyc_status) — the user-store flags
+  // (isIDverified / isVerified) are unreliable because other pages set them
+  // optimistically, so we only fall back to them if the endpoint has no data.
+  const { data: kycStatus } = useQuery({
+    queryKey: userKeys.kycStatus,
+    queryFn: () => userService.getKycStatus(),
+    select: (res: any) => res?.data,
+    staleTime: 60_000,
+    retry: 1,
+    throwOnError: false,
+  });
 
   // Fetch real funding balance via WebSocket portfolio channel
   const { coins: portfolioCoins } = usePortfolioWs();
 
   const balanceArray = Array.isArray(portfolioCoins) ? portfolioCoins : [];
-  const fundingBalance = balanceArray.reduce((acc: number, b: any) => 
+  const fundingBalance = balanceArray.reduce((acc: number, b: any) =>
     acc + parseFloat(b.fundingBalance || "0"), 0
   );
 
-  // Evaluate requirements based on USE_MOCK toggle
-  const requirements = USE_MOCK ? {
-    kycLevel2: true,
-    accountAge: true,
-    fundingAccount: true
-  } : {
-    // Check if ID is verified in the user store
-    kycLevel2: !!user?.isIDverified || !!user?.isVerified,
-    // Account age check (assuming createdAt exists in backend, otherwise defaulting to true)
-    accountAge: true, // TODO: Check user.createdAt > 30 days when available from backend
-    // Check if they have any funds in their funding account
-    fundingAccount: fundingBalance > 0
-  };
+  // Real requirement checks — no mock bypass
+  const kycLevel2 =
+    kycStatus?.status
+      ? isKycApproved(kycStatus.status)
+      : !!user?.isIDverified || !!user?.isVerified;
+  const accountAgeDays = getAccountAgeDays(user?.createdAt ?? user?.accountCreatedAt);
+  const accountAge = accountAgeDays !== null && accountAgeDays >= MIN_ACCOUNT_AGE_DAYS;
+  const fundingAccount = fundingBalance > 0;
 
+  const requirements = { kycLevel2, accountAge, fundingAccount };
   const allRequirementsMet = requirements.kycLevel2 && requirements.accountAge && requirements.fundingAccount;
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -81,11 +111,6 @@ function AdvertiserRegisterPageInner() {
     );
   }
 
-  // If already an advertiser, jump to complete (or show different state)
-  if (isAdvertiser && activeStep !== 2) {
-    setActiveStep(2);
-  }
-
   return (
     <P2PLayout>
       <div className="w-full max-w-4xl mx-auto py-8">
@@ -109,12 +134,26 @@ function AdvertiserRegisterPageInner() {
                 <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
                   <div className="flex flex-col">
                     <span className="font-medium text-white">KYC Level 2 Verification</span>
-                    <span className="text-sm text-white/50">Complete identity verification.</span>
+                    <span className="text-sm text-white/50">
+                      {requirements.kycLevel2
+                        ? "Identity verified"
+                        : kycStatus?.status === "pending"
+                        ? "Verification is pending review"
+                        : "Complete identity verification."}
+                    </span>
                   </div>
                   {requirements.kycLevel2 ? (
                     <MdCheckCircle className="text-buy" size={24} />
+                  ) : kycStatus?.status === "pending" ? (
+                    <span className="text-[#FBA42A] text-sm font-semibold flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#FBA42A] animate-pulse" />
+                      Pending
+                    </span>
                   ) : (
-                    <MdCancel className="text-[#F6465D]" size={24} />
+                    <div className="flex items-center gap-3">
+                      <Button size="xs" color="blue" onClick={() => router.push("/account/kyc")}>Verify</Button>
+                      <MdCancel className="text-[#F6465D]" size={24} />
+                    </div>
                   )}
                 </div>
 
@@ -139,7 +178,7 @@ function AdvertiserRegisterPageInner() {
                     <MdCheckCircle className="text-buy" size={24} />
                   ) : (
                     <div className="flex items-center gap-3">
-                      <Button size="xs" color="blue" onClick={() => {}}>Set up</Button>
+                      <Button size="xs" color="blue" onClick={() => router.push("/assets/funding")}>Set up</Button>
                       <MdCancel className="text-[#F6465D]" size={24} />
                     </div>
                   )}
@@ -166,19 +205,45 @@ function AdvertiserRegisterPageInner() {
               <div className="py-8 max-w-2xl mx-auto flex flex-col gap-6">
                 <h2 className="text-xl font-bold text-white mb-2">Advertiser Agreement</h2>
                 
-                <div 
+<div
                   className="bg-black/40 border border-white/10 rounded-lg p-6 h-64 overflow-y-auto text-sm text-white/70 leading-relaxed"
                   onScroll={handleScroll}
                 >
-                  <p className="font-bold text-white mb-4">Limiance P2P Trading Rules & Agreement</p>
-                  <p className="mb-4">1. You must use a payment method that matches your verified identity name.</p>
-                  <p className="mb-4">2. Do not include crypto-related keywords in payment remarks.</p>
-                  <p className="mb-4">3. Fraudulent behavior will result in permanent account bans.</p>
-                  <p className="mb-4">4. You are responsible for verifying received funds before releasing crypto.</p>
-                  <p className="mb-4">5. Limiance is not responsible for losses due to user error.</p>
-                  {/* Simulate long text */}
-                  <div className="h-40"></div>
-                  <p className="mb-4 text-white">By clicking &quot;I Agree&quot;, you acknowledge that you have read and understood these terms.</p>
+                  <p className="font-bold text-white mb-4">Limiance P2P Trading Rules &amp; Agreement</p>
+                  <p className="mb-2 font-semibold text-white/80">Identity &amp; Payment Accounts</p>
+                  <ul className="list-disc pl-5 mb-4 flex flex-col gap-1.5">
+                    <li>You must use a payment method whose registered name matches your verified identity.</li>
+                    <li>All bank accounts and payment cards you link must belong to you. You may not use third-party accounts under any circumstance.</li>
+                    <li>You must complete KYC Level 2 verification before posting ads, and maintain valid verification for the lifetime of your advertiser account.</li>
+                  </ul>
+                  <p className="mb-2 font-semibold text-white/80">Payment &amp; Release Rules</p>
+                  <ul className="list-disc pl-5 mb-4 flex flex-col gap-1.5">
+                    <li>Funds being sold must sit in your Funding Account before an ad is created or matched.</li>
+                    <li>Do not include crypto-related keywords (e.g. wallet, BTC, USDT) in your bank payment remarks.</li>
+                    <li>You are responsible for verifying that payment has actually been received before releasing crypto.</li>
+                    <li>Only release crypto after confirming the exact amount, sender name, and payment reference match the order.</li>
+                    <li>Do not ask buyers or sellers to confirm payment outside the Limiance chat system.</li>
+                  </ul>
+                  <p className="mb-2 font-semibold text-white/80">Prohibited Conduct</p>
+                  <ul className="list-disc pl-5 mb-4 flex flex-col gap-1.5">
+                    <li>Multiple accounts created to bypass limits or fees are prohibited.</li>
+                    <li>Manipulating prices, self-matching, or placing ads you cannot fulfil is prohibited.</li>
+                    <li>Fraudulent behaviour, chargebacks, or deliberate payment disputes will result in permanent account bans.</li>
+                    <li>Do not share your login, API keys, or funds with other users.</li>
+                  </ul>
+                  <p className="mb-2 font-semibold text-white/80">Limits, Fees &amp; Liability</p>
+                  <ul className="list-disc pl-5 mb-4 flex flex-col gap-1.5">
+                    <li>Advertiser limits and P2P fees are set by Limiance and may change with notice.</li>
+                    <li>Limiance is a matching and escrow platform; it is not a party to your payment transactions.</li>
+                    <li>Limiance is not liable for losses caused by user error, off-platform payment, or third-party misuse.</li>
+                    <li>Disputes are reviewed based on evidence provided in order chat; always keep proof of payment.</li>
+                  </ul>
+                  <p className="mb-2 font-semibold text-white/80">Enforcement</p>
+                  <ul className="list-disc pl-5 mb-4 flex flex-col gap-1.5">
+                    <li>Violations may lead to warnings, temporary suspension, or permanent revocation of advertiser status.</li>
+                    <li>Limiance may withhold funds pending investigation of fraud or regulatory requirements.</li>
+                  </ul>
+                  <p className="mb-4 text-white">By clicking &quot;I Agree&quot;, you acknowledge that you have read, understood, and agreed to these terms.</p>
                 </div>
 
                 <Checkbox

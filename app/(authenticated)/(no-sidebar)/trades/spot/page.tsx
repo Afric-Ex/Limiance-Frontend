@@ -120,10 +120,21 @@ function SpotTrades() {
   };
   const formatOrderDate = (value: unknown, timeOnly = false) => {
     if (!value) return "—";
-    const date = new Date(String(value));
-    if (Number.isNaN(date.getTime())) return "—";
-    return timeOnly ? date.toLocaleTimeString() : date.toLocaleString();
+    const raw = String(value);
+    const date = new Date(raw);
+    if (!Number.isNaN(date.getTime())) return timeOnly ? date.toLocaleTimeString() : date.toLocaleString();
+    return timeOnly ? (raw.split(/\s+/).pop() ?? raw) : raw;
   };
+  const getOrderPair = (order: any) =>
+    order?.pair || (order?.base && order?.quote ? `${order.base}/${order.quote}` : "—");
+  const getOrderTotal = (order: any) => {
+    const total = Number(order?.total);
+    if (Number.isFinite(total) && total >= 0) return total;
+    const price = Number(order?.price);
+    const qty = Number(order?.quantity ?? order?.amount);
+    return Number.isFinite(price) && Number.isFinite(qty) ? price * qty : null;
+  };
+  const isBuySide = (side: unknown) => String(side ?? "").toUpperCase() === "BUY";
 
   const isPositive = (feed.changePercent24h ?? 0) >= 0;
   const changeColor = isPositive ? "text-success-6" : "text-error-1";
@@ -408,16 +419,16 @@ function SpotTrades() {
                     {openOrders?.map((order: any) => (
                       <TableTr key={order.id}>
                         <TableTd><span className="text-xs text-white/70">{formatOrderDate(order.createdAt, true)}</span></TableTd>
-                        <TableTd><span className="text-xs font-semibold">{order.pair}</span></TableTd>
+                        <TableTd><span className="text-xs font-semibold">{getOrderPair(order)}</span></TableTd>
                         <TableTd><span className="text-xs text-white/70 capitalize">{order.type}</span></TableTd>
                         <TableTd>
-                          <span className={`text-xs font-bold ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>
+                          <span className={`text-xs font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>
                             {order.side?.toUpperCase()}
                           </span>
                         </TableTd>
                         <TableTd><span className="text-xs text-white/90">{formatOrderNumber(order.price)}</span></TableTd>
                         <TableTd><span className="text-xs text-white/90">{order.amount ?? order.quantity}</span></TableTd>
-                        <TableTd><span className="text-xs text-white/90">{formatOrderNumber(order.total)}</span></TableTd>
+                        <TableTd><span className="text-xs text-white/90">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></TableTd>
                         <TableTd>
                           <span className="text-xs text-white/40">
                             {order.takeProfit ? <span className="text-success-6">{order.takeProfit}</span> : "—"}
@@ -478,13 +489,13 @@ function SpotTrades() {
                     <tbody>
                       {orderHistory.map((order: any, idx: number) => (
                         <TableTr key={order.id ?? idx}>
-                          <TableTd><span className="text-xs text-white/70">{order.createdAt ? new Date(order.createdAt).toLocaleString() : "—"}</span></TableTd>
-                          <TableTd><span className="text-xs font-semibold">{order.pair ?? `${order.base}/${order.quote}`}</span></TableTd>
+                          <TableTd><span className="text-xs text-white/70">{formatOrderDate(order.createdAt)}</span></TableTd>
+                          <TableTd><span className="text-xs font-semibold">{getOrderPair(order)}</span></TableTd>
                           <TableTd><span className="text-xs text-white/70 capitalize">{order.type}</span></TableTd>
-                          <TableTd><span className={`text-xs font-bold ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span></TableTd>
+                          <TableTd><span className={`text-xs font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span></TableTd>
                           <TableTd><span className="text-xs text-white/90">{formatOrderNumber(order.price)}</span></TableTd>
                           <TableTd><span className="text-xs text-white/90">{order.amount ?? order.quantity}</span></TableTd>
-                          <TableTd><span className="text-xs text-white/90">{formatOrderNumber(order.total)}</span></TableTd>
+                          <TableTd><span className="text-xs text-white/90">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></TableTd>
                           <TableTd>
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               order.status === "filled" ? "bg-success-6/15 text-success-6" :
@@ -631,39 +642,6 @@ function SpotTrades() {
               />
             </TabsPanel>
           </Tabs>
-        </div>
-        
-        {/* Mobile Open Orders View */}
-        <div className="min-[1150px]:hidden bg-[#181a20] rounded flex flex-col p-4 mt-2">
-           <h3 className="text-base font-bold text-white mb-4">Open Orders ({openOrders?.length ?? 0})</h3>
-           {openOrdersLoading ? (
-             <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={3} columns={1} className="w-full" /></div>
-           ) : !openOrders?.length ? (
-             <div className="min-h-[120px] flex flex-col items-center justify-center gap-2">
-               <p className="text-xs font-medium text-white/30">No open orders</p>
-             </div>
-           ) : (
-             <div className="flex flex-col gap-3">
-               {openOrders.map((order: any) => (
-                 <div key={order.id} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2 relative">
-                   <div className="flex justify-between items-center">
-                     <span className="text-sm font-bold">{order.pair} <span className={`ml-2 text-xs uppercase ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>{order.side}</span></span>
-                     <button
-                        onClick={() => closeOrder(order.id)}
-                        disabled={closeOrderPending}
-                        className="text-xs font-semibold text-white/40 hover:text-primary transition-colors flex items-center gap-1"
-                      >
-                        Cancel
-                      </button>
-                   </div>
-                   <div className="grid grid-cols-2 gap-2 text-xs">
-                     <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
-                     <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{formatOrderNumber(order.price)}</span></div>
-                   </div>
-                 </div>
-               ))}
-             </div>
-           )}
         </div>
 
       </div>
@@ -838,12 +816,18 @@ function SpotTrades() {
                    {openOrders.map((order: any) => (
                      <div key={order.id} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2 relative">
                        <div className="flex justify-between items-center">
-                         <span className="text-sm font-bold">{order.pair} <span className={`ml-2 text-xs uppercase ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>{order.side}</span></span>
-                         <button onClick={() => closeOrder(order.id)} disabled={closeOrderPending} className="text-[10px] font-semibold text-white/40 hover:text-primary">Cancel</button>
+                         <div className="flex items-center gap-2 min-w-0">
+                           <span className="text-sm font-bold">{getOrderPair(order)}</span>
+                           <span className={`text-xs uppercase font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span>
+                         </div>
+                         <button onClick={() => closeOrder(order.id)} disabled={closeOrderPending} className="text-[10px] font-semibold text-white/40 hover:text-primary shrink-0">Cancel</button>
                        </div>
                        <div className="grid grid-cols-2 gap-2 text-xs">
-                         <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
+                         <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white text-right">{formatOrderDate(order.createdAt)}</span></div>
+                         <div className="flex justify-between"><span className="text-white/40">Type</span><span className="text-white capitalize">{order.type}</span></div>
                          <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{formatOrderNumber(order.price)}</span></div>
+                         <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
+                         <div className="flex justify-between"><span className="text-white/40">Total</span><span className="text-white">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></div>
                        </div>
                      </div>
                    ))}

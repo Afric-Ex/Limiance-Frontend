@@ -2,141 +2,105 @@
 
 import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } from "@mantine/core";
 import React, { useState } from "react";
-import { EmptyTable } from "../icons/empty-table";
-import clsx from "clsx";
 import { Search } from "../icons/search";
-import { DateInput } from "@mantine/dates";
 import { useQuery } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import {
+  fmtDate,
+  fmtNum,
+  getPair,
+  selectStyles,
+  searchInputClass,
+  sideTone,
+  StatusPill,
+  TableCard,
+  tableClassNames,
+  ChipToggle,
+} from "./orders-shared";
 
-const selectStyles = {
-  input: "!h-11 !rounded-lg !bg-transparent",
-  label: "!text-xs !font-medium",
-};
 const filters = ["Cross", "Isolated"];
 
 export const MarginOrderHistory = () => {
   const [filter, setFilter] = useState("Cross");
+  const [pair, setPair] = useState("");
 
-  const { data: history } = useQuery({
+  const { data: history, isLoading } = useQuery({
     queryKey: tradingKeys.marginOrderHistory,
-    queryFn: () =>
-      tradingService.marginOrderHistory(),
+    queryFn: () => tradingService.marginOrderHistory(),
     select: (res) => res.data,
   });
 
-  const hasHistory = history && history.length > 0;
+  const allHistory: any[] = Array.isArray(history) ? history : [];
+  const filtered = pair
+    ? allHistory.filter((o) => String(getPair(o)).toUpperCase().includes(pair.toUpperCase()))
+    : allHistory;
 
   return (
-    <div className="flex flex-col gap-9">
-      <div className="flex items-center gap-10">
-        <div className="flex bg-black/[42%] border border-gray-9/25 rounded-md gap-1 p-1">
-          {filters.map((item) => (
-            <span
-              key={item}
-              onClick={() => setFilter(item)}
-              className={clsx(
-                filter === item
-                  ? "bg-gray-13 rounded-md border-gray-9"
-                  : "border-black bg-black",
-                "py-2 cursor-pointer text-xs px-4  border "
-              )}
-            >
-              {item}
-            </span>
-          ))}
-        </div>
-        <div className="flex items-center gap-5">
-          <TextInput
-            classNames={{
-              input: "!h-11 !bg-gray-13 !border-0 !w-[386px] !rounded-full",
-            }}
-            placeholder="Search"
-            leftSection={<Search />}
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
+        <div className="flex flex-wrap gap-4 items-end">
+          <Select
+            label="Order"
+            data={["Limit / Market"]}
+            defaultValue="Limit / Market"
+            classNames={selectStyles}
+            className="w-[150px]"
           />
-          <span className="text-xs font-medium cursor-pointer">Reset</span>
+          <Select
+            label="Trade Side"
+            data={["All", "Buy", "Sell"]}
+            defaultValue="All"
+            classNames={selectStyles}
+            className="w-[140px]"
+          />
+          <ChipToggle value={filter} options={filters} onChange={setFilter} />
+        </div>
+        <div className="flex items-center gap-4">
+          <TextInput
+            classNames={searchInputClass}
+            placeholder="Search pair..."
+            leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
+            onChange={(e) => setPair(e.currentTarget.value)}
+          />
+          <button
+            className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
+            onClick={() => setPair("")}
+          >
+            Reset
+          </button>
         </div>
       </div>
-      <div className="flex gap-3">
-        <Select
-          label="Order"
-          data={["Limit/Market"]}
-          defaultValue="Limit/Market"
-          classNames={selectStyles}
-        />
-        <DateInput label="Date" classNames={selectStyles} />
-        <Select
-          label="Trading Pair"
-          data={["All"]}
-          defaultValue="All"
-          classNames={selectStyles}
-        />
-        <Select
-          label="Trade"
-          data={["Side"]}
-          defaultValue="Side"
-          classNames={selectStyles}
-        />
-        <Select
-          label="Sort By"
-          data={["Order Time"]}
-          defaultValue="Order Time"
-          classNames={selectStyles}
-        />
-      </div>
-      <div className="py-5 min-h-292px rounded-32px bg-gray-7 px-7 pb-9">
-        {hasHistory ? (
-          <Table classNames={{ th: "!text-gray-9 !text-sm", td: "!text-sm !py-4 !border-white/[8%]" }}>
-            <TableThead>
-              <TableTr>
-                <TableTh>Order Time</TableTh>
-                <TableTh>Trading Pair</TableTh>
-                <TableTh>Type</TableTh>
-                <TableTh>Side</TableTh>
-                <TableTh>Average</TableTh>
-                <TableTh>Price</TableTh>
-                <TableTh>Executed</TableTh>
-                <TableTh>Amount</TableTh>
-                <TableTh>Triggers Condition</TableTh>
-                <TableTh>Status</TableTh>
+
+      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No margin order history found.">
+        <Table classNames={tableClassNames}>
+          <TableThead>
+            <TableTr>
+              <TableTh className="pl-5">Order Time</TableTh>
+              <TableTh>Trading Pair</TableTh>
+              <TableTh>Type</TableTh>
+              <TableTh>Side</TableTh>
+              <TableTh>Price</TableTh>
+              <TableTh>Executed</TableTh>
+              <TableTh>Amount</TableTh>
+              <TableTh>Status</TableTh>
+            </TableTr>
+          </TableThead>
+          <TableTbody>
+            {filtered.map((order: any) => (
+              <TableTr key={order.id}>
+                <TableTd className="pl-5 text-white/50">{fmtDate(order.createdAt)}</TableTd>
+                <TableTd className="!text-white !font-bold">{getPair(order)}</TableTd>
+                <TableTd>{order.type ?? "—"}</TableTd>
+                <TableTd className={sideTone(order.side)}>{String(order.side ?? "—").toUpperCase()}</TableTd>
+                <TableTd>{fmtNum(order.price)}</TableTd>
+                <TableTd>{fmtNum(order.filled ?? 0)}</TableTd>
+                <TableTd>{fmtNum(order.amount ?? order.quantity)}</TableTd>
+                <TableTd><StatusPill status={order.status} /></TableTd>
               </TableTr>
-            </TableThead>
-            <TableTbody>
-              {history.map((order: any) => (
-                <TableTr key={order.id}>
-                  <TableTd>{new Date(order.createdAt).toLocaleString()}</TableTd>
-                  <TableTd>{order.pair ?? `${order.base}/${order.quote}`}</TableTd>
-                  <TableTd>{order.type}</TableTd>
-                  <TableTd className={order.side === "buy" ? "!text-green-400" : "!text-red-400"}>
-                    {order.side.toUpperCase()}
-                  </TableTd>
-                  <TableTd>{order.price?.toLocaleString() ?? "—"}</TableTd>
-                  <TableTd>{order.price?.toLocaleString() ?? "—"}</TableTd>
-                  <TableTd>{order.filled ?? 0}</TableTd>
-                  <TableTd>{order.amount ?? order.quantity}</TableTd>
-                  <TableTd>—</TableTd>
-                  <TableTd>
-                    <span className={
-                      order.status === "filled" ? "text-green-400" :
-                      order.status === "cancelled" ? "text-red-400" :
-                      "text-yellow-400"
-                    }>
-                      {order.status}
-                    </span>
-                  </TableTd>
-                </TableTr>
-              ))}
-            </TableTbody>
-          </Table>
-        ) : (
-          <div className="h-full flex items-center justify-center py-10">
-            <div className="flex flex-col items-center gap-4">
-              <EmptyTable />
-              <span className="text-xs font-medium text-gray-9">No Records</span>
-            </div>
-          </div>
-        )}
-      </div>
+            ))}
+          </TableTbody>
+        </Table>
+      </TableCard>
     </div>
   );
 };

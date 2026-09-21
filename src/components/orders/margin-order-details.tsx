@@ -1,102 +1,100 @@
 "use client";
 
-import { Select, Table, TableTh, TableTr, TextInput } from "@mantine/core";
+import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } from "@mantine/core";
 import React, { useState } from "react";
-import { EmptyTable } from "../icons/empty-table";
-import clsx from "clsx";
 import { Search } from "../icons/search";
-import { DateInput } from "@mantine/dates";
+import { useQuery } from "@tanstack/react-query";
+import { tradingKeys, tradingService } from "@/src/services/trading";
+import {
+  fmtDate,
+  fmtNum,
+  getAmount,
+  getPair,
+  selectStyles,
+  searchInputClass,
+  sideTone,
+  TableCard,
+  tableClassNames,
+  ChipToggle,
+} from "./orders-shared";
 
-const selectStyles = {
-  input: "!h-11 !rounded-lg !bg-transparent",
-  label: "!text-xs !font-medium",
-};
 const filters = ["Cross", "Isolated"];
 
 export const MarginOrderDetails = () => {
   const [filter, setFilter] = useState("Cross");
+  const [pair, setPair] = useState("");
+
+  const { data: records, isLoading } = useQuery({
+    queryKey: tradingKeys.marginOrderHistory,
+    queryFn: () => tradingService.marginOrderHistory(),
+    select: (res) => res.data,
+  });
+
+  const allRecords: any[] = Array.isArray(records) ? records : [];
+  const filtered = pair
+    ? allRecords.filter((r) => String(getPair(r)).toUpperCase().includes(pair.toUpperCase()))
+    : allRecords;
+
+  const fee = (r: any) =>
+    r.fee ?? r.commission ?? (r.feeAmount !== undefined ? r.feeAmount : null);
 
   return (
-    <div className="flex flex-col gap-9">
-      <div className="flex items-center gap-10">
-        <div className="flex bg-black/[42%] border border-gray-9/25 rounded-md gap-1 p-1">
-          {filters.map((item) => (
-            <span
-              key={item}
-              onClick={() => setFilter(item)}
-              className={clsx(
-                filter === item
-                  ? "bg-gray-13 rounded-md border-gray-9"
-                  : "border-black bg-black",
-                "py-2 cursor-pointer text-xs px-4  border "
-              )}
-            >
-              {item}
-            </span>
-          ))}
-        </div>
-        <div className="flex items-center gap-5">
-          <TextInput
-            classNames={{
-              input: "!h-11 !bg-gray-13 !border-0 !w-[386px] !rounded-full",
-            }}
-            placeholder="Search"
-            leftSection={<Search />}
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
+        <div className="flex flex-wrap gap-4 items-end">
+          <Select
+            label="Order"
+            data={["Limit / Market"]}
+            defaultValue="Limit / Market"
+            classNames={selectStyles}
+            className="w-[150px]"
           />
-          <span className="text-xs font-medium cursor-pointer">Reset</span>
+          <ChipToggle value={filter} options={filters} onChange={setFilter} />
+        </div>
+        <div className="flex items-center gap-4">
+          <TextInput
+            classNames={searchInputClass}
+            placeholder="Search pair..."
+            leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
+            onChange={(e) => setPair(e.currentTarget.value)}
+          />
+          <button
+            className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
+            onClick={() => setPair("")}
+          >
+            Reset
+          </button>
         </div>
       </div>
-      <div className="flex gap-3">
-        <Select
-          label="Order"
-          data={["Limit/Market"]}
-          defaultValue="Limit/Market"
-          classNames={selectStyles}
-        />
-        <DateInput label="Date" classNames={selectStyles} />
-        <Select
-          label="Trading Pair"
-          data={["All"]}
-          defaultValue="All"
-          classNames={selectStyles}
-        />
-        <Select
-          label="Trade"
-          data={["Side"]}
-          defaultValue="Side"
-          classNames={selectStyles}
-        />
-        <Select
-          label="Time"
-          data={["Last 7 Days"]}
-          defaultValue="Last 7 Days"
-          classNames={selectStyles}
-        />
-      </div>
-      <div className="py-5 h-292px rounded-32px bg-gray-7 px-7 pb-9 ">
-        <Table
-          classNames={{
-            th: "!text-gray-9 !text-sm",
-          }}
-        >
-          <TableTr>
-            <TableTh>Date</TableTh>
-            <TableTh>Trading Pair</TableTh>
-            <TableTh>Type</TableTh>
-            <TableTh>Price</TableTh>
-            <TableTh>Filled</TableTh>
-            <TableTh>Fee</TableTh>
-            <TableTh>Role</TableTh>
-            <TableTh>Total</TableTh>
-          </TableTr>
+
+      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No margin trade records found.">
+        <Table classNames={tableClassNames}>
+          <TableThead>
+            <TableTr>
+              <TableTh className="pl-5">Date</TableTh>
+              <TableTh>Trading Pair</TableTh>
+              <TableTh>Side</TableTh>
+              <TableTh>Price</TableTh>
+              <TableTh>Filled</TableTh>
+              <TableTh>Fee</TableTh>
+              <TableTh>Total</TableTh>
+            </TableTr>
+          </TableThead>
+          <TableTbody>
+            {filtered.map((r: any) => (
+              <TableTr key={r.id}>
+                <TableTd className="pl-5 text-white/50">{fmtDate(r.createdAt)}</TableTd>
+                <TableTd className="!text-white !font-bold">{getPair(r)}</TableTd>
+                <TableTd className={sideTone(r.side)}>{String(r.side ?? "—").toUpperCase()}</TableTd>
+                <TableTd>{fmtNum(r.price)}</TableTd>
+                <TableTd>{fmtNum(r.filled ?? getAmount(r))}</TableTd>
+                <TableTd>{fmtNum(fee(r))}</TableTd>
+                <TableTd>{fmtNum(r.total ?? (r.price && r.quantity ? r.price * r.quantity : null))}</TableTd>
+              </TableTr>
+            ))}
+          </TableTbody>
         </Table>
-        <div className="h-full flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <EmptyTable />
-            <span className="text-xs font-medium text-gray-9">No Records</span>
-          </div>
-        </div>
-      </div>
+      </TableCard>
     </div>
   );
 };

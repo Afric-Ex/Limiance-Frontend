@@ -15,4 +15,6 @@ export interface User {
   twoFaEnabled: boolean;
   emailOtpEnabled?: boolean;
   isVerified: boolean;
+  createdAt?: string | number;
+  accountCreatedAt?: string | number;
 }
