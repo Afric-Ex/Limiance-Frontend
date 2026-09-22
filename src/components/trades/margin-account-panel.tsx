@@ -15,7 +15,6 @@ import { useUserStore } from "@/src/stores/user-store";
 import { MdSearch } from "react-icons/md";
 import clsx from "clsx";
 import { Skeleton } from "@/src/components/shared/skeleton";
-import { useDailyPnl } from "@/src/hooks/use-daily-pnl";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { getCryptoIcon } from "@/src/utils/crypto-icons";
 
@@ -98,8 +97,10 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
   // ── Derived numbers ────────────────────────────────────────────────────────
   const totalUsd     = parseNum(marginBalance?.inUsd);
 
-  const { pnl, pnlPct } = useDailyPnl("margin");
-  const isPnlPos     = pnl >= 0;
+  // Server-provided 24h P&L. pnlPercentage is a fraction → ×100 for display.
+  const pnl       = parseNum(marginBalance?.pnl ?? "0");
+  const pnlPct    = parseNum(marginBalance?.pnlPercentage ?? "0") * 100;
+  const isPnlPos  = pnl >= 0;
 
   // Real-time backend margin metrics from WS
   const fallbackTotalUsd = parseNum(balances?.margin?.inUsd ?? "0");

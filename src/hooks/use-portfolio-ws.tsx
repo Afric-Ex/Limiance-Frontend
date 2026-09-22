@@ -123,11 +123,14 @@ export function normalizePortfolioCoins(coins: any[]): PortfolioCoin[] {
   return Array.from(merged.values());
 }
 
-/** Derive per-account USD totals from per-coin portfolio data */
+/** Derive per-account USD totals + server 24h P&L from per-coin portfolio data */
 function deriveAccountBalances(coins: any[]): Record<string, AccountBalance> {
   const totals: Record<string, number> = { spot: 0, funding: 0, futures: 0, margin: 0 };
+  const pnl: Record<string, number> = { spot: 0, funding: 0, futures: 0, margin: 0 };
+  const pnlPctWeighted: Record<string, number> = { spot: 0, funding: 0, futures: 0, margin: 0 };
+  const hasServerPnl: Record<string, boolean> = { spot: false, funding: false, futures: false, margin: false };
 
-  coins.forEach(c => {
+  coins.forEach((c) => {
     const price = parseFloat(c.currencyPrice || c.usdPrice || c.price || "0");
     const spot = parseFloat(c.spotBalance || c.spot_balance || c.balance || c.free || "0");
     const funding = parseFloat(c.fundingBalance || c.funding_balance || "0");
@@ -138,24 +141,54 @@ function deriveAccountBalances(coins: any[]): Record<string, AccountBalance> {
     totals.funding += funding * price;
     totals.futures += futures * price;
     totals.margin  += margin  * price;
+
+    // Server 24h P&L per coin (from get_portfolio)
+    const rawPnl = c.pnl ?? c.pnl_24h;
+    const coinPnl = rawPnl != null && rawPnl !== "" ? parseFloat(rawPnl) : NaN;
+    if (!Number.isFinite(coinPnl)) return;
+
+    const rawPct = c.pnlPercentage ?? c.pnl_percentage;
+    const coinPct = rawPct != null && rawPct !== "" ? parseFloat(rawPct) : NaN;
+
+    const totalBal = funding + futures + margin + spot;
+    const wallets: Array<[string, number]> = [
+      ["spot", spot],
+      ["funding", funding],
+      ["futures", futures],
+      ["margin", margin],
+    ];
+
+    for (const [key, bal] of wallets) {
+      if (bal <= 0) continue;
+      hasServerPnl[key] = true;
+      const share = totalBal > 0 ? bal / totalBal : 1;
+      const scaled = coinPnl * share;
+      pnl[key] += scaled;
+      // Aggregate the server pnlPercentage (fraction, e.g. 0.00496626) weighted
+      // by each coin's P&L contribution — no frontend price math.
+      if (Number.isFinite(coinPct) && scaled !== 0) {
+        pnlPctWeighted[key] += scaled * coinPct;
+      }
+    }
   });
 
   const btcCoin = coins.find((c) => c.symbol === "BTC");
   const btcPrice = parseFloat(btcCoin?.currencyPrice || btcCoin?.price || "1") || 1;
 
-  const makeBalance = (usd: number): AccountBalance => ({
+  const makeBalance = (usd: number, key: string): AccountBalance => ({
     inUsd: usd.toFixed(8),
     inBtc: (usd / btcPrice).toFixed(8),
     inNgn: (usd * 1600).toFixed(2),
-    pnl: "0",
-    pnlPercentage: "0",
+    pnl: hasServerPnl[key] ? pnl[key].toFixed(8) : "0",
+    pnlPercentage:
+      hasServerPnl[key] && pnl[key] !== 0 ? (pnlPctWeighted[key] / pnl[key]).toFixed(8) : "0",
   });
 
   return {
-    spot:    makeBalance(totals.spot),
-    funding: makeBalance(totals.funding),
-    futures: makeBalance(totals.futures),
-    margin:  makeBalance(totals.margin),
+    spot:    makeBalance(totals.spot, "spot"),
+    funding: makeBalance(totals.funding, "funding"),
+    futures: makeBalance(totals.futures, "futures"),
+    margin:  makeBalance(totals.margin, "margin"),
   };
 }
 

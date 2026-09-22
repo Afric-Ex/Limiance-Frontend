@@ -11,7 +11,6 @@ import { Withdraw } from "../icons/withdraw";
 import { useAssets } from "@/src/hooks/use-assets";
 import { useRouter } from "next/navigation";
 import { ConvertAsset } from "../transactions/convert-asset";
-import { useDailyPnl } from "@/src/hooks/use-daily-pnl";
 import { BalanceCloak } from "../shared/balance-cloak";
 import { BalanceRevealControl } from "../shared/balance-reveal-control";
 import { Skeleton } from "../shared/skeleton";
@@ -47,13 +46,14 @@ export const WalletCard = ({ title }: { title?: string }) => {
   const totalUsd = safeNum(acctBal?.inUsd);
   const totalBtc = safeNum(acctBal?.inBtc);
 
-  // Calculate real 24h P&L from Binance public API
-  const pnlAccount = singleAccount === "spot" ? "spot" : singleAccount === "margin" ? "margin" : singleAccount === "futures" ? "futures" : undefined;
-  const { pnl: pnlNum, pnlPct: pnlPctNum } = useDailyPnl(pnlAccount);
+  // Server-provided 24h P&L (from get_portfolio / get_portfolio_balance).
+  // pnlPercentage is a fraction (e.g. 0.00496626) → ×100 for display.
+  const pnl = safeNum(acctBal?.pnl);
+  const pnlPct = safeNum(acctBal?.pnlPercentage) * 100;
 
-  const pnlDisplay = (pnlNum >= 0 ? "+" : "") + pnlNum.toFixed(2);
-  const pnlPctDisplay = (pnlPctNum >= 0 ? "+" : "") + pnlPctNum.toFixed(2) + "%";
-  const isPnlUp = pnlNum >= 0;
+  const pnlDisplay = (pnl >= 0 ? "+" : "") + pnl.toFixed(2);
+  const pnlPctDisplay = (pnlPct >= 0 ? "+" : "") + pnlPct.toFixed(2) + "%";
+  const isPnlUp = pnl >= 0;
 
   const balance = { inUsd: totalUsd, inBtc: totalBtc };
 
