@@ -63,7 +63,7 @@ function MarginTrades() {
   const [quickOrderSide, setQuickOrderSide] = useState<"buy" | "sell">("buy");
 
   const feed = useMarketFeed(selectedPair);
-  const orderBook = useOrderBook(selectedPair);
+  const orderBook = useOrderBook(selectedPair, "margin");
   const queryClient = useQueryClient();
 
   const { data: marginAccount, isLoading: marginAccountLoading, refetch: refetchMarginAccount, isError: marginAccountError } = useQuery({
@@ -103,6 +103,16 @@ function MarginTrades() {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
     },
+    retry: false,
+    throwOnError: false,
+  });
+
+  const normalizedSymbol = selectedPair.replace(/[/\\\-_\s]/g, "").toUpperCase();
+
+  const { data: recentTrades, isLoading: recentTradesLoading } = useQuery({
+    queryKey: tradingKeys.spotRecentTrades(normalizedSymbol),
+    queryFn: () => tradingService.spotRecentTrades({ symbol: normalizedSymbol }),
+    select: (res: any) => (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []),
     retry: false,
     throwOnError: false,
   });
@@ -151,6 +161,53 @@ function MarginTrades() {
   const formatPrice = (val: number | null) =>
     val !== null ? val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : null;
 
+  const formatTime = (value: unknown) => {
+    if (!value) return "—";
+    const date = new Date(String(value));
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleTimeString();
+  };
+
+  // Shared renderer for recent market trades (desktop + mobile)
+  const renderRecentTrades = (limit = 20) => (
+    <div className="w-full">
+      {recentTradesLoading ? (
+        <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={5} columns={3} className="w-full" /></div>
+      ) : !recentTrades?.length ? (
+        <div className="p-4 text-center text-xs text-white/40">No recent trades</div>
+      ) : (
+        <div className="flex flex-col">
+          <div className="grid grid-cols-4 px-3 py-1.5 text-[10px] text-white/40">
+            <span>Time</span><span className="text-center">Direction</span><span className="text-right">Price</span><span className="text-right">Qty</span>
+          </div>
+          <div className="flex flex-col divide-y divide-white/[0.04]">
+            {[...recentTrades]
+              .sort((a: any, b: any) => {
+                const ta = new Date(a?.createdAt ?? a?.time ?? a?.ts ?? 0).getTime();
+                const tb = new Date(b?.createdAt ?? b?.time ?? b?.ts ?? 0).getTime();
+                return (Number.isNaN(tb) ? 0 : tb) - (Number.isNaN(ta) ? 0 : ta);
+              })
+              .slice(0, limit)
+              .map((t: any, i: number) => {
+              const side = String(t.side ?? "").toUpperCase();
+              const isBuy = side === "BUY";
+              const priceColor = isBuy ? "text-success-6" : side === "SELL" ? "text-error-1" : "text-white/80";
+              return (
+                <div key={t.id ?? t.tradeId ?? i} className="grid grid-cols-4 px-3 py-1.5 text-[11px] font-mono tabular-nums items-center">
+                  <span className="text-white/40">{formatTime(t.createdAt ?? t.time ?? t.ts)}</span>
+                  <span className="text-center">
+                    <span className={isBuy ? "text-success-6" : "text-error-1"}>{isBuy ? "BUY" : side === "SELL" ? "SELL" : "—"}</span>
+                  </span>
+                  <span className={"text-right " + priceColor}>{Number(t.price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span>
+                  <span className="text-right text-white/80">{Number(t.quantity ?? t.qty ?? t.filled).toLocaleString()}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const isPositive = (feed.changePercent24h ?? 0) >= 0;
   const changeColor = isPositive ? "text-success-6" : "text-error-1";
 
@@ -169,6 +226,44 @@ function MarginTrades() {
     setSelectedPair(`${base}/${quote}`);
     setPairSearch("");
   };
+
+  // Open margin orders already filtered by selectedPair (query key) — draw Entry/TP/SL on the chart
+  const chartOrderLevels =
+    (openOrders ?? []).flatMap((order: any) => {
+      const entry = Number(order.price ?? order.entryPrice);
+      const takeProfit = Number(order.takeProfit);
+      const stopLoss = Number(order.stopLoss);
+      const side = String(order.side ?? "").toUpperCase();
+      const amount = Number(order.amount ?? order.quantity);
+
+      return [
+        ...(entry
+          ? [{
+              id: `order-${order.id ?? entry}-entry`,
+              label: "Entry",
+              price: entry,
+              color: "entry" as const,
+              detail: `${side || "ORDER"}${amount ? ` ${amount}` : ""}`,
+            }]
+          : []),
+        ...(takeProfit
+          ? [{
+              id: `order-${order.id ?? takeProfit}-tp`,
+              label: "TP",
+              price: takeProfit,
+              color: "tp" as const,
+            }]
+          : []),
+        ...(stopLoss
+          ? [{
+              id: `order-${order.id ?? stopLoss}-sl`,
+              label: "SL",
+              price: stopLoss,
+              color: "sl" as const,
+            }]
+          : []),
+      ];
+    });
 
   const [base, quote] = selectedPair.split("/");
 
@@ -324,7 +419,7 @@ function MarginTrades() {
         {/* Chart Column (Responsive) */}
         <div className="flex flex-col gap-1 overflow-hidden min-w-0 min-[1150px]:col-start-1">
           <div className={clsx("bg-[#181a20] rounded relative flex flex-col transition-all duration-300", chartExpanded ? "h-[450px]" : "h-[280px] min-[1150px]:h-[520px]")}>
-            <CandlestickChart key={selectedPair} symbol={selectedPair} orderBook={orderBook} />
+            <CandlestickChart key={selectedPair} symbol={selectedPair} market="margin" orderBook={orderBook} orderLevels={chartOrderLevels} />
             
             {/* Mobile chart expand toggle */}
             <button 
@@ -476,9 +571,7 @@ function MarginTrades() {
                 )}
               </TabsPanel>
               <TabsPanel value="trades">
-                <div className="min-h-[120px] flex flex-col items-center justify-center gap-2">
-                  <p className="text-xs font-medium text-white/30">Trade history coming soon</p>
-                </div>
+                <div className="min-h-[120px]">{renderRecentTrades(50)}</div>
               </TabsPanel>
             </Tabs>
           </div>
@@ -647,11 +740,37 @@ function MarginTrades() {
 
       {/* MOBILE VIEW */}
       <div className="min-[1150px]:hidden flex flex-col flex-1 pb-[80px] min-h-0 relative">
+        {/* Mobile market stats strip */}
+        <div className="shrink-0 grid grid-cols-2 gap-x-3 gap-y-1.5 bg-[#181a20] border-b border-white/[0.06] px-4 py-2.5">
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="text-white/40">24h High</span>
+            <span className="text-white/90 font-semibold tabular-nums">{formatPrice(feed.high24h) ?? "—"}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="text-white/40">24h Low</span>
+            <span className="text-white/90 font-semibold tabular-nums">{formatPrice(feed.low24h) ?? "—"}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="text-white/40">24h Vol({base})</span>
+            <span className="text-white/90 font-semibold tabular-nums">{feed.volume24h !== null ? feed.volume24h.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—"}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="text-white/40">24h Vol({quote})</span>
+            <span className="text-white/90 font-semibold tabular-nums">{feed.volume24h !== null && feed.price !== null ? (feed.volume24h * feed.price).toLocaleString("en-US", { maximumFractionDigits: 0 }) : "—"}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px] col-span-2">
+            <span className="text-white/40">24h Change</span>
+            <span className={`font-semibold tabular-nums ${changeColor}`}>
+              {feed.change24h !== null ? formatPrice(feed.change24h) : "—"}
+              {feed.changePercent24h !== null ? ` (${feed.changePercent24h >= 0 ? "+" : ""}${feed.changePercent24h.toFixed(2)}%)` : ""}
+            </span>
+          </div>
+        </div>
         {mobileMode === "chart" ? (
           // --- CHART VIEW ---
           <div className="flex flex-col flex-1 overflow-auto custom-scrollbar pb-[65px]">
             <div className="h-[400px] shrink-0 bg-[#181a20]">
-              <CandlestickChart key={selectedPair} symbol={selectedPair} orderBook={orderBook} />
+<CandlestickChart key={selectedPair} symbol={selectedPair} market="margin" orderBook={orderBook} orderLevels={chartOrderLevels} />
             </div>
             
             {/* Bottom Action Bar */}
@@ -715,7 +834,7 @@ function MarginTrades() {
               </TabsPanel>
               
               <TabsPanel value="trades">
-                <div className="p-4 text-center text-xs text-white/40">No recent trades</div>
+                <div className="flex flex-col p-2">{renderRecentTrades(30)}</div>
               </TabsPanel>
             </Tabs>
 
@@ -793,31 +912,76 @@ function MarginTrades() {
               </div>
             </div>
 
-            {/* Open Orders Section */}
-            <div className="bg-[#181a20] rounded flex flex-col p-4 mt-2 mb-[80px]">
-               <h3 className="text-sm font-bold text-white mb-4">Open Orders ({openOrders?.length ?? 0})</h3>
-               {openOrdersLoading ? (
-                 <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={3} columns={1} className="w-full" /></div>
-               ) : !openOrders?.length ? (
-                 <div className="min-h-[100px] flex flex-col items-center justify-center gap-2">
-                   <p className="text-[10px] font-medium text-white/30">No open orders</p>
-                 </div>
-               ) : (
-                 <div className="flex flex-col gap-3">
-                   {openOrders.map((order: any) => (
-                     <div key={order.id} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2 relative">
-                       <div className="flex justify-between items-center">
-                         <span className="text-sm font-bold">{order.pair} <span className={`ml-2 text-xs uppercase ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>{order.side}</span></span>
-                         <button onClick={() => closeOrder(order.id)} disabled={closeOrderPending} className="text-[10px] font-semibold text-white/40 hover:text-primary">Cancel</button>
+            {/* Open Orders / History / Trades */}
+            <div className="bg-[#181a20] rounded flex flex-col mt-2 mb-[80px]">
+               <Tabs
+                 defaultValue="open"
+                 classNames={{
+                   tab: "!py-3 !px-3 flex-1 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50",
+                   list: "border-b border-white/[0.06] flex items-center before:!border-0 w-full px-2",
+                   panel: "!p-4",
+                 }}
+               >
+                 <TabsList>
+                   <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
+                   <TabsTab value="history">Order History</TabsTab>
+                   <TabsTab value="trades">Trades</TabsTab>
+                 </TabsList>
+                 <TabsPanel value="open">
+                 {openOrdersLoading ? (
+                   <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={3} columns={1} className="w-full" /></div>
+                 ) : !openOrders?.length ? (
+                   <div className="min-h-[100px] flex flex-col items-center justify-center gap-2">
+                     <p className="text-[10px] font-medium text-white/30">No open orders</p>
+                   </div>
+                 ) : (
+                   <div className="flex flex-col gap-3">
+                     {openOrders.map((order: any) => (
+                       <div key={order.id} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2 relative">
+                         <div className="flex justify-between items-center">
+                           <span className="text-sm font-bold">{order.pair} <span className={`ml-2 text-xs uppercase ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>{order.side}</span></span>
+                           <button onClick={() => closeOrder(order.id)} disabled={closeOrderPending} className="text-[10px] font-semibold text-white/40 hover:text-primary">Cancel</button>
+                         </div>
+                         <div className="grid grid-cols-2 gap-2 text-xs">
+                           <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{order.price?.toLocaleString()}</span></div>
+                         </div>
                        </div>
-                       <div className="grid grid-cols-2 gap-2 text-xs">
-                         <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
-                         <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{order.price?.toLocaleString()}</span></div>
+                     ))}
+                   </div>
+                 )}
+                 </TabsPanel>
+                 <TabsPanel value="history">
+                 {orderHistoryLoading ? (
+                   <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={3} columns={1} className="w-full" /></div>
+                 ) : !orderHistory?.length ? (
+                   <div className="min-h-[100px] flex flex-col items-center justify-center gap-2">
+                     <p className="text-[10px] font-medium text-white/30">No order history</p>
+                   </div>
+                 ) : (
+                   <div className="flex flex-col gap-3">
+                     {orderHistory.map((order: any, idx: number) => (
+                       <div key={order.id ?? idx} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
+                         <div className="flex justify-between items-center gap-2">
+                           <span className="text-sm font-bold truncate">{order.pair ?? `${order.base}/${order.quote}`} <span className={`ml-2 text-xs uppercase font-bold ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span></span>
+                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${order.status === "filled" ? "bg-success-6/15 text-success-6" : order.status === "cancelled" ? "bg-error-1/15 text-error-1" : "bg-white/10 text-white/50"}`}>{order.status}</span>
+                         </div>
+                         <div className="grid grid-cols-2 gap-2 text-xs">
+                           <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white text-right">{order.createdAt ? new Date(order.createdAt).toLocaleString() : "—"}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Type</span><span className="text-white capitalize">{order.type}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{order.price?.toLocaleString()}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Total</span><span className="text-white">{order.total?.toLocaleString()}</span></div>
+                         </div>
                        </div>
-                     </div>
-                   ))}
-                 </div>
-               )}
+                     ))}
+                   </div>
+                 )}
+                 </TabsPanel>
+                 <TabsPanel value="trades">
+                   {renderRecentTrades(30)}
+                 </TabsPanel>
+               </Tabs>
             </div>
           </div>
         )}

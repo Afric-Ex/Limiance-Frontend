@@ -17,19 +17,22 @@ import {
   tableClassNames,
 } from "./orders-shared";
 
+export const normalizeSymbol = (value: string) =>
+  String(value ?? "")
+    .replace(/[-/_\\\s]+/g, "")
+    .toUpperCase();
+
 export const OrderDetails = () => {
-  const [pair, setPair] = useState("");
+  const [symbol, setSymbol] = useState("BTCUSDT");
 
   const { data: trades, isLoading } = useQuery({
-    queryKey: tradingKeys.spotRecentTrades,
-    queryFn: () => tradingService.spotRecentTrades(),
+    queryKey: tradingKeys.spotRecentTrades(symbol),
+    queryFn: () => tradingService.spotRecentTrades({ symbol }),
     select: (res) => res.data,
   });
 
   const allTrades: any[] = Array.isArray(trades) ? trades : [];
-  const filtered = pair
-    ? allTrades.filter((t) => String(getPair(t)).toUpperCase().includes(pair.toUpperCase()))
-    : allTrades;
+  const filtered = allTrades;
 
   const fee = (t: any) =>
     t.fee ?? t.commission ?? (t.feeAmount !== undefined ? t.feeAmount : null);
@@ -49,13 +52,14 @@ export const OrderDetails = () => {
         <div className="flex items-center gap-4">
           <TextInput
             classNames={searchInputClass}
-            placeholder="Search pair..."
+            placeholder={symbol === "BTCUSDT" ? "BTCUSDT" : "Search pair..."}
+            value={symbol}
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
-            onChange={(e) => setPair(e.currentTarget.value)}
+            onChange={(e) => setSymbol(normalizeSymbol(e.currentTarget.value))}
           />
           <button
             className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
-            onClick={() => setPair("")}
+            onClick={() => setSymbol("BTCUSDT")}
           >
             Reset
           </button>

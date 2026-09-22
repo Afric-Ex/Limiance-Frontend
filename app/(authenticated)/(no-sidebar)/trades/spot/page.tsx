@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "@/src/components/icons/search";
-import { PlaceSpot } from "@/src/components/trades/place-spot";
+import { PlaceSpot, type TpslPreview } from "@/src/components/trades/place-spot";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { useOrderBook } from "@/src/hooks/use-order-book";
@@ -43,6 +43,8 @@ const CandlestickChart = dynamic(
   { ssr: false, loading: () => <Skeleton variant="chart" height="100%" /> }
 );
 
+import type { OrderLevel } from "@/src/components/trades/candlestick-char";
+
 type TradeMode = "spot" | "cross" | "isolated";
 
 function SpotTrades() {
@@ -60,9 +62,10 @@ function SpotTrades() {
   const [mobileMode, setMobileMode] = useState<"trade" | "chart">("chart");
   const [quickOrderOpen, setQuickOrderOpen] = useState(false);
   const [quickOrderSide, setQuickOrderSide] = useState<"buy" | "sell">("buy");
+  const [tpslPreview, setTpslPreview] = useState<TpslPreview>({});
 
   const feed = useMarketFeed(selectedPair);
-  const orderBook = useOrderBook(selectedPair);
+  const orderBook = useOrderBook(selectedPair, "spot");
   const queryClient = useQueryClient();
   const { refreshBalances } = usePortfolioWs();
 
@@ -84,6 +87,16 @@ function SpotTrades() {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
     },
+    retry: false,
+    throwOnError: false,
+  });
+
+  const normalizedSymbol = selectedPair.replace(/[/\\\-_\s]/g, "").toUpperCase();
+
+  const { data: recentTrades, isLoading: recentTradesLoading } = useQuery({
+    queryKey: tradingKeys.spotRecentTrades(normalizedSymbol),
+    queryFn: () => tradingService.spotRecentTrades({ symbol: normalizedSymbol }),
+    select: (res: any) => (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []),
     retry: false,
     throwOnError: false,
   });
@@ -136,6 +149,47 @@ function SpotTrades() {
   };
   const isBuySide = (side: unknown) => String(side ?? "").toUpperCase() === "BUY";
 
+  // Shared renderer for recent market trades (desktop + mobile)
+  const renderRecentTrades = (limit = 20) => (
+    <div className="w-full">
+      {recentTradesLoading ? (
+        <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={5} columns={3} className="w-full" /></div>
+      ) : !recentTrades?.length ? (
+        <div className="p-4 text-center text-xs text-white/40">No recent trades</div>
+      ) : (
+        <div className="flex flex-col">
+          <div className="grid grid-cols-4 px-3 py-1.5 text-[10px] text-white/40">
+            <span>Time</span><span className="text-center">Direction</span><span className="text-right">Price</span><span className="text-right">Qty</span>
+          </div>
+          <div className="flex flex-col divide-y divide-white/[0.04]">
+            {[...recentTrades]
+              .sort((a: any, b: any) => {
+                const ta = new Date(a?.createdAt ?? a?.time ?? a?.ts ?? 0).getTime();
+                const tb = new Date(b?.createdAt ?? b?.time ?? b?.ts ?? 0).getTime();
+                return (Number.isNaN(tb) ? 0 : tb) - (Number.isNaN(ta) ? 0 : ta);
+              })
+              .slice(0, limit)
+              .map((t: any, i: number) => {
+              const side = String(t.side ?? "").toUpperCase();
+              const isBuy = side === "BUY";
+              const priceColor = isBuy ? "text-success-6" : side === "SELL" ? "text-error-1" : "text-white/80";
+              return (
+                <div key={t.id ?? t.tradeId ?? i} className="grid grid-cols-4 px-3 py-1.5 text-[11px] font-mono tabular-nums items-center">
+                  <span className="text-white/40">{formatOrderDate(t.createdAt ?? t.time ?? t.ts, true)}</span>
+                  <span className="text-center">
+                    <span className={isBuy ? "text-success-6" : "text-error-1"}>{isBuy ? "BUY" : side === "SELL" ? "SELL" : "—"}</span>
+                  </span>
+                  <span className={"text-right " + priceColor}>{Number(t.price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span>
+                  <span className="text-right text-white/80">{Number(t.quantity ?? t.qty ?? t.filled).toLocaleString()}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const isPositive = (feed.changePercent24h ?? 0) >= 0;
   const changeColor = isPositive ? "text-success-6" : "text-error-1";
 
@@ -161,7 +215,7 @@ function SpotTrades() {
 
   const orderBookMidPrice = bestAsk && bestBid ? (bestAsk + bestBid) / 2 : bestAsk ?? bestBid ?? null;
   const effectiveMarketPrice = feed.price ?? selectedMarket?.last_price ?? selectedMarket?.lastPrice ?? selectedMarket?.price ?? orderBookMidPrice;
-  const chartOrderLevels = (openOrders ?? []).flatMap((order: any) => {
+  const chartOrderLevels: OrderLevel[] = (openOrders ?? []).flatMap((order: any) => {
     const entry = Number(order.price ?? order.entryPrice);
     const takeProfit = Number(order.takeProfit);
     const stopLoss = Number(order.stopLoss);
@@ -196,6 +250,15 @@ function SpotTrades() {
         : []),
     ];
   });
+
+  // Live TP/SL preview from the order form, shown before the order is placed
+  const previewTpslLevels: OrderLevel[] = [];
+  const isFinitePositive = (v: number | undefined): v is number => Number.isFinite(v) && (v ?? 0) > 0;
+  if (isFinitePositive(tpslPreview.buyTp)) previewTpslLevels.push({ id: "preview-tp-buy", label: "TP", price: tpslPreview.buyTp, color: "tp", detail: "BUY" });
+  if (isFinitePositive(tpslPreview.buySl)) previewTpslLevels.push({ id: "preview-sl-buy", label: "SL", price: tpslPreview.buySl, color: "sl", detail: "BUY" });
+  if (isFinitePositive(tpslPreview.sellTp)) previewTpslLevels.push({ id: "preview-tp-sell", label: "TP", price: tpslPreview.sellTp, color: "tp", detail: "SELL" });
+  if (isFinitePositive(tpslPreview.sellSl)) previewTpslLevels.push({ id: "preview-sl-sell", label: "SL", price: tpslPreview.sellSl, color: "sl", detail: "SELL" });
+  previewTpslLevels.forEach((level) => chartOrderLevels.push(level));
 
   const [base, quote] = selectedPair.split("/");
 
@@ -355,6 +418,7 @@ function SpotTrades() {
             <CandlestickChart
               key={selectedPair}
               symbol={selectedPair}
+              market="spot"
               orderBook={orderBook}
               orderLevels={chartOrderLevels}
               priceRange={{ min: feed.low24h, max: feed.high24h }}
@@ -510,9 +574,7 @@ function SpotTrades() {
                 )}
               </TabsPanel>
               <TabsPanel value="trades">
-                <div className="min-h-[120px] flex flex-col items-center justify-center gap-2">
-                  <p className="text-xs font-medium text-white/30">Trade history coming soon</p>
-                </div>
+                <div className="min-h-[120px]">{renderRecentTrades(50)}</div>
               </TabsPanel>
             </Tabs>
           </div>
@@ -619,7 +681,7 @@ function SpotTrades() {
               <TabsTab value="isolated" className="flex-1">Isolated {tradeMode === "isolated" ? `${leverage}x` : "10x"}</TabsTab>
             </TabsList>
             <TabsPanel value="spot">
-              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} />
+              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} onTpslChange={setTpslPreview} />
             </TabsPanel>
             <TabsPanel value="cross">
               <PlaceSpot
@@ -629,6 +691,7 @@ function SpotTrades() {
                 onLeverageChange={setLeverage}
                 marketPrice={effectiveMarketPrice}
                 clickedPrice={clickedPrice}
+                onTpslChange={setTpslPreview}
               />
             </TabsPanel>
             <TabsPanel value="isolated">
@@ -639,6 +702,7 @@ function SpotTrades() {
                 onLeverageChange={setLeverage}
                 marketPrice={effectiveMarketPrice}
                 clickedPrice={clickedPrice}
+                onTpslChange={setTpslPreview}
               />
             </TabsPanel>
           </Tabs>
@@ -650,6 +714,32 @@ function SpotTrades() {
 
       {/* MOBILE VIEW */}
       <div className="min-[1150px]:hidden flex flex-col flex-1 pb-[80px] min-h-0 relative">
+        {/* Mobile market stats strip */}
+        <div className="shrink-0 grid grid-cols-2 gap-x-3 gap-y-1.5 bg-[#181a20] border-b border-white/[0.06] px-4 py-2.5">
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="text-white/40">24h High</span>
+            <span className="text-white/90 font-semibold tabular-nums">{formatPrice(feed.high24h) ?? "—"}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="text-white/40">24h Low</span>
+            <span className="text-white/90 font-semibold tabular-nums">{formatPrice(feed.low24h) ?? "—"}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="text-white/40">24h Vol({base})</span>
+            <span className="text-white/90 font-semibold tabular-nums">{feed.volume24h !== null ? feed.volume24h.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—"}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="text-white/40">24h Vol({quote})</span>
+            <span className="text-white/90 font-semibold tabular-nums">{feed.volume24h !== null && feed.price !== null ? (feed.volume24h * feed.price).toLocaleString("en-US", { maximumFractionDigits: 0 }) : "—"}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px] col-span-2">
+            <span className="text-white/40">24h Change</span>
+            <span className={`font-semibold tabular-nums ${changeColor}`}>
+              {feed.change24h !== null ? formatPrice(feed.change24h) : "—"}
+              {feed.changePercent24h !== null ? ` (${feed.changePercent24h >= 0 ? "+" : ""}${feed.changePercent24h.toFixed(2)}%)` : ""}
+            </span>
+          </div>
+        </div>
         {mobileMode === "chart" ? (
           // --- CHART VIEW ---
           <div className="flex flex-col flex-1 overflow-auto custom-scrollbar pb-[65px]">
@@ -657,6 +747,7 @@ function SpotTrades() {
               <CandlestickChart
                 key={selectedPair}
                 symbol={selectedPair}
+                market="spot"
                 orderBook={orderBook}
                 orderLevels={chartOrderLevels}
                 priceRange={{ min: feed.low24h, max: feed.high24h }}
@@ -724,7 +815,7 @@ function SpotTrades() {
               </TabsPanel>
               
               <TabsPanel value="trades">
-                <div className="p-4 text-center text-xs text-white/40">No recent trades</div>
+                <div className="flex flex-col p-2">{renderRecentTrades(30)}</div>
               </TabsPanel>
             </Tabs>
 
@@ -749,10 +840,10 @@ function SpotTrades() {
                     <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
                   </TabsList>
                   <TabsPanel value="buy">
-                    <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" />
+                    <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" onTpslChange={setTpslPreview} />
                   </TabsPanel>
                   <TabsPanel value="sell">
-                    <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" />
+                    <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" onTpslChange={setTpslPreview} />
                   </TabsPanel>
                 </Tabs>
               </div>
@@ -802,37 +893,82 @@ function SpotTrades() {
               </div>
             </div>
 
-            {/* Open Orders Section */}
-            <div className="bg-[#181a20] rounded flex flex-col p-4 mt-2">
-               <h3 className="text-sm font-bold text-white mb-4">Open Orders ({openOrders?.length ?? 0})</h3>
-               {openOrdersLoading ? (
-                 <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={3} columns={1} className="w-full" /></div>
-               ) : !openOrders?.length ? (
-                 <div className="min-h-[100px] flex flex-col items-center justify-center gap-2">
-                   <p className="text-[10px] font-medium text-white/30">No open orders</p>
-                 </div>
-               ) : (
-                 <div className="flex flex-col gap-3">
-                   {openOrders.map((order: any) => (
-                     <div key={order.id} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2 relative">
-                       <div className="flex justify-between items-center">
-                         <div className="flex items-center gap-2 min-w-0">
-                           <span className="text-sm font-bold">{getOrderPair(order)}</span>
-                           <span className={`text-xs uppercase font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span>
+            {/* Open Orders / History / Trades */}
+            <div className="bg-[#181a20] rounded flex flex-col mt-2">
+               <Tabs
+                 defaultValue="open"
+                 classNames={{
+                   tab: "!py-3 !px-3 flex-1 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50",
+                   list: "border-b border-white/[0.06] flex items-center before:!border-0 w-full px-2",
+                   panel: "!p-4",
+                 }}
+               >
+                 <TabsList>
+                   <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
+                   <TabsTab value="history">Order History</TabsTab>
+                   <TabsTab value="trades">Trades</TabsTab>
+                 </TabsList>
+                 <TabsPanel value="open">
+                 {openOrdersLoading ? (
+                   <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={3} columns={1} className="w-full" /></div>
+                 ) : !openOrders?.length ? (
+                   <div className="min-h-[100px] flex flex-col items-center justify-center gap-2">
+                     <p className="text-[10px] font-medium text-white/30">No open orders</p>
+                   </div>
+                 ) : (
+                   <div className="flex flex-col gap-3">
+                     {openOrders.map((order: any) => (
+                       <div key={order.id} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2 relative">
+                         <div className="flex justify-between items-center">
+                           <div className="flex items-center gap-2 min-w-0">
+                             <span className="text-sm font-bold">{getOrderPair(order)}</span>
+                             <span className={`text-xs uppercase font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span>
+                           </div>
+                           <button onClick={() => closeOrder(order.id)} disabled={closeOrderPending} className="text-[10px] font-semibold text-white/40 hover:text-primary shrink-0">Cancel</button>
                          </div>
-                         <button onClick={() => closeOrder(order.id)} disabled={closeOrderPending} className="text-[10px] font-semibold text-white/40 hover:text-primary shrink-0">Cancel</button>
+                         <div className="grid grid-cols-2 gap-2 text-xs">
+                           <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white text-right">{formatOrderDate(order.createdAt)}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Type</span><span className="text-white capitalize">{order.type}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{formatOrderNumber(order.price)}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Total</span><span className="text-white">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></div>
+                         </div>
                        </div>
-                       <div className="grid grid-cols-2 gap-2 text-xs">
-                         <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white text-right">{formatOrderDate(order.createdAt)}</span></div>
-                         <div className="flex justify-between"><span className="text-white/40">Type</span><span className="text-white capitalize">{order.type}</span></div>
-                         <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{formatOrderNumber(order.price)}</span></div>
-                         <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
-                         <div className="flex justify-between"><span className="text-white/40">Total</span><span className="text-white">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></div>
+                     ))}
+                   </div>
+                 )}
+                 </TabsPanel>
+                 <TabsPanel value="history">
+                 {orderHistoryLoading ? (
+                   <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={3} columns={1} className="w-full" /></div>
+                 ) : !orderHistory?.length ? (
+                   <div className="min-h-[100px] flex flex-col items-center justify-center gap-2">
+                     <p className="text-[10px] font-medium text-white/30">No order history</p>
+                   </div>
+                 ) : (
+                   <div className="flex flex-col gap-3">
+                     {orderHistory.map((order: any, idx: number) => (
+                       <div key={order.id ?? idx} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
+                         <div className="flex justify-between items-center gap-2">
+                           <span className="text-sm font-bold truncate">{getOrderPair(order)} <span className={`ml-2 text-xs uppercase font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span></span>
+                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${order.status === "filled" ? "bg-success-6/15 text-success-6" : order.status === "cancelled" ? "bg-error-1/15 text-error-1" : "bg-white/10 text-white/50"}`}>{order.status}</span>
+                         </div>
+                         <div className="grid grid-cols-2 gap-2 text-xs">
+                           <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white text-right">{formatOrderDate(order.createdAt)}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Type</span><span className="text-white capitalize">{order.type}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{formatOrderNumber(order.price)}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
+                           <div className="flex justify-between"><span className="text-white/40">Total</span><span className="text-white">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></div>
+                         </div>
                        </div>
-                     </div>
-                   ))}
-                 </div>
-               )}
+                     ))}
+                   </div>
+                 )}
+                 </TabsPanel>
+                 <TabsPanel value="trades">
+                   {renderRecentTrades(30)}
+                 </TabsPanel>
+               </Tabs>
             </div>
           </div>
         )}
@@ -854,10 +990,10 @@ function SpotTrades() {
               <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
             </TabsList>
             <TabsPanel value="buy">
-              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" />
+              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" onTpslChange={setTpslPreview} />
             </TabsPanel>
             <TabsPanel value="sell">
-              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" />
+              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" onTpslChange={setTpslPreview} />
             </TabsPanel>
           </Tabs>
         </div>

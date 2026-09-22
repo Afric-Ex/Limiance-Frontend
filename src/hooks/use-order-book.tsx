@@ -20,7 +20,14 @@ interface OrderBookData {
   lastUpdated: Date | null;
 }
 
-export const useOrderBook = (pair: string): OrderBookData => {
+export type OrderBookMarket = "spot" | "margin" | "futures";
+
+const wsPairForMarket = (pair: string, market: OrderBookMarket) =>
+  market === "margin"
+    ? pair.replace(/[/\\\-_\s]/g, "").toUpperCase()
+    : pair.replace("/", "-");
+
+export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): OrderBookData => {
   const [data, setData] = useState<OrderBookData>({
     buyOrders: [],
     sellOrders: [],
@@ -33,9 +40,10 @@ export const useOrderBook = (pair: string): OrderBookData => {
   });
 
   const fetchHttpFallback = useCallback(async () => {
+    // Margin order books are websocket-only — no HTTP fallback endpoint.
+    if (market === "margin") return;
     try {
-      const wsPair = pair.replace("/", "-");
-      const res = await api.get("trading/spot/orderbook", { params: { symbol: pair } });
+      const res = await api.get(`trading/${market}/orderbook`, { params: { symbol: pair } });
       const payload = res.data?.data || res.data || {};
       
       const rawBids = Array.isArray(payload.bids) ? payload.bids : [];
@@ -67,14 +75,14 @@ export const useOrderBook = (pair: string): OrderBookData => {
     } catch (err) {
       console.error("HTTP fallback for orderbook failed", err);
     }
-  }, [pair]);
+  }, [pair, market]);
 
   // --- real mode: single shared WebSocket connection via wsClient ---
   useEffect(() => {
     fetchHttpFallback();
 
-    const wsPair = pair.replace("/", "-");
-    const payload = { type: "get_spot_order_books", data: { pair: wsPair } };
+    const wsPair = wsPairForMarket(pair, market);
+    const payload = { type: `get_${market}_order_books`, data: { pair: wsPair } };
 
     const unsubscribeStatus = wsClient.onStatusChange((connected) => {
       setData((prev) => ({ ...prev, isConnected: connected }));
@@ -87,11 +95,23 @@ export const useOrderBook = (pair: string): OrderBookData => {
       "order_book_update",
       payload,
       (dataPayload) => {
-        const book = dataPayload?.orderBook;
+        const book = dataPayload?.orderBook ?? dataPayload?.data?.orderBook ?? dataPayload;
         if (!book) return;
 
-        const buyOrders: OrderBookEntry[] = Array.isArray(book.buyOrders) ? book.buyOrders : [];
-        const sellOrders: OrderBookEntry[] = Array.isArray(book.sellOrders) ? book.sellOrders : [];
+        const normalize = (entries: any): OrderBookEntry[] => {
+          if (!Array.isArray(entries)) return [];
+          return entries.slice(0, 50).map((e: any) => ({
+            price: parseFloat(e.price ?? e[0] ?? "0"),
+            quantity: parseFloat(e.quantity ?? e.size ?? e[1] ?? "0"),
+          }));
+        };
+
+        const rawBuy = book.buyOrders ?? book.bids;
+        const rawSell = book.sellOrders ?? book.asks;
+        if (!Array.isArray(rawBuy) && !Array.isArray(rawSell)) return;
+
+        const buyOrders = normalize(rawBuy);
+        const sellOrders = normalize(rawSell);
 
         setData({
           buyOrders,
@@ -110,7 +130,7 @@ export const useOrderBook = (pair: string): OrderBookData => {
       unsubscribeStatus();
       unsubscribeMessages();
     };
-  }, [pair, fetchHttpFallback]);
+  }, [pair, market, fetchHttpFallback]);
 
   return data;
 };

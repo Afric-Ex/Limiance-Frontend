@@ -5,6 +5,7 @@ import { EmptyTable } from "../icons/empty-table";
 import { DateInput } from "@mantine/dates";
 import { useQuery } from "@tanstack/react-query";
 import { tradingService, tradingKeys } from "@/src/services/trading";
+import { parseDate } from "./orders-shared";
 
 const selectStyles = {
   input: "!h-11 !rounded-xl !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !text-white !bg-[#181a20] !text-sm !font-medium !transition-all !duration-200",
@@ -86,7 +87,7 @@ export const SpotRecords = () => {
                         <TableTd>
                           <span className={isBuy ? "text-emerald-400" : "text-red-400"}>{rec.side}</span>
                         </TableTd>
-                        <TableTd>{rec.createdAt ? new Date(rec.createdAt).toLocaleString() : '—'}</TableTd>
+                        <TableTd>{parseDate(rec.createdAt)?.toLocaleString() ?? '—'}</TableTd>
                         <TableTd className="font-mono">{Number(rec.price || 0).toLocaleString()}</TableTd>
                         <TableTd className="font-mono">{Number(rec.quantity || rec.amount || 0).toLocaleString()}</TableTd>
                         <TableTd className="capitalize">{rec.status || 'Closed'}</TableTd>

@@ -2,13 +2,11 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { IoSearchOutline, IoChevronBackOutline, IoChevronForwardOutline } from "react-icons/io5";
 import { MdStar, MdStarBorder } from "react-icons/md";
 import { getCryptoIcon } from "@/src/utils/crypto-icons";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
-import { tradingKeys, tradingService } from "@/src/services/trading";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { MarketsPageSkeleton } from "@/src/components/skeletons/with-sidebar";
@@ -23,46 +21,19 @@ type TokenRow = {
   high24h: number;
   low24h: number;
   image?: string;
+  category?: string;
   leverage?: string;
-  feeTag?: string;
-  isMock?: boolean;
-  suffix?: string;
+  sparkline?: number[];
 };
 
-// Mocks to populate different tabs and match the high-fidelity screenshot
-const RECENT_SCREENSHOT_TOKENS = [
-  { symbol: "BTC", pair: "BTC/USDC", price: 66508, change: 2.83, high24h: 66605.8, low24h: 64025.4, volume: 23120000, leverage: "10X" },
-  { symbol: "XRP", pair: "XRP/USDT", price: 1.1396, change: 3.53, high24h: 1.1398, low24h: 1.0864, volume: 18980000, leverage: "10X" },
-  { symbol: "INJ", pair: "INJ/USDT", price: 5.374, change: 1.99, high24h: 5.487, low24h: 5.228, volume: 18520000, leverage: "10X" },
-  { symbol: "ENA", pair: "ENA/USDT", price: 0.08683, change: 6.16, high24h: 0.08767, low24h: 0.08067, volume: 13810000, leverage: "10X" },
-  { symbol: "XAUT", pair: "XAUT/USDT", price: 4060.2, change: 1.19, high24h: 4080.1, low24h: 3999.5, volume: 13410000, leverage: "10X" },
-  { symbol: "LINK", pair: "LINK/USDT", price: 8.7, change: 2.85, high24h: 8.758, low24h: 8.307, volume: 13100000, leverage: "10X" },
-  { symbol: "USD1", pair: "USD1/USDT", price: 0.9996, change: -0.04, high24h: 1.0001, low24h: 0.9996, volume: 12990000, leverage: "5X", feeTag: "0 fees" },
-  { symbol: "BILL", pair: "BILL/USDT", price: 0.02402, change: -2.12, high24h: 0.02556, low24h: 0.02357, volume: 11360000 },
-  { symbol: "WLD", pair: "WLD/USDT", price: 0.3841, change: 4.83, high24h: 0.3875, low24h: 0.3625, volume: 9830000, leverage: "10X" },
-  { symbol: "AAVE", pair: "AAVE/USDT", price: 94.34, change: 4.16, high24h: 95.62, low24h: 88.23, volume: 8870000, leverage: "10X" },
-  { symbol: "ADA", pair: "ADA/USDT", price: 0.1755, change: 6.69, high24h: 0.1777, low24h: 0.1618, volume: 8400000, leverage: "10X" },
-  { symbol: "ETH", pair: "ETH/USDC", price: 1941.21, change: 3.59, high24h: 1951.59, low24h: 1852.33, volume: 7970000, leverage: "10X" }
-];
-
-const DERIVATIVES_MOCK: TokenRow[] = [
-  { symbol: "BTC-PERP", pair: "BTC/USDT", price: 66542, change: 2.91, high24h: 66800, low24h: 63900, volume: 154000000, leverage: "100X", suffix: "Perp", isMock: true },
-  { symbol: "ETH-PERP", pair: "ETH/USDT", price: 3412.5, change: 1.84, high24h: 3480, low24h: 3320, volume: 88000000, leverage: "100X", suffix: "Perp", isMock: true },
-  { symbol: "SOL-PERP", pair: "SOL/USDT", price: 178.45, change: 4.75, high24h: 182.1, low24h: 168.5, volume: 42000000, leverage: "50X", suffix: "Perp", isMock: true },
-  { symbol: "AVAX-PERP", pair: "AVAX/USDT", price: 32.14, change: -1.25, high24h: 33.8, low24h: 31.5, volume: 12000000, leverage: "50X", suffix: "Perp", isMock: true }
-];
-
-const TRADFI_MOCK: TokenRow[] = [
-  { symbol: "SPY", pair: "SPY/USDT", price: 543.2, change: 0.12, high24h: 544.5, low24h: 541.2, volume: 4500000, isMock: true },
-  { symbol: "GLD", pair: "GLD/USDT", price: 218.4, change: 0.85, high24h: 219.1, low24h: 217.3, volume: 2100000, isMock: true },
-  { symbol: "SLV", pair: "SLV/USDT", price: 27.8, change: -0.45, high24h: 28.2, low24h: 27.5, volume: 950000, isMock: true }
-];
-
-const NEWLY_LISTED_MOCK: TokenRow[] = [
-  { symbol: "SUI", pair: "SUI/USDT", price: 1.89, change: 24.52, high24h: 1.95, low24h: 1.45, volume: 32000000, leverage: "10X", isMock: true },
-  { symbol: "APT", pair: "APT/USDT", price: 8.42, change: 12.35, high24h: 8.65, low24h: 7.35, volume: 18000000, leverage: "10X", isMock: true },
-  { symbol: "ZRO", pair: "ZRO/USDT", price: 4.12, change: -8.45, high24h: 4.55, low24h: 3.98, volume: 14000000, leverage: "10X", isMock: true }
-];
+// Category classification from the market feed's `category` field.
+const matchesCategory = (tab: "derivatives" | "tradfi" | "newly-listed", category?: string): boolean => {
+  const c = String(category ?? "").toLowerCase().trim();
+  if (!c) return false;
+  if (tab === "derivatives") return /(derivativ|futures|perp|perpetual)/.test(c);
+  if (tab === "tradfi") return /(tradfi|trad.?fi|stock|stocks|etf|forex|^fx$)/.test(c);
+  return /(newly[\s-]?listed|new listed|newcoin|^new$)/.test(c);
+};
 
 const TRENDING_PAIRS = [
   "🔥 MNT/USDT",
@@ -80,34 +51,25 @@ function formatVolume(val: number) {
   return val.toFixed(2);
 }
 
-// Custom SVG sparklines based on change volatility
-function Sparkline({ change, pair }: { change: number; pair: string }) {
+// Real SVG sparkline rendered from the market feed's `sparkline` price series.
+function Sparkline({ pair, values }: { pair: string; values: number[] }) {
   const points = useMemo(() => {
-    let seed = 0;
-    for (let i = 0; i < pair.length; i++) {
-      seed = pair.charCodeAt(i) + ((seed << 5) - seed);
-    }
-    const count = 10;
-    const values: number[] = [];
-    let current = 50;
-    values.push(current);
-
-    const stepDirection = change >= 0 ? -1.5 : 1.5;
-
-    for (let i = 1; i < count; i++) {
-      const pseudoRandom = Math.abs(Math.sin(seed + i)) * 10 - 5;
-      current += stepDirection + pseudoRandom;
-      current = Math.max(15, Math.min(85, current));
-      values.push(current);
-    }
-
     const width = 100;
     const height = 30;
-    const xStep = width / (count - 1);
-    return values.map((y, index) => `${index * xStep},${(y / 100) * height}`).join(" ");
-  }, [change, pair]);
+    if (!values || values.length < 2) return "";
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+    const xStep = width / (values.length - 1);
+    return values
+      .map((v, i) => `${(i * xStep).toFixed(2)},${(height - ((v - min) / span) * height).toFixed(2)}`)
+      .join(" ");
+  }, [values]);
 
-  const strokeColor = change >= 0 ? "#10b981" : "#ef4444";
+  if (!points) return null;
+
+  const up = values[values.length - 1] >= values[0];
+  const strokeColor = up ? "#10b981" : "#ef4444";
   const areaPoints = `0,30 ${points} 100,30`;
 
   return (
@@ -195,29 +157,6 @@ function MarketsPageInner() {
     });
   };
 
-  const { data: listedPairs, isLoading: pairsLoading } = useQuery({
-    queryKey: ["listed-pairs-markets"],
-    queryFn: () => tradingService.listedPairs({ limit: 500 }),
-    staleTime: 30000,
-    select: (res: any) => {
-      const arr: any[] = Array.isArray(res?.data?.data) ? res.data.data
-        : Array.isArray(res?.data) ? res.data
-        : Array.isArray(res) ? res : [];
-      return arr;
-    },
-  });
-
-  const { data: movers } = useQuery({
-    queryKey: tradingKeys.gainersLosers,
-    queryFn: () => tradingService.gainersLosers(100),
-    staleTime: 60000,
-    select: (res: any) => {
-      const g: any[] = res?.data?.gainers ?? [];
-      const l: any[] = res?.data?.losers ?? [];
-      return [...g, ...l];
-    },
-  });
-
   const normaliseRow = (m: any): TokenRow => {
     const rawPair = (m.symbol || m.pair || `${m.base || ""}/${m.quote || "USDT"}`).replace("-", "/").toUpperCase();
     const parts = rawPair.split("/");
@@ -231,6 +170,9 @@ function MarketsPageInner() {
       volume: Number(m.volume ?? m.volume24h ?? m.quoteVolume ?? 0),
       high24h: Number(m.high_24h ?? m.highPrice ?? m.high24h ?? 0),
       low24h: Number(m.low_24h ?? m.lowPrice ?? m.low24h ?? 0),
+      category: String(m.category ?? ""),
+      leverage: String(m.max_leverage ?? m.leverage ?? ""),
+      sparkline: Array.isArray(m.sparkline) ? m.sparkline.map((v: any) => Number(v)).filter(Number.isFinite) : [],
       image: getCryptoIcon(base, m.image ?? m.logo ?? m.icon),
     };
   };
@@ -240,55 +182,15 @@ function MarketsPageInner() {
     return !!base && !!quote;
   };
 
-  // Base list containing all API pairs merged with high-fidelity screenshot assets
+  // Only pairs returned by the spot_margin_markets WS stream.
   const spotTokens = useMemo((): TokenRow[] => {
-    const enrichMap = new Map<string, TokenRow>();
-    if (Array.isArray(movers)) {
-      movers.forEach((m: any) => {
-        const row = normaliseRow(m);
-        if (row.pair && isValidPair(row.pair)) enrichMap.set(row.pair, row);
-      });
-    }
+    const list: TokenRow[] = [];
     (feed.markets || []).forEach((m: any) => {
       const row = normaliseRow(m);
-      if (row.pair && isValidPair(row.pair)) {
-        enrichMap.set(row.pair, { ...(enrichMap.get(row.pair) ?? row), ...row });
-      }
+      if (row.pair && isValidPair(row.pair)) list.push(row);
     });
-
-    const baseList = new Map<string, TokenRow>();
-    if (Array.isArray(listedPairs) && listedPairs.length > 0) {
-      listedPairs.forEach((p: any) => {
-        const base = normaliseRow(p);
-        if (!base.pair || !isValidPair(base.pair)) return;
-        const live = enrichMap.get(base.pair);
-        baseList.set(base.pair, live ? { ...base, ...live } : base);
-      });
-    }
-    enrichMap.forEach((row, pair) => {
-      if (!baseList.has(pair)) baseList.set(pair, row);
-    });
-
-    // Merge high-fidelity screenshot tokens
-    RECENT_SCREENSHOT_TOKENS.forEach((mock) => {
-      const liveToken = baseList.get(mock.pair);
-      baseList.set(mock.pair, {
-        symbol: mock.symbol,
-        pair: mock.pair,
-        price: liveToken?.price || mock.price,
-        change: liveToken?.change || mock.change,
-        priceChange: liveToken?.priceChange || 0,
-        volume: liveToken?.volume || mock.volume,
-        high24h: liveToken?.high24h || mock.high24h,
-        low24h: liveToken?.low24h || mock.low24h,
-        image: getCryptoIcon(mock.symbol, undefined),
-        leverage: mock.leverage,
-        feeTag: (mock as any).feeTag,
-      });
-    });
-
-    return Array.from(baseList.values());
-  }, [feed.markets, movers, listedPairs]);
+    return list;
+  }, [feed.markets]);
 
   // Main navigation tab filtering
   const activeRows = useMemo(() => {
@@ -301,12 +203,8 @@ function MarketsPageInner() {
       } else {
         list = spotTokens.filter(t => t.pair.endsWith(`/${spotQuoteTab}`));
       }
-    } else if (mainTab === "derivatives") {
-      list = DERIVATIVES_MOCK;
-    } else if (mainTab === "tradfi") {
-      list = TRADFI_MOCK;
-    } else if (mainTab === "newly-listed") {
-      list = NEWLY_LISTED_MOCK;
+    } else {
+      list = spotTokens.filter(t => matchesCategory(mainTab, t.category));
     }
 
     // Apply Search Filter
@@ -324,7 +222,7 @@ function MarketsPageInner() {
     return activeRows.slice(start, start + ITEMS_PER_PAGE);
   }, [activeRows, currentPage]);
 
-  const isLoading = pairsLoading && spotTokens.length === 0;
+  const isLoading = !feed.isConnected && spotTokens.length === 0;
 
   return (
     <main className="flex flex-col gap-6 w-full animate-fade-in pb-8 page-enter">
@@ -454,15 +352,21 @@ function MarketsPageInner() {
                   <td colSpan={9} className="py-16 text-center text-white/35">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <IoSearchOutline size={32} className="text-white/10" />
-                      <span className="text-sm">No assets found matching parameters.</span>
+                      <span className="text-sm">
+                        {mainTab === "derivatives" || mainTab === "tradfi" || mainTab === "newly-listed"
+                          ? "No pair Found"
+                          : "No assets found matching parameters."}
+                      </span>
                     </div>
                   </td>
                 </tr>
               ) : (
                 paginatedRows.map((token) => {
                   const isFav = favorites.includes(token.pair);
+                  const hasData = token.price > 0;
                   const isUp = token.change >= 0;
                   const [, quote] = token.pair.split("/");
+                  const priceText = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: v > 100 ? 2 : 6 });
                   
                   return (
                     <tr
@@ -491,15 +395,10 @@ function MarketsPageInner() {
                           )}
                           <div className="flex items-center gap-1.5">
                             <span className="text-[13px] font-bold text-white">{token.symbol}</span>
-                            <span className="text-[10px] font-medium text-white/30">/{quote || token.suffix || "USDT"}</span>
-                            {token.leverage && (
+                            <span className="text-[10px] font-medium text-white/30">/{quote || "USDT"}</span>
+                            {hasData && token.leverage && (
                               <span className="text-[9px] font-bold px-1 py-0.2 bg-primary/15 text-primary rounded uppercase shrink-0">
                                 {token.leverage}
-                              </span>
-                            )}
-                            {token.feeTag && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.2 bg-success-2/15 text-success-2 rounded shrink-0">
-                                {token.feeTag}
                               </span>
                             )}
                           </div>
@@ -508,39 +407,43 @@ function MarketsPageInner() {
 
                       {/* Last Price */}
                       <td className="py-3 font-semibold text-sm text-white tabular-nums">
-                        ${token.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: token.price > 100 ? 2 : 6 })}
+                        {hasData ? `$${priceText(token.price)}` : "-"}
                       </td>
 
                       {/* 24h Change */}
                       <td className="py-3">
-                        <span className={clsx("text-sm font-semibold tabular-nums", isUp ? "text-success-2" : "text-error-1")}>
-                          {isUp ? "+" : ""}{token.change.toFixed(2)}%
-                        </span>
+                        {hasData ? (
+                          <span className={clsx("text-sm font-semibold tabular-nums", isUp ? "text-success-2" : "text-error-1")}>
+                            {isUp ? "+" : ""}{token.change.toFixed(2)}%
+                          </span>
+                        ) : (
+                          <span className="text-sm text-white/40">-</span>
+                        )}
                       </td>
 
                       {/* 24h High */}
                       <td className="py-3 text-white/60 text-sm tabular-nums">
-                        {token.high24h > 0 ? token.high24h.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: token.high24h > 100 ? 2 : 6 }) : "—"}
+                        {hasData && token.high24h > 0 ? priceText(token.high24h) : "-"}
                       </td>
 
                       {/* 24h Low */}
                       <td className="py-3 text-white/60 text-sm tabular-nums">
-                        {token.low24h > 0 ? token.low24h.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: token.low24h > 100 ? 2 : 6 }) : "—"}
+                        {hasData && token.low24h > 0 ? priceText(token.low24h) : "-"}
                       </td>
 
                       {/* 24h Volume */}
                       <td className="py-3 text-white/95 text-sm tabular-nums">
-                        {token.volume > 0 ? (
+                        {hasData && token.volume > 0 ? (
                           <span>
                             {formatVolume(token.volume)}
                             <span className="text-white/30 text-[11px] ml-0.5">({quote || "USDT"})</span>
                           </span>
-                        ) : "—"}
+                        ) : "-"}
                       </td>
 
                       {/* Sparkline chart */}
                       <td className="py-3">
-                        <Sparkline change={token.change} pair={token.pair} />
+                        {hasData && token.sparkline && token.sparkline.length > 1 ? <Sparkline values={token.sparkline} pair={token.pair} /> : <span className="text-white/40">-</span>}
                       </td>
 
                       {/* Action */}
@@ -576,10 +479,13 @@ function MarketsPageInner() {
             </div>
           ) : paginatedRows.length === 0 ? (
             <div className="py-12 text-center text-white/35 text-sm">
-              No assets matching parameters.
+              {mainTab === "derivatives" || mainTab === "tradfi" || mainTab === "newly-listed"
+                ? "No pair Found"
+                : "No assets matching parameters."}
             </div>
           ) : (
             paginatedRows.map((token) => {
+              const hasData = token.price > 0;
               const isUp = token.change >= 0;
               const [, quote] = token.pair.split("/");
               return (
@@ -600,25 +506,31 @@ function MarketsPageInner() {
                       <div className="flex items-center gap-1">
                         <span className="text-sm font-bold text-white">{token.symbol}</span>
                         <span className="text-[11px] text-white/30">/{quote || "USDT"}</span>
-                        {token.leverage && (
+                        {hasData && token.leverage && (
                           <span className="text-[8px] font-bold px-1 bg-primary/15 text-primary rounded uppercase shrink-0">
                             {token.leverage}
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-white/40 mt-0.5">Vol: {formatVolume(token.volume)}</p>
+                      <p className="text-[11px] text-white/40 mt-0.5">
+                        Vol: {hasData && token.volume > 0 ? formatVolume(token.volume) : "-"}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-white tabular-nums">
-                      ${token.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: token.price > 100 ? 2 : 4 })}
+                      {hasData ? `$${token.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: token.price > 100 ? 2 : 4 })}` : "-"}
                     </p>
-                    <span className={clsx(
-                      "inline-block text-[11px] font-bold px-1.5 py-0.5 rounded mt-1",
-                      isUp ? "bg-success-2/10 text-success-2" : "bg-error-1/10 text-error-1"
-                    )}>
-                      {isUp ? "+" : ""}{token.change.toFixed(2)}%
-                    </span>
+                    {hasData ? (
+                      <span className={clsx(
+                        "inline-block text-[11px] font-bold px-1.5 py-0.5 rounded mt-1",
+                        isUp ? "bg-success-2/10 text-success-2" : "bg-error-1/10 text-error-1"
+                      )}>
+                        {isUp ? "+" : ""}{token.change.toFixed(2)}%
+                      </span>
+                    ) : (
+                      <span className="inline-block text-[11px] font-bold px-1.5 py-0.5 rounded mt-1 text-white/40">-</span>
+                    )}
                   </div>
                 </button>
               );
