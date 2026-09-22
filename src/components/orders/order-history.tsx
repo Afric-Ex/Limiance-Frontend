@@ -6,6 +6,7 @@ import { EmptyTable } from "../icons/empty-table";
 import { DateInput } from "@mantine/dates";
 import { useQuery } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { parseDate } from "./orders-shared";
 
 const selectStyles = {
   input: "!h-11 !rounded-xl !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !text-white !bg-[#181a20] !text-sm !font-medium !transition-all !duration-200",
@@ -32,9 +33,8 @@ const formatNumber = (value: unknown, fallback = "—") => {
 };
 
 const formatDate = (value: unknown) => {
-  if (!value) return "—";
-  const date = new Date(String(value));
-  return Number.isNaN(date.getTime())
+  const date = parseDate(value);
+  return !date
     ? "—"
     : date.toLocaleString(undefined, {
         month: "short",

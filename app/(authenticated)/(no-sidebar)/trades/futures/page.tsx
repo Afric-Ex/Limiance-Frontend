@@ -82,7 +82,7 @@ function FuturesTradesInner() {
   const [fundingCountdown, setFundingCountdown] = useState('--:--:--');
 
   const feed = useMarketFeed(selectedPair);
-  const orderBook = useOrderBook(selectedPair);
+  const orderBook = useOrderBook(selectedPair, "futures");
 
   const { balances, coins: portfolio, refreshBalances, futuresPositions } = usePortfolioWs();
   const futuresBalance = balances["futures"];
@@ -324,6 +324,33 @@ function FuturesTradesInner() {
         }]
       : []),
   ];
+  // Open positions for the selected pair — draw Entry/TP/SL lines on the chart
+  const positionLevels =
+    (Array.isArray(futuresPositions) ? futuresPositions : [])
+      .filter((p: any) => {
+        const pPair = p.pair || `${p.base || ""}/${p.quote || "USDT"}`;
+        return pPair.replace("/", "").replace("-", "").toUpperCase() === selectedPair.replace("/", "").replace("-", "").toUpperCase();
+      })
+      .flatMap((p: any) => {
+        const side = String(p.side || "").toLowerCase();
+        const sideLabel =
+          side === "long" || side === "buy" ? "LONG" :
+          side === "short" || side === "sell" ? "SHORT" :
+          (p.side || "").toUpperCase();
+        const size = Number(p.quantity ?? p.size ?? 0);
+        const entry = Number(p.price || p.entryPrice || p.entry_price || 0);
+        const tp = Number(p.takeProfit || p.take_profit_price || 0);
+        const sl = Number(p.stopLoss || p.stop_loss_price || 0);
+        const key = p.id || p._id || p.position_id || `${p.pair}-${size}-${entry}`;
+        const detail = `${sideLabel}${size ? ` ${size}` : ""}${p.leverage ? ` ${p.leverage}X` : ""}`;
+        return [
+          ...(entry ? [{ id: `pos-${key}-entry`, label: "Entry", price: entry, color: "entry" as const, detail }] : []),
+          ...(tp ? [{ id: `pos-${key}-tp`, label: "TP", price: tp, color: "tp" as const }] : []),
+          ...(sl ? [{ id: `pos-${key}-sl`, label: "SL", price: sl, color: "sl" as const }] : []),
+        ];
+      });
+  positionLevels.forEach((level) => chartOrderLevels.push(level));
+
   const filteredMarkets = (feed.markets || []).filter((market: any) => {
     if (!pairSearch.trim()) return true;
     const needle = pairSearch.trim().toLowerCase();
@@ -734,6 +761,7 @@ function FuturesTradesInner() {
           <div className={clsx("bg-[#181a20] rounded relative flex flex-col transition-all duration-300", chartExpanded ? "h-[450px]" : "h-[280px] min-[1150px]:min-h-[500px]")}>
             <CandlestickChart
               symbol={selectedPair}
+              market="futures"
               orderLevels={chartOrderLevels}
               priceRange={{ min: feed.low24h, max: feed.high24h }}
               orderBook={orderBook}
@@ -1360,12 +1388,39 @@ function FuturesTradesInner() {
 
       {/* MOBILE VIEW */}
       <div className="min-[1150px]:hidden flex flex-col flex-1 pb-[80px] min-h-0 relative">
+        {/* Mobile market stats strip */}
+        <div className="shrink-0 grid grid-cols-2 gap-x-3 gap-y-1.5 bg-[#181a20] border-b border-white/[0.06] px-4 py-2.5">
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="text-white/40">24h High</span>
+            <span className="text-white/90 font-semibold tabular-nums">{formatPrice(feed.high24h) ?? "—"}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="text-white/40">24h Low</span>
+            <span className="text-white/90 font-semibold tabular-nums">{formatPrice(feed.low24h) ?? "—"}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="text-white/40">Funding</span>
+            <span className="text-primary font-semibold tabular-nums">{feed.fundingRate !== null ? `${(feed.fundingRate * 100).toFixed(4)}%` : "0.0100%"}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px]">
+            <span className="text-white/40">Countdown</span>
+            <span className="text-primary font-semibold tabular-nums">{fundingCountdown}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px] col-span-2">
+            <span className="text-white/40">24h Change</span>
+            <span className={`font-semibold tabular-nums ${changeColor}`}>
+              {feed.change24h !== null ? formatPrice(feed.change24h) : "—"}
+              {feed.changePercent24h !== null ? ` (${feed.changePercent24h >= 0 ? "+" : ""}${feed.changePercent24h.toFixed(2)}%)` : ""}
+            </span>
+          </div>
+        </div>
         {mobileMode === "chart" ? (
           // --- CHART VIEW ---
           <div className="flex flex-col flex-1 overflow-auto custom-scrollbar pb-[65px]">
             <div className="h-[400px] shrink-0 bg-[#181a20]">
               <CandlestickChart
                 symbol={selectedPair}
+                market="futures"
                 orderLevels={chartOrderLevels}
                 priceRange={{ min: feed.low24h, max: feed.high24h }}
                 orderBook={orderBook}
@@ -1433,7 +1488,31 @@ function FuturesTradesInner() {
               </TabsPanel>
               
               <TabsPanel value="trades">
-                <div className="p-4 text-center text-xs text-white/40">No recent trades</div>
+                <div className="flex flex-col p-2">
+                  {!futuresTradeHistory || futuresTradeHistory.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-white/40">No trade history</div>
+                  ) : (
+                    <div className="flex flex-col">
+                      <div className="grid grid-cols-4 px-2 py-1.5 text-[10px] text-white/40">
+                        <span>Side</span><span className="text-right">Price</span><span className="text-right">Qty</span><span className="text-right">PnL</span>
+                      </div>
+                      <div className="flex flex-col divide-y divide-white/[0.04]">
+                        {futuresTradeHistory.slice(0, 30).map((trade: any, idx: number) => {
+                          const isLong = trade.side?.toLowerCase() === 'long' || trade.side?.toLowerCase() === 'buy';
+                          const pnl = Number(trade.pnl || trade.realizedPnl || trade.realized_pnl || 0);
+                          return (
+                            <div key={trade.id || idx} className="grid grid-cols-4 px-2 py-1.5 text-[11px] font-mono tabular-nums items-center">
+                              <span className={`text-xs font-bold uppercase ${isLong ? 'text-emerald-400' : 'text-red-400'}`}>{trade.side}</span>
+                              <span className="text-right text-white/80">{Number(trade.price || trade.closePrice || 0).toLocaleString()}</span>
+                              <span className="text-right text-white/80">{Number(trade.quantity || trade.size || 0)}</span>
+                              <span className={`text-right font-semibold ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{pnl >= 0 ? '+' : ''}{pnl.toFixed(4)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </TabsPanel>
             </Tabs>
 
@@ -1505,6 +1584,8 @@ function FuturesTradesInner() {
                 <TabsList>
                   <TabsTab value="positions">Positions ({futuresPositions.length})</TabsTab>
                   <TabsTab value="open-orders">Open Orders ({futuresOpenOrders?.length ?? 0})</TabsTab>
+                  <TabsTab value="history">Order History</TabsTab>
+                  <TabsTab value="trades">Trade History</TabsTab>
                 </TabsList>
                 <TabsPanel value="positions">
                   <div className="p-4">
@@ -1526,26 +1607,139 @@ function FuturesTradesInner() {
                           const markPrice = Number(market?.last_price || market?.lastPrice || market?.price || (pos.pair === selectedPair ? feed.price : null) || entryPrice);
                           const margin = (pos.margin || pos.marginUsed || pos.margin_used) ? Number(pos.margin || pos.marginUsed || pos.margin_used) : (size * entryPrice) / leverage;
                           const pnl = isLong ? size * (markPrice - entryPrice) : size * (entryPrice - markPrice);
+                          const roe = margin > 0 ? (pnl / margin) * 100 : 0;
                           const pnlSign = pnl >= 0 ? '+' : '';
                           const pnlColor = pnl >= 0 ? 'text-emerald-400' : 'text-red-400';
+                          const tp = pos.takeProfit || pos.take_profit_price || '—';
+                          const sl = pos.stopLoss || pos.stop_loss_price || '—';
                           return (
                             <div key={pos.id || pos._id || `${pos.pair}-${pos.side}`} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
                               <div className="flex justify-between items-center">
                                 <span className="text-sm font-bold text-white">{pos.pair} <span className={`text-xs font-bold ${isLong ? 'text-emerald-400' : 'text-red-400'}`}>{pos.side?.toUpperCase()} {leverage}x</span></span>
-                                <span className={`text-sm font-bold tabular-nums ${pnlColor}`}>{pnlSign}{pnl.toFixed(4)}</span>
+                                <div className="text-right">
+                                  <span className={`text-sm font-bold tabular-nums ${pnlColor}`}>{pnlSign}{pnl.toFixed(4)}</span>
+                                  <span className={`block text-[10px] tabular-nums ${pnlColor}`}>{pnlSign}{roe.toFixed(2)}%</span>
+                                </div>
                               </div>
                               <div className="grid grid-cols-2 gap-1 text-xs">
                                 <div className="flex justify-between"><span className="text-white/40">Size</span><span className="text-white tabular-nums">{size}</span></div>
                                 <div className="flex justify-between"><span className="text-white/40">Entry</span><span className="text-white tabular-nums">${entryPrice.toLocaleString()}</span></div>
                                 <div className="flex justify-between"><span className="text-white/40">Mark</span><span className="text-white tabular-nums">${markPrice.toLocaleString()}</span></div>
                                 <div className="flex justify-between"><span className="text-white/40">Margin</span><span className="text-white tabular-nums">{margin.toFixed(2)}</span></div>
+                                <div className="flex justify-between col-span-2"><span className="text-white/40">TP</span><span className="text-emerald-400 tabular-nums">{tp}</span></div>
+                                <div className="flex justify-between col-span-2"><span className="text-white/40">SL</span><span className="text-red-400 tabular-nums">{sl}</span></div>
                               </div>
-                              <button onClick={() => closePosition(pos.id)} disabled={closingPosition} className="w-full h-8 rounded-lg bg-red-400/10 text-red-400 text-xs font-bold hover:bg-red-400/20 transition-colors disabled:opacity-50">
-                                Close Position
-                              </button>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    let qty = '';
+                                    modals.open({
+                                      title: 'Partial Close',
+                                      children: (
+                                        <div className="flex flex-col gap-4">
+                                          <p className="text-xs text-white/50">Current size: <span className="text-white font-semibold">{size} {pos.pair?.split('/')[0] ?? 'BTC'}</span></p>
+                                          <TextInput
+                                            label="Close Quantity"
+                                            placeholder={`Max ${size}`}
+                                            onChange={(e) => { qty = e.currentTarget.value; }}
+                                          />
+                                          <button
+                                            className="w-full h-10 mt-1 rounded bg-amber-500/80 hover:bg-amber-500 text-white text-sm font-semibold transition-colors"
+                                            onClick={() => {
+                                              if (!qty || isNaN(Number(qty)) || Number(qty) <= 0) return;
+                                              partialClosePosition({ positionId: pos.id, close_quantity: qty });
+                                            }}
+                                          >
+                                            Confirm Partial Close
+                                          </button>
+                                        </div>
+                                      ),
+                                      ...DEFAULT_MODAL_SETTINGS
+                                    });
+                                  }}
+                                  className="flex-1 text-[11px] font-semibold text-amber-400 hover:text-amber-300 px-2 py-1.5 bg-amber-400/10 hover:bg-amber-400/20 rounded transition-colors"
+                                >
+                                  Partial
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    let tp = pos.takeProfit || pos.take_profit_price || '';
+                                    let sl = pos.stopLoss || pos.stop_loss_price || '';
+                                    modals.open({
+                                      title: 'Update TP/SL',
+                                      children: (
+                                        <div className="flex flex-col gap-4">
+                                          <TextInput
+                                            label="Take Profit Price"
+                                            placeholder="Enter target price"
+                                            defaultValue={tp}
+                                            onChange={(e) => { tp = e.currentTarget.value; }}
+                                          />
+                                          <TextInput
+                                            label="Stop Loss Price"
+                                            placeholder="Enter trigger price"
+                                            defaultValue={sl}
+                                            onChange={(e) => { sl = e.currentTarget.value; }}
+                                          />
+                                          <button
+                                            className="w-full h-10 mt-2 rounded bg-primary text-white text-sm font-semibold"
+                                            onClick={() => updateTPSL({ positionId: pos.id, take_profit_price: tp, stop_loss_price: sl })}
+                                          >
+                                            Confirm Update
+                                          </button>
+                                        </div>
+                                      ),
+                                      ...DEFAULT_MODAL_SETTINGS
+                                    });
+                                  }}
+                                  className="flex-1 text-[11px] font-semibold text-white/60 hover:text-white px-2 py-1.5 bg-white/5 rounded"
+                                >
+                                  TP/SL
+                                </button>
+                                <button
+                                  onClick={() => closePosition(pos.id)}
+                                  disabled={closingPosition || partialClosing}
+                                  className="flex-1 text-[11px] font-semibold text-primary hover:underline px-2 py-1.5 bg-primary/10 rounded disabled:opacity-50"
+                                >
+                                  Close
+                                </button>
+                              </div>
                             </div>
                           );
                         })}
+                        <div className="border-t border-white/[0.06] pt-3 flex flex-col gap-1.5 text-xs">
+                          {(() => {
+                            const totalPnl = futuresPositions.reduce((sum: number, pos: any) => {
+                              const isLong = pos.side?.toLowerCase() === 'long' || pos.side?.toLowerCase() === 'buy';
+                              const size = Number(pos.quantity ?? pos.size ?? 0);
+                              const entryPrice = Number(pos.price || pos.entryPrice || pos.entry_price || 0);
+                              const symbolRaw = (pos.pair || '').replace('/', '').toUpperCase();
+                              const market = (feed.markets || []).find((m: any) =>
+                                (m.symbol || m.pair || '').replace('/', '').replace('-', '').toUpperCase() === symbolRaw
+                              );
+                              const markPrice = Number(market?.last_price || market?.lastPrice || market?.price || 0)
+                                || ((pos.pair || '').replace('/', '') === selectedPair.replace('/', '') ? feed.price : null)
+                                || entryPrice;
+                              return sum + (isLong ? size * (Number(markPrice) - entryPrice) : size * (entryPrice - Number(markPrice)));
+                            }, 0);
+                            const totalMargin = futuresPositions.reduce((sum: number, pos: any) => {
+                              const size = Number(pos.quantity ?? pos.size ?? 0);
+                              const entryPrice = Number(pos.price || pos.entryPrice || pos.entry_price || 0);
+                              const leverage = Number(pos.leverage || 1);
+                              return sum + ((pos.margin || pos.marginUsed || pos.margin_used) ? Number(pos.margin || pos.marginUsed || pos.margin_used) : (size * entryPrice) / leverage);
+                            }, 0);
+                            const equity = walletBalanceUsd + totalPnl;
+                            const totalPnlColor = totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400';
+                            const totalPnlSign = totalPnl >= 0 ? '+' : '';
+                            return (
+                              <>
+                                <div className="flex justify-between"><span className="text-white/40">Total uPNL</span><span className={`font-bold tabular-nums ${totalPnlColor}`}>{totalPnlSign}{totalPnl.toFixed(4)} USDT</span></div>
+                                <div className="flex justify-between"><span className="text-white/40">Margin Used</span><span className="font-semibold text-white/80 tabular-nums">{totalMargin.toFixed(4)} USDT</span></div>
+                                <div className="flex justify-between"><span className="text-white/40">Account Equity</span><span className="font-semibold text-white/80 tabular-nums">{equity.toFixed(4)} USDT</span></div>
+                              </>
+                            );
+                          })()}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1571,6 +1765,64 @@ function FuturesTradesInner() {
                                 <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white tabular-nums">${Number(order.price || 0).toLocaleString()}</span></div>
                                 <div className="flex justify-between"><span className="text-white/40">Qty</span><span className="text-white tabular-nums">{Number(order.quantity || order.size || 0)}</span></div>
                                 <div className="flex justify-between"><span className="text-white/40">Filled</span><span className="text-white tabular-nums">{Number(order.filled || 0)}</span></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </TabsPanel>
+                <TabsPanel value="history">
+                  <div className="p-4">
+                    {!futuresOrderHistory || futuresOrderHistory.length === 0 ? (
+                      <div className="min-h-[150px] flex flex-col items-center justify-center gap-2">
+                        <p className="text-xs font-medium text-white/30">No order history</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        {futuresOrderHistory.map((ord: any, idx: number) => {
+                          const isLong = ord.side?.toLowerCase() === 'long' || ord.side?.toLowerCase() === 'buy';
+                          return (
+                            <div key={ord.id || idx} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
+                              <div className="flex justify-between items-center gap-2">
+                                <span className="text-sm font-bold text-white truncate">{ord.pair || `${ord.base || ''}/${ord.quote || 'USDT'}`} <span className={`text-[10px] font-bold uppercase ml-1 ${isLong ? 'text-emerald-400' : 'text-red-400'}`}>{ord.side}</span></span>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${ord.status === 'filled' ? 'bg-emerald-400/15 text-emerald-400' : ord.status === 'cancelled' ? 'bg-red-400/15 text-red-400' : 'bg-white/10 text-white/50'}`}>{ord.status || '—'}</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-1 text-xs">
+                                <div className="flex justify-between"><span className="text-white/40">Type</span><span className="text-white capitalize">{ord.type || ord.orderType || '—'}</span></div>
+                                <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white tabular-nums">${Number(ord.price || 0).toLocaleString()}</span></div>
+                                <div className="flex justify-between"><span className="text-white/40">Qty</span><span className="text-white tabular-nums">{Number(ord.quantity || ord.size || 0)}</span></div>
+                                <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white/60 text-right">{ord.createdAt ? new Date(ord.createdAt).toLocaleString() : '—'}</span></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </TabsPanel>
+                <TabsPanel value="trades">
+                  <div className="p-4">
+                    {!futuresTradeHistory || futuresTradeHistory.length === 0 ? (
+                      <div className="min-h-[150px] flex flex-col items-center justify-center gap-2">
+                        <p className="text-xs font-medium text-white/30">No trade history</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        {futuresTradeHistory.map((trade: any, idx: number) => {
+                          const isLong = trade.side?.toLowerCase() === 'long' || trade.side?.toLowerCase() === 'buy';
+                          const pnl = Number(trade.pnl || trade.realizedPnl || trade.realized_pnl || 0);
+                          return (
+                            <div key={trade.id || idx} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
+                              <div className="flex justify-between items-center gap-2">
+                                <span className="text-sm font-bold text-white truncate">{trade.pair || `${trade.base || ''}/${trade.quote || 'USDT'}`} <span className={`text-[10px] font-bold uppercase ml-1 ${isLong ? 'text-emerald-400' : 'text-red-400'}`}>{trade.side}</span></span>
+                                <span className={`text-sm font-bold tabular-nums ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{pnl >= 0 ? '+' : ''}{pnl.toFixed(4)} USDT</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-1 text-xs">
+                                <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white tabular-nums">${Number(trade.price || trade.closePrice || 0).toLocaleString()}</span></div>
+                                <div className="flex justify-between"><span className="text-white/40">Qty</span><span className="text-white tabular-nums">{Number(trade.quantity || trade.size || 0)}</span></div>
+                                <div className="flex justify-between col-span-2"><span className="text-white/40">Time</span><span className="text-white/60 text-right">{trade.createdAt ? new Date(trade.createdAt).toLocaleString() : '—'}</span></div>
                               </div>
                             </div>
                           );

@@ -14,6 +14,13 @@ import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import clsx from "clsx";
 
+export type TpslPreview = {
+  buyTp?: number;
+  buySl?: number;
+  sellTp?: number;
+  sellSl?: number;
+};
+
 interface Props {
   pair?: string;          // "BTC/USDT"
   mode?: "spot" | "cross" | "isolated";
@@ -23,6 +30,7 @@ interface Props {
   clickedPrice?: number | null;
   compactSide?: "buy" | "sell";
   onLeverageChangeEnd?: (val: number) => void;
+  onTpslChange?: (preview: TpslPreview) => void;
 }
 
 const PERCENT_MARKS = [
@@ -86,7 +94,7 @@ function FieldRow({
   );
 }
 
-export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLeverageChange, marketPrice, clickedPrice, compactSide, onLeverageChangeEnd }: Props) => {
+export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLeverageChange, marketPrice, clickedPrice, compactSide, onLeverageChangeEnd, onTpslChange }: Props) => {
   const [activeTab, setActiveTab] = useState("limit");
   const [buyPrice, setBuyPrice] = useState<number | string>("");
   const [buyAmount, setBuyAmount] = useState<number | string>("");
@@ -132,6 +140,24 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     setBuyPriceEdited(true);
     setSellPriceEdited(true);
   }, [clickedPrice]);
+
+  // report live TP/SL preview so the chart can draw the levels
+  useEffect(() => {
+    const valid = (value: number | string) => {
+      const n = parseFloat(String(value));
+      return Number.isFinite(n) && n > 0 ? n : undefined;
+    };
+    if (!tpslEnabled) {
+      onTpslChange?.({});
+      return;
+    }
+    onTpslChange?.({
+      buyTp: valid(buyTp),
+      buySl: valid(buySl),
+      sellTp: valid(sellTp),
+      sellSl: valid(sellSl),
+    });
+  }, [tpslEnabled, buyTp, buySl, sellTp, sellSl, onTpslChange]);
 
   const [base, quote] = pair.split("/");
 

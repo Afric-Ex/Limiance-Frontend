@@ -17,6 +17,8 @@ export interface PortfolioCoin {
   marginBalance: string;
   lockedBalance: string;
   pnlBalance: string;
+  pnl?: string;
+  pnlPercentage?: string;
 }
 
 export interface AllocationItem {

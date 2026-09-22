@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FiPlus, FiMinus, FiChevronsRight } from "react-icons/fi";
 import type { OrderBookEntry } from "@/src/hooks/use-order-book";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { wsClient } from "@/src/lib/websocket-client";
 import type { KlineCandle } from "@/src/types/trading";
 
 const INTERVALS = ["1s", "1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const;
@@ -20,11 +21,46 @@ const ZOOM_FACTOR = 1.25;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
+// Normalize any pair spelling ("BTC/USDT", "BTC-USDT", "BTCUSDT") to one key.
+const pairKey = (v: string) => String(v ?? "").replace(/[/\\\-_\s]/g, "").toUpperCase();
+
 interface Props {
   symbol?: string;
+  market?: "spot" | "margin" | "futures";
   orderBook?: { buyOrders: OrderBookEntry[]; sellOrders: OrderBookEntry[] };
   orderLevels?: OrderLevel[];
   priceRange?: { min: number | null; max: number | null };
+}
+
+export type ChartMarket = "spot" | "margin" | "futures";
+
+// Backend WS candle stream request types per market.
+const MARKET_CANDLE_REQUEST: Partial<Record<ChartMarket, string>> = {
+  spot: "get_spot_candles",
+  margin: "get_margin_candles",
+  futures: "get_futures_candles",
+};
+
+interface LiveCandle extends KlineCandle {
+  symbol: string;
+  interval: string;
+  closed: boolean;
+}
+
+function toLiveCandle(c: any): LiveCandle | null {
+  if (!c || !Number.isFinite(Number(c.o))) return null;
+  const rawTime = Number(c.t);
+  return {
+    time: Number.isFinite(rawTime) && rawTime > 0 && rawTime < 1e12 ? rawTime * 1000 : rawTime,
+    open: Number(c.o),
+    high: Number(c.h),
+    low: Number(c.l),
+    close: Number(c.c),
+    volume: Number(c.v),
+    symbol: String(c.s ?? ""),
+    interval: String(c.i ?? ""),
+    closed: c.x === true,
+  };
 }
 
 export type OrderLevel = {
@@ -117,17 +153,20 @@ function drawCandles(
   h: number,
   candles: KlineCandle[],
   symbol: string,
-  interval: Interval
+  interval: Interval,
+  showEmptyState = true
 ) {
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = APP_CHART_BACKGROUND;
   ctx.fillRect(0, 0, w, h);
 
   if (candles.length === 0) {
-    ctx.fillStyle = "rgba(255,255,255,0.3)";
-    ctx.font = "13px ui-monospace, monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("No chart data", w / 2, h / 2);
+    if (showEmptyState) {
+      ctx.fillStyle = "rgba(255,255,255,0.3)";
+      ctx.font = "13px ui-monospace, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("No chart data", w / 2, h / 2);
+    }
     return;
   }
 
@@ -240,7 +279,7 @@ function drawCandles(
   ctx.fillText(`${change >= 0 ? "+" : ""}${change.toFixed(2)}%`, padL + ctx.measureText(symbol + "  ").width, padT - 2);
 }
 
-function CandlestickChart({ symbol, interval }: { symbol: string; interval: Interval }) {
+function CandlestickChart({ symbol, interval, market = "spot" }: { symbol: string; interval: Interval; market?: ChartMarket }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startX: number; startEnd: number } | null>(null);
@@ -249,16 +288,92 @@ function CandlestickChart({ symbol, interval }: { symbol: string; interval: Inte
   const [count, setCount] = useState(DEFAULT_VISIBLE);
   const [end, setEnd] = useState(0);
 
-  const { data: candles, isLoading, isError } = useQuery({
+  // Margin candles arrive over WS as the primary source; the REST history
+  // endpoint is only used as a fallback when the WS stream is unavailable.
+  const isMargin = market === "margin";
+  const [wsReady, setWsReady] = useState(false);
+  const [restFallback, setRestFallback] = useState(false);
+
+  const { data: historyCandles, isLoading, isError } = useQuery({
     queryKey: tradingKeys.klineData(symbol, interval),
     queryFn: () => tradingService.klineData({ symbol, interval, limit: 500 }),
     select: (res) => normalizeKlines(res),
     staleTime: 60_000,
     retry: 1,
     throwOnError: false,
+    enabled: !isMargin || restFallback,
   });
 
+  // liveCandles = history (backfill) + incremental WS candle updates
+  const [liveCandles, setLiveCandles] = useState<KlineCandle[] | null>(null);
+  const historyRef = useRef<KlineCandle[]>([]);
+  useEffect(() => {
+    historyRef.current = historyCandles ?? [];
+  }, [historyCandles]);
+
+  // Reset the live buffer whenever the pair or interval changes
+  useEffect(() => {
+    setLiveCandles(null);
+    setEnd(0);
+    setWsReady(false);
+    setRestFallback(false);
+  }, [symbol, interval]);
+
+  // If the WS never answers get_margin_candles (or the socket drops), fall
+  // back to the REST historical endpoint so the chart still has data.
+  useEffect(() => {
+    if (!isMargin || wsReady) return;
+    let wasConnected = false;
+    const timer = setTimeout(() => setRestFallback(true), 5000);
+    const unsubStatus = wsClient.onStatusChange((connected) => {
+      if (wasConnected && !connected) setRestFallback(true);
+      wasConnected = connected;
+    });
+    return () => {
+      clearTimeout(timer);
+      unsubStatus();
+    };
+  }, [isMargin, wsReady]);
+
+  // Margin candles use the compact pair ("BTCUSDT"); spot/futures use the dashed form.
+  const wsPair = isMargin ? pairKey(symbol) : symbol.replace("/", "-").toUpperCase();
+  const candleRequest = MARKET_CANDLE_REQUEST[market];
+
+  useEffect(() => {
+    if (!candleRequest) return;
+    const payload = { type: candleRequest, data: { pair: wsPair, interval } };
+    const unsubscribe = wsClient.subscribe("candle", payload, (data) => {
+      const rawCandles = data?.candles;
+      if (!Array.isArray(rawCandles) || rawCandles.length === 0) return;
+      const incoming = rawCandles.map(toLiveCandle).filter((c): c is LiveCandle => c !== null);
+      if (incoming.length === 0) return;
+      // Candles tagged with a different pair/interval belong to another subscription.
+      const matched = incoming.filter(
+        (c) =>
+          (!c.symbol || pairKey(c.symbol) === pairKey(symbol)) &&
+          (!c.interval || c.interval === interval)
+      );
+      if (matched.length === 0) return;
+      setWsReady(true);
+      setRestFallback(false);
+      setLiveCandles((prev) => {
+        const base = prev && prev.length > 0 ? prev : historyRef.current;
+        const next = [...base];
+        for (const candle of matched) {
+          const idx = next.findIndex((k) => k.time === candle.time);
+          if (idx >= 0) next[idx] = candle;
+          else next.push(candle);
+        }
+        return next.sort((a, b) => a.time - b.time);
+      });
+    });
+    return unsubscribe;
+  }, [candleRequest, wsPair, interval, symbol]);
+
+  const candles = liveCandles ?? historyCandles;
+
   const n = candles?.length ?? 0;
+  const wsPending = isMargin && !wsReady && !restFallback && !isLoading && n === 0;
   const effEnd = end === 0 ? Math.min(count, n) : Math.min(end, n);
   const visible = candles?.slice(Math.max(0, effEnd - count), effEnd) ?? [];
 
@@ -288,6 +403,9 @@ function CandlestickChart({ symbol, interval }: { symbol: string; interval: Inte
   });
 
   const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    // Pressing the zoom/arrow buttons must not start a drag: setPointerCapture
+    // would retarget the browser's click event to this wrapper and swallow it.
+    if ((e.target as HTMLElement)?.closest?.("button")) return;
     dragRef.current = { startX: e.clientX, startEnd: effEnd };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -319,7 +437,7 @@ function CandlestickChart({ symbol, interval }: { symbol: string; interval: Inte
       const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        drawCandles(ctx, width, height, visible, symbol, interval);
+        drawCandles(ctx, width, height, visible, symbol, interval, !wsPending && !isLoading && !isError);
       }
     };
 
@@ -327,7 +445,7 @@ function CandlestickChart({ symbol, interval }: { symbol: string; interval: Inte
     const ro = new ResizeObserver(redraw);
     ro.observe(wrapper);
     return () => ro.disconnect();
-  }, [candles, symbol, interval, count, end, visible]);
+  }, [candles, symbol, interval, count, end, visible, wsPending, isLoading, isError]);
 
   return (
     <div
@@ -339,11 +457,11 @@ function CandlestickChart({ symbol, interval }: { symbol: string; interval: Inte
       className="relative w-full h-full cursor-grab active:cursor-grabbing touch-none select-none"
     >
       <canvas ref={canvasRef} className="block" />
-      {(isLoading || isError) && (
+      {(wsPending || ((isLoading || isError) && n === 0)) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
           <div className="w-5 h-5 border-2 border-white/20 border-t-primary rounded-full animate-spin" />
           <span className="text-xs text-white/40">
-            {isLoading ? "Loading chart data..." : "Failed to load chart data"}
+            {wsPending ? "Connecting to live chart..." : isLoading ? "Loading chart data..." : "Failed to load chart data"}
           </span>
         </div>
       )}
@@ -550,7 +668,7 @@ function OrderLevelOverlay({ levels, priceRange }: { levels: OrderLevel[]; price
   );
 }
 
-export default function TradingViewChart({ symbol = "BTC/USDT", orderBook, orderLevels = [], priceRange }: Props) {
+export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot", orderBook, orderLevels = [], priceRange }: Props) {
   const [interval, setIntervalVal] = useState<Interval>("15m");
   const [view, setView] = useState<View>("chart");
 
@@ -599,7 +717,7 @@ export default function TradingViewChart({ symbol = "BTC/USDT", orderBook, order
       {/* Chart views */}
       {view === "chart" ? (
         <div className="relative flex-1 min-h-0 overflow-hidden">
-          <CandlestickChart symbol={symbol} interval={interval} />
+          <CandlestickChart symbol={symbol} interval={interval} market={market} />
           <OrderLevelOverlay levels={orderLevels} priceRange={priceRange} />
         </div>
       ) : (

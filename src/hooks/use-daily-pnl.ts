@@ -84,8 +84,8 @@ async function fetchCoinGeckoPrices(symbols: string[]): Promise<Record<string, T
 
 /**
  * Calculates Today's P&L using:
- *  1. Real-time portfolio coins from WebSocket (usePortfolioWs)
- *  2. Backend 24h movers → CoinGecko fallback when backend is empty
+ *  1. Backend 24h `pnl` / `pnlPercentage` per coin from the portfolio payload (get_portfolio)
+ *  2. Fallback to price-based math (WS coins + movers / CoinGecko) only when a coin lacks server P&L
  */
 export function useDailyPnl(account?: string) {
   // ✅ Use WebSocket portfolio data (same source as the balance display)
@@ -151,8 +151,14 @@ export function useDailyPnl(account?: string) {
     Object.assign(tickerMap, cgPrices);
   }
 
-  let currTotal = 0;
   let prevTotal = 0;
+  let pnl = 0;
+
+  const totalBalanceFor = (coin: PortfolioCoin) =>
+    safeFloat(coin.spotBalance) +
+    safeFloat(coin.marginBalance) +
+    safeFloat(coin.futuresBalance) +
+    safeFloat(coin.fundingBalance);
 
   for (const coin of coins) {
     const sym = coin.symbol?.toUpperCase();
@@ -167,18 +173,44 @@ export function useDailyPnl(account?: string) {
       balance = safeFloat(coin.futuresBalance);
     } else {
       // Overall: sum all wallets
-      balance =
-        safeFloat(coin.spotBalance) +
-        safeFloat(coin.marginBalance) +
-        safeFloat(coin.futuresBalance) +
-        safeFloat(coin.fundingBalance);
+      balance = totalBalanceFor(coin);
     }
 
     if (!balance) continue;
 
-    // Stablecoins: 1:1 USD, no price movement
+    // Backend 24h P&L from the portfolio payload (get_portfolio)
+    const rawPnl = coin.pnl;
+    const serverPnl = rawPnl != null && rawPnl !== "" ? safeFloat(rawPnl) : 0;
+    const hasServerPnl = Number.isFinite(serverPnl) && rawPnl != null && rawPnl !== "";
+
+    if (hasServerPnl) {
+      // Scale the coin-level P&L to this account's share of the coin's total balance
+      const totalBalance = totalBalanceFor(coin);
+      const share = totalBalance > 0 ? balance / totalBalance : 1;
+      const pnlScaled = serverPnl * share;
+
+      pnl += pnlScaled;
+
+      // Use the server's pnlPercentage (fraction, e.g. 0.00496626) to derive the
+      // previous value this P&L was measured against, so the aggregate % matches
+      const rawPnlPct = coin.pnlPercentage;
+      const serverPnlPct = rawPnlPct != null && rawPnlPct !== "" ? safeFloat(rawPnlPct) : 0;
+
+      if (Number.isFinite(serverPnlPct) && serverPnlPct !== 0) {
+        prevTotal += pnlScaled / serverPnlPct;
+      } else {
+        const wsPrice = safeFloat(coin.currencyPrice);
+        const ticker = tickerMap[sym];
+        const currentPrice = ticker?.lastPrice || wsPrice;
+        if (currentPrice > 0) {
+          prevTotal += balance * currentPrice - pnlScaled;
+        }
+      }
+      continue;
+    }
+
+    // Fallback: stablecoins 1:1 USD, no price movement
     if (STABLECOINS.has(sym)) {
-      currTotal += balance;
       prevTotal += balance;
       continue;
     }
@@ -188,16 +220,14 @@ export function useDailyPnl(account?: string) {
 
     const ticker = tickerMap[sym];
     if (ticker && ticker.lastPrice) {
-      currTotal += balance * ticker.lastPrice;
       prevTotal += balance * ticker.prevPrice;
+      pnl += balance * (ticker.lastPrice - ticker.prevPrice);
     } else if (wsPrice > 0) {
       // We have the current price from WS but no 24h prev price — can't compute change
-      currTotal += balance * wsPrice;
       prevTotal += balance * wsPrice; // neutral: shows 0 change for this coin
     }
   }
 
-  const pnl = currTotal - prevTotal;
   const pnlPct = prevTotal > 0 ? (pnl / prevTotal) * 100 : 0;
 
   return { pnl, pnlPct, isLoading: portfolioLoading };

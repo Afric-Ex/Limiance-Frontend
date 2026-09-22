@@ -3,12 +3,25 @@ import { modals } from "@mantine/modals";
 import { FaArrowRightLong } from "react-icons/fa6";
 import Link from "next/link";
 import { HiOutlineUsers } from "react-icons/hi2";
-import { LuWallet } from "react-icons/lu";
+import { LuWallet, LuBanknote } from "react-icons/lu";
 import { IoSparklesOutline } from "react-icons/io5";
 import { MdOutlineClose } from "react-icons/md";
 
 export const SelectDepositMethod = () => {
   const actions = [
+    {
+      category: "Deposit Fiat",
+      subtitle: "Fiat Deposit",
+      badge: "Instant",
+      badgeColor: "bg-success-5/10 text-success-5 border border-success-5/20",
+      desc: "Fund your account with NGN via bank transfer or card.",
+      link: "/transactions/fiat-deposit",
+      Icon: LuBanknote,
+      iconBg: "from-success-5/20 to-success-5/5",
+      iconColor: "text-success-5",
+      ctaColor:
+        "bg-success-5 hover:bg-success-6 hover:shadow-[0_0_16px_rgba(14,203,129,0.3)]",
+    },
     {
       category: "Buy Crypto with Fiat",
       subtitle: "P2P Trading",

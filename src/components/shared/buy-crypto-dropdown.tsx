@@ -10,6 +10,7 @@ const list = [
     icon: QuickBuy,
     title: "Quick Buy",
     subtitle: "Buy Crypto via VISA or Master Card",
+    link: "/transactions/fiat-deposit?tab=card",
   },
   {
     icon: P2pTrading,
@@ -26,7 +27,7 @@ const list = [
     icon: FiatOtc,
     title: "Fiat Deposit",
     subtitle: "Deposit fiat via bank transfer",
-    isDiabled: true,
+    link: "/transactions/fiat-deposit",
   },
 ];
 
@@ -38,9 +39,7 @@ export const BuyCryptoDropdown = () => {
           href={item.link || ""}
           key={item.title}
           className={clsx(
-            item.isDiabled
-              ? "cursor-not-allowed opacity-50"
-              : "cursor-pointer hover:bg-gray-9/40",
+            "cursor-pointer hover:bg-gray-9/40",
             "flex items-center gap-2 py-10px px-2 group rounded"
           )}
         >

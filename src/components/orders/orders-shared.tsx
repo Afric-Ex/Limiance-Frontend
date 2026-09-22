@@ -3,6 +3,31 @@
 import { EmptyTable } from "../icons/empty-table";
 import { Skeleton } from "@/src/components/shared/skeleton";
 
+const MONTHS = [
+  "january", "february", "march", "april", "may", "june",
+  "july", "august", "september", "october", "november", "december",
+];
+
+export const parseDate = (value: unknown): Date | null => {
+  if (!value) return null;
+  const str = String(value).trim();
+  const direct = new Date(str);
+  if (!Number.isNaN(direct.getTime())) return direct;
+  // Handles backend format like "Monday 21 September 2026 12:29:06PM"
+  const m = str.match(/^[A-Za-z]+,?\s+(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  if (!m) return null;
+  const [, day, monthName, year, hour, minute, second, ap] = m;
+  const month = MONTHS.indexOf(monthName.toLowerCase());
+  if (month === -1) return null;
+  let h = Number(hour);
+  if (ap) {
+    const isPm = ap.toUpperCase() === "PM";
+    if (isPm && h < 12) h += 12;
+    if (!isPm && h === 12) h = 0;
+  }
+  return new Date(Number(year), month, Number(day), h, Number(minute), Number(second ?? 0));
+};
+
 export const toNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
@@ -15,17 +40,15 @@ export const fmtNum = (value: unknown, fallback = "—", maxDigits = 8) => {
 };
 
 export const fmtDate = (value: unknown, fallback = "—") => {
-  if (!value) return fallback;
-  const d = new Date(String(value));
-  return Number.isNaN(d.getTime())
+  const d = parseDate(value);
+  return !d
     ? fallback
     : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
 export const fmtDateTime = (value: unknown, fallback = "—") => {
-  if (!value) return fallback;
-  const d = new Date(String(value));
-  return Number.isNaN(d.getTime()) ? fallback : d.toLocaleString();
+  const d = parseDate(value);
+  return !d ? fallback : d.toLocaleString();
 };
 
 export const getPair = (order: any) =>

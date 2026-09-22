@@ -216,7 +216,7 @@ function BuyCryptoInner() {
             </div>
 
             {/* CTA */}
-            <Link href="/trades/p2p" className="w-full h-[56px] rounded-xl bg-primary hover:bg-primary/90 hover:shadow-[0_0_16px_rgba(77,119,240,0.3)] text-white font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+            <Link href={activeTab === "buy" ? "/transactions/fiat-deposit" : "/transactions/fiat-withdraw"} className="w-full h-[56px] rounded-xl bg-primary hover:bg-primary/90 hover:shadow-[0_0_16px_rgba(77,119,240,0.3)] text-white font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2">
                 {activeTab === "buy" ? "Buy With NGN" : "Sell For NGN"}
             </Link>
 

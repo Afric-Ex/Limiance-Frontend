@@ -30,7 +30,7 @@ export const tradingKeys = {
   marginBorrowHistory: ["margin-borrow-history"],
   marginLiquidationHistory: ["margin-liquidation-history"],
   convertHistory: ["convert-history"],
-  spotRecentTrades: ["spot-recent-trades"],
+  spotRecentTrades: (symbol?: string) => ["spot-recent-trades", symbol],
   fiatOrderHistory: ["fiat-order-history"],
   paymentHistory: ["payment-history"],
   listedTokens: (params?: { query?: string; page?: number; limit?: number; isTradable?: boolean }) => ["listed-tokens", params],
@@ -436,7 +436,7 @@ export const tradingService = {
   },
 
   fiatOrderHistory: async () => {
-    const response = await api.get("trading/fiat/history");
+    const response = await api.get("wallet/fiat/history");
     return response.data;
   },
 
