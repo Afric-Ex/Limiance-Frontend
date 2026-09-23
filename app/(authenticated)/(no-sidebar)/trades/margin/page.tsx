@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "@/src/components/icons/search";
-import { PlaceSpot } from "@/src/components/trades/place-spot";
+import { PlaceSpot, type TpslPreview } from "@/src/components/trades/place-spot";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { useOrderBook } from "@/src/hooks/use-order-book";
@@ -61,6 +61,13 @@ function MarginTrades() {
   const [mobileMode, setMobileMode] = useState<"trade" | "chart">("trade");
   const [quickOrderOpen, setQuickOrderOpen] = useState(false);
   const [quickOrderSide, setQuickOrderSide] = useState<"buy" | "sell">("buy");
+  const [tpslPreview, setTpslPreview] = useState<TpslPreview>({});
+  // Last placed trade — shown as an orange FILL tag on the chart
+  const [placedFill, setPlacedFill] = useState<{ side: string; price: number; quantity: number } | null>(null);
+  useEffect(() => {
+    setPlacedFill(null);
+    setTpslPreview({});
+  }, [selectedPair]);
 
   const feed = useMarketFeed(selectedPair);
   const orderBook = useOrderBook(selectedPair, "margin");
@@ -92,6 +99,17 @@ function MarginTrades() {
     queryKey: tradingKeys.openOrders(selectedPair),
     queryFn: () => tradingService.fetchMarginOpenOrders({ pair: selectedPair }),
     select: (res: any) => res.data,
+    retry: false,
+    throwOnError: false,
+  });
+
+  const { data: marginPositions } = useQuery({
+    queryKey: ["margin-positions"],
+    queryFn: () => tradingService.marginPositions(),
+    select: (res: any) => {
+      const raw = res?.data ?? res ?? [];
+      return Array.isArray(raw) ? raw : [];
+    },
     retry: false,
     throwOnError: false,
   });
@@ -227,12 +245,14 @@ function MarginTrades() {
     setPairSearch("");
   };
 
-  // Open margin orders already filtered by selectedPair (query key) — draw Entry/TP/SL on the chart
+  // Open margin orders already filtered by selectedPair (query key) — draw Entry/TP/SL on the chart.
+  // The backend may return TP/SL under different names (camelCase on orders,
+  // snake_case on OCO/trigger orders), so read defensively.
   const chartOrderLevels =
     (openOrders ?? []).flatMap((order: any) => {
       const entry = Number(order.price ?? order.entryPrice);
-      const takeProfit = Number(order.takeProfit);
-      const stopLoss = Number(order.stopLoss);
+      const takeProfit = Number(order.takeProfit ?? order.take_profit ?? order.take_profit_price ?? order.tp_trigger_price ?? order.tp_price ?? order.tp);
+      const stopLoss = Number(order.stopLoss ?? order.stop_loss ?? order.stop_loss_price ?? order.sl_trigger_price ?? order.sl_price ?? order.sl);
       const side = String(order.side ?? "").toUpperCase();
       const amount = Number(order.amount ?? order.quantity);
 
@@ -264,6 +284,53 @@ function MarginTrades() {
           : []),
       ];
     });
+
+  // Margin positions carry TP/SL too — draw Entry/TP/SL lines for them as well.
+  const positionLevels =
+    (Array.isArray(marginPositions) ? marginPositions : [])
+      .filter((p: any) => {
+        const pPair = p.pair || p.symbol || `${p.base || ""}/${p.quote || "USDT"}`;
+        return pPair.replace(/[/\\\-_\s]/g, "").toUpperCase() === normalizedSymbol;
+      })
+      .flatMap((p: any) => {
+        const side = String(p?.side ?? "").toLowerCase();
+        const sideLabel =
+          side === "long" || side === "buy" ? "LONG" :
+          side === "short" || side === "sell" ? "SHORT" :
+          (p?.side || "").toUpperCase();
+        const size = Number(p.quantity ?? p.size ?? 0);
+        const entry = Number(p.price ?? p.entryPrice ?? p.entry_price ?? 0);
+        const takeProfit = Number(p.takeProfit ?? p.take_profit_price ?? p.take_profit ?? p.tp_price ?? p.tp);
+        const stopLoss = Number(p.stopLoss ?? p.stop_loss_price ?? p.stop_loss ?? p.sl_price ?? p.sl);
+        const key = p.id ?? p._id ?? p.position_id ?? `${p.pair}-${size}-${entry}`;
+        const detail = `${sideLabel}${size ? ` ${size}` : ""}${p.leverage ? ` ${p.leverage}X` : ""}`;
+        return [
+          ...(entry ? [{ id: `mpos-${key}-entry`, label: "Entry", price: entry, color: "entry" as const, detail }] : []),
+          ...(takeProfit ? [{ id: `mpos-${key}-tp`, label: "TP", price: takeProfit, color: "tp" as const }] : []),
+          ...(stopLoss ? [{ id: `mpos-${key}-sl`, label: "SL", price: stopLoss, color: "sl" as const }] : []),
+        ];
+      });
+    positionLevels.forEach((level) => chartOrderLevels.push(level));
+
+  // Live TP/SL preview from the order form, shown before the order is placed
+  const previewTpslLevels = [];
+  const isFinitePositive = (v: number | undefined): v is number => Number.isFinite(v) && (v ?? 0) > 0;
+  if (isFinitePositive(tpslPreview.buyTp)) previewTpslLevels.push({ id: "preview-tp-buy", label: "TP", price: tpslPreview.buyTp, color: "tp", detail: "BUY" });
+  if (isFinitePositive(tpslPreview.buySl)) previewTpslLevels.push({ id: "preview-sl-buy", label: "SL", price: tpslPreview.buySl, color: "sl", detail: "BUY" });
+  if (isFinitePositive(tpslPreview.sellTp)) previewTpslLevels.push({ id: "preview-tp-sell", label: "TP", price: tpslPreview.sellTp, color: "tp", detail: "SELL" });
+  if (isFinitePositive(tpslPreview.sellSl)) previewTpslLevels.push({ id: "preview-sl-sell", label: "SL", price: tpslPreview.sellSl, color: "sl", detail: "SELL" });
+  previewTpslLevels.forEach((level) => chartOrderLevels.push(level));
+
+  // Orange tag for the trade the user just placed
+  if (placedFill && Number.isFinite(placedFill.price) && placedFill.price > 0) {
+    chartOrderLevels.push({
+      id: `fill-${placedFill.side}-${placedFill.price}-${Date.now()}`,
+      label: "FILL",
+      price: placedFill.price,
+      color: "fill",
+      detail: `${placedFill.side.toUpperCase()}${placedFill.quantity ? ` ${placedFill.quantity}` : ""}`,
+    });
+  }
 
   const [base, quote] = selectedPair.split("/");
 
@@ -677,6 +744,8 @@ function MarginTrades() {
             </TabsList>
             <TabsPanel value="cross">
               <PlaceSpot
+                onFill={setPlacedFill}
+                onTpslChange={setTpslPreview}
                 pair={selectedPair}
                 mode="cross"
                 leverage={leverage}
@@ -688,6 +757,8 @@ function MarginTrades() {
             </TabsPanel>
             <TabsPanel value="isolated">
               <PlaceSpot
+                onFill={setPlacedFill}
+                onTpslChange={setTpslPreview}
                 pair={selectedPair}
                 mode="isolated"
                 leverage={leverage}
@@ -859,10 +930,10 @@ function MarginTrades() {
                     <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
                   </TabsList>
                   <TabsPanel value="buy">
-                    <PlaceSpot pair={selectedPair} mode="cross" leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={feed.price} clickedPrice={clickedPrice} compactSide="buy" />
+                    <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode="cross" leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={feed.price} clickedPrice={clickedPrice} compactSide="buy" />
                   </TabsPanel>
                   <TabsPanel value="sell">
-                    <PlaceSpot pair={selectedPair} mode="cross" leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={feed.price} clickedPrice={clickedPrice} compactSide="sell" />
+                    <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode="cross" leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={feed.price} clickedPrice={clickedPrice} compactSide="sell" />
                   </TabsPanel>
                 </Tabs>
               </div>
@@ -1003,10 +1074,10 @@ function MarginTrades() {
               <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
             </TabsList>
             <TabsPanel value="buy">
-              <PlaceSpot pair={selectedPair} mode="cross" leverage={leverage} onLeverageChange={setLeverage} marketPrice={feed.price} clickedPrice={clickedPrice} compactSide="buy" />
+              <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode="cross" leverage={leverage} onLeverageChange={setLeverage} marketPrice={feed.price} clickedPrice={clickedPrice} compactSide="buy" />
             </TabsPanel>
             <TabsPanel value="sell">
-              <PlaceSpot pair={selectedPair} mode="cross" leverage={leverage} onLeverageChange={setLeverage} marketPrice={feed.price} clickedPrice={clickedPrice} compactSide="sell" />
+              <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode="cross" leverage={leverage} onLeverageChange={setLeverage} marketPrice={feed.price} clickedPrice={clickedPrice} compactSide="sell" />
             </TabsPanel>
           </Tabs>
         </div>

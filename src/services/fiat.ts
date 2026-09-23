@@ -27,8 +27,8 @@ export const fiatKeys = {
 } as const;
 
 export const fiatService = {
-  getQuote: async (): Promise<FiatQuote> => {
-    const response = await api.post("wallet/fiat/quote", {});
+  getQuote: async (symbol?: string): Promise<FiatQuote> => {
+    const response = await api.post("wallet/fiat/quote", symbol ? { symbol } : {});
     return response.data;
   },
 

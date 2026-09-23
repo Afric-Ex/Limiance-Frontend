@@ -23,7 +23,7 @@ export const tradingKeys = {
   orderBooks: ["order-books"],
   openOrders: (pair?: string) => ["open-orders", pair],
   orderHistory: (params?: any) => ["order-history", params],
-  klineData: (symbol: string, interval: string) => ["kline", symbol, interval],
+  klineData: (symbol: string, interval: string, market?: string) => ["kline", symbol, interval, market],
   gainersLosers: ["gainers-losers"],
   marginOrderHistory: ["margin-order-history"],
   marginOpenOrders: ["margin-open-orders"],
@@ -391,6 +391,7 @@ export const tradingService = {
     limit?: number;
     startTime?: string;
     endTime?: string;
+    market?: string;
   }) => {
     const response = await api.get("trading/kline/historical", {
       params: {
@@ -399,6 +400,7 @@ export const tradingService = {
         "end-time": params.endTime || "",
         interval: params.interval,
         limit: params.limit || 500,
+        ...(params.market ? { market: params.market } : {}),
       },
     });
     return response.data;

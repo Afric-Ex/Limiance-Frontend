@@ -77,6 +77,11 @@ function FuturesTradesInner() {
   const [chartExpanded, setChartExpanded] = useState(false);
   const [, setOrderBookOpen] = useState(false);
   const [mobileMode, setMobileMode] = useState<"trade" | "chart">("trade");
+  // Last placed trade — shown as an orange FILL tag on the chart
+  const [placedFill, setPlacedFill] = useState<{ side: string; price: number; quantity: number } | null>(null);
+  useEffect(() => {
+    setPlacedFill(null);
+  }, [selectedPair]);
   const [quickOrderOpen, setQuickOrderOpen] = useState(false);
   // Live funding countdown
   const [fundingCountdown, setFundingCountdown] = useState('--:--:--');
@@ -339,8 +344,8 @@ function FuturesTradesInner() {
           (p.side || "").toUpperCase();
         const size = Number(p.quantity ?? p.size ?? 0);
         const entry = Number(p.price || p.entryPrice || p.entry_price || 0);
-        const tp = Number(p.takeProfit || p.take_profit_price || 0);
-        const sl = Number(p.stopLoss || p.stop_loss_price || 0);
+        const tp = Number(p.takeProfit || p.take_profit_price || p.take_profit || p.tp_price || p.tp || 0);
+        const sl = Number(p.stopLoss || p.stop_loss_price || p.stop_loss || p.sl_price || p.sl || 0);
         const key = p.id || p._id || p.position_id || `${p.pair}-${size}-${entry}`;
         const detail = `${sideLabel}${size ? ` ${size}` : ""}${p.leverage ? ` ${p.leverage}X` : ""}`;
         return [
@@ -350,6 +355,17 @@ function FuturesTradesInner() {
         ];
       });
   positionLevels.forEach((level) => chartOrderLevels.push(level));
+
+  // Orange tag for the trade the user just placed
+  if (placedFill && Number.isFinite(placedFill.price) && placedFill.price > 0) {
+    chartOrderLevels.push({
+      id: `fill-${placedFill.side}-${placedFill.price}-${Date.now()}`,
+      label: "FILL",
+      price: placedFill.price,
+      color: "fill",
+      detail: `${placedFill.side.toUpperCase()}${placedFill.quantity ? ` ${placedFill.quantity}` : ""}`,
+    });
+  }
 
   const filteredMarkets = (feed.markets || []).filter((market: any) => {
     if (!pairSearch.trim()) return true;
@@ -423,6 +439,7 @@ function FuturesTradesInner() {
       return tradingService.placeFuturesOrder(payload);
     },
     onSuccess: (_, side) => {
+      setPlacedFill({ side, price: workingPrice, quantity });
       successNotification(`Futures ${side} order placed successfully`);
       refreshBalances();
       refetchOpenOrders();
