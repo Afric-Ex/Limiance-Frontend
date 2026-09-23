@@ -14,10 +14,9 @@ import { ConvertAsset } from "../transactions/convert-asset";
 import { BalanceCloak } from "../shared/balance-cloak";
 import { BalanceRevealControl } from "../shared/balance-reveal-control";
 import { Skeleton } from "../shared/skeleton";
-import { MdKeyboardArrowRight } from "react-icons/md";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
-export const WalletCard = ({ title }: { title?: string }) => {
+export const WalletCard = ({ title, children }: { title?: string; children?: React.ReactNode }) => {
   const { push } = useRouter();
   const {
     handleOpenDepositModal,
@@ -101,71 +100,82 @@ export const WalletCard = ({ title }: { title?: string }) => {
   ];
 
   return (
-    <div className="animate-fade-up rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl">
-      {/* Top row: Title + Eye toggle + Action buttons */}
-      <div className="flex flex-wrap items-start justify-between gap-4 mb-6 max-[1150px]:mb-4 max-[1150px]:flex-col">
-        <div className="flex items-center gap-2">
-          <h3 className="text-base font-semibold text-white/80">
-            {title ?? "Assets Overview"}
-          </h3>
-          <BalanceRevealControl />
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5 max-[1150px]:grid max-[1150px]:grid-cols-4 max-[1150px]:w-full">
-          {buttons.map((item) => (
-            <button
-              key={item.text}
-              onClick={item.action}
-              className={clsx(
-                "flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-all duration-200 max-[1150px]:flex-col max-[1150px]:p-2 max-[1150px]:justify-center max-[1150px]:text-[10px]",
-                item.isPrimary
-                  ? "bg-primary text-white hover:brightness-110 max-[1150px]:bg-white/5 max-[1150px]:border max-[1150px]:border-white/10"
-                  : "border border-white/10 bg-transparent text-white hover:border-white/25 hover:bg-white/[0.04]"
+    <div className="relative rounded-2xl overflow-hidden border border-white/[0.05] bg-gradient-to-br from-surface via-elevated to-black animate-fade-up max-[1150px]:rounded-xl">
+      {/* Glow blobs */}
+      <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-primary/20 blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-blue-600/10 blur-[80px] pointer-events-none" />
+
+      <div className="relative z-10 p-5 sm:p-6 lg:p-7 flex flex-col gap-5">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          {/* Left: label + balance + P&L */}
+          <div className="flex flex-col gap-3 max-w-md">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-primary/70">
+                {title ?? "Assets Overview"}
+              </span>
+              <BalanceRevealControl />
+            </div>
+
+            {balanceLoading ? (
+              <Skeleton variant="balance" />
+            ) : (
+              <>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl sm:text-3xl font-extrabold text-white tabular-nums leading-none">
+                    <BalanceCloak balance={balance?.inUsd ?? 0} />
+                  </span>
+                  <span className="text-base font-semibold text-white/40">USD</span>
+                </div>
+                <div className="flex items-center gap-1 text-sm text-white/50">
+                  <span>≈</span>
+                  <span><BalanceCloak balance={balance?.inBtc ?? 0} /></span>
+                  <span className="text-xs text-white/30">BTC</span>
+                </div>
+              </>
+            )}
+
+            {/* P&L line */}
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-white/40">
+                Today&apos;s P&L
+              </span>
+              {balanceLoading ? (
+                <Skeleton variant="text" width="100px" height="14px" />
+              ) : (
+                <span className={clsx("flex items-center gap-1 text-sm font-mono font-bold", isPnlUp ? "text-[#25AB42]" : "text-error-1")}>
+                  <span>{pnlDisplay}</span>
+                  <span>({pnlPctDisplay})</span>
+                </span>
               )}
-            >
-              <item.icon className="max-[1150px]:w-5 max-[1150px]:h-5" />
-              <span className="max-[1150px]:whitespace-nowrap">{item.text}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+            </div>
+          </div>
 
-      {/* Balance section */}
-      <div className="flex flex-col gap-1">
-        {balanceLoading ? (
-          <Skeleton variant="balance" />
-        ) : (
-          <>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl max-[1150px]:text-2xl font-bold text-white">
-                <BalanceCloak balance={balance?.inUsd ?? 0} />
-              </span>
-              <span className="text-sm font-medium text-white/40">USD</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-sm text-white/40">≈</span>
-              <span className="text-sm text-white/40">
-                <BalanceCloak balance={balance?.inBtc ?? 0} />
-              </span>
-              <span className="text-xs text-white/30">BTC</span>
-            </div>
-          </>
+          {/* Right: action cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 lg:shrink-0">
+            {buttons.map((item) => (
+              <button
+                key={item.text}
+                onClick={item.action}
+                className={clsx(
+                  "flex flex-col items-center justify-center gap-1 rounded-xl p-3.5 min-w-[96px] transition-all duration-200 active:scale-95",
+                  item.isPrimary
+                    ? "bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-white hover:border-primary"
+                    : "bg-white/[0.04] border border-white/[0.05] text-white/80 hover:bg-white/[0.08] hover:border-white/15"
+                )}
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="text-xs font-semibold">{item.text}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Optional slot: Deposit / Fiat Channels merged into the same hero */}
+        {children != null && (
+          <div className="flex flex-col gap-3 border-t border-white/[0.08] pt-5">
+            {children}
+          </div>
         )}
-
-        {/* PnL line */}
-        <div className="mt-2 flex items-center gap-2">
-          <span className="text-sm font-medium text-white/50">
-            Today&apos;s P&L
-          </span>
-          {balanceLoading ? (
-            <Skeleton variant="text" width="100px" height="14px" />
-          ) : (
-              <span className={clsx("flex items-center gap-1 text-sm", isPnlUp ? "text-[#25AB42]" : "text-error-1")}>
-                <span>{pnlDisplay}</span>
-                <span>({pnlPctDisplay})</span>
-                <MdKeyboardArrowRight className="text-white/30" />
-              </span>
-          )}
-        </div>
       </div>
     </div>
   );

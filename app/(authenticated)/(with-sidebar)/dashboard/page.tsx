@@ -320,47 +320,38 @@ function DashboardInner() {
         />
       )}
 
-      {/* Grid wrapper */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-[1150px]:gap-4 items-start w-full">
-        {/* Left Column: Wallet Card */}
-        <div className="w-full flex">
-          <div className="w-full h-full max-[1150px]:min-h-[160px]">
-             <WalletCard />
-          </div>
-        </div>
-
-        {/* Right Column: Deposit Channels */}
-        <div className="w-full h-full animate-fade-up stagger-2 rounded-2xl border border-white/[0.06] bg-[#181a20] flex flex-col p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl">
-          <h4 className="text-sm font-semibold text-white/80 mb-4 max-[1150px]:mb-2">
+      {/* Merged Wallet + Deposit Channels hero */}
+      <div className="w-full animate-fade-up">
+        <WalletCard>
+          <h4 className="text-xs font-bold uppercase tracking-widest text-white/40">
             Deposit / Fiat Channels
           </h4>
-          <div className="flex flex-col gap-3 flex-1 justify-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {depositChannels.map((item) => (
               <Link
                 key={item.name}
                 href={item.link}
-                className="p-4 border border-white/[0.04] bg-[#181a20] rounded-xl flex items-center justify-between transition-colors hover:bg-white/[0.04] row-hover group"
+                className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-white/[0.04] px-3.5 py-3 transition-colors hover:bg-white/[0.06] hover:border-white/15"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <span
-                    className="w-10 h-10 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-white/80"
+                    className="w-9 h-9 rounded-full flex items-center justify-center bg-white/[0.06] border border-white/10 shrink-0"
+                    style={{ color: item.color }}
                   >
-                    <item.icon className="w-5 h-5" />
+                    <item.icon className="w-4 h-4" />
                   </span>
                   <div className="flex flex-col gap-0.5">
-                    <h5 className="text-sm font-semibold">{item.name}</h5>
-                    <span className="text-xs text-white/40">
-                      {item.channel}
-                    </span>
+                    <h5 className="text-sm font-semibold text-white">{item.name}</h5>
+                    <span className="text-[11px] text-white/40">{item.channel}</span>
                   </div>
                 </div>
-                <span className="p-2 hover:bg-white/10 text-white/40 group-hover:text-white transition-all rounded-full">
+                <span className="text-white/40 group-hover:text-white transition-all shrink-0">
                   <ArrowTo className="w-4 h-4" />
                 </span>
               </Link>
             ))}
           </div>
-        </div>
+        </WalletCard>
       </div>
 
       {/* Markets Section */}
