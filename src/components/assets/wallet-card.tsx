@@ -4,7 +4,6 @@ import clsx from "clsx";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import React from "react";
-import { BusinessCard } from "../icons/business-card";
 import { Convert } from "../icons/convert";
 import { Transfer } from "../icons/transfer";
 import { Withdraw } from "../icons/withdraw";
@@ -19,7 +18,6 @@ import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 export const WalletCard = ({ title, children }: { title?: string; children?: React.ReactNode }) => {
   const { push } = useRouter();
   const {
-    handleOpenDepositModal,
     handleOpenInternalTransferModal,
     handleOpenExternalTransferModal,
   } = useAssets();
@@ -57,12 +55,6 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
   const balance = { inUsd: totalUsd, inBtc: totalBtc };
 
   const buttons = [
-    {
-      icon: BusinessCard,
-      text: "Deposit",
-      isPrimary: true,
-      action: handleOpenDepositModal,
-    },
     {
       icon: Withdraw,
       text: "Withdraw",
@@ -151,7 +143,7 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
           </div>
 
           {/* Right: action cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 lg:shrink-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 lg:shrink-0">
             {buttons.map((item) => (
               <button
                 key={item.text}

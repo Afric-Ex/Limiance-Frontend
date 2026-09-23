@@ -53,12 +53,6 @@ const faqs = [
   },
 ];
 
-const StepBadge = ({ num }: { num: number }) => (
-  <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-[0_0_10px_rgba(77,119,240,0.4)]">
-    {num}
-  </div>
-);
-
 const InfoTooltip = ({ label }: { label: string }) => (
   <Tooltip withArrow multiline w={220} arrowSize={8} color="#181a20" label={label}
     classNames={{ tooltip: "!text-xs !font-medium !border !border-white/[0.08]" }}>
@@ -137,31 +131,24 @@ function DepositInner() {
         }}
       />
 
+      {/* Page header */}
+      <div className="flex flex-col gap-1">
+        <h1 className="text-xl font-bold text-white tracking-tight">Deposit Crypto</h1>
+        <span className="text-xs font-medium text-white/40">
+          Send supported assets to your personal deposit address — they will be credited automatically.
+        </span>
+      </div>
+
       {/* Main Form + FAQ Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 max-[1150px]:gap-4 items-start max-[1150px]:flex max-[1150px]:flex-col">
 
-        {/* Left: Steps */}
-        <div className="flex flex-col gap-4">
+        {/* Main: Deposit card */}
+        <div className="flex flex-col gap-5 bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl min-w-0">
 
-          {/* Step 1+2: Coin & Network */}
-          <div className="bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl flex flex-col gap-5 max-[1150px]:gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <StepBadge num={1} />
-                <h3 className="text-base font-bold text-white">Select Coin & Network</h3>
-              </div>
-              {selectedCoin.symbol && (
-                <button
-                  onClick={openModal}
-                  className="text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
-                >
-                  Change
-                </button>
-              )}
-            </div>
-
+          {/* Coin & Network picker */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             {selectedCoin.symbol && selectedNetwork.name ? (
-              <div className="flex items-center gap-4 px-4 py-3 bg-white/[0.02] border border-white/[0.04] rounded-xl">
+              <div className="flex items-center gap-4 px-4 py-3 bg-white/[0.02] border border-white/[0.04] rounded-xl min-w-0">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   {selectedCoin.image && (
                     <img src={selectedCoin.image} alt={selectedCoin.symbol} width={28} height={28} className="rounded-full shrink-0" />
@@ -181,25 +168,27 @@ function DepositInner() {
             ) : (
               <button
                 onClick={openModal}
-                className="h-[56px] rounded-xl border border-white/[0.08] hover:border-primary/40 hover:bg-primary/[0.04] text-white/40 hover:text-primary text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                className="h-[56px] px-5 rounded-xl border border-white/[0.08] hover:border-primary/40 hover:bg-primary/[0.04] text-white/40 hover:text-primary text-sm font-semibold transition-all flex items-center justify-center gap-2 min-w-0"
               >
                 Select Coin & Network
                 <MdKeyboardArrowRight size={18} />
               </button>
             )}
+            <button
+              onClick={openModal}
+              className="text-xs font-semibold text-primary hover:text-primary/70 transition-colors shrink-0"
+            >
+              Change
+            </button>
           </div>
 
-          {/* Step 2: Deposit Details */}
-          <div className={`bg-[#181a20] border rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl flex flex-col gap-6 max-[1150px]:gap-4 transition-all ${selectedNetwork.name ? "border-white/[0.06]" : "border-white/[0.03] opacity-60 pointer-events-none"}`}>
-            <div className="flex items-center gap-3">
-              <StepBadge num={2} />
-              <h3 className="text-base font-bold text-white">Deposit Details</h3>
-            </div>
+          <div className="h-px bg-white/[0.06]" />
 
-            {/* Address Display */}
-            <div className="flex flex-col gap-2">
+          {/* Address + QR */}
+          <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+            <div className="flex flex-col gap-2 flex-1 min-w-0">
               <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Deposit Address</label>
-              <div className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 h-14">
+              <div className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 h-14 w-full min-w-0">
                 {walletLoading ? (
                   <InlineLoading />
                 ) : walletError ? (
@@ -216,7 +205,7 @@ function DepositInner() {
                   </>
                 ) : walletAddress ? (
                   <>
-                    <span className="flex-1 text-sm font-bold text-white/90 tracking-wide truncate">
+                    <span className="flex-1 min-w-0 text-sm font-bold text-white/90 tracking-wide break-all">
                       {walletAddress}
                     </span>
                     <Copy color="var(--primary)" text={walletAddress} />
@@ -231,107 +220,105 @@ function DepositInner() {
 
             {/* QR Code */}
             {walletAddress && (
-              <div className="flex justify-center">
+              <div className="flex justify-center shrink-0">
                 <div className="p-3 bg-white rounded-xl shadow-[0_0_24px_rgba(77,119,240,0.15)]">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(walletAddress)}`}
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(walletAddress)}`}
                     alt="Deposit QR Code"
-                    width={140}
-                    height={140}
+                    width={120}
+                    height={120}
                     className="block rounded-lg"
                   />
                 </div>
               </div>
             )}
+          </div>
 
-            {/* Details rows */}
-            <div className="flex flex-col gap-3">
-              {selectedCoin?.symbol && (
-                <div className="flex items-center justify-between py-3 border-b border-white/[0.04]">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white/50">Minimum Deposit</span>
-                    <InfoTooltip label="Deposits below the minimum amount will neither be credited nor refunded." />
-                  </div>
-                  <span className="text-sm font-bold text-primary">
-                    {minDepositData?.minimum ?? "—"}{" "}
-                    <span className="text-white/50 font-medium">{selectedCoin?.symbol}</span>
-                  </span>
+          {/* Details grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {selectedCoin?.symbol && (
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Min Deposit</span>
+                  <InfoTooltip label="Deposits below the minimum amount will neither be credited nor refunded." />
                 </div>
-              )}
-
-              {networkFeeData?.fee && (
-                <div className="flex items-center justify-between py-3 border-b border-white/[0.04]">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white/50">Network Fee</span>
-                    <InfoTooltip label="This fee is charged by the blockchain network, not Limiance." />
-                  </div>
-                  <span className="text-sm font-bold text-white/70">
-                    {networkFeeData.fee}{" "}
-                    <span className="text-white/40 font-medium">{selectedCoin?.symbol}</span>
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between py-3 border-b border-white/[0.04]">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-white/50">Deposit Channel</span>
-                  <InfoTooltip label="All pending and future deposits will be directed to the selected wallet." />
-                </div>
-                <WalletDropdown selectedWallet={walletType} setSelectedWallet={setWalletType} />
-              </div>
-
-              <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
-                <span className="text-xs text-white/45">
-                  Deposit credit routing is determined by the generated wallet and backend deposit rules.
+                <span className="text-sm font-bold text-primary">
+                  {minDepositData?.minimum ?? "—"}{" "}
+                  <span className="text-white/50 font-medium">{selectedCoin?.symbol}</span>
                 </span>
               </div>
+            )}
 
-              {selectedCoin?.contractAddress && (
-                <div className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white/50">Contract Address</span>
-                    <InfoTooltip label="Contract addresses differ from deposit addresses. Sending funds to a contract address may result in permanent loss of assets." />
-                  </div>
-                  <Popover classNames={{ dropdown: "!bg-[#181a20] !border-white/[0.08] !px-1 !pt-3 !pb-2" }}>
-                    <PopoverTarget>
-                      <button className="flex items-center gap-1 text-primary hover:text-primary/70 transition-colors">
-                        <span className="text-xs font-medium">···{selectedCoin?.contractAddress?.slice(-6)}</span>
-                        <MdKeyboardArrowRight size={14} />
-                      </button>
-                    </PopoverTarget>
-                    <PopoverDropdown>
-                      <div className="flex flex-col gap-2 w-72">
-                        <span className="text-xs font-semibold text-white/40 px-2">Contract Address</span>
-                        <div className="flex justify-between gap-3 bg-white/[0.04] p-3 rounded-xl items-center border border-white/[0.06]">
-                          <span className="text-xs flex-1 text-white/70 font-mono break-all">
-                            {selectedCoin?.contractAddress}
-                          </span>
-                          <Copy text={selectedCoin?.contractAddress} color="var(--primary)" />
-                        </div>
-                      </div>
-                    </PopoverDropdown>
-                  </Popover>
+            {networkFeeData?.fee && (
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Network Fee</span>
+                  <InfoTooltip label="This fee is charged by the blockchain network, not Limiance." />
                 </div>
-              )}
+                <span className="text-sm font-bold text-white/70">
+                  {networkFeeData.fee}{" "}
+                  <span className="text-white/40 font-medium">{selectedCoin?.symbol}</span>
+                </span>
+              </div>
+            )}
+
+            <div className="sm:col-span-2 flex items-center justify-between gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Deposit Channel</span>
+                <InfoTooltip label="All pending and future deposits will be directed to the selected wallet." />
+              </div>
+              <WalletDropdown selectedWallet={walletType} setSelectedWallet={setWalletType} />
             </div>
 
-            {/* Warning Box */}
-            {selectedCoin?.symbol && (
-              <div className="bg-warning-1/[0.06] border border-warning-1/20 rounded-xl p-4 flex gap-3">
-                <IoMdInformationCircleOutline size={18} className="text-warning-1 shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-sm font-semibold text-white/80">
-                    Deposit {selectedCoin?.symbol} only via {selectedNetwork?.name ?? "selected network"}
-                  </span>
-                  <ul className="text-xs font-medium text-warning-1/80 list-disc pl-4 flex flex-col gap-1">
-                    <li>Only send {selectedCoin?.symbol} ({selectedCoin?.name}) to this address.</li>
-                    <li>Deposits from smart contracts will not be credited.</li>
-                    <li>Incorrect network or asset selection may result in permanent loss.</li>
-                  </ul>
+            {selectedCoin?.contractAddress && (
+              <div className="sm:col-span-2 flex items-center justify-between gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Contract Address</span>
+                  <InfoTooltip label="Contract addresses differ from deposit addresses. Sending funds to a contract address may result in permanent loss of assets." />
                 </div>
+                <Popover classNames={{ dropdown: "!bg-[#181a20] !border-white/[0.08] !px-1 !pt-3 !pb-2" }}>
+                  <PopoverTarget>
+                    <button className="flex items-center gap-1 text-primary hover:text-primary/70 transition-colors">
+                      <span className="text-xs font-medium">···{selectedCoin?.contractAddress?.slice(-6)}</span>
+                      <MdKeyboardArrowRight size={14} />
+                    </button>
+                  </PopoverTarget>
+                  <PopoverDropdown>
+                    <div className="flex flex-col gap-2 w-72">
+                      <span className="text-xs font-semibold text-white/40 px-2">Contract Address</span>
+                      <div className="flex justify-between gap-3 bg-white/[0.04] p-3 rounded-xl items-center border border-white/[0.06]">
+                        <span className="text-xs flex-1 text-white/70 font-mono break-all">
+                          {selectedCoin?.contractAddress}
+                        </span>
+                        <Copy text={selectedCoin?.contractAddress} color="var(--primary)" />
+                      </div>
+                    </div>
+                  </PopoverDropdown>
+                </Popover>
               </div>
             )}
           </div>
+
+          <span className="text-xs text-white/30">
+            Deposit credit routing is determined by the generated wallet and backend deposit rules.
+          </span>
+
+          {/* Warning Box */}
+          {selectedCoin?.symbol && (
+            <div className="bg-warning-1/[0.06] border border-warning-1/20 rounded-xl p-4 flex gap-3">
+              <IoMdInformationCircleOutline size={18} className="text-warning-1 shrink-0 mt-0.5" />
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-semibold text-white/80">
+                  Deposit {selectedCoin?.symbol} only via {selectedNetwork?.name ?? "selected network"}
+                </span>
+                <ul className="text-xs font-medium text-warning-1/80 list-disc pl-4 flex flex-col gap-1">
+                  <li>Only send {selectedCoin?.symbol} ({selectedCoin?.name}) to this address.</li>
+                  <li>Deposits from smart contracts will not be credited.</li>
+                  <li>Incorrect network or asset selection may result in permanent loss.</li>
+                </ul>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: FAQ */}

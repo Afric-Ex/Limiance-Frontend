@@ -26,6 +26,7 @@ import { userKeys, userService } from "@/src/services/user";
 import { useQuery } from "@tanstack/react-query";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { useAssets } from "@/src/hooks/use-assets";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -49,7 +50,7 @@ const depositChannels = [
     channel: "Deposit crypto or fiat",
     color: "var(--yellow-1)",
     icon: CoinsIcon,
-    link: "/transactions/deposit",
+    modal: true,
   },
 ];
 
@@ -98,6 +99,7 @@ function DashboardInner() {
   const router = useRouter();
 
   const [activeMarketTab, setActiveMarketTab] = useState("Holding");
+  const { handleOpenDepositModal } = useAssets();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -327,29 +329,53 @@ function DashboardInner() {
             Deposit / Fiat Channels
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {depositChannels.map((item) => (
-              <Link
-                key={item.name}
-                href={item.link}
-                className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-white/[0.04] px-3.5 py-3 transition-colors hover:bg-white/[0.06] hover:border-white/15"
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className="w-9 h-9 rounded-full flex items-center justify-center bg-white/[0.06] border border-white/10 shrink-0"
-                    style={{ color: item.color }}
-                  >
-                    <item.icon className="w-4 h-4" />
-                  </span>
-                  <div className="flex flex-col gap-0.5">
-                    <h5 className="text-sm font-semibold text-white">{item.name}</h5>
-                    <span className="text-[11px] text-white/40">{item.channel}</span>
+            {depositChannels.map((item) =>
+              item.modal ? (
+                <button
+                  key={item.name}
+                  onClick={handleOpenDepositModal}
+                  className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-white/[0.04] px-3.5 py-3 text-left transition-colors hover:bg-white/[0.06] hover:border-white/15"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="w-9 h-9 rounded-full flex items-center justify-center bg-white/[0.06] border border-white/10 shrink-0"
+                      style={{ color: item.color }}
+                    >
+                      <item.icon className="w-4 h-4" />
+                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <h5 className="text-sm font-semibold text-white">{item.name}</h5>
+                      <span className="text-[11px] text-white/40">{item.channel}</span>
+                    </div>
                   </div>
-                </div>
-                <span className="text-white/40 group-hover:text-white transition-all shrink-0">
-                  <ArrowTo className="w-4 h-4" />
-                </span>
-              </Link>
-            ))}
+                  <span className="text-white/40 group-hover:text-white transition-all shrink-0">
+                    <ArrowTo className="w-4 h-4" />
+                  </span>
+                </button>
+              ) : (
+                <Link
+                  key={item.name}
+                  href={item.link!}
+                  className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-white/[0.04] px-3.5 py-3 transition-colors hover:bg-white/[0.06] hover:border-white/15"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="w-9 h-9 rounded-full flex items-center justify-center bg-white/[0.06] border border-white/10 shrink-0"
+                      style={{ color: item.color }}
+                    >
+                      <item.icon className="w-4 h-4" />
+                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <h5 className="text-sm font-semibold text-white">{item.name}</h5>
+                      <span className="text-[11px] text-white/40">{item.channel}</span>
+                    </div>
+                  </div>
+                  <span className="text-white/40 group-hover:text-white transition-all shrink-0">
+                    <ArrowTo className="w-4 h-4" />
+                  </span>
+                </Link>
+              )
+            )}
           </div>
         </WalletCard>
       </div>
