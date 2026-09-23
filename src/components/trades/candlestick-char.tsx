@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FiPlus, FiMinus, FiChevronsRight } from "react-icons/fi";
@@ -41,6 +41,17 @@ const MARKET_CANDLE_REQUEST: Partial<Record<ChartMarket, string>> = {
   futures: "get_futures_candles",
 };
 
+// The pair string each market's WS candle stream expects to receive:
+//   spot    → "BTC-USDT"  (dashed, verified live)
+//   margin  → "BTC/USDT"  (dashed with slash — compact BTCUSDT makes the stream
+//                          error with "Error receiving OHLC data")
+//   futures → "BTCUSDT"   (compact, per confirmed backend shape)
+const MARKET_WS_PAIR: Record<ChartMarket, (symbol: string) => string> = {
+  spot: (s) => s.replace("/", "-").toUpperCase(),
+  margin: (s) => s,
+  futures: (s) => pairKey(s),
+};
+
 interface LiveCandle extends KlineCandle {
   symbol: string;
   interval: string;
@@ -67,7 +78,7 @@ export type OrderLevel = {
   id: string;
   label: string;
   price: number;
-  color: "entry" | "tp" | "sl";
+  color: "entry" | "tp" | "sl" | "fill";
   detail?: string;
 };
 
@@ -75,6 +86,7 @@ const LEVEL_STYLES: Record<OrderLevel["color"], { line: string; bg: string }> = 
   entry: { line: "rgba(59, 130, 246, 0.9)", bg: "rgba(37, 99, 235, 0.95)" },
   tp: { line: "rgba(14, 203, 129, 0.9)", bg: "rgba(5, 150, 105, 0.95)" },
   sl: { line: "rgba(246, 70, 93, 0.9)", bg: "rgba(220, 38, 38, 0.95)" },
+  fill: { line: "rgba(255, 138, 0, 0.9)", bg: "rgba(255, 138, 0, 0.95)" },
 };
 
 // ── Backend kline normalisation ──────────────────────────────────────────────
@@ -288,28 +300,29 @@ function CandlestickChart({ symbol, interval, market = "spot" }: { symbol: strin
   const [count, setCount] = useState(DEFAULT_VISIBLE);
   const [end, setEnd] = useState(0);
 
-  // Margin candles arrive over WS as the primary source; the REST history
-  // endpoint is only used as a fallback when the WS stream is unavailable.
-  const isMargin = market === "margin";
+  // Live candles are driven by the backend WS candle stream and overlaid on
+  // REST history. HTTP is only used to seed/backfill history (the WS stream
+  // does not send it) and to keep the chart alive while the socket is down.
+  const candleRequest = MARKET_CANDLE_REQUEST[market];
   const [wsReady, setWsReady] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
   const [restFallback, setRestFallback] = useState(false);
 
   const { data: historyCandles, isLoading, isError } = useQuery({
-    queryKey: tradingKeys.klineData(symbol, interval),
-    queryFn: () => tradingService.klineData({ symbol, interval, limit: 500 }),
+    queryKey: tradingKeys.klineData(symbol, interval, market),
+    queryFn: () => tradingService.klineData({ symbol, interval, limit: 500, market }),
     select: (res) => normalizeKlines(res),
     staleTime: 60_000,
     retry: 1,
     throwOnError: false,
-    enabled: !isMargin || restFallback,
+    // Load history while the socket is down, while no WS candle has arrived
+    // yet for this pair/interval, or after the WS fell back to REST.
+    enabled: !wsConnected || !wsReady || restFallback,
   });
 
-  // liveCandles = history (backfill) + incremental WS candle updates
+  // liveCandles only tracks the incremental WS updates; history is merged in
+  // at render time so it always appears regardless of arrival order.
   const [liveCandles, setLiveCandles] = useState<KlineCandle[] | null>(null);
-  const historyRef = useRef<KlineCandle[]>([]);
-  useEffect(() => {
-    historyRef.current = historyCandles ?? [];
-  }, [historyCandles]);
 
   // Reset the live buffer whenever the pair or interval changes
   useEffect(() => {
@@ -319,25 +332,36 @@ function CandlestickChart({ symbol, interval, market = "spot" }: { symbol: strin
     setRestFallback(false);
   }, [symbol, interval]);
 
-  // If the WS never answers get_margin_candles (or the socket drops), fall
-  // back to the REST historical endpoint so the chart still has data.
+  // Track whether the shared socket is up.
   useEffect(() => {
-    if (!isMargin || wsReady) return;
-    let wasConnected = false;
-    const timer = setTimeout(() => setRestFallback(true), 5000);
-    const unsubStatus = wsClient.onStatusChange((connected) => {
-      if (wasConnected && !connected) setRestFallback(true);
-      wasConnected = connected;
-    });
-    return () => {
-      clearTimeout(timer);
-      unsubStatus();
-    };
-  }, [isMargin, wsReady]);
+    const unsubStatus = wsClient.onStatusChange(setWsConnected);
+    return unsubStatus;
+  }, []);
 
-  // Margin candles use the compact pair ("BTCUSDT"); spot/futures use the dashed form.
-  const wsPair = isMargin ? pairKey(symbol) : symbol.replace("/", "-").toUpperCase();
-  const candleRequest = MARKET_CANDLE_REQUEST[market];
+  // Fall back to HTTP whenever the socket is not connected, and while it is
+  // connected wait briefly for the candle stream; if it never answers, use
+  // HTTP so the chart still has history. Markets with no candle WS stream
+  // (futures) always go through REST.
+  useEffect(() => {
+    if (!candleRequest) {
+      setRestFallback(true);
+      return;
+    }
+    if (wsReady) {
+      setRestFallback(false);
+      return;
+    }
+    if (!wsConnected) {
+      setRestFallback(true);
+      return;
+    }
+    setRestFallback(false);
+    const timer = setTimeout(() => setRestFallback(true), 5000);
+    return () => clearTimeout(timer);
+  }, [candleRequest, wsConnected, wsReady]);
+
+  // Each market's candle WS stream expects a different pair spelling.
+  const wsPair = MARKET_WS_PAIR[market](symbol);
 
   useEffect(() => {
     if (!candleRequest) return;
@@ -357,7 +381,7 @@ function CandlestickChart({ symbol, interval, market = "spot" }: { symbol: strin
       setWsReady(true);
       setRestFallback(false);
       setLiveCandles((prev) => {
-        const base = prev && prev.length > 0 ? prev : historyRef.current;
+        const base = prev && prev.length > 0 ? prev : [];
         const next = [...base];
         for (const candle of matched) {
           const idx = next.findIndex((k) => k.time === candle.time);
@@ -370,10 +394,16 @@ function CandlestickChart({ symbol, interval, market = "spot" }: { symbol: strin
     return unsubscribe;
   }, [candleRequest, wsPair, interval, symbol]);
 
-  const candles = liveCandles ?? historyCandles;
+  const candles = useMemo(() => {
+    const base = historyCandles ?? [];
+    if (!liveCandles || liveCandles.length === 0) return base;
+    const byTime = new Map(base.map((c) => [c.time, c]));
+    for (const c of liveCandles) byTime.set(c.time, c);
+    return [...byTime.values()].sort((a, b) => a.time - b.time);
+  }, [historyCandles, liveCandles]);
 
   const n = candles?.length ?? 0;
-  const wsPending = isMargin && !wsReady && !restFallback && !isLoading && n === 0;
+  const wsPending = !wsReady && !restFallback && !isLoading && n === 0;
   const effEnd = end === 0 ? Math.min(count, n) : Math.min(end, n);
   const visible = candles?.slice(Math.max(0, effEnd - count), effEnd) ?? [];
 

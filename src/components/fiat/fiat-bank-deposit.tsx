@@ -35,11 +35,14 @@ export const FiatBankDeposit = () => {
     createAccount,
     confirming,
     confirmDeposit,
+    rate,
+    rateLoading,
   } = useFiatBankDeposit();
 
   const selectedBank = banks?.find((b) => b.code === form.values.bankCode);
   const amountValid = Number(form.values.amount) > 0;
   const canRequest = amountValid && !!form.values.bankCode && !!form.values.symbol;
+  const receivedAmount = amountValid && rate > 0 ? Number(form.values.amount) / rate : 0;
 
   if (account) {
     return (
@@ -152,30 +155,30 @@ export const FiatBankDeposit = () => {
         </p>
       </div>
 
-      {/* Asset */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">You will receive</label>
-        <Select
-          data={["USDT", "USDC", "BTC", "ETH", "SOL"]}
-          {...form.getInputProps("symbol")}
-          classNames={bankSelectClass}
-        />
-      </div>
-
-      {/* Amount */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Amount (NGN)</label>
-        <NumberInput
-          thousandSeparator=","
-          hideControls
-          classNames={{ input: inputClass, section: "!w-fit !right-3" }}
-          placeholder="0.00"
-          min={0}
-          rightSection={
-            <span className="pr-1 text-sm font-bold text-white">₦</span>
-          }
-          {...form.getInputProps("amount")}
-        />
+      {/* Amount + Asset */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">You pay (NGN)</label>
+          <NumberInput
+            thousandSeparator=","
+            hideControls
+            classNames={{ input: inputClass, section: "!w-fit !right-3" }}
+            placeholder="0.00"
+            min={0}
+            rightSection={
+              <span className="pr-1 text-sm font-bold text-white">₦</span>
+            }
+            {...form.getInputProps("amount")}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">You receive</label>
+          <Select
+            data={["USDT", "USDC", "BTC", "ETH", "SOL"]}
+            {...form.getInputProps("symbol")}
+            classNames={bankSelectClass}
+          />
+        </div>
       </div>
 
       {/* Bank */}
@@ -191,12 +194,32 @@ export const FiatBankDeposit = () => {
         />
       </div>
 
-      {/* summary */}
-      <div className="flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
-        <span className="text-sm text-white/50">You will receive</span>
-        <span className="text-sm font-bold text-primary">
-          {form.values.symbol} {amountValid ? `≈ ${Number(form.values.amount).toLocaleString()} NGN` : "—"}
-        </span>
+      {/* summary strip */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="flex flex-col gap-1 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+          <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">You pay</span>
+          <span className="text-sm font-bold text-white tabular-nums">
+            {amountValid ? `₦${Number(form.values.amount).toLocaleString()}` : "—"}
+          </span>
+        </div>
+        <div className="flex flex-col gap-1 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+          <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Rate</span>
+          <span className="text-sm font-bold text-white tabular-nums">
+            {rate > 0 ? `₦${Number(rate).toLocaleString()}` : rateLoading ? "…" : "—"}
+          </span>
+        </div>
+        <div className="flex flex-col gap-1 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+          <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">You receive</span>
+          <span className="text-sm font-bold text-primary tabular-nums">
+            {!amountValid
+              ? "—"
+              : receivedAmount > 0
+                ? `${receivedAmount.toLocaleString("en-US", { maximumFractionDigits: 6 })} ${form.values.symbol}`
+                : rateLoading
+                  ? "≈ …"
+                  : `${form.values.symbol} ${Number(form.values.amount).toLocaleString()} NGN`}
+          </span>
+        </div>
       </div>
 
       <Button

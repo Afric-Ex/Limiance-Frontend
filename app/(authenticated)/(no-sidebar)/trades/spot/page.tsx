@@ -63,6 +63,11 @@ function SpotTrades() {
   const [quickOrderOpen, setQuickOrderOpen] = useState(false);
   const [quickOrderSide, setQuickOrderSide] = useState<"buy" | "sell">("buy");
   const [tpslPreview, setTpslPreview] = useState<TpslPreview>({});
+  // Last placed trade — shown as an orange FILL tag on the chart
+  const [placedFill, setPlacedFill] = useState<{ side: string; price: number; quantity: number } | null>(null);
+  useEffect(() => {
+    setPlacedFill(null);
+  }, [selectedPair]);
 
   const feed = useMarketFeed(selectedPair);
   const orderBook = useOrderBook(selectedPair, "spot");
@@ -259,6 +264,17 @@ function SpotTrades() {
   if (isFinitePositive(tpslPreview.sellTp)) previewTpslLevels.push({ id: "preview-tp-sell", label: "TP", price: tpslPreview.sellTp, color: "tp", detail: "SELL" });
   if (isFinitePositive(tpslPreview.sellSl)) previewTpslLevels.push({ id: "preview-sl-sell", label: "SL", price: tpslPreview.sellSl, color: "sl", detail: "SELL" });
   previewTpslLevels.forEach((level) => chartOrderLevels.push(level));
+
+  // Orange tag for the trade the user just placed
+  if (placedFill && Number.isFinite(placedFill.price) && placedFill.price > 0) {
+    chartOrderLevels.push({
+      id: `fill-${placedFill.side}-${placedFill.price}-${Date.now()}`,
+      label: "FILL",
+      price: placedFill.price,
+      color: "fill",
+      detail: `${placedFill.side.toUpperCase()}${placedFill.quantity ? ` ${placedFill.quantity}` : ""}`,
+    });
+  }
 
   const [base, quote] = selectedPair.split("/");
 
@@ -681,7 +697,7 @@ function SpotTrades() {
               <TabsTab value="isolated" className="flex-1">Isolated {tradeMode === "isolated" ? `${leverage}x` : "10x"}</TabsTab>
             </TabsList>
             <TabsPanel value="spot">
-              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} onTpslChange={setTpslPreview} />
+              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} onTpslChange={setTpslPreview} onFill={setPlacedFill} />
             </TabsPanel>
             <TabsPanel value="cross">
               <PlaceSpot
@@ -691,7 +707,7 @@ function SpotTrades() {
                 onLeverageChange={setLeverage}
                 marketPrice={effectiveMarketPrice}
                 clickedPrice={clickedPrice}
-                onTpslChange={setTpslPreview}
+                onTpslChange={setTpslPreview} onFill={setPlacedFill}
               />
             </TabsPanel>
             <TabsPanel value="isolated">
@@ -702,7 +718,7 @@ function SpotTrades() {
                 onLeverageChange={setLeverage}
                 marketPrice={effectiveMarketPrice}
                 clickedPrice={clickedPrice}
-                onTpslChange={setTpslPreview}
+                onTpslChange={setTpslPreview} onFill={setPlacedFill}
               />
             </TabsPanel>
           </Tabs>
@@ -840,10 +856,10 @@ function SpotTrades() {
                     <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
                   </TabsList>
                   <TabsPanel value="buy">
-                    <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" onTpslChange={setTpslPreview} />
+                    <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
                   </TabsPanel>
                   <TabsPanel value="sell">
-                    <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" onTpslChange={setTpslPreview} />
+                    <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
                   </TabsPanel>
                 </Tabs>
               </div>
@@ -990,10 +1006,10 @@ function SpotTrades() {
               <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
             </TabsList>
             <TabsPanel value="buy">
-              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" onTpslChange={setTpslPreview} />
+              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
             </TabsPanel>
             <TabsPanel value="sell">
-              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" onTpslChange={setTpslPreview} />
+              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
             </TabsPanel>
           </Tabs>
         </div>

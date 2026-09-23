@@ -38,6 +38,30 @@ export const useFiatBankDeposit = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Rate (NGN per 1 unit of the selected symbol) used to preview "you will receive"
+  const { data: rate, isLoading: rateLoading } = useQuery({
+    queryKey: [...fiatKeys.quote, form.values.symbol],
+    queryFn: () => fiatService.getQuote(form.values.symbol),
+    select: (res: any): number | undefined => {
+      const body = res?.data && typeof res.data === "object" ? res.data : res;
+      if (Array.isArray(body)) {
+        const match = body.find(
+          (q: any) => String(q?.symbol ?? "").toUpperCase() === String(form.values.symbol).toUpperCase()
+        );
+        return Number(match?.sellRate ?? match?.buyRate ?? 0) || undefined;
+      }
+      const sell = Number(body?.sellRate ?? 0);
+      const buy = Number(body?.buyRate ?? 0);
+      if (sell) return sell;
+      if (buy) return buy;
+      const symQuote = body?.[form.values.symbol];
+      if (symQuote) return Number(symQuote?.sellRate ?? symQuote?.buyRate ?? 0) || undefined;
+      return undefined;
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
   const { mutate: createAccount, isPending: creatingAccount } = useMutation({
     mutationFn: () =>
       fiatService.createDepositAccount({
@@ -69,6 +93,8 @@ export const useFiatBankDeposit = () => {
   return {
     banks,
     banksLoading,
+    rate,
+    rateLoading,
     form,
     account,
     expirySeconds,

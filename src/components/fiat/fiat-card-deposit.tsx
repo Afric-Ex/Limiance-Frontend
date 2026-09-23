@@ -188,28 +188,28 @@ export const FiatCardDeposit = () => {
           </p>
         </div>
 
-        {/* Asset */}
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">You will receive</label>
-          <TextInput
-            placeholder="e.g. USDT"
-            classNames={{ input: inputClass }}
-            {...form.getInputProps("symbol")}
-          />
-        </div>
-
-        {/* Amount */}
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Amount (NGN)</label>
-          <NumberInput
-            thousandSeparator=","
-            hideControls
-            classNames={{ input: inputClass, section: "!w-fit !right-3" }}
-            placeholder="0.00"
-            min={0}
-            rightSection={<span className="pr-1 text-sm font-bold text-white">₦</span>}
-            {...form.getInputProps("amount")}
-          />
+        {/* Asset + Amount */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">You receive</label>
+            <TextInput
+              placeholder="e.g. USDT"
+              classNames={{ input: inputClass }}
+              {...form.getInputProps("symbol")}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">You pay (NGN)</label>
+            <NumberInput
+              thousandSeparator=","
+              hideControls
+              classNames={{ input: inputClass, section: "!w-fit !right-3" }}
+              placeholder="0.00"
+              min={0}
+              rightSection={<span className="pr-1 text-sm font-bold text-white">₦</span>}
+              {...form.getInputProps("amount")}
+            />
+          </div>
         </div>
 
         {/* Card Number */}

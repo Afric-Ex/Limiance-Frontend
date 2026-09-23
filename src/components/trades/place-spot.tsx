@@ -31,6 +31,7 @@ interface Props {
   compactSide?: "buy" | "sell";
   onLeverageChangeEnd?: (val: number) => void;
   onTpslChange?: (preview: TpslPreview) => void;
+  onFill?: (fill: { side: "buy" | "sell"; price: number; quantity: number }) => void;
 }
 
 const PERCENT_MARKS = [
@@ -94,7 +95,7 @@ function FieldRow({
   );
 }
 
-export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLeverageChange, marketPrice, clickedPrice, compactSide, onLeverageChangeEnd, onTpslChange }: Props) => {
+export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLeverageChange, marketPrice, clickedPrice, compactSide, onLeverageChangeEnd, onTpslChange, onFill }: Props) => {
   const [activeTab, setActiveTab] = useState("limit");
   const [buyPrice, setBuyPrice] = useState<number | string>("");
   const [buyAmount, setBuyAmount] = useState<number | string>("");
@@ -245,6 +246,14 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
   const { mutate: placeBuy, isPending: buyLoading } = useMutation({
     mutationFn: () => placeOrder("buy"),
     onSuccess: () => {
+      if (onFill) {
+        const p = buildPayload("buy");
+        onFill({
+          side: "buy",
+          price: activeTab === "market" ? (marketPrice ?? +p.price) : +p.price,
+          quantity: +p.quantity,
+        });
+      }
       successNotification("Buy order placed");
       refreshTradingBalances();
       setBuyPrice(""); setBuyAmount(""); setBuyTp(""); setBuySl(""); setBuyPct(0);
@@ -256,6 +265,14 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
   const { mutate: placeSell, isPending: sellLoading } = useMutation({
     mutationFn: () => placeOrder("sell"),
     onSuccess: () => {
+      if (onFill) {
+        const p = buildPayload("sell");
+        onFill({
+          side: "sell",
+          price: activeTab === "market" ? (marketPrice ?? +p.price) : +p.price,
+          quantity: +p.quantity,
+        });
+      }
       successNotification("Sell order placed");
       refreshTradingBalances();
       setSellPrice(""); setSellAmount(""); setSellTp(""); setSellSl(""); setSellPct(0);
