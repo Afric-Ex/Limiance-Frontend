@@ -22,24 +22,36 @@ interface OrderBookData {
 
 export type OrderBookMarket = "spot" | "margin" | "futures";
 
-const normalizePair = (v: string) => String(v ?? "").replace(/[/\\\-_\s]/g, "").toUpperCase();
+const normalizePair = (v: string) => String(v ?? "").replace(/[/\\\-_:\s]/g, "").toUpperCase();
+
+// True when an incoming order-book symbol tag refers to the pair we requested.
+// Strips separators and accepts a prefix match (some streams tag the book with
+// an extended symbol like "BTCUSDT0929" or ":USDT" suffixes).
+const symbolMatches = (tag: unknown, pair: string) => {
+  if (!tag) return false;
+  const a = normalizePair(String(tag));
+  const b = normalizePair(pair);
+  if (!a || !b) return false;
+  return a === b || a.startsWith(b) || b.startsWith(a);
+};
 
 // The pair string each market's order-book WS stream expects:
-//   spot    → "BTC-USDT"  (dashed, verified live)
-//   margin  → "BTCUSDT"   (compact, verified live)
-//   futures → "BTCUSDT"   (compact — the backend only emits a snapshot when
-//                          the symbol matches exactly; dashed "BTC-USDT"
-//                          starts the stream but never delivers data)
-const wsPairForMarket = (pair: string, market: OrderBookMarket) =>
-  market === "spot" ? pair.replace("/", "-").toUpperCase() : normalizePair(pair);
+//   spot    → "BTC/USDT"   (slashed — the backend matches the pair with the
+//                           slash separator, not the dashed "BTC-USDT" form)
+//   margin  → "BTC/USDT"   (slashed — the payload API Dog verified;
+//                            compact "BTCUSDT" and "BTC/USDT:margin" ack the
+//                            stream but return null levels)
+//   futures → "BTC/USDT"   (slashed — the backend matches the pair with the
+//                           slash separator, not compact "BTCUSDT")
+const wsPairForMarket = (pair: string, _market: OrderBookMarket) => pair.toUpperCase();
 
 // The backend pushes order books on a per-market response type:
-//   spot/margin → "order_book_update"           (data.orderBook.{buyOrders,sellOrders})
+//   spot/margin → "order_book_update"  (data.orderBook.{buyOrders,sellOrders})
 //   futures     → "futures_order_book_update"   (data.{buy,sell} + markPrice)
-const RESPONSE_TOPIC: Record<OrderBookMarket, string> = {
-  spot: "order_book_update",
-  margin: "order_book_update",
-  futures: "futures_order_book_update",
+const RESPONSE_TOPICS: Record<OrderBookMarket, string[]> = {
+  spot: ["order_book_update"],
+  margin: ["order_book_update"],
+  futures: ["futures_order_book_update"],
 };
 
 export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): OrderBookData => {
@@ -104,7 +116,6 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
 
     const wsPair = wsPairForMarket(pair, market);
     const payload = { type: `get_${market}_order_books`, data: { pair: wsPair } };
-    const responseTopic = RESPONSE_TOPIC[market];
 
     const unsubscribeStatus = wsClient.onStatusChange((connected) => {
       setData((prev) => ({ ...prev, isConnected: connected }));
@@ -113,17 +124,19 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
       }
     });
 
-    const unsubscribeMessages = wsClient.subscribe(responseTopic, payload, (dataPayload) => {
-      // spot/margin nest the book under data.orderBook; futures carry buy/sell
-      // directly on the payload.
-      const book = dataPayload?.orderBook ?? dataPayload;
+    // Listen on every possible response topic for this market. All of them share
+    // the same subscription payload and map into the same handler.
+    const handleBookMessage = (dataPayload: any) => {
+      // spot/margin nest the book under data.orderBook (or data.data.orderBook);
+      // futures carry buy/sell directly on the payload.
+      const book = dataPayload?.orderBook ?? dataPayload?.data?.orderBook ?? dataPayload?.data ?? dataPayload;
       if (!book) return;
 
       // The backend tags each order-book update with a symbol/pair. Only accept
       // the book for the pair we asked for, otherwise a shared stream can show
       // another pair's book or a stale one.
-      const bookSymbol = dataPayload?.symbol ?? dataPayload?.pair ?? book?.symbol;
-      if (bookSymbol && normalizePair(bookSymbol) !== normalizePair(pair)) return;
+      const bookSymbol = dataPayload?.symbol ?? dataPayload?.pair ?? book?.symbol ?? book?.pair;
+      if (bookSymbol && !symbolMatches(bookSymbol, pair)) return;
 
       const normalize = (entries: any): OrderBookEntry[] => {
         if (!Array.isArray(entries)) return [];
@@ -151,7 +164,11 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
         isConnected: true,
         lastUpdated: new Date(),
       });
-    });
+    };
+
+    const unsubscribeMessages = RESPONSE_TOPICS[market].map((responseTopic) =>
+      wsClient.subscribe(responseTopic, payload, handleBookMessage)
+    );
 
     // The backend sends a single order-book snapshot when a stream starts and
     // does not re-push it while the stream is already active. If that snapshot
@@ -165,7 +182,7 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
     return () => {
       clearInterval(healTimer);
       unsubscribeStatus();
-      unsubscribeMessages();
+      unsubscribeMessages.forEach((unsub) => unsub());
     };
   }, [pair, market, fetchHttpFallback]);
 

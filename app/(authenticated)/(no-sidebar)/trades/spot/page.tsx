@@ -430,7 +430,7 @@ function SpotTrades() {
 
         {/* Chart Column (Responsive) */}
         <div className="flex flex-col gap-1 overflow-hidden min-w-0 min-[1150px]:col-start-1">
-          <div className={clsx("bg-[#181a20] rounded relative flex flex-col transition-all duration-300", chartExpanded ? "h-[450px]" : "h-[280px] min-[1150px]:h-[520px]")}>
+          <div className={clsx("bg-[#181a20] rounded relative flex flex-col transition-all duration-300", chartExpanded ? "h-[950px] shrink-0" : "flex-1 min-[1150px]:min-h-0")}>
             <CandlestickChart
               key={selectedPair}
               symbol={selectedPair}
@@ -450,16 +450,17 @@ function SpotTrades() {
           </div>
 
           {/* Desktop Order History Tabs */}
-          <div className="hidden min-[1150px]:flex bg-[#181a20] rounded flex-1 overflow-hidden flex-col min-h-[220px]">
+          <div className="hidden min-[1150px]:flex bg-[#181a20] rounded flex-1 overflow-hidden flex-col h-[50px] min-h-[50px] shrink-0">
             <Tabs
               classNames={{
                 tab: "!pb-2 !pt-3 hover:!bg-transparent hover:!border-0 data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50",
-                list: "!flex !items-center border-b border-white/[0.06] px-4",
-                panel: "!flex-1 !overflow-auto",
+                list: "!flex !items-center border-b border-white/[0.06] px-4 shrink-0",
+                panel: "!flex-1 !overflow-auto !min-h-0",
+                root: "!flex !flex-col !min-h-0",
               }}
               defaultValue="open"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between shrink-0">
                 <TabsList>
                   <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
                   <TabsTab value="history">Order History</TabsTab>

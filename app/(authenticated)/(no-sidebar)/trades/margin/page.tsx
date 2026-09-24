@@ -373,6 +373,10 @@ function MarginTrades() {
       {/* Top Header Desktop */}
       <div className="hidden min-[1150px]:flex bg-[#181a20] py-3 px-4 justify-between items-center border-b border-white/[0.06]">
         <div className="flex items-center gap-6">
+          {/* Back */}
+          <button className="flex items-center gap-1 tap-scale" onClick={() => window.history.back()}>
+            <IoChevronDown className="rotate-90 text-white/70" size={22} />
+          </button>
           {/* Pair selector */}
           <Popover width={360} position="bottom-start" shadow="md">
             <PopoverTarget>
@@ -484,8 +488,8 @@ function MarginTrades() {
         </button>
 
         {/* Chart Column (Responsive) */}
-        <div className="flex flex-col gap-1 overflow-hidden min-w-0 min-[1150px]:col-start-1">
-          <div className={clsx("bg-[#181a20] rounded relative flex flex-col transition-all duration-300", chartExpanded ? "h-[450px]" : "h-[280px] min-[1150px]:h-[520px]")}>
+        <div className="flex flex-col gap-1 overflow-hidden min-w-0 min-h-0 min-[1150px]:col-start-1">
+          <div className={clsx("bg-[#181a20] rounded relative flex flex-col transition-all duration-300", chartExpanded ? "h-[450px] shrink-0" : "flex-1 min-[1150px]:min-h-0")}>
             <CandlestickChart key={selectedPair} symbol={selectedPair} market="margin" orderBook={orderBook} orderLevels={chartOrderLevels} />
             
             {/* Mobile chart expand toggle */}
@@ -498,20 +502,22 @@ function MarginTrades() {
           </div>
 
           {/* Desktop Order History Tabs */}
-          <div className="hidden min-[1150px]:flex bg-[#181a20] rounded flex-1 overflow-hidden flex-col min-h-[220px]">
+          <div className="hidden min-[1150px]:flex bg-[#181a20] rounded overflow-hidden flex-col h-[310px] min-h-[310px] shrink-0">
             <Tabs
               classNames={{
                 tab: "!pb-2 !pt-3 hover:!bg-transparent hover:!border-0 data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50",
-                list: "!flex !items-center border-b border-white/[0.06] px-4",
-                panel: "!flex-1 !overflow-auto",
+                list: "!flex !items-center border-b border-white/[0.06] px-4 shrink-0",
+                panel: "flex-1 flex flex-col min-h-0 overflow-auto",
+                root: "!flex !flex-col !min-h-0 !h-full",
               }}
               defaultValue="open"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between shrink-0">
                 <TabsList>
                   <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
                   <TabsTab value="history">Order History</TabsTab>
-                  <TabsTab value="trades">Trade History</TabsTab>
+                  <TabsTab value="tradeHistory">Trade History</TabsTab>
+                  <TabsTab value="trades">Trades</TabsTab>
                 </TabsList>
                 <div className="pr-4">
                   <Checkbox
@@ -583,7 +589,7 @@ function MarginTrades() {
                     <Skeleton variant="table-row" count={3} columns={9} className="w-full" />
                   </div>
                 ) : !openOrders?.length ? (
-                  <div className="min-h-[120px] flex flex-col items-center justify-center gap-2">
+                  <div className="flex-1 min-h-[120px] flex flex-col items-center justify-center gap-2">
                     <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20">
                       <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -597,7 +603,7 @@ function MarginTrades() {
                 {orderHistoryLoading ? (
                   <div className="p-8 flex justify-center"><Skeleton variant="table-row" count={3} columns={9} className="w-full" /></div>
                 ) : !orderHistory?.length ? (
-                  <div className="min-h-[120px] flex flex-col items-center justify-center gap-2">
+                  <div className="flex-1 min-h-[120px] flex flex-col items-center justify-center gap-2">
                     <p className="text-xs font-medium text-white/30">No order history</p>
                   </div>
                 ) : (
@@ -637,8 +643,47 @@ function MarginTrades() {
                   </Table>
                 )}
               </TabsPanel>
+              <TabsPanel value="tradeHistory">
+                {(() => {
+                  const filled = (orderHistory ?? []).filter((o: any) => o.status === "filled");
+                  return orderHistoryLoading ? (
+                    <div className="p-8 flex justify-center"><Skeleton variant="table-row" count={3} columns={9} className="w-full" /></div>
+                  ) : !filled.length ? (
+                    <div className="flex-1 min-h-[120px] flex flex-col items-center justify-center gap-2">
+                      <p className="text-xs font-medium text-white/30">No trade history</p>
+                    </div>
+                  ) : (
+                    <Table classNames={{ th: "!text-[10px] uppercase !text-white/40 !bg-[#181a20] sticky top-0 z-10 border-b border-white/[0.06]", tr: "row-hover transition-colors border-b border-transparent" }}>
+                      <thead>
+                        <TableTr>
+                          <TableTh>Time</TableTh>
+                          <TableTh>Pair</TableTh>
+                          <TableTh>Type</TableTh>
+                          <TableTh>Side</TableTh>
+                          <TableTh>Price</TableTh>
+                          <TableTh>Amount</TableTh>
+                          <TableTh>Total</TableTh>
+                        </TableTr>
+                      </thead>
+                      <tbody>
+                        {filled.map((order: any, idx: number) => (
+                          <TableTr key={order.id ?? idx}>
+                            <TableTd><span className="text-xs text-white/70">{order.createdAt ? new Date(order.createdAt).toLocaleString() : "—"}</span></TableTd>
+                            <TableTd><span className="text-xs font-semibold">{order.pair ?? `${order.base}/${order.quote}`}</span></TableTd>
+                            <TableTd><span className="text-xs text-white/70 capitalize">{order.type}</span></TableTd>
+                            <TableTd><span className={`text-xs font-bold ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span></TableTd>
+                            <TableTd><span className="text-xs text-white/90">{order.price?.toLocaleString()}</span></TableTd>
+                            <TableTd><span className="text-xs text-white/90">{order.amount ?? order.quantity}</span></TableTd>
+                            <TableTd><span className="text-xs text-white/90">{order.total?.toLocaleString()}</span></TableTd>
+                          </TableTr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  );
+                })()}
+              </TabsPanel>
               <TabsPanel value="trades">
-                <div className="min-h-[120px]">{renderRecentTrades(50)}</div>
+                <div className="flex-1 min-h-[120px]">{renderRecentTrades(50)}</div>
               </TabsPanel>
             </Tabs>
           </div>
@@ -983,77 +1028,6 @@ function MarginTrades() {
               </div>
             </div>
 
-            {/* Open Orders / History / Trades */}
-            <div className="bg-[#181a20] rounded flex flex-col mt-2 mb-[80px]">
-               <Tabs
-                 defaultValue="open"
-                 classNames={{
-                   tab: "!py-3 !px-3 flex-1 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50",
-                   list: "border-b border-white/[0.06] flex items-center before:!border-0 w-full px-2",
-                   panel: "!p-4",
-                 }}
-               >
-                 <TabsList>
-                   <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
-                   <TabsTab value="history">Order History</TabsTab>
-                   <TabsTab value="trades">Trades</TabsTab>
-                 </TabsList>
-                 <TabsPanel value="open">
-                 {openOrdersLoading ? (
-                   <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={3} columns={1} className="w-full" /></div>
-                 ) : !openOrders?.length ? (
-                   <div className="min-h-[100px] flex flex-col items-center justify-center gap-2">
-                     <p className="text-[10px] font-medium text-white/30">No open orders</p>
-                   </div>
-                 ) : (
-                   <div className="flex flex-col gap-3">
-                     {openOrders.map((order: any) => (
-                       <div key={order.id} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2 relative">
-                         <div className="flex justify-between items-center">
-                           <span className="text-sm font-bold">{order.pair} <span className={`ml-2 text-xs uppercase ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>{order.side}</span></span>
-                           <button onClick={() => closeOrder(order.id)} disabled={closeOrderPending} className="text-[10px] font-semibold text-white/40 hover:text-primary">Cancel</button>
-                         </div>
-                         <div className="grid grid-cols-2 gap-2 text-xs">
-                           <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{order.price?.toLocaleString()}</span></div>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 )}
-                 </TabsPanel>
-                 <TabsPanel value="history">
-                 {orderHistoryLoading ? (
-                   <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={3} columns={1} className="w-full" /></div>
-                 ) : !orderHistory?.length ? (
-                   <div className="min-h-[100px] flex flex-col items-center justify-center gap-2">
-                     <p className="text-[10px] font-medium text-white/30">No order history</p>
-                   </div>
-                 ) : (
-                   <div className="flex flex-col gap-3">
-                     {orderHistory.map((order: any, idx: number) => (
-                       <div key={order.id ?? idx} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
-                         <div className="flex justify-between items-center gap-2">
-                           <span className="text-sm font-bold truncate">{order.pair ?? `${order.base}/${order.quote}`} <span className={`ml-2 text-xs uppercase font-bold ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span></span>
-                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${order.status === "filled" ? "bg-success-6/15 text-success-6" : order.status === "cancelled" ? "bg-error-1/15 text-error-1" : "bg-white/10 text-white/50"}`}>{order.status}</span>
-                         </div>
-                         <div className="grid grid-cols-2 gap-2 text-xs">
-                           <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white text-right">{order.createdAt ? new Date(order.createdAt).toLocaleString() : "—"}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Type</span><span className="text-white capitalize">{order.type}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{order.price?.toLocaleString()}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Total</span><span className="text-white">{order.total?.toLocaleString()}</span></div>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 )}
-                 </TabsPanel>
-                 <TabsPanel value="trades">
-                   {renderRecentTrades(30)}
-                 </TabsPanel>
-               </Tabs>
-            </div>
           </div>
         )}
       </div>
