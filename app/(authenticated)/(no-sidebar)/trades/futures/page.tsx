@@ -9,7 +9,7 @@ import { usePortfolioWs } from '@/src/hooks/use-portfolio-ws';
 import { errorMessageHandler } from '@/src/lib/error-handler';
 import { successNotification } from '@/src/lib/notification-handler';
 import { useUserStore } from '@/src/stores/user-store';
-import { tradingService } from '@/src/services/trading';
+import { tradingService, tradingKeys } from '@/src/services/trading';
 import { DEFAULT_MODAL_SETTINGS } from '@/src/utils/constants';
 import {
   Checkbox,
@@ -49,6 +49,66 @@ const CandlestickChart = dynamic(
 
 const LEVERAGE_PRESETS = [1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100];
 const PERCENT_MARKS = [{ value: 25 }, { value: 50 }, { value: 75 }];
+
+const POSITION_MODAL_STYLES = {
+  content: {
+    backgroundColor: '#13151c',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: '16px',
+  },
+  header: {
+    backgroundColor: 'transparent',
+    padding: '16px 20px',
+  },
+  body: {
+    padding: '0 20px 20px',
+  },
+};
+
+// Resolve a futures position. Prefers the live fields streamed by the
+// `futures_positions` WS channel (markPrice, unrealizedPnl, initialMargin,
+// takeProfitPrice/stopLossPrice) and only falls back to the markets feed or
+// local math when the payload omits them (e.g. the HTTP fallback shape).
+const resolveFuturesPosition = (pos: any, feed: any, selectedPair: string) => {
+  const pair = pos.pair || pos.symbol || `${pos.base || ''}/${pos.quote || 'USDT'}`;
+  const isLong = /^(long|buy)$/i.test(String(pos.side ?? ''));
+  const size = Number(pos.quantity ?? pos.size ?? 0);
+  const entryPrice = Number(pos.entryPrice ?? pos.entry_price ?? pos.price ?? pos.entry ?? 0);
+  const leverage = Number(pos.leverage || 1);
+
+  const symbolRaw = pair.replace('/', '').toUpperCase();
+  const market = (feed.markets || []).find(
+    (m: any) =>
+      (m.symbol || m.pair || '').replace('/', '').replace('-', '').toUpperCase() ===
+      symbolRaw.replace('-', '')
+  );
+  const liveFeedMark = Number(market?.last_price || market?.lastPrice || market?.price || 0);
+  const liveSelectedMark = pair.replace('/', '') === selectedPair.replace('/', '') ? feed.price : null;
+  const payloadMark = Number(pos.markPrice ?? pos.mark_price ?? 0);
+  // Live ticker mark first (moves with price), then the positions-WS snapshot mark,
+  // then entry price as last resort.
+  const markPrice = liveFeedMark || liveSelectedMark || payloadMark || entryPrice;
+
+  const rawMargin = pos.initialMargin ?? pos.initial_margin ?? pos.margin ?? pos.marginUsed ?? pos.margin_used;
+  const margin = rawMargin ? Number(rawMargin) : (size * entryPrice) / leverage;
+
+  const livePriced = Boolean(liveFeedMark || liveSelectedMark);
+  const hasPayloadPnl =
+    pos.unrealizedPnl !== undefined && pos.unrealizedPnl !== null && !isNaN(Number(pos.unrealizedPnl));
+  const pnl =
+    !livePriced && hasPayloadPnl
+      ? Number(pos.unrealizedPnl)
+      : isLong
+        ? size * (markPrice - entryPrice)
+        : size * (entryPrice - markPrice);
+  const roe = margin > 0 ? (pnl / margin) * 100 : 0;
+
+  const tpRaw = pos.takeProfitPrice ?? pos.take_profit_price ?? pos.takeProfit ?? pos.take_profit ?? null;
+  const slRaw = pos.stopLossPrice ?? pos.stop_loss_price ?? pos.stopLoss ?? pos.stop_loss ?? null;
+  const pickTpSl = (v: any) => (v !== null && Number(v) !== 0 ? v : null);
+
+  return { pair, isLong, size, entryPrice, markPrice, leverage, margin, pnl, roe, tp: pickTpSl(tpRaw), sl: pickTpSl(slRaw) };
+};
 
 type OrderType = 'limit' | 'market' | 'stop';
 type TradeSide = 'buy' | 'sell';
@@ -121,6 +181,16 @@ function FuturesTradesInner() {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
     },
+    retry: false,
+    throwOnError: false,
+  });
+
+  const normalizedSymbol = selectedPair.replace(/[/\\\-_\s]/g, "").toUpperCase();
+
+  const { data: recentTrades, isLoading: recentTradesLoading } = useQuery({
+    queryKey: tradingKeys.spotRecentTrades(normalizedSymbol),
+    queryFn: () => tradingService.spotRecentTrades({ symbol: normalizedSymbol }),
+    select: (res: any) => (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []),
     retry: false,
     throwOnError: false,
   });
@@ -378,6 +448,53 @@ function FuturesTradesInner() {
     value !== null
       ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       : null;
+
+  const formatTime = (value: unknown) => {
+    if (!value) return '—';
+    const date = new Date(String(value));
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleTimeString();
+  };
+
+  // Shared renderer for recent market trades (desktop + mobile) — mirrors margin
+  const renderRecentTrades = (limit = 20) => (
+    <div className="w-full">
+      {recentTradesLoading ? (
+        <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={5} columns={3} className="w-full" /></div>
+      ) : !recentTrades?.length ? (
+        <div className="p-4 text-center text-xs text-white/40">No recent trades</div>
+      ) : (
+        <div className="flex flex-col">
+          <div className="grid grid-cols-4 px-3 py-1.5 text-[10px] text-white/40">
+            <span>Time</span><span className="text-center">Direction</span><span className="text-right">Price</span><span className="text-right">Qty</span>
+          </div>
+          <div className="flex flex-col divide-y divide-white/[0.04]">
+            {[...recentTrades]
+              .sort((a: any, b: any) => {
+                const ta = new Date(a?.createdAt ?? a?.time ?? a?.ts ?? 0).getTime();
+                const tb = new Date(b?.createdAt ?? b?.time ?? b?.ts ?? 0).getTime();
+                return (Number.isNaN(tb) ? 0 : tb) - (Number.isNaN(ta) ? 0 : ta);
+              })
+              .slice(0, limit)
+              .map((t: any, i: number) => {
+              const side = String(t.side ?? '').toUpperCase();
+              const isBuy = side === 'BUY';
+              const priceColor = isBuy ? 'text-success-6' : side === 'SELL' ? 'text-error-1' : 'text-white/80';
+              return (
+                <div key={t.id ?? t.tradeId ?? i} className="grid grid-cols-4 px-3 py-1.5 text-[11px] font-mono tabular-nums items-center">
+                  <span className="text-white/40">{formatTime(t.createdAt ?? t.time ?? t.ts)}</span>
+                  <span className="text-center">
+                    <span className={isBuy ? 'text-success-6' : 'text-error-1'}>{isBuy ? 'BUY' : side === 'SELL' ? 'SELL' : '—'}</span>
+                  </span>
+                  <span className={'text-right ' + priceColor}>{Number(t.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span>
+                  <span className="text-right text-white/80">{Number(t.quantity ?? t.qty ?? t.filled).toLocaleString()}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   const isPositive = (feed.changePercent24h ?? 0) >= 0;
   const changeColor = isPositive ? 'text-success-6' : 'text-error-1';
@@ -679,6 +796,10 @@ function FuturesTradesInner() {
 
       <div className="hidden min-[1150px]:flex bg-[#181a20] py-3 px-4 justify-between items-center border-b border-white/[0.06]">
         <div className="flex items-center gap-8">
+          {/* Back */}
+          <button className="flex items-center gap-1 tap-scale" onClick={() => window.history.back()}>
+            <IoChevronDown className="rotate-90 text-white/70" size={22} />
+          </button>
           <Popover width={350} position="bottom-start" shadow="md">
             <PopoverTarget>
               <button className="flex items-center gap-2 hover:bg-white/5 py-1 px-2 rounded -ml-2 transition-colors">
@@ -791,16 +912,17 @@ function FuturesTradesInner() {
             </button>
           </div>
 
-          <div className="hidden min-[1150px]:flex bg-[#181a20] rounded flex-1 overflow-hidden flex-col min-h-[250px]">
+          <div className="hidden min-[1150px]:flex bg-[#181a20] rounded overflow-hidden flex-col h-[360px]">
             <Tabs
               classNames={{
                 tab: '!pb-2 !pt-3 hover:!bg-transparent hover:!border-0 data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50',
-                list: '!flex !items-center border-b border-white/[0.06] px-4',
-                panel: '!flex-1 !overflow-auto',
+                list: '!flex !items-center border-b border-white/[0.06] px-4 shrink-0',
+                panel: 'flex-1 flex flex-col min-h-0 overflow-hidden',
+                root: '!flex !flex-col !min-h-0 !h-full',
               }}
               defaultValue="positions"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between shrink-0">
                 <TabsList>
                   <TabsTab value="positions">Positions({futuresPositions.length})</TabsTab>
                   <TabsTab value="open">Open Orders({futuresOpenOrders?.length ?? 0})</TabsTab>
@@ -819,7 +941,7 @@ function FuturesTradesInner() {
               </div>
               <TabsPanel value="positions">
                 {!futuresPositions || futuresPositions.length === 0 ? (
-                  <div className="h-full min-h-[150px] flex flex-col items-center justify-center gap-2">
+                  <div className="flex-1 min-h-[150px] flex flex-col items-center justify-center gap-2">
                     <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20">
                       <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -828,7 +950,7 @@ function FuturesTradesInner() {
                     <p className="text-xs font-medium text-white/30">You have no open positions.</p>
                   </div>
                 ) : (
-                  <div className="w-full h-full overflow-x-auto overflow-y-auto">
+                  <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
                     <Table classNames={{
                       table: "min-w-[950px] w-full",
                       th: "!text-[10px] uppercase tracking-wide !text-white/40 !border-b !border-white/[0.05] !py-3 !font-medium whitespace-nowrap",
@@ -873,39 +995,14 @@ function FuturesTradesInner() {
                             return String(a.id || a._id || '').localeCompare(String(b.id || b._id || ''));
                           })
                           .map((pos: any, idx: number) => {
-                          const pair = pos.pair || `${pos.base || ''}/${pos.quote || 'USDT'}`;
-                          const isLong = pos.side?.toLowerCase() === 'long' || pos.side?.toLowerCase() === 'buy';
-                          // Use quantity first (order amount), fall back to size
-                          const size = Number(pos.quantity ?? pos.size ?? 0);
-                          const entryPrice = Number(pos.price || pos.entryPrice || pos.entry_price || 0);
-                          const leverage = Number(pos.leverage || 1);
-
-                          // Find current mark price — try markets list first, then feed.price
-                          // markets use last_price (from the WS schema), not price
-                          const symbolRaw = pair.replace('/', '').toUpperCase();
-                          const market = (feed.markets || []).find((m: any) => {
-                            const sym = (m.symbol || m.pair || '').replace('/', '').replace('-', '').toUpperCase();
-                            return sym === symbolRaw.replace('-', '');
-                          });
-                          // Use WS market price first, then live feed price if same pair, then entry price
-                          // NOTE: feed.price is live for the selectedPair only — so positions on other pairs
-                          // will show mark = entry (PNL=0) until WS market feed covers that pair.
-                          const markPrice = Number(market?.last_price || market?.lastPrice || market?.price || 0)
-                            || (pair.replace('/', '') === selectedPair.replace('/', '') ? feed.price : null)
-                            || entryPrice;
-
-                          // Calculations
-                          const margin = (pos.margin || pos.marginUsed || pos.margin_used)
-                            ? Number(pos.margin || pos.marginUsed || pos.margin_used)
-                            : (size * entryPrice) / leverage;
-                          const pnl = isLong ? size * (Number(markPrice) - entryPrice) : size * (entryPrice - Number(markPrice));
-                          const roe = margin > 0 ? (pnl / margin) * 100 : 0;
-                          
-                          const pnlColor = pnl >= 0 ? "text-emerald-400" : "text-red-400";
-                          const pnlSign = pnl >= 0 ? "+" : "";
+                          const {
+                            pair, isLong, size, entryPrice, markPrice, leverage, margin, pnl, roe, tp, sl,
+                          } = resolveFuturesPosition(pos, feed, selectedPair);
 
                           // Create a stable key combining available unique fields
                           const stableKey = pos.id || pos._id || pos.position_id || `${pair}-${pos.side}-${size}-${entryPrice}-${leverage}-${idx}`;
+                          const pnlColor = pnl >= 0 ? "text-emerald-400" : "text-red-400";
+                          const pnlSign = pnl >= 0 ? "+" : "";
 
                           return (
                             <TableTr key={stableKey}>
@@ -927,8 +1024,8 @@ function FuturesTradesInner() {
                               </TableTd>
                               <TableTd className="font-mono">
                                 <div className="flex flex-col gap-1 text-[11px]">
-                                  <span className="text-emerald-400">TP: {pos.takeProfit || pos.take_profit_price || '—'}</span>
-                                  <span className="text-red-400">SL: {pos.stopLoss || pos.stop_loss_price || '—'}</span>
+                                  <span className="text-emerald-400">TP: {tp ?? '—'}</span>
+                                  <span className="text-red-400">SL: {sl ?? '—'}</span>
                                 </div>
                               </TableTd>
                               <TableTd className="!pr-4 !text-right">
@@ -937,10 +1034,13 @@ function FuturesTradesInner() {
                                     onClick={() => {
                                       let qty = '';
                                       modals.open({
-                                        title: 'Partial Close',
+                                        ...DEFAULT_MODAL_SETTINGS,
+                                        size: 'lg',
+                                        title: <span className="text-white font-bold text-base">Partial Close</span>,
+                                        styles: POSITION_MODAL_STYLES,
                                         children: (
                                           <div className="flex flex-col gap-4">
-                                            <p className="text-xs text-white/50">Current size: <span className="text-white font-semibold">{size} {pos.pair?.split('/')[0] ?? 'BTC'}</span></p>
+<p className="text-xs text-white/50">Current size: <span className="text-white font-semibold">{size} {pair.split('/')[0]}</span></p>
                                             <TextInput
                                               label="Close Quantity"
                                               placeholder={`Max ${size}`}
@@ -957,7 +1057,6 @@ function FuturesTradesInner() {
                                             </button>
                                           </div>
                                         ),
-                                        ...DEFAULT_MODAL_SETTINGS
                                       });
                                     }}
                                     className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 px-2 py-1 bg-amber-400/10 hover:bg-amber-400/20 rounded transition-colors"
@@ -966,10 +1065,13 @@ function FuturesTradesInner() {
                                   </button>
                                   <button
                                     onClick={() => {
-                                      let tp = pos.takeProfit || pos.take_profit_price || '';
-                                      let sl = pos.stopLoss || pos.stop_loss_price || '';
+                                      let tp = pos.takeProfitPrice ?? pos.take_profit_price ?? pos.takeProfit ?? pos.take_profit ?? '';
+                                      let sl = pos.stopLossPrice ?? pos.stop_loss_price ?? pos.stopLoss ?? pos.stop_loss ?? '';
                                       modals.open({
-                                        title: 'Update TP/SL',
+                                        ...DEFAULT_MODAL_SETTINGS,
+                                        size: 'lg',
+                                        title: <span className="text-white font-bold text-base">Update TP/SL</span>,
+                                        styles: POSITION_MODAL_STYLES,
                                         children: (
                                           <div className="flex flex-col gap-4">
                                             <TextInput
@@ -992,7 +1094,6 @@ function FuturesTradesInner() {
                                             </button>
                                           </div>
                                         ),
-                                        ...DEFAULT_MODAL_SETTINGS
                                       });
                                     }}
                                     className="text-[11px] font-semibold text-white/60 hover:text-white px-2 py-1 bg-white/5 rounded"
@@ -1016,23 +1117,10 @@ function FuturesTradesInner() {
                     {/* uPNL Summary Footer */}
                     {futuresPositions.length > 0 && (() => {
                       const totalPnl = futuresPositions.reduce((sum: number, pos: any) => {
-                        const isLong = pos.side?.toLowerCase() === 'long' || pos.side?.toLowerCase() === 'buy';
-                        const size = Number(pos.quantity ?? pos.size ?? 0);
-                        const entryPrice = Number(pos.price || pos.entryPrice || pos.entry_price || 0);
-                        const symbolRaw = (pos.pair || '').replace('/', '').toUpperCase();
-                        const market = (feed.markets || []).find((m: any) =>
-                          (m.symbol || m.pair || '').replace('/', '').replace('-', '').toUpperCase() === symbolRaw
-                        );
-                        const markPrice = Number(market?.last_price || market?.lastPrice || market?.price || 0)
-                          || ((pos.pair || '').replace('/', '') === selectedPair.replace('/', '') ? feed.price : null)
-                          || entryPrice;
-                        return sum + (isLong ? size * (Number(markPrice) - entryPrice) : size * (entryPrice - Number(markPrice)));
+                        return sum + resolveFuturesPosition(pos, feed, selectedPair).pnl;
                       }, 0);
                       const totalMargin = futuresPositions.reduce((sum: number, pos: any) => {
-                        const size = Number(pos.quantity ?? pos.size ?? 0);
-                        const entryPrice = Number(pos.price || pos.entryPrice || pos.entry_price || 0);
-                        const leverage = Number(pos.leverage || 1);
-                        return sum + ((pos.margin || pos.marginUsed || pos.margin_used) ? Number(pos.margin || pos.marginUsed || pos.margin_used) : (size * entryPrice) / leverage);
+                        return sum + resolveFuturesPosition(pos, feed, selectedPair).margin;
                       }, 0);
                       const equity = walletBalanceUsd + totalPnl;
                       const pnlColor = totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400';
@@ -1061,7 +1149,7 @@ function FuturesTradesInner() {
               </TabsPanel>
               <TabsPanel value="open">
                 {!futuresOpenOrders || futuresOpenOrders.length === 0 ? (
-                  <div className="h-full min-h-[150px] flex flex-col items-center justify-center gap-2">
+                  <div className="flex-1 min-h-[150px] flex flex-col items-center justify-center gap-2">
                     <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20">
                       <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -1070,7 +1158,7 @@ function FuturesTradesInner() {
                     <p className="text-xs font-medium text-white/30">You have no open orders.</p>
                   </div>
                 ) : (
-                  <div className="w-full h-full overflow-auto">
+                  <div className="flex-1 min-h-0 overflow-auto">
                     <Table classNames={{ table: "min-w-[600px]", th: "!text-[10px] uppercase tracking-wide !text-white/40 !border-b !border-white/[0.05] !py-3 !font-medium", td: "!text-sm !text-white/80 !border-b !border-white/[0.03] !py-3", tr: "hover:!bg-white/[0.02] transition-colors" }}>
                       <thead>
                         <TableTr>
@@ -1110,7 +1198,7 @@ function FuturesTradesInner() {
               </TabsPanel>
               <TabsPanel value="orders">
                 {!futuresOrderHistory || futuresOrderHistory.length === 0 ? (
-                  <div className="h-full min-h-[150px] flex flex-col items-center justify-center gap-2">
+                  <div className="flex-1 min-h-[150px] flex flex-col items-center justify-center gap-2">
                     <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20">
                       <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -1119,7 +1207,7 @@ function FuturesTradesInner() {
                     <p className="text-xs font-medium text-white/30">No order history.</p>
                   </div>
                 ) : (
-                  <div className="w-full h-full overflow-auto">
+                  <div className="flex-1 min-h-0 overflow-auto">
                     <Table classNames={{ table: "min-w-[600px]", th: "!text-[10px] uppercase tracking-wide !text-white/40 !border-b !border-white/[0.05] !py-3 !font-medium", td: "!text-sm !text-white/80 !border-b !border-white/[0.03] !py-3", tr: "hover:!bg-white/[0.02] transition-colors" }}>
                       <thead>
                         <TableTr>
@@ -1158,50 +1246,7 @@ function FuturesTradesInner() {
                 )}
               </TabsPanel>
               <TabsPanel value="trade">
-                {!futuresTradeHistory || futuresTradeHistory.length === 0 ? (
-                  <div className="h-full min-h-[150px] flex flex-col items-center justify-center gap-2">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20">
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                    </div>
-                    <p className="text-xs font-medium text-white/30">No trade history.</p>
-                  </div>
-                ) : (
-                  <div className="w-full h-full overflow-auto">
-                    <Table classNames={{ table: "min-w-[600px]", th: "!text-[10px] uppercase tracking-wide !text-white/40 !border-b !border-white/[0.05] !py-3 !font-medium", td: "!text-sm !text-white/80 !border-b !border-white/[0.03] !py-3", tr: "hover:!bg-white/[0.02] transition-colors" }}>
-                      <thead>
-                        <TableTr>
-                          <TableTh className="!pl-4">Pair</TableTh>
-                          <TableTh>Side</TableTh>
-                          <TableTh>Price</TableTh>
-                          <TableTh>Quantity</TableTh>
-                          <TableTh>PnL</TableTh>
-                          <TableTh className="!pr-4">Date</TableTh>
-                        </TableTr>
-                      </thead>
-                      <tbody>
-                        {futuresTradeHistory.map((trade: any, idx: number) => {
-                          const pair = trade.pair || `${trade.base || ''}/${trade.quote || 'USDT'}`;
-                          const isLong = trade.side?.toLowerCase() === 'long' || trade.side?.toLowerCase() === 'buy';
-                          const pnl = Number(trade.pnl || trade.realizedPnl || trade.realized_pnl || 0);
-                          return (
-                            <TableTr key={trade.id || idx}>
-                              <TableTd className="!pl-4 font-bold text-white">{pair}</TableTd>
-                              <TableTd>
-                                <span className={clsx("text-xs font-bold uppercase px-1.5 py-0.5 rounded", isLong ? "bg-emerald-400/10 text-emerald-400" : "bg-red-400/10 text-red-400")}>{trade.side}</span>
-                              </TableTd>
-                              <TableTd className="font-mono">${Number(trade.price || trade.closePrice || 0).toLocaleString()}</TableTd>
-                              <TableTd className="font-mono">{Number(trade.quantity || trade.size || 0).toLocaleString()}</TableTd>
-                              <TableTd className={clsx("font-mono font-semibold", pnl >= 0 ? 'text-emerald-400' : 'text-red-400')}>{pnl >= 0 ? '+' : ''}{pnl.toFixed(4)} USDT</TableTd>
-                              <TableTd className="!pr-4 text-white/40 text-xs">{trade.createdAt ? new Date(trade.createdAt).toLocaleString() : '—'}</TableTd>
-                            </TableTr>
-                          );
-                        })}
-                      </tbody>
-                    </Table>
-                  </div>
-                )}
+                <div className="flex-1 min-h-0 overflow-auto"><div className="p-3">{renderRecentTrades(50)}</div></div>
               </TabsPanel>
             </Tabs>
           </div>
@@ -1247,6 +1292,7 @@ function FuturesTradesInner() {
                         type="button"
                         key={`ask-${i}`}
                         onClick={() => { setFuturesPrice(order.price); priceUserEditedRef.current = true; }}
+                        className="relative grid grid-cols-3 px-3 py-[2px] overflow-hidden cursor-pointer hover:bg-white/[0.02]"
                       >
                         <div className="absolute top-0 right-0 bottom-0 bg-error-1/[0.08] transition-all duration-300" style={{ width: `${widthPercent}%` }} />
                         <span className="text-[11px] font-mono tabular-nums font-semibold text-error-1 z-10">{order.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -1279,6 +1325,7 @@ function FuturesTradesInner() {
                         type="button"
                         key={`bid-${i}`}
                         onClick={() => { setFuturesPrice(order.price); priceUserEditedRef.current = true; }}
+                        className="relative grid grid-cols-3 px-3 py-[2px] overflow-hidden cursor-pointer hover:bg-white/[0.02]"
                       >
                         <div className="absolute top-0 right-0 bottom-0 bg-success-6/[0.08] transition-all duration-300" style={{ width: `${widthPercent}%` }} />
                         <span className="text-[11px] font-mono tabular-nums font-semibold text-success-6 z-10">{order.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -1506,29 +1553,7 @@ function FuturesTradesInner() {
               
               <TabsPanel value="trades">
                 <div className="flex flex-col p-2">
-                  {!futuresTradeHistory || futuresTradeHistory.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-white/40">No trade history</div>
-                  ) : (
-                    <div className="flex flex-col">
-                      <div className="grid grid-cols-4 px-2 py-1.5 text-[10px] text-white/40">
-                        <span>Side</span><span className="text-right">Price</span><span className="text-right">Qty</span><span className="text-right">PnL</span>
-                      </div>
-                      <div className="flex flex-col divide-y divide-white/[0.04]">
-                        {futuresTradeHistory.slice(0, 30).map((trade: any, idx: number) => {
-                          const isLong = trade.side?.toLowerCase() === 'long' || trade.side?.toLowerCase() === 'buy';
-                          const pnl = Number(trade.pnl || trade.realizedPnl || trade.realized_pnl || 0);
-                          return (
-                            <div key={trade.id || idx} className="grid grid-cols-4 px-2 py-1.5 text-[11px] font-mono tabular-nums items-center">
-                              <span className={`text-xs font-bold uppercase ${isLong ? 'text-emerald-400' : 'text-red-400'}`}>{trade.side}</span>
-                              <span className="text-right text-white/80">{Number(trade.price || trade.closePrice || 0).toLocaleString()}</span>
-                              <span className="text-right text-white/80">{Number(trade.quantity || trade.size || 0)}</span>
-                              <span className={`text-right font-semibold ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{pnl >= 0 ? '+' : ''}{pnl.toFixed(4)}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  {renderRecentTrades(30)}
                 </div>
               </TabsPanel>
             </Tabs>
@@ -1589,12 +1614,13 @@ function FuturesTradesInner() {
             </div>
 
             {/* Positions & Orders Tabs */}
-            <div className="bg-[#181a20] rounded flex flex-col mt-2 mb-[80px]">
+            <div className="bg-[#181a20] rounded flex flex-col mt-2 mb-[80px] h-[320px] overflow-hidden">
               <Tabs
                 classNames={{
                   tab: "!pb-2 !pt-3 hover:!bg-transparent hover:!border-0 data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50",
-                  list: "!flex !items-center border-b border-white/[0.06] px-4",
-                  panel: "!flex-1 !overflow-auto",
+                  list: "!flex !items-center border-b border-white/[0.06] px-4 shrink-0",
+                  panel: "flex-1 flex flex-col min-h-0 overflow-hidden",
+                  root: "!flex !flex-col !min-h-0 !h-full",
                 }}
                 defaultValue="positions"
               >
@@ -1605,30 +1631,17 @@ function FuturesTradesInner() {
                   <TabsTab value="trades">Trade History</TabsTab>
                 </TabsList>
                 <TabsPanel value="positions">
-                  <div className="p-4">
+                  <div className="p-4 flex-1 min-h-0 overflow-y-auto flex flex-col">
                     {!futuresPositions || futuresPositions.length === 0 ? (
-                      <div className="min-h-[150px] flex flex-col items-center justify-center gap-2">
+                      <div className="flex-1 min-h-[150px] flex flex-col items-center justify-center gap-2">
                         <p className="text-xs font-medium text-white/30">No open positions</p>
                       </div>
                     ) : (
                       <div className="flex flex-col gap-3">
                         {futuresPositions.map((pos: any) => {
-                          const isLong = pos.side?.toLowerCase() === 'long' || pos.side?.toLowerCase() === 'buy';
-                          const size = Number(pos.quantity ?? pos.size ?? 0);
-                          const entryPrice = Number(pos.price || pos.entryPrice || pos.entry_price || 0);
-                          const leverage = Number(pos.leverage || 1);
-                          const symbolRaw = (pos.pair || '').replace('/', '').toUpperCase();
-                          const market = (feed.markets || []).find((m: any) =>
-                            (m.symbol || m.pair || '').replace('/', '').replace('-', '').toUpperCase() === symbolRaw
-                          );
-                          const markPrice = Number(market?.last_price || market?.lastPrice || market?.price || (pos.pair === selectedPair ? feed.price : null) || entryPrice);
-                          const margin = (pos.margin || pos.marginUsed || pos.margin_used) ? Number(pos.margin || pos.marginUsed || pos.margin_used) : (size * entryPrice) / leverage;
-                          const pnl = isLong ? size * (markPrice - entryPrice) : size * (entryPrice - markPrice);
-                          const roe = margin > 0 ? (pnl / margin) * 100 : 0;
+                          const { pair, isLong, size, entryPrice, markPrice, leverage, margin, pnl, roe, tp, sl } = resolveFuturesPosition(pos, feed, selectedPair);
                           const pnlSign = pnl >= 0 ? '+' : '';
                           const pnlColor = pnl >= 0 ? 'text-emerald-400' : 'text-red-400';
-                          const tp = pos.takeProfit || pos.take_profit_price || '—';
-                          const sl = pos.stopLoss || pos.stop_loss_price || '—';
                           return (
                             <div key={pos.id || pos._id || `${pos.pair}-${pos.side}`} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
                               <div className="flex justify-between items-center">
@@ -1643,18 +1656,21 @@ function FuturesTradesInner() {
                                 <div className="flex justify-between"><span className="text-white/40">Entry</span><span className="text-white tabular-nums">${entryPrice.toLocaleString()}</span></div>
                                 <div className="flex justify-between"><span className="text-white/40">Mark</span><span className="text-white tabular-nums">${markPrice.toLocaleString()}</span></div>
                                 <div className="flex justify-between"><span className="text-white/40">Margin</span><span className="text-white tabular-nums">{margin.toFixed(2)}</span></div>
-                                <div className="flex justify-between col-span-2"><span className="text-white/40">TP</span><span className="text-emerald-400 tabular-nums">{tp}</span></div>
-                                <div className="flex justify-between col-span-2"><span className="text-white/40">SL</span><span className="text-red-400 tabular-nums">{sl}</span></div>
+                                <div className="flex justify-between col-span-2"><span className="text-white/40">TP</span><span className="text-emerald-400 tabular-nums">{tp ?? '—'}</span></div>
+                                <div className="flex justify-between col-span-2"><span className="text-white/40">SL</span><span className="text-red-400 tabular-nums">{sl ?? '—'}</span></div>
                               </div>
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => {
                                     let qty = '';
                                     modals.open({
-                                      title: 'Partial Close',
+                                      ...DEFAULT_MODAL_SETTINGS,
+                                      size: 'lg',
+                                      title: <span className="text-white font-bold text-base">Partial Close</span>,
+                                      styles: POSITION_MODAL_STYLES,
                                       children: (
                                         <div className="flex flex-col gap-4">
-                                          <p className="text-xs text-white/50">Current size: <span className="text-white font-semibold">{size} {pos.pair?.split('/')[0] ?? 'BTC'}</span></p>
+                                          <p className="text-xs text-white/50">Current size: <span className="text-white font-semibold">{size} {pair.split('/')[0]}</span></p>
                                           <TextInput
                                             label="Close Quantity"
                                             placeholder={`Max ${size}`}
@@ -1671,7 +1687,6 @@ function FuturesTradesInner() {
                                           </button>
                                         </div>
                                       ),
-                                      ...DEFAULT_MODAL_SETTINGS
                                     });
                                   }}
                                   className="flex-1 text-[11px] font-semibold text-amber-400 hover:text-amber-300 px-2 py-1.5 bg-amber-400/10 hover:bg-amber-400/20 rounded transition-colors"
@@ -1680,10 +1695,13 @@ function FuturesTradesInner() {
                                 </button>
                                 <button
                                   onClick={() => {
-                                    let tp = pos.takeProfit || pos.take_profit_price || '';
-                                    let sl = pos.stopLoss || pos.stop_loss_price || '';
+                                    let tp = pos.takeProfitPrice ?? pos.take_profit_price ?? pos.takeProfit ?? pos.take_profit ?? '';
+                                    let sl = pos.stopLossPrice ?? pos.stop_loss_price ?? pos.stopLoss ?? pos.stop_loss ?? '';
                                     modals.open({
-                                      title: 'Update TP/SL',
+                                      ...DEFAULT_MODAL_SETTINGS,
+                                      size: 'lg',
+                                      title: <span className="text-white font-bold text-base">Update TP/SL</span>,
+                                      styles: POSITION_MODAL_STYLES,
                                       children: (
                                         <div className="flex flex-col gap-4">
                                           <TextInput
@@ -1706,7 +1724,6 @@ function FuturesTradesInner() {
                                           </button>
                                         </div>
                                       ),
-                                      ...DEFAULT_MODAL_SETTINGS
                                     });
                                   }}
                                   className="flex-1 text-[11px] font-semibold text-white/60 hover:text-white px-2 py-1.5 bg-white/5 rounded"
@@ -1727,23 +1744,10 @@ function FuturesTradesInner() {
                         <div className="border-t border-white/[0.06] pt-3 flex flex-col gap-1.5 text-xs">
                           {(() => {
                             const totalPnl = futuresPositions.reduce((sum: number, pos: any) => {
-                              const isLong = pos.side?.toLowerCase() === 'long' || pos.side?.toLowerCase() === 'buy';
-                              const size = Number(pos.quantity ?? pos.size ?? 0);
-                              const entryPrice = Number(pos.price || pos.entryPrice || pos.entry_price || 0);
-                              const symbolRaw = (pos.pair || '').replace('/', '').toUpperCase();
-                              const market = (feed.markets || []).find((m: any) =>
-                                (m.symbol || m.pair || '').replace('/', '').replace('-', '').toUpperCase() === symbolRaw
-                              );
-                              const markPrice = Number(market?.last_price || market?.lastPrice || market?.price || 0)
-                                || ((pos.pair || '').replace('/', '') === selectedPair.replace('/', '') ? feed.price : null)
-                                || entryPrice;
-                              return sum + (isLong ? size * (Number(markPrice) - entryPrice) : size * (entryPrice - Number(markPrice)));
+                              return sum + resolveFuturesPosition(pos, feed, selectedPair).pnl;
                             }, 0);
                             const totalMargin = futuresPositions.reduce((sum: number, pos: any) => {
-                              const size = Number(pos.quantity ?? pos.size ?? 0);
-                              const entryPrice = Number(pos.price || pos.entryPrice || pos.entry_price || 0);
-                              const leverage = Number(pos.leverage || 1);
-                              return sum + ((pos.margin || pos.marginUsed || pos.margin_used) ? Number(pos.margin || pos.marginUsed || pos.margin_used) : (size * entryPrice) / leverage);
+                              return sum + resolveFuturesPosition(pos, feed, selectedPair).margin;
                             }, 0);
                             const equity = walletBalanceUsd + totalPnl;
                             const totalPnlColor = totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400';
@@ -1762,9 +1766,9 @@ function FuturesTradesInner() {
                   </div>
                 </TabsPanel>
                 <TabsPanel value="open-orders">
-                  <div className="p-4">
+                  <div className="p-4 flex-1 min-h-0 overflow-y-auto flex flex-col">
                     {!futuresOpenOrders || futuresOpenOrders.length === 0 ? (
-                      <div className="min-h-[150px] flex flex-col items-center justify-center gap-2">
+                      <div className="flex-1 min-h-[150px] flex flex-col items-center justify-center gap-2">
                         <p className="text-xs font-medium text-white/30">No open orders</p>
                       </div>
                     ) : (
@@ -1791,9 +1795,9 @@ function FuturesTradesInner() {
                   </div>
                 </TabsPanel>
                 <TabsPanel value="history">
-                  <div className="p-4">
+                  <div className="p-4 flex-1 min-h-0 overflow-y-auto flex flex-col">
                     {!futuresOrderHistory || futuresOrderHistory.length === 0 ? (
-                      <div className="min-h-[150px] flex flex-col items-center justify-center gap-2">
+                      <div className="flex-1 min-h-[150px] flex flex-col items-center justify-center gap-2">
                         <p className="text-xs font-medium text-white/30">No order history</p>
                       </div>
                     ) : (
@@ -1820,32 +1824,8 @@ function FuturesTradesInner() {
                   </div>
                 </TabsPanel>
                 <TabsPanel value="trades">
-                  <div className="p-4">
-                    {!futuresTradeHistory || futuresTradeHistory.length === 0 ? (
-                      <div className="min-h-[150px] flex flex-col items-center justify-center gap-2">
-                        <p className="text-xs font-medium text-white/30">No trade history</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-3">
-                        {futuresTradeHistory.map((trade: any, idx: number) => {
-                          const isLong = trade.side?.toLowerCase() === 'long' || trade.side?.toLowerCase() === 'buy';
-                          const pnl = Number(trade.pnl || trade.realizedPnl || trade.realized_pnl || 0);
-                          return (
-                            <div key={trade.id || idx} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
-                              <div className="flex justify-between items-center gap-2">
-                                <span className="text-sm font-bold text-white truncate">{trade.pair || `${trade.base || ''}/${trade.quote || 'USDT'}`} <span className={`text-[10px] font-bold uppercase ml-1 ${isLong ? 'text-emerald-400' : 'text-red-400'}`}>{trade.side}</span></span>
-                                <span className={`text-sm font-bold tabular-nums ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{pnl >= 0 ? '+' : ''}{pnl.toFixed(4)} USDT</span>
-                              </div>
-                              <div className="grid grid-cols-2 gap-1 text-xs">
-                                <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white tabular-nums">${Number(trade.price || trade.closePrice || 0).toLocaleString()}</span></div>
-                                <div className="flex justify-between"><span className="text-white/40">Qty</span><span className="text-white tabular-nums">{Number(trade.quantity || trade.size || 0)}</span></div>
-                                <div className="flex justify-between col-span-2"><span className="text-white/40">Time</span><span className="text-white/60 text-right">{trade.createdAt ? new Date(trade.createdAt).toLocaleString() : '—'}</span></div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                  <div className="p-4 flex-1 min-h-0 overflow-y-auto flex flex-col">
+                    {renderRecentTrades(30)}
                   </div>
                 </TabsPanel>
               </Tabs>
