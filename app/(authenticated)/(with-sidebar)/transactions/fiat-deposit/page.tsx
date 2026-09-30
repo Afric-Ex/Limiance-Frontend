@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import {
   Accordion,
@@ -26,9 +26,9 @@ import { FiatBankDeposit } from "@/src/components/fiat/fiat-bank-deposit";
 import { FiatCardDeposit } from "@/src/components/fiat/fiat-card-deposit";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { DepositSkeleton } from "@/src/components/skeletons/orders";
-import { TablePagination } from "@/src/components/shared/table-pagination";
+import { useInfiniteList } from "@/src/hooks/use-infinite-list";
+import { InfiniteScrollTrigger } from "@/src/components/shared/infinite-scroll-trigger";
 import { fiatKeys, fiatService } from "@/src/services/fiat";
-import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 
 const faqs = [
@@ -74,16 +74,23 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 function FiatDepositInner() {
-  const [page, setPage] = useState(1);
   const limit = 30;
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get("tab") === "card" ? "card" : "bank";
 
-  const { data: history, isLoading: historyLoading } = useQuery({
-    queryKey: fiatKeys.history({ page, limit }),
-    queryFn: () => fiatService.getHistory({ page, limit }),
-    select: (res: any) =>
-      Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [],
+  const {
+    items: history,
+    isPending: historyLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    loadedCount,
+    isError: historyError,
+    refetch: refetchHistory,
+    fetchNextPage,
+  } = useInfiniteList({
+    queryKey: fiatKeys.historyList(),
+    limit,
+    fetchPage: (params) => fiatService.getHistory(params),
   });
 
   return (
@@ -99,7 +106,7 @@ function FiatDepositInner() {
       {/* Tabs + FAQ grid */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 max-[1150px]:gap-4 items-start max-[1150px]:flex max-[1150px]:flex-col">
         <div className="flex flex-col gap-4 w-full min-w-0">
-          <Tabs classNames={classes} defaultValue={defaultTab}>
+          <Tabs keepMounted={false} classNames={classes} defaultValue={defaultTab}>
             <TabsList>
               <TabsTab value="bank">Bank Transfer</TabsTab>
               <TabsTab value="card">Card</TabsTab>
@@ -228,7 +235,14 @@ function FiatDepositInner() {
           )}
         </div>
 
-        <TablePagination totalCount={history?.length ?? 0} page={page} setPage={setPage} limit={limit} />
+        <InfiniteScrollTrigger
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          loadedCount={loadedCount}
+          isError={historyError}
+          onRetry={refetchHistory}
+          onLoadMore={() => fetchNextPage()}
+        />
       </div>
     </div>
   );

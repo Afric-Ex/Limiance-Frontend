@@ -18,6 +18,18 @@ export const assetKeys = {
     walletType,
   ],
   transactionHistory: (params?: any) => ["transaction-history", params],
+  /**
+   * Key for the infinite-scroll list. Deliberately excludes `page`/`limit`:
+   * under `useInfiniteQuery` the page is owned by react-query, so baking it into
+   * the key would give every page its own cache entry and break the chain.
+   * `transactionHistory` above is kept for the single-page consumers
+   * (the "recent 5" widget) that still want a fixed window.
+   */
+  transactionHistoryList: (filters: Record<string, unknown> = {}) => [
+    "transaction-history",
+    "list",
+    filters,
+  ],
   allWallets: (params?: any) => ["all-wallets", params],
   convertAsset: ["convert-asset"],
   externalTransferCode: (asset: string) => ["external-transfer-code", asset],

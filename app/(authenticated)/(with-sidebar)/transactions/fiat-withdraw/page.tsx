@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import {
   Accordion,
@@ -26,9 +26,9 @@ import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { useFiatWithdrawal } from "@/src/hooks/use-fiat-withdrawal";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { WithdrawalSkeleton } from "@/src/components/skeletons/orders";
-import { TablePagination } from "@/src/components/shared/table-pagination";
+import { useInfiniteList } from "@/src/hooks/use-infinite-list";
+import { InfiniteScrollTrigger } from "@/src/components/shared/infinite-scroll-trigger";
 import { fiatKeys, fiatService } from "@/src/services/fiat";
-import { useQuery } from "@tanstack/react-query";
 
 const faqs = [
   {
@@ -88,7 +88,6 @@ function FiatWithdrawInner() {
   } = useFiatWithdrawal();
 
   const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs();
-  const [page, setPage] = useState(1);
   const limit = 30;
 
   const coinPortfolio = form.values.symbol
@@ -96,11 +95,19 @@ function FiatWithdrawInner() {
     : undefined;
   const assetBalance = parseFloat(coinPortfolio?.fundingBalance ?? coinPortfolio?.spotBalance ?? "0");
 
-  const { data: history, isLoading: historyLoading } = useQuery({
-    queryKey: fiatKeys.history({ page, limit }),
-    queryFn: () => fiatService.getHistory({ page, limit }),
-    select: (res: any) =>
-      Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [],
+  const {
+    items: history,
+    isPending: historyLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    loadedCount,
+    isError: historyError,
+    refetch: refetchHistory,
+    fetchNextPage,
+  } = useInfiniteList({
+    queryKey: fiatKeys.historyList(),
+    limit,
+    fetchPage: (params) => fiatService.getHistory(params),
   });
 
   const amountValid = Number(form.values.amount) > 0 && Number(form.values.amount) <= assetBalance;
@@ -379,7 +386,14 @@ function FiatWithdrawInner() {
           )}
         </div>
 
-        <TablePagination totalCount={history?.length ?? 0} page={page} setPage={setPage} limit={limit} />
+        <InfiniteScrollTrigger
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          loadedCount={loadedCount}
+          isError={historyError}
+          onRetry={refetchHistory}
+          onLoadMore={() => fetchNextPage()}
+        />
       </div>
     </div>
   );

@@ -64,7 +64,7 @@ export const useFiatWithdrawal = () => {
       const d = unwrap<FiatWithdrawalResponse>(res);
       modals.closeAll();
       successNotification(d?.status || "Withdrawal authorized and processing.");
-      queryClient.invalidateQueries({ queryKey: fiatKeys.history });
+      queryClient.invalidateQueries({ queryKey: fiatKeys.historyRoot });
       modals.open({
         children: (
           <SuccessModal
@@ -140,7 +140,7 @@ export const useFiatWithdrawal = () => {
       } else {
         modals.closeAll();
         successNotification(d?.status || "Withdrawal initiated successfully.");
-        queryClient.invalidateQueries({ queryKey: fiatKeys.history });
+        queryClient.invalidateQueries({ queryKey: fiatKeys.historyRoot });
         push("/assets/overview");
       }
     },

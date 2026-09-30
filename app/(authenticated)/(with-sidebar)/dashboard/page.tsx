@@ -43,7 +43,7 @@ const depositChannels = [
     channel: "Local currency, payment...",
     color: "var(--primary)",
     icon: Basket,
-    link: "/buy-crypto",
+    link: "/transactions/fiat-deposit",
   },
   {
     name: "Deposit",
@@ -432,7 +432,7 @@ function DashboardInner() {
                   <TableTr>
                     <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] pl-4 max-[768px]:pl-2">Coin</TableTh>
                     <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[768px]:text-right max-[768px]:pr-2">Price</TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[768px]:hidden">
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[768px]:text-right max-[768px]:pr-2">
                       <span>{item === "Holding" ? "Balance" : "24h Volume"}</span>
                     </TableTh>
                     <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[768px]:hidden">24h Change</TableTh>
@@ -479,7 +479,7 @@ function DashboardInner() {
                           <ChangeCell value={token.changePercent24h} mobile={true} />
                         </span>
                       </TableTd>
-                      <TableTd className="max-[768px]:hidden py-1.5">
+                      <TableTd className="py-1.5 max-[768px]:text-right max-[768px]:pr-2">
                         <span className="text-[13px] font-medium text-white/90 tabular-nums">
                           {item === "Holding" && token.balance != null
                             ? `${Number(token.balance).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${token.symbol}`

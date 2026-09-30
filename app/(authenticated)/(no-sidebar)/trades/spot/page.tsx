@@ -52,7 +52,10 @@ function SpotTrades() {
   const initialPair = searchParams.get("pair")?.replace("_", "/") ?? "BTC/USDT";
   const [selectedPair, setSelectedPair] = useState(initialPair);
   const [pairSearch, setPairSearch] = useState("");
+  // Mobile and desktop headers are BOTH mounted (one is hidden by CSS), so they
+  // need separate state — sharing it would open both dropdowns at once.
   const [pairMenuOpen, setPairMenuOpen] = useState(false);
+  const [pairMenuDesktopOpen, setPairMenuDesktopOpen] = useState(false);
   const [tradeMode, setTradeMode] = useState<TradeMode>("spot");
   const [leverage, setLeverage] = useState(1);
   const [clickedPrice, setClickedPrice] = useState<number | null>(null);
@@ -218,6 +221,7 @@ function SpotTrades() {
     setSelectedPair(`${base}/${quote}`);
     setPairSearch("");
     setPairMenuOpen(false);
+    setPairMenuDesktopOpen(false);
   };
 
   const orderBookMidPrice = bestAsk && bestBid ? (bestAsk + bestBid) / 2 : bestAsk ?? bestBid ?? null;
@@ -294,7 +298,11 @@ function SpotTrades() {
             </button>
             <Popover width={300} position="bottom-start" shadow="md" opened={pairMenuOpen} onChange={setPairMenuOpen}>
               <PopoverTarget>
-                <button className="flex items-center gap-1 px-1 py-0.5 rounded tap-scale">
+                <button
+                  aria-label="Change trading pair"
+                  onClick={() => setPairMenuOpen((v) => !v)}
+                  className="flex items-center gap-1 px-1 py-0.5 rounded tap-scale"
+                >
                   <IoSwapHorizontal size={16} className="text-white/40 shrink-0" />
                   <span className="text-[15px] font-bold text-white/90">{selectedPair}</span>
                   <MdKeyboardArrowDown className="text-white/40" size={16} />
@@ -368,9 +376,13 @@ function SpotTrades() {
       <div className="hidden min-[1150px]:flex bg-[#181a20] py-3 px-4 justify-between items-center border-b border-white/[0.06]">
         <div className="flex items-center gap-6">
           {/* Pair selector */}
-          <Popover width={360} position="bottom-start" shadow="md">
+          <Popover width={360} position="bottom-start" shadow="md" opened={pairMenuDesktopOpen} onChange={setPairMenuDesktopOpen}>
             <PopoverTarget>
-              <button className="flex items-center gap-2 hover:bg-white/5 py-1 px-2 rounded -ml-2 transition-colors">
+              <button
+                aria-label="Change trading pair"
+                onClick={() => setPairMenuDesktopOpen((v) => !v)}
+                className="flex items-center gap-2 hover:bg-white/5 py-1 px-2 rounded -ml-2 transition-colors"
+              >
                 <span className="text-xl font-bold text-white">{selectedPair}</span>
                 <MdKeyboardArrowDown className="text-white/50" size={20} />
               </button>

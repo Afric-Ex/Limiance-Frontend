@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readNumber, unwrapObject } from "./api-response";
+import { readList, readNumber, unwrapObject } from "./api-response";
 
 describe("unwrapObject", () => {
   it("returns a bare object body", () => {
@@ -44,5 +44,37 @@ describe("readNumber", () => {
     expect(readNumber({ fee: "abc" }, "fee")).toBeNull();
     expect(readNumber({ fee: Infinity }, "fee")).toBeNull();
     expect(readNumber(null, "fee")).toBeNull();
+  });
+});
+
+describe("readList", () => {
+  it("reads the list out of a backend envelope", () => {
+    expect(readList({ data: [{ id: 1 }], totalRecords: "1" })).toEqual([{ id: 1 }]);
+  });
+
+  it("reads the list out of an unwrapped AxiosResponse (the p2p shape)", () => {
+    expect(readList({ data: { data: [{ id: 2 }], totalRecords: "1" } })).toEqual([{ id: 2 }]);
+  });
+
+  it("accepts a bare array", () => {
+    expect(readList([{ id: 3 }])).toEqual([{ id: 3 }]);
+  });
+
+  it("returns an empty array for a swallowed error body", () => {
+    // asset.transactionHistory catches 502s and returns the body as a success,
+    // so this shape reaches the pagination loop and must not read as a page.
+    expect(readList({ statusCode: 502, error: "Bad Gateway" })).toEqual([]);
+    expect(readList({ message: "Unauthenticated" })).toEqual([]);
+  });
+
+  it("returns an empty array for nullish and primitive bodies", () => {
+    expect(readList(null)).toEqual([]);
+    expect(readList(undefined)).toEqual([]);
+    expect(readList("nope")).toEqual([]);
+    expect(readList({})).toEqual([]);
+  });
+
+  it("prefers the outer array over a nested one", () => {
+    expect(readList({ data: [{ id: 1 }], nested: { data: [{ id: 9 }] } })).toEqual([{ id: 1 }]);
   });
 });

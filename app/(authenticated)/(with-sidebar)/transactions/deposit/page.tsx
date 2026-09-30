@@ -27,10 +27,10 @@ import { WalletDropdown } from "@/src/components/assets/wallet-dropdown";
 import { assetKeys, asset } from "@/src/services/asset";
 import { readNumber, unwrapObject } from "@/src/lib/api-response";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { truncateCryptoAddress } from "@/src/utils/truncate-address";
+import { useInfiniteList } from "@/src/hooks/use-infinite-list";
+import { InfiniteScrollTrigger } from "@/src/components/shared/infinite-scroll-trigger";
 
-import { TablePagination } from "@/src/components/shared/table-pagination";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { DepositSkeleton } from "@/src/components/skeletons/orders";
@@ -115,13 +115,23 @@ function DepositInner() {
   const minimumDeposit = readNumber(minDepositData, "minimum");
   const depositNetworkFee = readNumber(networkFeeData, "fee");
 
-  const [page, setPage] = useState(1);
   const limit = 30;
+  const transactionType = "deposit" as const;
 
-  const { data: history, isLoading: historyLoading } = useQuery({
-    queryKey: assetKeys.transactionHistory({ page, limit, transaction_type: "deposit" }),
-    queryFn: () => asset.transactionHistory({ page, limit, transaction_type: "deposit" }),
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
+  const {
+    items: history,
+    isPending: historyLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    loadedCount,
+    isError: historyError,
+    refetch: refetchHistory,
+    fetchNextPage,
+  } = useInfiniteList({
+    queryKey: assetKeys.transactionHistoryList({ transactionType }),
+    limit,
+    filters: { transaction_type: transactionType },
+    fetchPage: (params) => asset.transactionHistory(params),
   });
 
   return (
@@ -463,7 +473,14 @@ function DepositInner() {
           )}
         </div>
 
-        <TablePagination totalCount={history?.length ?? 0} page={page} setPage={setPage} limit={limit} />
+        <InfiniteScrollTrigger
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          loadedCount={loadedCount}
+          isError={historyError}
+          onRetry={refetchHistory}
+          onLoadMore={() => fetchNextPage()}
+        />
       </div>
     </div>
   );
