@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, NumberInput, PasswordInput, TextInput } from "@mantine/core";
+import { Button, NumberInput, PasswordInput, Select, TextInput } from "@mantine/core";
 import { FiCreditCard } from "react-icons/fi";
 import { ModalClose } from "../icons/modal-close";
 import { OtpInput } from "../settings/otp-input";
@@ -14,6 +14,13 @@ const cardInputClass = {
   input: `${inputClass} !font-mono !tracking-wider`,
   section: "!text-white/40 hover:!text-white",
 } as const;
+
+const assetSelectClass = {
+  input: `${inputClass} !text-white`,
+  dropdown: "!bg-[#181a20] !border !border-white/[0.08]",
+  option: "!text-white hover:!bg-white/[0.04]",
+  label: "!mt-0",
+};
 
 function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -158,6 +165,8 @@ export const FiatCardDeposit = () => {
     otpPending,
     complete3ds,
     threeDsPending,
+    coinSymbols,
+    coinSymbolsLoading,
   } = useFiatCardDeposit();
 
   const expiryValid =
@@ -192,10 +201,17 @@ export const FiatCardDeposit = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">You receive</label>
-            <TextInput
-              placeholder="e.g. USDT"
-              classNames={{ input: inputClass }}
+            <Select
+              data={coinSymbols}
+              placeholder={coinSymbolsLoading ? "Loading assets…" : "Select an asset"}
+              autoComplete="new-password"
+              name="card-receive-asset"
+              id="card-receive-asset"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              data-form-type="other"
               {...form.getInputProps("symbol")}
+              classNames={assetSelectClass}
             />
           </div>
           <div className="flex flex-col gap-2">

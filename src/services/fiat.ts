@@ -77,7 +77,7 @@ export const fiatService = {
   }): Promise<PayWithCardResponse> => {
     const response = await api.post("wallet/fiat/card/pay", {
       symbol: data.symbol,
-      amount: data.amount,
+      amount: data.amount.toString(),
       cardNumber: data.cardNumber,
       cardExpiryMonth: data.cardExpiryMonth,
       cardExpiryYear: data.cardExpiryYear,

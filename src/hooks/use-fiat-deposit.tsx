@@ -20,9 +20,44 @@ const unwrap = <T,>(res: any): T => {
   return cur as T;
 };
 
+// Coins the fiat rails support. The quote endpoint returns the whole rate table
+// when called without a symbol, which is exactly the set of assets you can buy
+// with NGN — so the deposit/card pickers are driven by it instead of a guess.
+const FALLBACK_FIAT_SYMBOLS = ["USDT", "USDC", "BTC", "ETH", "SOL"];
+
+export const useFiatCoinSymbols = () => {
+  const { data, isLoading } = useQuery({
+    queryKey: fiatKeys.quote,
+    queryFn: () => fiatService.getQuote(),
+    select: (res: any): string[] => {
+      let body = res?.data && typeof res.data === "object" ? res.data : res;
+      if (body && !Array.isArray(body) && typeof body === "object") {
+        body = (body as { rates?: unknown }).rates ?? body;
+      }
+      const list = Array.isArray(body) ? body : null;
+      const symbols = list
+        ? list
+            .map((q: any) => String(q?.symbol ?? "").toUpperCase().trim())
+            .filter(Boolean)
+        : body && typeof body === "object"
+          ? Object.keys(body as Record<string, unknown>).map((s) => s.toUpperCase())
+          : [];
+      const unique = [...new Set(symbols)];
+      return unique.length ? unique : FALLBACK_FIAT_SYMBOLS;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    coinSymbols: data ?? FALLBACK_FIAT_SYMBOLS,
+    coinSymbolsLoading: isLoading,
+  };
+};
+
 export const useFiatBankDeposit = () => {
   const queryClient = useQueryClient();
   const markPendingDeposit = useDepositStore((state) => state.markPending);
+  const { coinSymbols, coinSymbolsLoading } = useFiatCoinSymbols();
   const form = useForm({
     initialValues: { symbol: "USDT", bankCode: "", amount: "" },
   });
@@ -99,6 +134,8 @@ export const useFiatBankDeposit = () => {
   return {
     banks,
     banksLoading,
+    coinSymbols,
+    coinSymbolsLoading,
     rate,
     rateLoading,
     form,
@@ -114,6 +151,7 @@ export const useFiatBankDeposit = () => {
 export const useFiatCardDeposit = () => {
   const queryClient = useQueryClient();
   const markPendingDeposit = useDepositStore((state) => state.markPending);
+  const { coinSymbols, coinSymbolsLoading } = useFiatCoinSymbols();
   const form = useForm({
     initialValues: {
       symbol: "USDT",
@@ -211,6 +249,8 @@ export const useFiatCardDeposit = () => {
 
   return {
     form,
+    coinSymbols,
+    coinSymbolsLoading,
     paying,
     pay,
     pendingReference,
