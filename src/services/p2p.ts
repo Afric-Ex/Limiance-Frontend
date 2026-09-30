@@ -251,6 +251,11 @@ export const p2p = {
     return response;
   },
 
+  reactivateSingleOrder: async (id: string): Promise<ApiResponse<unknown>> => {
+    const response = await api.get(`trading/p2p/reactivate_single_order/${id}`);
+    return response;
+  },
+
   getDisputedOrders: async (params?: { page?: number; limit?: number }): Promise<ApiResponse<unknown>> => {
     const response = await api.get(`trading/p2p/advertiser_disputed_orders`, { params });
     return response;

@@ -83,16 +83,32 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
         toAsset: toCoin.symbol,
         quantity: amount,
       }),
-    select: (res: any) => res?.data as {
-      baseRate: string;
-      amountUSD: string;
-      amountNGN: string;
-      baseUSDPrice: string;
-      baseNGNPrice: string;
-      baseInQuote: string;
-      baseInQuoteNGN: string;
-      baseInQuoteUSD: string;
-    } | undefined,
+    select: (res: any) => {
+      // The endpoint nests everything under `data.rate` and `data.valuation`,
+      // not at the top level — flatten it into the shape the UI reads.
+      const body = res?.data;
+      const rate = body?.rate;
+      const valuation = body?.valuation;
+      return {
+        baseRate: rate?.baseRate,
+        amountUSD: valuation?.amountUSD,
+        amountNGN: valuation?.amountNGN,
+        baseUSDPrice: rate?.baseInQuoteUSD,
+        baseNGNPrice: rate?.baseInQuoteNGN,
+        baseInQuote: rate?.baseInQuote,
+        baseInQuoteNGN: rate?.baseInQuoteNGN,
+        baseInQuoteUSD: rate?.baseInQuoteUSD,
+      } as {
+        baseRate: string;
+        amountUSD: string;
+        amountNGN: string;
+        baseUSDPrice: string;
+        baseNGNPrice: string;
+        baseInQuote: string;
+        baseInQuoteNGN: string;
+        baseInQuoteUSD: string;
+      } | undefined;
+    },
     enabled: rateEnabled,
     staleTime: 10000,
     retry: false,
