@@ -764,15 +764,55 @@ function FuturesTradesInner() {
         showBack
         title=""
         leftElement={
-          <button className="flex items-center gap-2 tap-scale" onClick={() => window.history.back()}>
-            <IoChevronDown className="rotate-90 text-white/70" size={20} />
-            <div className="flex items-center gap-1">
-              <IoSwapHorizontal size={16} className="text-white/40" />
-              <span className="text-[15px] font-bold text-white/90">
-                {selectedPair} <span className="text-primary text-[10px] align-top bg-primary/10 px-1 rounded ml-1">Perp</span>
-              </span>
-            </div>
-          </button>
+          <div className="flex items-center gap-1">
+            <button aria-label="Go back" onClick={() => window.history.back()} className="tap-scale p-0.5 -ml-1">
+              <IoChevronDown className="rotate-90 text-white/70" size={20} />
+            </button>
+            <Popover width={300} position="bottom-start" shadow="md">
+              <PopoverTarget>
+                <button className="flex items-center gap-1 px-1 py-0.5 rounded tap-scale">
+                  <IoSwapHorizontal size={16} className="text-white/40" />
+                  <span className="text-[15px] font-bold text-white/90">
+                    {selectedPair} <span className="text-primary text-[10px] align-top bg-primary/10 px-1 rounded ml-1">Perp</span>
+                  </span>
+                  <MdKeyboardArrowDown className="text-white/40" size={16} />
+                </button>
+              </PopoverTarget>
+              <PopoverDropdown className="!bg-[#181a20] !border-white/[0.06] !p-0">
+                <div className="max-h-[400px] overflow-auto flex flex-col p-2">
+                  <TextInput
+                    value={pairSearch}
+                    onChange={(event) => setPairSearch(event.currentTarget.value)}
+                    classNames={{
+                      input: '!h-8 !bg-white/5 placeholder:!text-white/30 !border-0 focus:!border focus:!border-primary !rounded mb-2 text-xs',
+                    }}
+                    placeholder="Search pairs..."
+                    leftSection={<Search className="w-4 h-4" />}
+                  />
+                  {filteredMarkets.slice(0, 25).map((market) => {
+                    const symbol = `${market.base}/${market.quote}`;
+                    return (
+                      <button
+                        key={market.symbol}
+                        onClick={() => setSelectedPair(symbol)}
+                        className={clsx(
+                          'flex items-center justify-between p-2 hover:bg-white/5 rounded transition-colors text-left',
+                          selectedPair === symbol && 'bg-white/5'
+                        )}
+                      >
+                        <span className="text-xs font-bold">
+                          {market.base}<span className="text-white/40">/{market.quote} Perp</span>
+                        </span>
+                        <span className={clsx('text-xs font-semibold', market.percent_change >= 0 ? 'text-success-2' : 'text-error-1')}>
+                          {market.percent_change >= 0 ? '+' : ''}{market.percent_change}%
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </PopoverDropdown>
+            </Popover>
+          </div>
         }
         rightElement={
           <div className="flex items-center gap-2">
@@ -890,7 +930,7 @@ function FuturesTradesInner() {
         </div>
       </div>
 
-            <div className="hidden min-[1150px]:grid lg:grid-cols-[1fr_220px_400px] gap-1 px-1 flex-1 pr-1 pb-0 min-h-0 relative">
+            <div className="hidden min-[1150px]:grid lg:grid-cols-[1fr_250px_320px] gap-1 px-1 flex-1 pr-1 pb-0 min-h-0 relative">
         {/* MOBILE: Floating Order Book Button */}
         <button className="min-[1150px]:hidden fixed bottom-[90px] right-4 z-40 bg-[#1c1e27] border border-white/[0.08] text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg tap-scale flex items-center gap-2" onClick={() => setOrderBookOpen(true)}>
           <span>Order Book</span>

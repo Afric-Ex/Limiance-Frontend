@@ -28,8 +28,9 @@ export const RegisterForm = () => {
   const storePhone = useAuthStore((state) => state.phone);
 
   const loginWithGoogle = useGoogleLogin({
-    onSuccess: (tokenResponse) => {
-      console.log(tokenResponse.access_token);
+    onSuccess: () => {
+      // Stub: auth wiring is not implemented yet. The Google access token is a
+      // bearer credential - never log or persist it.
     },
     onError: () => {
       console.log("Login Failed");

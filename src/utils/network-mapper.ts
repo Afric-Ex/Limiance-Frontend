@@ -1,18 +1,4 @@
 /**
- * Networks the backend does not currently support for deposit/withdrawal.
- * Coins whose ONLY chain falls in this list will be hidden entirely.
- */
-export const UNSUPPORTED_CHAIN_SYMBOLS = new Set([
-  "xrp",
-  "xtz",   // Tezos
-  "ada",   // Cardano
-  "avax",  // Avalanche
-  "doge",  // Dogecoin
-  "kava",
-  "near",
-]);
-
-/**
  * Maps the network symbol coming from the "listed_networks" API (e.g. "BTC", "ETH", "BSC")
  * to the internal chain name stored in the wallet database (e.g. "bitcoin", "evm", "bsc").
  */

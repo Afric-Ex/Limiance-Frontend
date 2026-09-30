@@ -1,7 +1,8 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { asset, assetKeys } from "../services/asset";
 import { useState, useEffect } from "react";
 import { useUserStore } from "../stores/user-store";
+import { useDepositStore } from "../stores/deposit-store";
 import { mapSymbolToWalletChain } from "../utils/network-mapper";
 
 export interface SelectedCoin {
@@ -16,6 +17,7 @@ export interface SelectedNetwork {
   name: string;
   symbol: string;
   blockchain: string;
+  image?: string;
 }
 
 
@@ -33,6 +35,7 @@ export const useDeposit = () => {
   });
   const [walletType, setWalletType] = useState(0);
   const user = useUserStore((state) => state.user);
+  const markPendingDeposit = useDepositStore((state) => state.markPending);
 
   // tokens needed for history table coin image lookup
   const { data: supportedTokens } = useQuery({
@@ -97,23 +100,13 @@ export const useDeposit = () => {
   const walletError =
     !existingWallet && generateWalletError && !!chainId;
 
-  const resolvedWalletId =
-    existingWallet?.id ?? (generatedWallet as any)?.id ?? (generatedWallet as any)?.data?.id;
-
-  const { mutate: saveDestination } = useMutation({
-    mutationFn: () =>
-      asset.initiateDeposit({
-        walletId: resolvedWalletId as string,
-        asset: selectedCoin?.symbol,
-        network: selectedNetwork?.symbol,
-      }),
-  });
-
+  // Arm the deposit flag off a purely local signal: once a live address exists
+  // the user can send funds, so any credit to this symbol is a deposit.
   useEffect(() => {
-    if (resolvedWalletId && selectedCoin?.name && selectedNetwork?.symbol) {
-      saveDestination();
+    if (walletAddress && selectedCoin?.symbol) {
+      markPendingDeposit(selectedCoin.symbol);
     }
-  }, [resolvedWalletId, selectedCoin?.name, selectedNetwork?.symbol, saveDestination]);
+  }, [walletAddress, selectedCoin?.symbol, markPendingDeposit]);
 
   return {
     supportedTokens,

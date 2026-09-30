@@ -81,7 +81,6 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
   const { mutate: handleBorrow, isPending: borrowLoading } = useMutation({
     mutationFn: async () => {
       const res = await tradingService.borrowMargin({ asset: selectedAsset, amount: enteredAmount });
-      console.log("Borrow response:", res); // Debug log
       // Some backends return 200 but with a non-success status/message in the body
       if (res?.status === false || res?.success === false) {
         const errorMsg = res?.error || res?.message || res?.data?.message || res?.data?.error || "Borrow failed";
@@ -110,7 +109,6 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
   const { mutate: handleRepay, isPending: repayLoading } = useMutation({
     mutationFn: async () => {
       const res = await tradingService.repayMargin({ asset: selectedAsset, amount: enteredAmount });
-      console.log("Repay response:", res); // Debug log
       if (res?.status === false || res?.success === false) {
         const errorMsg = res?.error || res?.message || res?.data?.message || res?.data?.error || "Repay failed";
         throw new Error(errorMsg);

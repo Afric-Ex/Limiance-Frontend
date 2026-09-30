@@ -90,7 +90,7 @@ export const KickstartJourney: React.FC<KickstartJourneyProps> = ({
               Verify your Identity
             </h4>
             <p className="text-xs sm:text-sm text-white/60 leading-snug">
-              complete the verification steps to secure your account by
+              complete the verification steps to secure your account.
             </p>
 
             {/* Status alerts if pending or rejected */}
@@ -121,7 +121,7 @@ export const KickstartJourney: React.FC<KickstartJourneyProps> = ({
               </button>
 
               {/* Badges B and A matching Figma design */}
-              <div className="flex items-center -space-x-1.5">
+              {/* <div className="flex items-center -space-x-1.5">
                 <span
                   title="Binance / Bitcoin"
                   className="w-6 h-6 rounded-full bg-[#f59e0b] text-[#0d1424] font-black text-[11px] flex items-center justify-center shadow-md ring-2 ring-[#0d1424]"
@@ -134,7 +134,7 @@ export const KickstartJourney: React.FC<KickstartJourneyProps> = ({
                 >
                   A
                 </span>
-              </div>
+              </div> */}
             </div>
           </div>
 

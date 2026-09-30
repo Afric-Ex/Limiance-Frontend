@@ -40,8 +40,8 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
         className
       )}
     >
-      {/* Left */}
-      <div className="w-10 flex items-center">
+      {/* Left — sized to its content so a pair dropdown trigger is not clipped */}
+      <div className={clsx("flex items-center", leftElement ? "w-auto shrink-0" : "w-10 shrink-0")}>
         {leftElement ?? (
           showBack ? (
             <button
@@ -63,7 +63,7 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
       )}
 
       {/* Right */}
-      <div className="w-10 flex items-center justify-end">
+      <div className="flex items-center justify-end shrink-0">
         {rightElement}
       </div>
     </div>

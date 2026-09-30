@@ -85,7 +85,6 @@ function PreOrderScreenContent() {
             toast.success("Order created!");
             router.push(`/trades/p2p/order/${matchId}`);
           } else {
-            console.log("Order response missing ID:", res);
             toast.success("Order created!");
             router.push(`/trades/p2p`);
           }

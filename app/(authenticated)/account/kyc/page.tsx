@@ -121,8 +121,7 @@ function KycPageInner() {
     return Promise.resolve(activeToken || "");
   };
 
-  const sumsubMessage = (type: string, payload: any) => {
-    console.log("Sumsub message:", type, payload);
+  const sumsubMessage = (type: string) => {
     if (type === "idCheck.onApplicantSubmitted") {
       setActiveToken(null);
       setPolling(true);
@@ -137,7 +136,6 @@ function KycPageInner() {
   };
 
   const sumsubError = (error: any) => {
-    console.error("Sumsub error:", error);
     errorMessageHandler(new Error(error?.message || "An unknown error occurred"));
   };
 

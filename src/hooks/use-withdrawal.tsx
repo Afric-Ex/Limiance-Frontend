@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { SelectedCoin, SelectedNetwork } from "./use-deposit";
 import { mapSymbolToWalletChain, mapSymbolToWithdrawalChain } from "../utils/network-mapper";
 import { useForm } from "@mantine/form";
@@ -8,6 +8,7 @@ import { useUserStore } from "../stores/user-store";
 import { errorMessageHandler } from "../lib/error-handler";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "../utils/constants";
+import { readNumber, unwrapObject } from "../lib/api-response";
 
 import { SuccessModal } from "../components/login/verify-email-success";
 import { useRouter } from "next/navigation";
@@ -45,6 +46,11 @@ export const useWithdrawal = () => {
   const internalChainName = mapSymbolToWalletChain(chainId);
   const withdrawalChainName = mapSymbolToWithdrawalChain(chainId);
 
+  // listed_networks already carries the real chain ("Arc"), so prefer it over the
+  // mapped name. mapSymbolToWalletChain buckets eth/pol/arb/op/base into "evm",
+  // which loses the network the user actually picked.
+  const generateChain = selectedNetwork?.blockchain || chainId;
+
   const { data: allWallets, isLoading: allWalletsLoading } = useQuery({
     queryKey: assetKeys.allWallets(),
     queryFn: () => asset.allWallets({ limit: 100 }),
@@ -52,26 +58,35 @@ export const useWithdrawal = () => {
     staleTime: Infinity,
   });
 
-  const existingWallet = internalChainName
+  const existingWallet = generateChain
     ? allWallets?.find(
-        (wallet) =>
-          wallet.chain.toLowerCase() === internalChainName.toLowerCase() &&
-          wallet.address &&
-          wallet.address.trim() !== ""
+        (wallet) => {
+          // Compare case-insensitively against the chain we would generate for,
+          // the legacy mapped name, and the raw symbol, so wallets stored before
+          // this change still match instead of generating a duplicate.
+          const candidates = [generateChain, internalChainName, chainId]
+            .filter(Boolean)
+            .map((value) => String(value).toLowerCase());
+          return (
+            candidates.includes(wallet.chain.toLowerCase()) &&
+            wallet.address &&
+            wallet.address.trim() !== ""
+          );
+        }
       )
     : undefined;
 
   const { data: generatedWallet, isLoading: generateWalletLoading } = useQuery({
-    queryKey: assetKeys.generateWalletKeys(internalChainName, walletType),
+    queryKey: assetKeys.generateWalletKeys(generateChain, walletType),
     queryFn: () =>
       asset.generateWallet({
-        chain: internalChainName,
+        chain: generateChain,
         walletType,
         userid: user?.id as string,
       }),
     enabled:
       !!selectedCoin?.symbol &&
-      !!internalChainName &&
+      !!generateChain &&
       !existingWallet &&
       !!user?.id,
     retry: false,
@@ -81,10 +96,10 @@ export const useWithdrawal = () => {
   const resolvedWalletId = existingWallet?.id ?? generatedWallet?.data?.id;
   const withdrawalWalletLoading =
     allWalletsLoading ||
-    (!existingWallet && generateWalletLoading && !!internalChainName);
+    (!existingWallet && generateWalletLoading && !!generateChain);
 
   // ─── Step 2: Confirm withdrawal with OTP or TOTP from backend ────────────
-  const { mutate: confirmWithdrawal, isPending: confirmPending } = useMutation({
+  const { mutateAsync: confirmWithdrawal, isPending: confirmPending } = useMutation({
     mutationFn: ({ otpCode, totpCode }: { otpCode?: string; totpCode?: string }) =>
       asset.confirmWithdrawal({
         otpCode: otpCode || "",
@@ -136,7 +151,6 @@ export const useWithdrawal = () => {
       });
     },
     onError(e) {
-      console.error("[DEBUG] CONFIRM WITHDRAWAL ERROR:", e);
       errorMessageHandler(e);
     },
   });
@@ -169,14 +183,12 @@ export const useWithdrawal = () => {
             onConfirm={(otpCode) =>
               confirmWithdrawal({ otpCode, totpCode: totpCodeRef.current })
             }
-            isPending={confirmPending}
           />
         ),
         ...DEFAULT_MODAL_SETTINGS,
       });
     },
     onError(e) {
-      console.error("[DEBUG] INITIATE WITHDRAWAL ERROR:", e);
       errorMessageHandler(e);
     },
   });
@@ -220,30 +232,63 @@ export const useWithdrawal = () => {
     }
   };
 
-  // mock until Ayo ships the fee endpoint
-  const { data: networkFeeData, isLoading: networkFeeLoading } = useQuery({
-    queryKey: ["network-fee", chainId, selectedCoin?.symbol],
-    queryFn: () =>
-      asset.networkFee({ chain: chainId, token: selectedCoin?.symbol }),
-    enabled: !!chainId && !!selectedCoin?.symbol,
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []),
+  // platform_fees is a flat list of per-product rates (Spot/Funding/Futures/
+  // Margin/P2P). It ignores the asset+network params, so it is fetched once and
+  // keyed by name rather than per selected coin.
+  const { data: platformFeeData, isLoading: networkFeeLoading } = useQuery({
+    queryKey: ["platform-fees"],
+    queryFn: () => asset.platformFees(),
+    select: (res: unknown) => {
+      const rows = (res as { data?: unknown })?.data;
+      return Array.isArray(rows) ? rows : [];
+    },
+    staleTime: Infinity,
+    retry: false,
+    throwOnError: false,
   });
+
+  // Only funding and spot wallets can be the source of a withdrawal, so those are
+  // the two rows that can ever apply.
+  const feeRateForSourceWallet = useMemo(() => {
+    const wanted = sourceWallet === "spot" ? "spot" : "funding";
+    const row = (platformFeeData ?? []).find(
+      (item: any) => String(item?.name ?? "").trim().toLowerCase() === wanted
+    );
+    const percentage = readNumber(row, "percentage");
+    return percentage === null ? null : percentage / 100;
+  }, [platformFeeData, sourceWallet]);
 
   const { data: minWithdrawData, isLoading: minWithdrawLoading } = useQuery({
     queryKey: ["minimum-withdrawal", selectedCoin?.symbol, chainId],
     queryFn: () =>
       asset.minimumWithdrawal({ token: selectedCoin?.symbol, chain: chainId }),
     enabled: !!selectedCoin?.symbol && !!chainId,
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []),
+    select: (res: unknown) => unwrapObject(res),
+    retry: false,
+    throwOnError: false,
   });
 
-  const networkFee = networkFeeData?.fee ? +networkFeeData.fee : 0;
-  const minimumWithdrawal = minWithdrawData?.minimum ? +minWithdrawData.minimum : 0;
-  const withdrawableAmountAfterNetworkFee = +(form.values.amount || 0) - networkFee;
+  const minimumWithdrawalValue = readNumber(minWithdrawData, "minimum");
+  const minimumWithdrawal = minimumWithdrawalValue ?? 0;
+
+  // The rate is a percentage of the amount's USD value:
+  //   feeUsd = amountUsd * percentage / 100   (percentage is already scaled, so
+  //   Funding's 0.015 means 0.015%, not 1.5%)
+  // The fee is charged in coin units, so it converts back with the coin's USD
+  // price and the price cancels: feeCoins = (amountUsd * pct) / usdPrice, and
+  // amountUsd = amount * usdPrice, leaving amount * pct. No price lookup needed.
+  const amount = +(form.values.amount || 0);
+  const feeRate = feeRateForSourceWallet;
+  const networkFee = feeRate !== null ? amount * feeRate : 0;
+  // null rate means the backend never told us, which is not the same as a zero fee.
+  const networkFeeKnown = feeRate !== null;
+
+  const withdrawableAmountAfterNetworkFee = amount - networkFee;
 
   return {
     withdrawableAmountAfterNetworkFee,
     networkFee,
+    networkFeeKnown,
     networkFeeLoading,
     minimumWithdrawal,
     minWithdrawLoading,
@@ -268,13 +313,25 @@ export const useWithdrawal = () => {
 function WithdrawalOtpModal({
   email,
   onConfirm,
-  isPending,
 }: {
   email: string;
-  onConfirm: (otpCode?: string, totpCode?: string) => void;
-  isPending: boolean;
+  onConfirm: (otpCode?: string, totpCode?: string) => Promise<unknown>;
 }) {
   const [otp, setOtp] = useState("");
+  // `modals.open` snapshots the children it is given, so a parent `isPending`
+  // prop would freeze at its open-time value. Track it here instead.
+  const [isPending, setIsPending] = useState(false);
+
+  const handleConfirm = async (otpCode?: string, totpCode?: string) => {
+    setIsPending(true);
+    try {
+      await onConfirm(otpCode, totpCode);
+    } catch {
+      // onError already surfaced the message; re-enable for a retry.
+    } finally {
+      setIsPending(false);
+    }
+  };
 
   return (
     <div className="bg-[#12131A] border border-white/[0.08] w-full max-w-md rounded-3xl p-6 sm:p-8 flex flex-col gap-8 shadow-2xl relative overflow-hidden mx-auto">
@@ -310,7 +367,7 @@ function WithdrawalOtpModal({
               backgroundColor: otp.length === 6 ? "#3B82F6" : "rgba(255,255,255,0.1)",
               color: otp.length === 6 ? "white" : "rgba(255,255,255,0.3)",
             }}
-            onClick={() => otp.length === 6 && onConfirm(otp, undefined)}
+            onClick={() => otp.length === 6 && handleConfirm(otp, undefined)}
             disabled={otp.length !== 6 || isPending}
           >
             Confirm Withdrawal

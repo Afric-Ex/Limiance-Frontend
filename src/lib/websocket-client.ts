@@ -55,6 +55,33 @@ function getAuthToken(): string {
 export type WsMessageHandler = (data: any, rawMessage: any) => void;
 export type WsStatusHandler = (connected: boolean) => void;
 
+/**
+ * Deterministic JSON serialisation: object keys are sorted recursively so two
+ * structurally identical payloads always produce the same string no matter what
+ * order the caller built the keys in. JSON.stringify can't be used here — it
+ * preserves insertion order, so {a,b} and {b,a} would hash differently.
+ */
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (typeof (value as { toJSON?: unknown }).toJSON === "function") {
+    return stableStringify((value as { toJSON: () => unknown }).toJSON());
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+  const record = value as Record<string, unknown>;
+  const entries = Object.keys(record)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${stableStringify(record[k])}`);
+  return `{${entries.join(",")}}`;
+}
+
+/** Stable identity for one (topic, payload) pair: callers asking for the same
+ *  topic with the same payload share an entry, different payloads get their own. */
+function subscriptionKey(topic: string, sendPayload: object | null): string {
+  return `${topic}::${stableStringify(sendPayload)}`;
+}
+
 interface Subscription {
   topic: string;
   sendPayload?: object | null;
@@ -69,6 +96,9 @@ class WebSocketClient {
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private subscriptions = new Map<string, Subscription>();
+  /** topic -> compound keys registered under it. Incoming frames only carry a
+   *  topic, so this is what lets us reach handlers across every distinct payload. */
+  private topicIndex = new Map<string, Set<string>>();
   private statusHandlers = new Set<WsStatusHandler>();
   private intentionalClose = false;
 
@@ -179,9 +209,14 @@ class WebSocketClient {
           const type = msg.type;
           if (!type) return;
 
-          // Dispatch to matching topic subscribers
-          const sub = this.subscriptions.get(type);
-          if (sub) {
+          // Dispatch by topic only — the server never echoes the payload back.
+          // Fan out to every distinct payload registered under this topic; each
+          // handler already filters the frame down to the pair/interval it asked for.
+          const keys = this.topicIndex.get(type);
+          if (!keys) return;
+          for (const key of Array.from(keys)) {
+            const sub = this.subscriptions.get(key);
+            if (!sub) continue;
             sub.handlers.forEach((handler) => {
               try {
                 handler(msg.data, msg);
@@ -247,6 +282,8 @@ class WebSocketClient {
   }
 
   private resubscribeAll() {
+    // subscriptions is keyed by topic+payload, so this walks every distinct
+    // payload — a topic with three active payloads re-sends all three frames.
     this.subscriptions.forEach((sub) => {
       if (sub.sendPayload) {
         this.send(sub.sendPayload);
@@ -257,22 +294,31 @@ class WebSocketClient {
   /**
    * Subscribes to a message type. Ensures the single socket is connected,
    * sends the initial subscription command if provided, and returns an unsubscribe cleanup function.
+   *
+   * A topic may carry several concurrent subscriptions with different payloads (e.g. two
+   * charts on different pairs both on "candle"). Each distinct payload gets its own entry,
+   * so a reconnect re-sends all of them rather than only the most recent.
    */
   public subscribe(
     topic: string,
     sendPayload: object | null,
     handler: WsMessageHandler
   ): () => void {
-    let sub = this.subscriptions.get(topic);
+    const key = subscriptionKey(topic, sendPayload);
+    let sub = this.subscriptions.get(key);
     if (!sub) {
       sub = {
         topic,
         sendPayload,
         handlers: new Set(),
       };
-      this.subscriptions.set(topic, sub);
-    } else if (sendPayload) {
-      sub.sendPayload = sendPayload;
+      this.subscriptions.set(key, sub);
+      let keys = this.topicIndex.get(topic);
+      if (!keys) {
+        keys = new Set();
+        this.topicIndex.set(topic, keys);
+      }
+      keys.add(key);
     }
 
     sub.handlers.add(handler);
@@ -285,26 +331,40 @@ class WebSocketClient {
     }
 
     return () => {
-      const currentSub = this.subscriptions.get(topic);
-      if (currentSub) {
-        currentSub.handlers.delete(handler);
-        if (currentSub.handlers.size === 0) {
-          this.subscriptions.delete(topic);
+      // Scoped to this compound key: unsubscribing one payload must leave the
+      // topic's other payloads (and their handlers) untouched.
+      const currentSub = this.subscriptions.get(key);
+      if (!currentSub) return;
+      currentSub.handlers.delete(handler);
+      if (currentSub.handlers.size === 0) {
+        this.subscriptions.delete(key);
+        const keys = this.topicIndex.get(topic);
+        if (keys) {
+          keys.delete(key);
+          if (keys.size === 0) this.topicIndex.delete(topic);
         }
       }
     };
   }
 
   /**
-   * Force update payload for an existing topic subscription (e.g. switching trading pair)
+   * Force update payload for an existing topic subscription (e.g. switching trading pair).
+   *
+   * NOTE: this is topic-wide — it rewrites the payload of *every* subscription registered
+   * under `topic` and sends once. Under the multi-payload model that is ambiguous (which of
+   * several payloads should win?), and since the entry key is derived from the payload it
+   * can leave a key that no longer matches its stored payload. It has no callers in the
+   * codebase today and is untested against the multi-payload model — revisit before use.
    */
   public updateSubscriptionPayload(topic: string, newPayload: object) {
-    const sub = this.subscriptions.get(topic);
-    if (sub) {
-      sub.sendPayload = newPayload;
-      if (this.isConnected) {
-        this.send(newPayload);
-      }
+    const keys = this.topicIndex.get(topic);
+    if (!keys || keys.size === 0) return;
+    keys.forEach((key) => {
+      const sub = this.subscriptions.get(key);
+      if (sub) sub.sendPayload = newPayload;
+    });
+    if (this.isConnected) {
+      this.send(newPayload);
     }
   }
 

@@ -38,7 +38,7 @@ export const botService = {
     type: BotType;
     pair: string;
     strategy: string;
-    investmentAmount: number;
+    investmentAmount: string;
     asset: string;
   }) => {
     const response = await api.post("trading/bot/create", data);

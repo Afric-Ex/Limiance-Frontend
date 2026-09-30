@@ -103,7 +103,7 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
           <div className="flex flex-col gap-3 max-w-md">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-bold uppercase tracking-widest text-primary/70">
-                {title ?? "Assets Overview"}
+                {title ?? "Total Assets"}
               </span>
               <BalanceRevealControl />
             </div>
