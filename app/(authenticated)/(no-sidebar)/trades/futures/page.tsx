@@ -34,6 +34,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { MdKeyboardArrowDown, MdMoreVert } from 'react-icons/md';
 import { MobileTopBar } from '@/src/components/shared/mobile-top-bar';
 import { IoChevronDown, IoChevronUp, IoSwapHorizontal, IoBarChartOutline, IoListOutline } from 'react-icons/io5';
@@ -41,6 +42,7 @@ import { MobileBottomSheet } from '@/src/components/shared/mobile-bottom-sheet';
 import { MobileBottomNav } from '@/src/components/shared/mobile-bottom-nav';
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { FuturesTradePageSkeleton } from "@/src/components/skeletons/trades";
+import type { OrderLevel } from "@/src/components/trades/candlestick-char";
 
 const CandlestickChart = dynamic(
   () => import('@/src/components/trades/candlestick-char'),
@@ -117,8 +119,15 @@ type MarginMode = 'cross' | 'isolated';
 function FuturesTradesInner() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  const [selectedPair, setSelectedPair] = useState('BTC/USDT');
+  // Futures is deep-linkable like spot/margin: /trades/futures?pair=BTC_USDT
+  const searchParams = useSearchParams();
+  const initialPair = searchParams.get('pair')?.replace('_', '/') ?? 'BTC/USDT';
+  const [selectedPair, setSelectedPair] = useState(initialPair);
   const [pairSearch, setPairSearch] = useState('');
+  // Mobile and desktop headers are BOTH mounted (one is hidden by CSS), so they
+  // need separate state — sharing it would open both dropdowns at once.
+  const [pairMenuOpen, setPairMenuOpen] = useState(false);
+  const [pairMenuDesktopOpen, setPairMenuDesktopOpen] = useState(false);
   const [futuresPrice, setFuturesPrice] = useState<number | string>('');
   const [stopLimitPrice, setStopLimitPrice] = useState<number | string>(''); // separate limit price for stop-limit orders
   const [futuresAmount, setFuturesAmount] = useState<number | string>('');
@@ -166,17 +175,6 @@ function FuturesTradesInner() {
   const { data: futuresOrderHistory } = useQuery({
     queryKey: ['futures-order-history'],
     queryFn: () => tradingService.futuresOrderHistory(),
-    select: (res: any) => {
-      const raw = res?.data ?? res ?? [];
-      return Array.isArray(raw) ? raw : [];
-    },
-    retry: false,
-    throwOnError: false,
-  });
-
-  const { data: futuresTradeHistory } = useQuery({
-    queryKey: ['futures-trade-history'],
-    queryFn: () => tradingService.futuresTradeHistory(),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
@@ -372,7 +370,7 @@ function FuturesTradesInner() {
   const cost = leverage > 0 ? orderValue / leverage : 0;
   const maxNotional = availableQuote * leverage;
   const maxQuantity = effectiveLimitPrice > 0 ? maxNotional / effectiveLimitPrice : 0;
-  const chartOrderLevels = [
+  const chartOrderLevels: OrderLevel[] = [
     ...(workingPrice && (quantity > 0 || tpslEnabled)
       ? [{
           id: 'entry-preview',
@@ -443,6 +441,14 @@ function FuturesTradesInner() {
     const marketPair = market.pair || market.symbol || `${market.base}/${market.quote}`;
     return marketPair.toLowerCase().includes(needle);
   });
+
+  // Close both dropdowns and clear the search so the next open starts clean.
+  const handleSelectPair = (base: string, quote: string) => {
+    setSelectedPair(`${base}/${quote}`);
+    setPairSearch('');
+    setPairMenuOpen(false);
+    setPairMenuDesktopOpen(false);
+  };
 
   const formatPrice = (value: number | null) =>
     value !== null
@@ -768,9 +774,13 @@ function FuturesTradesInner() {
             <button aria-label="Go back" onClick={() => window.history.back()} className="tap-scale p-0.5 -ml-1">
               <IoChevronDown className="rotate-90 text-white/70" size={20} />
             </button>
-            <Popover width={300} position="bottom-start" shadow="md">
+            <Popover width={300} position="bottom-start" shadow="md" opened={pairMenuOpen} onChange={setPairMenuOpen}>
               <PopoverTarget>
-                <button className="flex items-center gap-1 px-1 py-0.5 rounded tap-scale">
+                <button
+                  aria-label="Change trading pair"
+                  onClick={() => setPairMenuOpen((v) => !v)}
+                  className="flex items-center gap-1 px-1 py-0.5 rounded tap-scale"
+                >
                   <IoSwapHorizontal size={16} className="text-white/40" />
                   <span className="text-[15px] font-bold text-white/90">
                     {selectedPair} <span className="text-primary text-[10px] align-top bg-primary/10 px-1 rounded ml-1">Perp</span>
@@ -789,26 +799,30 @@ function FuturesTradesInner() {
                     placeholder="Search pairs..."
                     leftSection={<Search className="w-4 h-4" />}
                   />
-                  {filteredMarkets.slice(0, 25).map((market) => {
-                    const symbol = `${market.base}/${market.quote}`;
-                    return (
-                      <button
-                        key={market.symbol}
-                        onClick={() => setSelectedPair(symbol)}
-                        className={clsx(
-                          'flex items-center justify-between p-2 hover:bg-white/5 rounded transition-colors text-left',
-                          selectedPair === symbol && 'bg-white/5'
-                        )}
-                      >
-                        <span className="text-xs font-bold">
-                          {market.base}<span className="text-white/40">/{market.quote} Perp</span>
-                        </span>
-                        <span className={clsx('text-xs font-semibold', market.percent_change >= 0 ? 'text-success-2' : 'text-error-1')}>
-                          {market.percent_change >= 0 ? '+' : ''}{market.percent_change}%
-                        </span>
-                      </button>
-                    );
-                  })}
+                  {filteredMarkets.length === 0 ? (
+                    <div className="text-center py-8 text-xs text-white/30">No pairs found</div>
+                  ) : (
+                    filteredMarkets.slice(0, 25).map((market) => {
+                      const symbol = `${market.base}/${market.quote}`;
+                      return (
+                        <button
+                          key={market.symbol}
+                          onClick={() => handleSelectPair(market.base, market.quote)}
+                          className={clsx(
+                            'flex items-center justify-between p-2 hover:bg-white/5 rounded transition-colors text-left',
+                            selectedPair === symbol && 'bg-white/5'
+                          )}
+                        >
+                          <span className="text-xs font-bold">
+                            {market.base}<span className="text-white/40">/{market.quote} Perp</span>
+                          </span>
+                          <span className={clsx('text-xs font-semibold', market.percent_change >= 0 ? 'text-success-2' : 'text-error-1')}>
+                            {market.percent_change >= 0 ? '+' : ''}{market.percent_change}%
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </PopoverDropdown>
             </Popover>
@@ -840,9 +854,13 @@ function FuturesTradesInner() {
           <button className="flex items-center gap-1 tap-scale" onClick={() => window.history.back()}>
             <IoChevronDown className="rotate-90 text-white/70" size={22} />
           </button>
-          <Popover width={350} position="bottom-start" shadow="md">
+          <Popover width={350} position="bottom-start" shadow="md" opened={pairMenuDesktopOpen} onChange={setPairMenuDesktopOpen}>
             <PopoverTarget>
-              <button className="flex items-center gap-2 hover:bg-white/5 py-1 px-2 rounded -ml-2 transition-colors">
+              <button
+                aria-label="Change trading pair"
+                onClick={() => setPairMenuDesktopOpen((v) => !v)}
+                className="flex items-center gap-2 hover:bg-white/5 py-1 px-2 rounded -ml-2 transition-colors"
+              >
                 <span className="text-xl font-bold text-white">
                   {selectedPair} <span className="text-primary text-[10px] ml-1 align-top bg-primary/10 px-1 rounded">Perp</span>
                 </span>
@@ -860,26 +878,30 @@ function FuturesTradesInner() {
                   placeholder="Search pairs..."
                   leftSection={<Search className="w-4 h-4" />}
                 />
-                {filteredMarkets.slice(0, 25).map((market) => {
-                  const symbol = `${market.base}/${market.quote}`;
-                  return (
-                    <button
-                      key={market.symbol}
-                      onClick={() => setSelectedPair(symbol)}
-                      className={clsx(
-                        'flex items-center justify-between p-2 hover:bg-white/5 rounded transition-colors text-left',
-                        selectedPair === symbol && 'bg-white/5'
-                      )}
-                    >
-                      <span className="text-xs font-bold">
-                        {market.base}<span className="text-white/40">/{market.quote} Perp</span>
-                      </span>
-                      <span className={clsx('text-xs font-semibold', market.percent_change >= 0 ? 'text-success-2' : 'text-error-1')}>
-                        {market.percent_change >= 0 ? '+' : ''}{market.percent_change}%
-                      </span>
-                    </button>
-                  );
-                })}
+                {filteredMarkets.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-white/30">No pairs found</div>
+                ) : (
+                  filteredMarkets.slice(0, 25).map((market) => {
+                    const symbol = `${market.base}/${market.quote}`;
+                    return (
+                      <button
+                        key={market.symbol}
+                        onClick={() => handleSelectPair(market.base, market.quote)}
+                        className={clsx(
+                          'flex items-center justify-between p-2 hover:bg-white/5 rounded transition-colors text-left',
+                          selectedPair === symbol && 'bg-white/5'
+                        )}
+                      >
+                        <span className="text-xs font-bold">
+                          {market.base}<span className="text-white/40">/{market.quote} Perp</span>
+                        </span>
+                        <span className={clsx('text-xs font-semibold', market.percent_change >= 0 ? 'text-success-2' : 'text-error-1')}>
+                          {market.percent_change >= 0 ? '+' : ''}{market.percent_change}%
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </PopoverDropdown>
           </Popover>

@@ -5,6 +5,7 @@ import { Button, NumberInput, Select } from "@mantine/core";
 import { FiCreditCard } from "react-icons/fi";
 import { MdOutlineContentCopy, MdOutlineTimer } from "react-icons/md";
 import { IoMdInformationCircleOutline } from "react-icons/io";
+import { IoChevronDownOutline } from "react-icons/io5";
 import { Copy } from "../shared/copy";
 import { useFiatBankDeposit } from "@/src/hooks/use-fiat-deposit";
 
@@ -162,6 +163,12 @@ export const FiatBankDeposit = () => {
           <NumberInput
             thousandSeparator=","
             hideControls
+            autoComplete="off"
+            name="fiat-deposit-amount"
+            id="fiat-deposit-amount"
+            data-1p-ignore="true"
+            data-lpignore="true"
+            data-form-type="other"
             classNames={{ input: inputClass, section: "!w-fit !right-3" }}
             placeholder="0.00"
             min={0}
@@ -175,6 +182,12 @@ export const FiatBankDeposit = () => {
           <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">You receive</label>
           <Select
             data={["USDT", "USDC", "BTC", "ETH", "SOL"]}
+            autoComplete="new-password"
+            name="fiat-receive-asset"
+            id="fiat-receive-asset"
+            data-1p-ignore="true"
+            data-lpignore="true"
+            data-form-type="other"
             {...form.getInputProps("symbol")}
             classNames={bankSelectClass}
           />
@@ -184,14 +197,27 @@ export const FiatBankDeposit = () => {
       {/* Bank */}
       <div className="flex flex-col gap-2">
         <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Preferred settlement bank</label>
-        <Select
-          data={banks?.map((b) => ({ value: b.code, label: b.name })) ?? []}
-          placeholder={banksLoading ? "Loading banks…" : "Select a bank"}
-          searchable
-          nothingFoundMessage="No banks found"
-          classNames={bankSelectClass}
-          {...form.getInputProps("bankCode")}
-        />
+        <div className="relative">
+          <select
+            {...form.getInputProps("bankCode")}
+            name="settlement-bank"
+            id="settlement-bank"
+            autoComplete="off"
+            className={`${inputClass} w-full !appearance-none !cursor-pointer !pr-10 [&>option]:!bg-[#181a20] [&>option]:!text-white [&>option]:!text-sm`}
+          >
+            <option value="">
+              {banksLoading ? "Loading banks…" : "Select a bank"}
+            </option>
+            {banks?.map((b) => (
+              <option key={b.code} value={b.code}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
+            <IoChevronDownOutline size={18} />
+          </span>
+        </div>
       </div>
 
       {/* summary strip */}

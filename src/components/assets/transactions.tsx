@@ -2,14 +2,15 @@
 
 import { Table, TableTd, TableTh, TableTr, Tooltip } from "@mantine/core";
 // import classes from "@/src/styles/assets-overview.module.css";
-import { useState } from "react";
 import { EmptyTable } from "../icons/empty-table";
 import { assetKeys, asset } from "@/src/services/asset";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteList } from "@/src/hooks/use-infinite-list";
+import { InfiniteScrollTrigger } from "../shared/infinite-scroll-trigger";
 import { PendingIcon } from "../icons/pending-icon";
 import { Copy } from "../shared/copy";
 import { InlineLoading } from "../shared/inline-loading";
 import { truncateCryptoAddress } from "@/src/utils/truncate-address";
+import { formatTransactionAmount, formatTransactionAsset } from "@/src/utils/transaction";
 
 export enum TransactionViews {
   RECENT = "recent",
@@ -19,17 +20,21 @@ export enum TransactionViews {
 export const Transactions = () => {
   // const [view, setView] = useState(TransactionViews.RECENT);
 
-  const [page] = useState(1);
   const limit = 30;
 
-  const { data: history, isLoading: historyLoading } = useQuery({
-    queryKey: assetKeys.transactionHistory({
-      page,
-      limit,
-    }),
-    queryFn: () => asset.transactionHistory({ page, limit }),
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
-    staleTime: Infinity,
+  const {
+    items: history,
+    isPending: historyLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    loadedCount,
+    isError: historyError,
+    refetch: refetchHistory,
+    fetchNextPage,
+  } = useInfiniteList({
+    queryKey: assetKeys.transactionHistoryList(),
+    limit,
+    fetchPage: (params) => asset.transactionHistory(params),
   });
 
   return (
@@ -81,11 +86,11 @@ export const Transactions = () => {
                   <span className="flex items-center gap-1">
                     {/* <Image src={images.usdt} alt="usdt" /> */}
                     <span className="text-xs font-medium uppercase">
-                      {item.asset}
+                      {formatTransactionAsset(item.asset, item.chain)}
                     </span>
                   </span>
                 </TableTd>
-                <TableTd>{item.amount}</TableTd>
+                <TableTd>{formatTransactionAmount(item.amount)}</TableTd>
                 <TableTd className="!capitalize">{item.type}</TableTd>
                 <TableTd>
                   <span className="flex items-center gap-2">
@@ -150,6 +155,16 @@ export const Transactions = () => {
           <div className="flex justify-center">
             <InlineLoading />
           </div>
+        )}
+        {!historyLoading && (
+          <InfiniteScrollTrigger
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            loadedCount={loadedCount}
+            isError={historyError}
+            onRetry={refetchHistory}
+            onLoadMore={() => fetchNextPage()}
+          />
         )}
       </div>
     </div>

@@ -58,6 +58,27 @@ export function installTestGlobals() {
     );
   }
 
+  // jsdom has no IntersectionObserver. Mantine's useIntersection would throw on
+  // construction, so infinite-scroll components need a stub. It never reports
+  // an intersection, which means the trigger stays in its idle state — tests
+  // drive loading by calling the returned fetchNextPage directly.
+  if (typeof globalThis !== "undefined" && !("IntersectionObserver" in globalThis)) {
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        root = null;
+        rootMargin = "";
+        thresholds: number[] = [];
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+        takeRecords() {
+          return [];
+        }
+      }
+    );
+  }
+
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     configurable: true,

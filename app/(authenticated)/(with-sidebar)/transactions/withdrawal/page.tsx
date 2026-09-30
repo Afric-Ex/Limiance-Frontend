@@ -32,9 +32,9 @@ import { WalletDropdown } from "@/src/components/assets/wallet-dropdown";
 import { assetKeys, asset } from "@/src/services/asset";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { truncateCryptoAddress } from "@/src/utils/truncate-address";
-import { TablePagination } from "@/src/components/shared/table-pagination";
+import { useInfiniteList } from "@/src/hooks/use-infinite-list";
+import { InfiniteScrollTrigger } from "@/src/components/shared/infinite-scroll-trigger";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { WithdrawalSkeleton } from "@/src/components/skeletons/orders";
@@ -147,8 +147,8 @@ function WithdrawalInner() {
     : parseFloat(coinPortfolio?.fundingBalance ?? "0");
   const assetBalanceLoading = portfolioLoading;
 
-  const [page, setPage] = useState(1);
   const limit = 30;
+  const transactionType = "withdrawal" as const;
 
   const { data: supportedTokens } = useQuery({
     queryKey: assetKeys.supportedTokensKey(""),
@@ -156,10 +156,20 @@ function WithdrawalInner() {
     select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
   });
 
-  const { data: history, isLoading: historyLoading } = useQuery({
-    queryKey: assetKeys.transactionHistory({ page, limit, transaction_type: "withdrawal" }),
-    queryFn: () => asset.transactionHistory({ page, limit, transaction_type: "withdrawal" }),
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
+  const {
+    items: history,
+    isPending: historyLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    loadedCount,
+    isError: historyError,
+    refetch: refetchHistory,
+    fetchNextPage,
+  } = useInfiniteList({
+    queryKey: assetKeys.transactionHistoryList({ transactionType }),
+    limit,
+    filters: { transaction_type: transactionType },
+    fetchPage: (params) => asset.transactionHistory(params),
   });
 
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
@@ -584,7 +594,14 @@ function WithdrawalInner() {
           )}
         </div>
 
-        <TablePagination totalCount={history?.length ?? 0} page={page} setPage={setPage} limit={limit} />
+        <InfiniteScrollTrigger
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          loadedCount={loadedCount}
+          isError={historyError}
+          onRetry={refetchHistory}
+          onLoadMore={() => fetchNextPage()}
+        />
       </div>
     </div>
   );

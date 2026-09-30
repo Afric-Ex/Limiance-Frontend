@@ -24,6 +24,15 @@ export const fiatKeys = {
   cardPay: ["fiat", "card-pay"],
   cardAuth: (reference: string) => ["fiat", "card-auth", reference],
   history: (params?: Record<string, unknown>) => ["fiat", "history", params],
+  /** Filters-only key for the infinite-scroll list; `page` is owned by react-query. */
+  historyList: (filters: Record<string, unknown> = {}) => [
+    "fiat",
+    "history",
+    "list",
+    filters,
+  ],
+  /** Invalidation prefix — matches both `history` and `historyList` entries. */
+  historyRoot: ["fiat", "history"] as const,
 } as const;
 
 export const fiatService = {
@@ -45,7 +54,7 @@ export const fiatService = {
     const response = await api.post("wallet/fiat/deposit/account", {
       symbol: data.symbol,
       bankCode: data.bankCode,
-      amount: data.amount,
+      amount: data.amount.toString(),
     });
     return response.data;
   },

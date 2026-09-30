@@ -91,7 +91,7 @@ export const useFiatBankDeposit = () => {
       setAccount(null);
       setExpirySeconds(0);
       form.reset();
-      queryClient.invalidateQueries({ queryKey: fiatKeys.history });
+      queryClient.invalidateQueries({ queryKey: fiatKeys.historyRoot });
     },
     onError: (e) => errorMessageHandler(e as any),
   });

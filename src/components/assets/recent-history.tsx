@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { assetKeys, asset } from "@/src/services/asset";
 import Link from "next/link";
 import { Skeleton } from "../shared/skeleton";
+import { formatTransactionAmount, formatTransactionAsset } from "@/src/utils/transaction";
 
 /**
  * RecentHistory — Right column component for Assets Overview.
@@ -61,9 +62,10 @@ export const RecentHistory = () => {
                     {item.completedAt}
                   </span>
                 </div>
-                <div className="flex flex-col items-end gap-0.5">
-                  <span className="text-xs font-semibold">
-                    {item.amount} <span className="uppercase text-white/50">{item.asset}</span>
+                <div className="flex flex-col items-end gap-0.5 min-w-0">
+                  <span className="text-xs font-semibold truncate max-w-full">
+                    {formatTransactionAmount(item.amount)}{" "}
+                    <span className="uppercase text-white/50">{formatTransactionAsset(item.asset, item.chain)}</span>
                   </span>
                   <span className="text-[10px] text-white/40 capitalize">
                     {item.status}

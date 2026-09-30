@@ -11,6 +11,10 @@ export interface PortfolioCoin {
   name: string;
   currencyPrice: string;
   image: string;
+  usdPrice?: string;
+  price?: string;
+  logo?: string;
+  icon?: string;
   spotBalance: string;
   futuresBalance: string;
   fundingBalance: string;

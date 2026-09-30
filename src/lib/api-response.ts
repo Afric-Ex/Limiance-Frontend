@@ -29,3 +29,26 @@ export function readNumber(source: unknown, key: string): number | null {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
+
+/**
+ * Pull the item array out of a paginated response *without* discarding the
+ * envelope, so sibling fields like `totalRecords` stay reachable.
+ *
+ * Two shapes are in play: most services unwrap the Axios response and hand back
+ * the backend envelope directly (list at `res.data`), while the p2p services
+ * return the whole AxiosResponse, putting the same list at `res.data.data`.
+ *
+ * Anything unrecognised becomes `[]` rather than a partial guess. That matters
+ * for `getNextPageParam`: `asset.transactionHistory` deliberately swallows 502s
+ * and returns the error body as if it were a success, and a non-empty-but-
+ * unrecognised body must not read as "another full page of results".
+ */
+export function readList<T = unknown>(res: unknown): T[] {
+  if (Array.isArray(res)) return res as T[];
+  if (!res || typeof res !== "object") return [];
+  const record = res as PlainObject;
+  if (Array.isArray(record.data)) return record.data as T[];
+  const nested = (record.data as PlainObject | null | undefined)?.data;
+  if (Array.isArray(nested)) return nested as T[];
+  return [];
+}
