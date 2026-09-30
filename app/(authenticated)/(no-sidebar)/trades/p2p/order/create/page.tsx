@@ -43,7 +43,11 @@ function PreOrderScreenContent() {
 
   // The user's action is opposite to the ad type:
   // If the ad is SELL → user is BUYING. If ad is BUY → user is SELLING.
-  const userAction = ad?.type === "Sell" ? "Buy" : "Sell";
+  // Normalise the ad type first — endpoints return inconsistent casing
+  // ("SELL" from all_orders, "Sell" from get_order_by_id), and a strict
+  // `=== "Sell"` flipped the mode and showed a bogus funding balance.
+  const adType = String(ad?.type ?? "").toUpperCase();
+  const userAction = adType === "SELL" ? "Buy" : "Sell";
 
   const price = parseFloat(String(ad?.price ?? 0));
   const minQty = parseFloat(String(ad?.minQuantity ?? 0));
@@ -57,11 +61,13 @@ function PreOrderScreenContent() {
   // Fetch portfolio (WebSocket channel) to get the per-asset funding balance (supports fractional amounts)
   const { coins: portfolio, isLoading: balanceLoading } = usePortfolioWs();
 
-  const fundingBalance = userAction === "Sell"
-    ? parseFloat(
-        portfolio?.find((p: any) => p.symbol.toUpperCase() === (ad?.asset ?? "").toUpperCase())?.fundingBalance ?? "0"
-      )
-    : 0;
+  const userCoin = portfolio?.find(
+    (p: any) => p.symbol.toUpperCase() === (ad?.asset ?? "").toUpperCase()
+  );
+  const fundingBalance =
+    userAction === "Sell"
+      ? parseFloat(userCoin?.fundingBalance ?? "0") || 0
+      : 0;
 
   // Validation
   let validationError = "";
@@ -233,8 +239,9 @@ function PreOrderScreenContent() {
                     <span className="text-white/70 text-xs font-medium">
                       {balanceLoading
                         ? "Loading..."
-                        : `${fundingBalance.toFixed(8).replace(/\.?0+$/, "")} ${ad.asset.toUpperCase()}`
-                      }
+                        : userCoin
+                          ? `${fundingBalance.toFixed(8).replace(/\.?0+$/, "")} ${ad.asset.toUpperCase()}`
+                          : "—"}
                     </span>
                   </div>
                 )}

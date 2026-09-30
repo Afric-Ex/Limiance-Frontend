@@ -29,6 +29,8 @@ export const FiatBankDeposit = () => {
   const {
     banks,
     banksLoading,
+    coinSymbols,
+    coinSymbolsLoading,
     form,
     account,
     expirySeconds,
@@ -181,7 +183,8 @@ export const FiatBankDeposit = () => {
         <div className="flex flex-col gap-2">
           <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">You receive</label>
           <Select
-            data={["USDT", "USDC", "BTC", "ETH", "SOL"]}
+            data={coinSymbols}
+            placeholder={coinSymbolsLoading ? "Loading assets…" : "Select an asset"}
             autoComplete="new-password"
             name="fiat-receive-asset"
             id="fiat-receive-asset"

@@ -131,6 +131,7 @@ function CreateAdPageInner() {
   const assetBalanceInfo = balanceArray.find((b: any) =>
     b.coin === selectedAsset || b.symbol === selectedAsset || b.asset === selectedAsset
   );
+  // console.log(assetBalanceInfo)
   const balanceAvailable = !!assetBalanceInfo;
   const fundingBalance = assetBalanceInfo
     ? parseFloat(assetBalanceInfo.fundingBalance || "0")
