@@ -211,6 +211,20 @@ export const useDeactivateSingleOrder = () => {
   });
 };
 
+export const useReactivateSingleOrder = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => p2p.reactivateSingleOrder(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: p2pKey.userOrders() });
+      toast.success("Ad status updated");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || "Failed to update ad status");
+    },
+  });
+};
+
 export const useAllMatchedOrders = (params?: any) => {
   return useQuery({
     queryKey: p2pKey.allMatchedOrders(params),

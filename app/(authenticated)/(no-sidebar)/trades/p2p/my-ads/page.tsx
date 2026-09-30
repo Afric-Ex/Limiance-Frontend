@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
 import { Button } from "@mantine/core";
 import { useRouter } from "next/navigation";
-import { useUserAds, useDeactivateSingleOrder } from "@/src/hooks/p2p/use-p2p";
+import { useUserAds, useDeactivateSingleOrder, useReactivateSingleOrder } from "@/src/hooks/p2p/use-p2p";
 import { UserAds } from "@/src/types/p2p";
 import { SegmentedControl } from "@/src/components/ui/segmented-control";
 import { Skeleton } from "@/src/components/shared/skeleton";
@@ -24,6 +24,7 @@ function MyAdsPageInner() {
 
   const { data, isLoading, refetch } = useUserAds({});
   const { mutate: deactivate, isPending: deactivating } = useDeactivateSingleOrder();
+  const { mutate: reactivate, isPending: reactivating } = useReactivateSingleOrder();
 
   const ads: UserAds["data"] = data?.data?.data ?? [];
 
@@ -38,7 +39,11 @@ function MyAdsPageInner() {
   const inactiveCount = ads.filter((a) => !a.active).length;
 
   const handleToggle = (ad: UserAds["data"][0]) => {
-    deactivate(ad.id, { onSuccess: () => refetch() });
+    if (ad.active) {
+      deactivate(ad.id, { onSuccess: () => refetch() });
+    } else {
+      reactivate(ad.id, { onSuccess: () => refetch() });
+    }
   };
 
   return (
@@ -188,7 +193,7 @@ function MyAdsPageInner() {
                     <Button
                       size="sm"
                       variant="outline"
-                      loading={deactivating}
+                      loading={deactivating || reactivating}
                       className={
                         isActive
                           ? "!border-[#FBA42A]/40 !text-[#FBA42A] hover:!bg-[#FBA42A]/10 !rounded-lg"
