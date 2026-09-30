@@ -90,8 +90,8 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
         lastUpdated: new Date(),
         markets: items,
       }));
-    } catch (err) {
-      console.error("HTTP fallback for market feed failed", err);
+    } catch {
+      // Feed falls back to the last known values; nothing to surface here.
     }
   }, [pair]);
 

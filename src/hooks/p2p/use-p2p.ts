@@ -48,7 +48,6 @@ export const useCreateAd = () => {
       toast.success("Ad created successfully");
     },
     onError: (error: any) => {
-      console.error("Create Ad Error details:", error?.response?.data);
       const message = error?.response?.data?.message;
       if (Array.isArray(message)) {
         toast.error(message[0] || "Validation failed");

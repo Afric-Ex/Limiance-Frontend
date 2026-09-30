@@ -11,12 +11,21 @@ import Image from "next/image";
 import { Search } from "../icons/search";
 import { icons } from "./icons";
 import { InlineLoading } from "../shared/inline-loading";
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction, useMemo, useState } from "react";
 import { useDisclosure } from "@mantine/hooks";
 import { SelectedCoin } from "@/src/hooks/use-deposit";
 import { assetKeys, asset } from "@/src/services/asset";
 import { useQuery } from "@tanstack/react-query";
 import { useUserStore } from "@/src/stores/user-store";
+
+/** One token as listed once per chain: every chain it lives on, plus the
+ *  contract address for each of those chains. */
+interface TokenEntry extends SelectedCoin {
+  blockchains: string[];
+  contractAddresses: Record<string, string>;
+}
+
+const normalize = (value: unknown) => String(value ?? "").trim().toLowerCase();
 
 export const SupportedListingsDropdown = ({
   selectedCoin,
@@ -30,18 +39,59 @@ export const SupportedListingsDropdown = ({
 
   const { data: allTokens, isLoading: supportedTokensLoading } = useQuery({
     queryKey: assetKeys.supportedTokensKey("all"),
-    queryFn: () => asset.fetchSupportedTokens({ limit: 200 }),
+    queryFn: () => asset.fetchSupportedTokens({ limit: 1000 }),
     select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
     staleTime: Infinity,
   });
 
-  const supportedTokens = tokenQuery.trim()
-    ? allTokens?.filter(
+  // listed_tokens returns one row per token PER CHAIN, so CNGN arrives four times
+  // (Arc, Monad, Celo, Lisk). Collapse to one entry per symbol and carry every
+  // chain, matching the same aggregation the deposit/withdrawal token modal uses.
+  const supportedTokens = useMemo<TokenEntry[]>(() => {
+    const bySymbol = new Map<string, TokenEntry>();
+
+    for (const token of allTokens ?? []) {
+      const symbol = String(token.symbol ?? "").trim();
+      if (!symbol) continue;
+
+      const key = symbol.toLowerCase();
+      const chain = String(token.blockchain ?? "").trim();
+      const contractAddress = String(token.contractAddress ?? "").trim();
+      const existing = bySymbol.get(key);
+
+      if (!existing) {
+        bySymbol.set(key, {
+          name: token.name,
+          symbol: token.symbol,
+          image: token.image,
+          contractAddress,
+          blockchain: chain,
+          blockchains: chain ? [chain] : [],
+          contractAddresses: chain && contractAddress ? { [normalize(chain)]: contractAddress } : {},
+        });
+        continue;
+      }
+
+      if (chain && !existing.blockchains.some((c) => normalize(c) === normalize(chain))) {
+        existing.blockchains.push(chain);
+      }
+      if (chain && contractAddress) {
+        existing.contractAddresses[normalize(chain)] = contractAddress;
+      }
+      // Some chains list the token with no image; keep whichever row has one.
+      if (!existing.image && token.image) existing.image = token.image;
+    }
+
+    return [...bySymbol.values()];
+  }, [allTokens]);
+
+  const filteredTokens = tokenQuery.trim()
+    ? supportedTokens.filter(
         (t) =>
           t.symbol.toLowerCase().includes(tokenQuery.toLowerCase()) ||
-          t.name.toLowerCase().includes(tokenQuery.toLowerCase())
+          t.name?.toLowerCase().includes(tokenQuery.toLowerCase())
       )
-    : allTokens;
+    : supportedTokens;
 
   const selectedCoinsHistory = useUserStore(
     (state) => state.selectedCoinsHistory
@@ -129,9 +179,9 @@ export const SupportedListingsDropdown = ({
               {supportedTokensLoading ? (
                 <InlineLoading />
               ) : (
-                supportedTokens?.map((item: any, index: number) => (
+                filteredTokens.map((item: TokenEntry) => (
                   <div
-                    key={`${item.symbol}-${item.blockchain ?? "native"}-${index}`}
+                    key={item.symbol}
                     className="py-3 px-2 flex cursor-pointer border-b border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.05] items-center gap-2 transition-colors"
                     onClick={() => {
                       setSelectedCoin({

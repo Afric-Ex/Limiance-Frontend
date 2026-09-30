@@ -12,9 +12,9 @@ export const GoogleSign = () => {
       size="large"
       type="icon"
       theme="outline"
-      onSuccess={(credentialResponse) => {
-        if (credentialResponse.credential)
-          console.log(credentialResponse.credential);
+      onSuccess={() => {
+        // Stub: auth wiring is not implemented yet. The Google credential is a
+        // bearer token - never log or persist it.
       }}
       onError={() => {
         console.log("Login Failed");

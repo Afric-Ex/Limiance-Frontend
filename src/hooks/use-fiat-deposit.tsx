@@ -5,6 +5,7 @@ import { fiatKeys, fiatService } from "../services/fiat";
 import { TemporaryDepositAccount } from "../types/fiat";
 import { errorMessageHandler } from "../lib/error-handler";
 import { successNotification } from "../lib/notification-handler";
+import { useDepositStore } from "../stores/deposit-store";
 
 const unwrap = <T,>(res: any): T => {
   let cur = res;
@@ -21,6 +22,7 @@ const unwrap = <T,>(res: any): T => {
 
 export const useFiatBankDeposit = () => {
   const queryClient = useQueryClient();
+  const markPendingDeposit = useDepositStore((state) => state.markPending);
   const form = useForm({
     initialValues: { symbol: "USDT", bankCode: "", amount: "" },
   });
@@ -63,6 +65,10 @@ export const useFiatBankDeposit = () => {
   });
 
   const { mutate: createAccount, isPending: creatingAccount } = useMutation({
+    // Flag the symbol as in-flight here, not on confirm: the credit is driven by
+    // the incoming bank transfer, so it can land before confirmDeposit is even
+    // called. Marking at account creation puts the flag in place early enough.
+    onMutate: () => markPendingDeposit(form.values.symbol),
     mutationFn: () =>
       fiatService.createDepositAccount({
         symbol: form.values.symbol,
@@ -107,6 +113,7 @@ export const useFiatBankDeposit = () => {
 
 export const useFiatCardDeposit = () => {
   const queryClient = useQueryClient();
+  const markPendingDeposit = useDepositStore((state) => state.markPending);
   const form = useForm({
     initialValues: {
       symbol: "USDT",
@@ -133,6 +140,10 @@ export const useFiatCardDeposit = () => {
   };
 
   const { mutate: pay, isPending: paying } = useMutation({
+    // A card payment credits the balance as part of processing, so the flag has
+    // to be set before the request goes out — by the time onSuccess runs the
+    // balance_update may already have been delivered and missed.
+    onMutate: () => markPendingDeposit(form.values.symbol),
     mutationFn: () =>
       fiatService.payCard({
         symbol: form.values.symbol,

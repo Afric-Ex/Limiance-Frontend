@@ -162,12 +162,16 @@ export const asset = {
   }) => {
     const response = await api.post<GenerateWalletResponse>("wallet/generate", {
       ...data,
-      chain: data.chain.toUpperCase(),
+      chain: data.chain,
     });
     return response.data;
   },
   networkFee: async (params: { chain: string; token: string }) => {
-    const response = await api.get("wallet/fees", { params: { asset: params.token, network: params.chain } });
+    const response = await api.get("trading/platform_fees", { params: { asset: params.token, network: params.chain } });
+    return response.data;
+  },
+  platformFees: async () => {
+    const response = await api.get("trading/platform_fees");
     return response.data;
   },
   minimumDeposit: async (params: { token: string; chain?: string }) => {
@@ -201,15 +205,6 @@ export const asset = {
       toBalance: data.toBalance,
       recipientAccount: data.toUserId,
     });
-    return response.data;
-  },
-
-  initiateDeposit: async (data: {
-    walletId: string;
-    asset: string;
-    network?: string;
-  }) => {
-    const response = await api.post("wallet/initiate_deposit", data);
     return response.data;
   },
 

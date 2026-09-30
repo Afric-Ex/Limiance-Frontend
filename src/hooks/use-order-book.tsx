@@ -78,34 +78,43 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
       const res = await api.get(`trading/${market}/orderbook`, { params: { symbol: pair } });
       const payload = res.data?.data || res.data || {};
 
-      const rawBids = Array.isArray(payload.bids) ? payload.bids : [];
-      const rawAsks = Array.isArray(payload.asks) ? payload.asks : [];
+      // The REST envelope mirrors the websocket book: buyOrders/sellOrders.
+      // bids/asks and buy/sell are accepted as aliases so the fallback keeps
+      // working if the endpoint is normalised to the usual exchange shape.
+      const rawBids = payload.buyOrders ?? payload.bids ?? payload.buy;
+      const rawAsks = payload.sellOrders ?? payload.asks ?? payload.sell;
+      if (!Array.isArray(rawBids) && !Array.isArray(rawAsks)) return;
 
-      const buyOrders = rawBids.slice(0, 50).map((b: any) => ({
+      const buyOrders = (Array.isArray(rawBids) ? rawBids : []).slice(0, 50).map((b: any) => ({
         price: parseFloat(b.price ?? b[0] ?? "0"),
         quantity: parseFloat(b.quantity ?? b.size ?? b[1] ?? "0"),
       }));
-      const sellOrders = rawAsks.slice(0, 50).map((a: any) => ({
+      const sellOrders = (Array.isArray(rawAsks) ? rawAsks : []).slice(0, 50).map((a: any) => ({
         price: parseFloat(a.price ?? a[0] ?? "0"),
         quantity: parseFloat(a.quantity ?? a.size ?? a[1] ?? "0"),
       }));
+
+      // Never let an empty REST snapshot wipe a live websocket book — this
+      // fallback also re-runs on every disconnect, which would otherwise blank
+      // the order book and the depth chart the moment the socket drops.
+      if (buyOrders.length === 0 && sellOrders.length === 0) return;
 
       const totalBuy = buyOrders.reduce((acc, curr) => acc + curr.quantity, 0);
       const totalSell = sellOrders.reduce((acc, curr) => acc + curr.quantity, 0);
       const total = totalBuy + totalSell;
 
-      setData({
+      setData((prev) => ({
         buyOrders,
         sellOrders,
         buyPercentage: total > 0 ? +((totalBuy / total) * 100).toFixed(1) : null,
         sellPercentage: total > 0 ? +((totalSell / total) * 100).toFixed(1) : null,
         totalBuyVolume: totalBuy,
         totalSellVolume: totalSell,
-        isConnected: false,
+        isConnected: prev.isConnected,
         lastUpdated: new Date(),
-      });
-    } catch (err) {
-      console.error("HTTP fallback for orderbook failed", err);
+      }));
+    } catch {
+      // Book falls back to the last known values; nothing to surface here.
     }
   }, [pair, market]);
 

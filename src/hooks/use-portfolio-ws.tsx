@@ -124,7 +124,7 @@ export function normalizePortfolioCoins(coins: any[]): PortfolioCoin[] {
 }
 
 /** Derive per-account USD totals + server 24h P&L from per-coin portfolio data */
-function deriveAccountBalances(coins: any[]): Record<string, AccountBalance> {
+export function deriveAccountBalances(coins: any[]): Record<string, AccountBalance> {
   const totals: Record<string, number> = { spot: 0, funding: 0, futures: 0, margin: 0 };
   const pnl: Record<string, number> = { spot: 0, funding: 0, futures: 0, margin: 0 };
   const pnlPctWeighted: Record<string, number> = { spot: 0, funding: 0, futures: 0, margin: 0 };
@@ -142,9 +142,13 @@ function deriveAccountBalances(coins: any[]): Record<string, AccountBalance> {
     totals.futures += futures * price;
     totals.margin  += margin  * price;
 
-    // Server 24h P&L per coin (from get_portfolio)
-    const rawPnl = c.pnl ?? c.pnl_24h;
-    const coinPnl = rawPnl != null && rawPnl !== "" ? parseFloat(rawPnl) : NaN;
+    // Server 24h P&L per coin (from get_portfolio). The payload field is
+    // `pnlBalance`, and like the other balance fields it is denominated in the
+    // coin, not USD, so it needs the same conversion the balances above use.
+    const rawPnl = c.pnlBalance ?? c.pnl_balance;
+    const coinPnlCoin = rawPnl != null && rawPnl !== "" ? parseFloat(rawPnl) : NaN;
+    if (!Number.isFinite(coinPnlCoin)) return;
+    const coinPnl = coinPnlCoin * price;
     if (!Number.isFinite(coinPnl)) return;
 
     const rawPct = c.pnlPercentage ?? c.pnl_percentage;
@@ -247,8 +251,7 @@ const fetchHttpFallbackData = async () => {
       }
 
       return result;
-    } catch (e) {
-      console.error("HTTP fallback error", e);
+    } catch {
       return null;
     }
   })();
@@ -326,7 +329,7 @@ export const usePortfolioWs = (): PortfolioWsData => {
     if (wsClient.getIsConnected()) {
       wsClient.send({ type: "get_portfolio", data: { page: "1", limit: "100", query: "" } });
       wsClient.send({ type: "get_portfolio_balance_allocations", data: {} });
-      wsClient.send({ type: "get_portfolio_balance", data: { account: "spot" } });
+      wsClient.send({ type: "get_portfolio_balance", data: { account: "" } });
       wsClient.send({ type: "get_margin_account", data: {} });
       wsClient.send({ type: "get_futures_positions", data: {} });
     } else {
@@ -392,7 +395,7 @@ export const usePortfolioWs = (): PortfolioWsData => {
     unsubs.push(
       wsClient.subscribe(
         "portfolio_balance",
-        { type: "get_portfolio_balance", data: { account: "spot" } },
+        { type: "get_portfolio_balance", data: { account: "" } },
         (rawPayload, fullMsg) => {
           const raw = fullMsg?.data?.data ?? fullMsg?.data ?? rawPayload;
           if (raw && raw.inUsd !== undefined) {

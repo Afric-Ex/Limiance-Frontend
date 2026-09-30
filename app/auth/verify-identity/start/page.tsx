@@ -39,8 +39,7 @@ function StartInner() {
     return Promise.resolve(activeToken || "");
   };
 
-  const sumsubMessage = (type: string, payload: any) => {
-    console.log("Sumsub message:", type, payload);
+  const sumsubMessage = (type: string) => {
     if (type === "idCheck.onApplicantSubmitted") {
       router.push("/auth/verify-identity/pending");
     }
@@ -51,7 +50,6 @@ function StartInner() {
   };
 
   const sumsubError = (error: any) => {
-    console.error("Sumsub error:", error);
     setError(error?.message || "Verification failed. Please try again.");
     setActiveToken(null);
   };

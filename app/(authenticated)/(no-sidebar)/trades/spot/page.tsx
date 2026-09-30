@@ -52,6 +52,7 @@ function SpotTrades() {
   const initialPair = searchParams.get("pair")?.replace("_", "/") ?? "BTC/USDT";
   const [selectedPair, setSelectedPair] = useState(initialPair);
   const [pairSearch, setPairSearch] = useState("");
+  const [pairMenuOpen, setPairMenuOpen] = useState(false);
   const [tradeMode, setTradeMode] = useState<TradeMode>("spot");
   const [leverage, setLeverage] = useState(1);
   const [clickedPrice, setClickedPrice] = useState<number | null>(null);
@@ -216,6 +217,7 @@ function SpotTrades() {
   const handleSelectPair = (base: string, quote: string) => {
     setSelectedPair(`${base}/${quote}`);
     setPairSearch("");
+    setPairMenuOpen(false);
   };
 
   const orderBookMidPrice = bestAsk && bestBid ? (bestAsk + bestBid) / 2 : bestAsk ?? bestBid ?? null;
@@ -286,13 +288,61 @@ function SpotTrades() {
         showBack
         title=""
         leftElement={
-          <button className="flex items-center gap-2 tap-scale" onClick={() => window.history.back()}>
-            <IoChevronDown className="rotate-90 text-white/70" size={20} />
-            <div className="flex items-center gap-1">
-              <IoSwapHorizontal size={16} className="text-white/40" />
-              <span className="text-[15px] font-bold text-white/90">{selectedPair}</span>
-            </div>
-          </button>
+          <div className="flex items-center gap-1">
+            <button aria-label="Go back" onClick={() => window.history.back()} className="tap-scale p-0.5 -ml-1 shrink-0">
+              <IoChevronDown className="rotate-90 text-white/70" size={20} />
+            </button>
+            <Popover width={300} position="bottom-start" shadow="md" opened={pairMenuOpen} onChange={setPairMenuOpen}>
+              <PopoverTarget>
+                <button className="flex items-center gap-1 px-1 py-0.5 rounded tap-scale">
+                  <IoSwapHorizontal size={16} className="text-white/40 shrink-0" />
+                  <span className="text-[15px] font-bold text-white/90">{selectedPair}</span>
+                  <MdKeyboardArrowDown className="text-white/40" size={16} />
+                </button>
+              </PopoverTarget>
+              <PopoverDropdown className="!bg-[#181a20] !border-white/[0.06] !p-0">
+                <div className="flex flex-col">
+                  <div className="p-3 border-b border-white/[0.06]">
+                    <TextInput
+                      classNames={{
+                        input: "!h-8 !bg-white/5 placeholder:!text-white/30 !border-0 focus:!border focus:!border-primary !rounded text-xs",
+                      }}
+                      placeholder="Search pairs (BTC, ETH…)"
+                      leftSection={<Search className="w-4 h-4" />}
+                      value={pairSearch}
+                      onChange={(e) => setPairSearch(e.target.value)}
+                    />
+                  </div>
+                  <div className="max-h-[50vh] overflow-auto py-1">
+                    {filteredMarkets.length === 0 ? (
+                      <div className="text-center py-8 text-xs text-white/30">No pairs found</div>
+                    ) : (
+                      filteredMarkets.slice(0, 30).map((m) => (
+                        <button
+                          key={m.symbol}
+                          onClick={() => handleSelectPair(m.base, m.quote)}
+                          className={clsx(
+                            "w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.04] transition-colors text-left",
+                            selectedPair === `${m.base}/${m.quote}` && "bg-white/[0.03]"
+                          )}
+                        >
+                          <div className="flex flex-col gap-0">
+                            <span className="text-xs font-bold text-white/90">
+                              {m.base}<span className="text-white/40">/{m.quote}</span>
+                            </span>
+                            <span className="text-[10px] text-white/30">{m.symbol}</span>
+                          </div>
+                          <span className={clsx("text-xs font-semibold", m.percent_change >= 0 ? "text-success-2" : "text-error-1")}>
+                            {m.percent_change >= 0 ? "+" : ""}{m.percent_change}%
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </PopoverDropdown>
+            </Popover>
+          </div>
         }
         rightElement={
           <div className="flex items-center gap-2">
@@ -421,7 +471,7 @@ function SpotTrades() {
       </div>
 
       {/* 3-Column Layout */}
-<div className="hidden min-[1150px]:grid lg:grid-cols-[1fr_220px_400px] gap-1 px-1 flex-1 pb-0 min-h-0 relative">
+      <div className="hidden min-[1150px]:grid lg:grid-cols-[1fr_250px_320px] gap-1 px-1 flex-1 pb-0 min-h-0 relative">
         
         {/* MOBILE: Floating Order Book Button */}
         <button className="min-[1150px]:hidden fixed bottom-[90px] right-4 z-40 bg-[#1c1e27] border border-white/[0.08] text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg tap-scale flex items-center gap-2" onClick={() => setOrderBookOpen(true)}>

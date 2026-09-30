@@ -5,8 +5,18 @@ import { authDebug } from "./auth-debug";
 const baseURL = process.env.NEXT_PUBLIC_API_URL;
 const rootBaseURL = baseURL?.replace(/\/api\/v1\/?$/, "");
 
+/**
+ * Hard cap on every request the app makes. Axios defaults to no timeout, so a
+ * backend that accepts the connection and then never answers leaves the caller
+ * pending forever and spinners on screen indefinitely. At this point the request
+ * is aborted and rejects like any other error, so `data` stays empty and the
+ * caller's loading state ends. A per-request `timeout` still overrides this.
+ */
+export const REQUEST_TIMEOUT_MS = 30_000;
+
 export const api = axios.create({
   baseURL,
+  timeout: REQUEST_TIMEOUT_MS,
   headers: {
     "Content-Type": "application/json",
   },
@@ -14,6 +24,7 @@ export const api = axios.create({
 
 export const apiRoot = axios.create({
   baseURL: rootBaseURL || baseURL,
+  timeout: REQUEST_TIMEOUT_MS,
   headers: {
     "Content-Type": "application/json",
   },

@@ -25,6 +25,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { InlineLoading } from "@/src/components/shared/inline-loading";
 import { WalletDropdown } from "@/src/components/assets/wallet-dropdown";
 import { assetKeys, asset } from "@/src/services/asset";
+import { readNumber, unwrapObject } from "@/src/lib/api-response";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { truncateCryptoAddress } from "@/src/utils/truncate-address";
@@ -97,7 +98,7 @@ function DepositInner() {
     queryKey: ["minimum-deposit", selectedCoin?.symbol, selectedNetwork?.name],
     queryFn: () => asset.minimumDeposit({ token: selectedCoin?.symbol, chain: selectedNetwork?.name }),
     enabled: !!selectedCoin?.symbol && !!selectedNetwork?.name,
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
+    select: (res: unknown) => unwrapObject(res),
     retry: false,
     throwOnError: false,
   });
@@ -106,10 +107,13 @@ function DepositInner() {
     queryKey: ["deposit-network-fee", selectedNetwork?.symbol, selectedCoin?.symbol],
     queryFn: () => asset.networkFee({ chain: selectedNetwork?.symbol, token: selectedCoin?.symbol }),
     enabled: !!selectedNetwork?.symbol && !!selectedCoin?.symbol,
-    select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
+    select: (res: unknown) => unwrapObject(res),
     retry: false,
     throwOnError: false,
   });
+
+  const minimumDeposit = readNumber(minDepositData, "minimum");
+  const depositNetworkFee = readNumber(networkFeeData, "fee");
 
   const [page, setPage] = useState(1);
   const limit = 30;
@@ -160,6 +164,9 @@ function DepositInner() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-xs text-white/30">via</span>
+                  {selectedNetwork.image && (
+                    <img src={selectedNetwork.image} alt={selectedNetwork.symbol} width={20} height={20} className="rounded-full shrink-0" />
+                  )}
                   <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg">
                     {selectedNetwork.symbol || selectedNetwork.name}
                   </span>
@@ -243,20 +250,20 @@ function DepositInner() {
                   <InfoTooltip label="Deposits below the minimum amount will neither be credited nor refunded." />
                 </div>
                 <span className="text-sm font-bold text-primary">
-                  {minDepositData?.minimum ?? "—"}{" "}
+                  {minimumDeposit ?? "—"}{" "}
                   <span className="text-white/50 font-medium">{selectedCoin?.symbol}</span>
                 </span>
               </div>
             )}
 
-            {networkFeeData?.fee && (
+            {depositNetworkFee !== null && (
               <div className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Network Fee</span>
                   <InfoTooltip label="This fee is charged by the blockchain network, not Limiance." />
                 </div>
                 <span className="text-sm font-bold text-white/70">
-                  {networkFeeData.fee}{" "}
+                  {depositNetworkFee}{" "}
                   <span className="text-white/40 font-medium">{selectedCoin?.symbol}</span>
                 </span>
               </div>

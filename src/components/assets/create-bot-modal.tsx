@@ -22,7 +22,7 @@ export const CreateBotModal = ({ type }: { type: BotType }) => {
       type,
       pair: pair ?? "BTC/USDT",
       strategy: strategy ?? "DCA",
-      investmentAmount: Number(amount),
+      investmentAmount: String(amount),
       asset: "USDT",
     }),
     onSuccess: () => {

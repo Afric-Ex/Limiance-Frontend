@@ -178,7 +178,7 @@ export const MyWallet = () => {
 
           <div className="flex items-center sm:justify-end gap-2 mt-2 sm:mt-0 max-[1150px]:grid max-[1150px]:grid-cols-4 max-[1150px]:mt-2">
             <button
-              onClick={() => push("/trade")}
+              onClick={() => push("/markets")}
               aria-label="Trade"
               className="text-xs font-semibold px-4 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors max-[1150px]:rounded-lg max-[1150px]:h-full max-[1150px]:col-span-1"
             >

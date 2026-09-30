@@ -14,6 +14,8 @@ export type ErrorType = {
     status: number;
   };
   message: string;
+  /** Axios sets this when the request is aborted by the timeout in src/lib/axios.ts. */
+  code?: string;
 };
 export const errorMessageHandler = (obj: ErrorType) => {
   const formatErrorString = (errStr: string): string => {
@@ -49,6 +51,12 @@ export const errorMessageHandler = (obj: ErrorType) => {
       errorNotification(String(msg));
     }
   };
+  // A timed-out request never reaches the server, so it has no response body to
+  // describe. Report it in plain language rather than leaking axios's
+  // "timeout of 30000ms exceeded" string at the user.
+  if (obj.code === "ECONNABORTED" || obj.code === "ETIMEDOUT") {
+    return notifyError("The request timed out. Please check your connection and try again.");
+  }
   if (obj.response) {
     if (obj.response.status === 401) {
       if (

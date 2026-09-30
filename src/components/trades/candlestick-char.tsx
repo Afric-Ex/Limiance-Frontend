@@ -1,78 +1,30 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { FiPlus, FiMinus, FiChevronsRight } from "react-icons/fi";
+import dynamic from "next/dynamic";
+import { FiArrowUp, FiArrowDown } from "react-icons/fi";
+import clsx from "clsx";
 import type { OrderBookEntry } from "@/src/hooks/use-order-book";
-import { tradingKeys, tradingService } from "@/src/services/trading";
-import { wsClient } from "@/src/lib/websocket-client";
-import type { KlineCandle } from "@/src/types/trading";
+
+// Lightweight Charts is the only renderer. Kept code-split with ssr:false
+// because the library touches the DOM at module scope.
+const LwcCandlestickChart = dynamic(
+  () => import("@/src/components/trades/candlestick-chart-lwc").then((m) => m.LwcCandlestickChart),
+  { ssr: false }
+);
 
 const INTERVALS = ["1s", "1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const;
 type Interval = (typeof INTERVALS)[number];
 type View = "chart" | "depth";
 
-const APP_CHART_BACKGROUND = "#181a20";
-const BULL_COLOR = "#25AB42";
-const BEAR_COLOR = "#F6465D";
-const DEFAULT_VISIBLE = 120;
-const MIN_VISIBLE = 20;
-const ZOOM_FACTOR = 1.25;
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-
-// Normalize any pair spelling ("BTC/USDT", "BTC-USDT", "BTCUSDT") to one key.
-const pairKey = (v: string) => String(v ?? "").replace(/[/\\\-_\s]/g, "").toUpperCase();
-
 interface Props {
   symbol?: string;
   market?: "spot" | "margin" | "futures";
-  orderBook?: { buyOrders: OrderBookEntry[]; sellOrders: OrderBookEntry[] };
+  orderBook?: { buyOrders: OrderBookEntry[]; sellOrders: OrderBookEntry[]; isConnected?: boolean };
   orderLevels?: OrderLevel[];
   priceRange?: { min: number | null; max: number | null };
 }
 
-export type ChartMarket = "spot" | "margin" | "futures";
-
-// Backend WS candle stream request types per market.
-const MARKET_CANDLE_REQUEST: Partial<Record<ChartMarket, string>> = {
-  spot: "get_spot_candles",
-  margin: "get_margin_candles",
-  futures: "get_futures_candles",
-};
-
-// The pair string each market's WS candle stream expects to receive:
-//   spot    → "BTC-USDT"  (dashed, verified live)
-//   margin  → "BTC/USDT"  (dashed with slash — compact BTCUSDT makes the stream
-//                          error with "Error receiving OHLC data")
-//   futures → "BTCUSDT"   (compact, per confirmed backend shape)
-const MARKET_WS_PAIR: Record<ChartMarket, (symbol: string) => string> = {
-  spot: (s) => s.replace("/", "-").toUpperCase(),
-  margin: (s) => s,
-  futures: (s) => pairKey(s),
-};
-
-interface LiveCandle extends KlineCandle {
-  symbol: string;
-  interval: string;
-  closed: boolean;
-}
-
-function toLiveCandle(c: any): LiveCandle | null {
-  if (!c || !Number.isFinite(Number(c.o))) return null;
-  const rawTime = Number(c.t);
-  return {
-    time: Number.isFinite(rawTime) && rawTime > 0 && rawTime < 1e12 ? rawTime * 1000 : rawTime,
-    open: Number(c.o),
-    high: Number(c.h),
-    low: Number(c.l),
-    close: Number(c.c),
-    volume: Number(c.v),
-    symbol: String(c.s ?? ""),
-    interval: String(c.i ?? ""),
-    closed: c.x === true,
-  };
-}
+export type { ChartMarket } from "@/src/components/trades/use-candle-feed";
 
 export type OrderLevel = {
   id: string;
@@ -82,623 +34,344 @@ export type OrderLevel = {
   detail?: string;
 };
 
-const LEVEL_STYLES: Record<OrderLevel["color"], { line: string; bg: string }> = {
-  entry: { line: "rgba(59, 130, 246, 0.9)", bg: "rgba(37, 99, 235, 0.95)" },
-  tp: { line: "rgba(14, 203, 129, 0.9)", bg: "rgba(5, 150, 105, 0.95)" },
-  sl: { line: "rgba(246, 70, 93, 0.9)", bg: "rgba(220, 38, 38, 0.95)" },
-  fill: { line: "rgba(255, 138, 0, 0.9)", bg: "rgba(255, 138, 0, 0.95)" },
-};
+// ── Depth panel ──────────────────────────────────────────────────────────────
+// Ported from the admin order book depth card (OrderbookPage.jsx). Cumulative
+// depth is tracked as notional (price x size) so the two sides stay directly
+// comparable and the totals read in quote currency.
+type DepthRow = { price: number; quantity: number; total: number; depthPct: number };
+type DepthViewMode = "both" | "bids" | "asks";
 
-// ── Backend kline normalisation ──────────────────────────────────────────────
-// Accepts response envelopes of {Data:[...]}, {data:[...]}, {result:[...]} or raw arrays,
-// and candles as either objects ({t,o,c,h,l,v} / {time,open,high,low,close,volume}) or Binance-style arrays.
-const SLICE_VARIANTS = ["Data", "data", "result", "klines", "candles"] as const;
+const DEPTH_ROW_OPTIONS = [10, 15, 25] as const;
+const PRECISION_OPTIONS = [1, 2, 4] as const;
 
-function unwrapKlines(raw: any): any[] {
-  let value = raw;
-  for (let i = 0; i < 2; i++) {
-    if (value && typeof value === "object") {
-      const inner = value?.data;
-      if (Array.isArray(inner)) return inner;
-      const found = SLICE_VARIANTS.find((k) => Array.isArray(value?.[k]));
-      if (found) return value[found];
-      if (typeof inner === "object" && inner !== null) value = inner;
-      else break;
-    }
-  }
-  return Array.isArray(value) ? value : [];
-}
+const DEPTH_BID = "#25AB42";
+const DEPTH_ASK = "#F6465D";
+const DEPTH_ACCENT = "#8974FF";
 
-function normalizeKlines(raw: any): KlineCandle[] {
-  return unwrapKlines(raw)
-    .map((c: any): KlineCandle | null => {
-      if (Array.isArray(c)) {
-        const [time, open, high, low, close, volume] = c;
-        if (typeof open === "string" && open.includes(":")) return null; // header row guard
-        if (!Number.isFinite(Number(open))) return null;
-        return {
-          time: Number(time ?? 0) * (Number(time) < 1e12 ? 1000 : 1),
-          open: Number(open),
-          high: Number(high),
-          low: Number(low),
-          close: Number(close),
-          volume: Number(volume ?? 0),
-        };
-      }
-      if (c === null || typeof c !== "object") return null;
-      if (!Number.isFinite(Number(c.open ?? c.o))) return null;
-      const rawTime = Number(c.time ?? c.t ?? c.openTime ?? c.open_time ?? c.timestamp);
-      const time =
-        Number.isFinite(rawTime) && rawTime > 0 && rawTime < 1e12 ? rawTime * 1000 : rawTime;
-      return {
-        time,
-        open: Number(c.open ?? c.o),
-        high: Number(c.high ?? c.h),
-        low: Number(c.low ?? c.l),
-        close: Number(c.close ?? c.c),
-        volume: Number(c.volume ?? c.v ?? 0),
-      };
-    })
-    .filter((c): c is KlineCandle => c !== null && Number.isFinite(c.open) && Number.isFinite(c.close))
-    .sort((a, b) => a.time - b.time);
-}
+function buildDepthRows(entries: OrderBookEntry[], side: "bid" | "ask"): DepthRow[] {
+  const sorted = entries
+    .filter((e) => e.price > 0 && e.quantity > 0)
+    .sort((a, b) => (side === "bid" ? b.price - a.price : a.price - b.price));
 
-function formatPrice(value: number, decimals: number) {
-  return value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-}
-
-function formatTime(t: number, interval: Interval) {
-  const d = new Date(t);
-  if (interval === "1D" || interval === "1W") {
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  }
-  if (interval === "1s") {
-    return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
-  }
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
-// ── Self-hosted candlestick chart drawn from backend klines ──────────────────
-function drawCandles(
-  ctx: CanvasRenderingContext2D,
-  w: number,
-  h: number,
-  candles: KlineCandle[],
-  symbol: string,
-  interval: Interval,
-  showEmptyState = true
-) {
-  ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = APP_CHART_BACKGROUND;
-  ctx.fillRect(0, 0, w, h);
-
-  if (candles.length === 0) {
-    if (showEmptyState) {
-      ctx.fillStyle = "rgba(255,255,255,0.3)";
-      ctx.font = "13px ui-monospace, monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("No chart data", w / 2, h / 2);
-    }
-    return;
-  }
-
-  const padL = 10;
-  const padR = 68;
-  const padT = 14;
-  const padB = 26;
-  const plotW = w - padL - padR;
-  const plotH = h - padT - padB;
-  const volH = Math.round(plotH * 0.16);
-  const priceH = plotH - volH - 8;
-
-  const priceMin = Math.min(...candles.map((c) => c.low));
-  const priceMax = Math.max(...candles.map((c) => c.high));
-  const priceRange = priceMax - priceMin || 1;
-  const calcY = (p: number) => padT + (1 - (p - priceMin) / priceRange) * priceH;
-
-  const decimals = priceRange >= 100 ? 1 : priceRange >= 1 ? 2 : priceRange >= 0.01 ? 3 : 5;
-
-  // Horizontal grid + price labels
-  const priceTicks = 5;
-  ctx.font = "10px ui-monospace, monospace";
-  for (let i = 0; i <= priceTicks; i++) {
-    const y = padT + (i / priceTicks) * priceH;
-    ctx.strokeStyle = "rgba(255,255,255,0.05)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(padL, y);
-    ctx.lineTo(w - padR, y);
-    ctx.stroke();
-    const price = priceMax - (i / priceTicks) * priceRange;
-    ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.textAlign = "left";
-    ctx.fillText(formatPrice(price, decimals), w - padR + 6, y + 3);
-  }
-
-  // Candles + volume
-  const candleW = plotW / candles.length;
-  const bodyW = Math.max(1, Math.min(8, candleW * 0.7));
-  const maxVol = Math.max(...candles.map((c) => c.volume), 1e-9);
-  const volTop = padT + priceH + 8;
-
-  for (let i = 0; i < candles.length; i++) {
-    const candle = candles[i];
-    const x = padL + i * candleW + candleW / 2;
-    const up = candle.close >= candle.open;
-    const color = up ? BULL_COLOR : BEAR_COLOR;
-
-    // Volume bar
-    const vh = (candle.volume / maxVol) * volH;
-    ctx.fillStyle = up ? "rgba(37,171,66,0.35)" : "rgba(246,70,93,0.35)";
-    ctx.fillRect(x - bodyW / 2, volTop + (volH - vh), bodyW, vh);
-
-    // Wick
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x, calcY(candle.high));
-    ctx.lineTo(x, calcY(candle.low));
-    ctx.stroke();
-
-    // Body
-    const yO = calcY(candle.open);
-    const yC = calcY(candle.close);
-    const top = Math.min(yO, yC);
-    ctx.fillStyle = color;
-    ctx.fillRect(x - bodyW / 2, top, bodyW, Math.max(Math.abs(yO - yC), 1));
-  }
-
-  // Time labels
-  const timeTicks = 6;
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
-  ctx.textAlign = "center";
-  for (let i = 0; i <= timeTicks; i++) {
-    const idx = Math.min(candles.length - 1, Math.round((i / timeTicks) * (candles.length - 1)));
-    const x = padL + idx * candleW + candleW / 2;
-    ctx.fillText(formatTime(candles[idx].time, interval), x, h - padB + 15);
-  }
-
-  // Last price line
-  const last = candles[candles.length - 1].close;
-  const yLast = calcY(last);
-  ctx.strokeStyle = "rgba(77,119,240,0.9)";
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath();
-  ctx.moveTo(padL, yLast);
-  ctx.lineTo(w - padR, yLast);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  const lastLabel = formatPrice(last, decimals);
-  ctx.font = "10px ui-monospace, monospace";
-  const tw = ctx.measureText(lastLabel).width + 8;
-  ctx.fillStyle = "#4d77f0";
-  ctx.fillRect(w - padR, yLast - 8, tw, 16);
-  ctx.fillStyle = "#ffffff";
-  ctx.textAlign = "center";
-  ctx.fillText(lastLabel, w - padR + tw / 2, yLast + 3);
-
-  // Symbol summary (top-left)
-  const first = candles[0];
-  const change = ((last - first.open) / first.open) * 100;
-  const changeColor = change >= 0 ? "#25AB42" : "#F6465D";
-  ctx.font = "bold 11px ui-monospace, monospace";
-  ctx.textAlign = "left";
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.fillText(symbol, padL, padT - 2);
-  ctx.font = "10px ui-monospace, monospace";
-  ctx.fillStyle = changeColor;
-  ctx.fillText(`${change >= 0 ? "+" : ""}${change.toFixed(2)}%`, padL + ctx.measureText(symbol + "  ").width, padT - 2);
-}
-
-function CandlestickChart({ symbol, interval, market = "spot" }: { symbol: string; interval: Interval; market?: ChartMarket }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ startX: number; startEnd: number } | null>(null);
-
-  // View window over the fetched candles: count = visible candles, end = right-edge index (0 = most recent)
-  const [count, setCount] = useState(DEFAULT_VISIBLE);
-  const [end, setEnd] = useState(0);
-
-  // Live candles are driven by the backend WS candle stream and overlaid on
-  // REST history. HTTP is only used to seed/backfill history (the WS stream
-  // does not send it) and to keep the chart alive while the socket is down.
-  const candleRequest = MARKET_CANDLE_REQUEST[market];
-  const [wsReady, setWsReady] = useState(false);
-  const [wsConnected, setWsConnected] = useState(false);
-  const [restFallback, setRestFallback] = useState(false);
-
-  const { data: historyCandles, isLoading, isError } = useQuery({
-    queryKey: tradingKeys.klineData(symbol, interval, market),
-    queryFn: () => tradingService.klineData({ symbol, interval, limit: 500, market }),
-    select: (res) => normalizeKlines(res),
-    staleTime: 60_000,
-    retry: 1,
-    throwOnError: false,
-    // Load history while the socket is down, while no WS candle has arrived
-    // yet for this pair/interval, or after the WS fell back to REST.
-    enabled: !wsConnected || !wsReady || restFallback,
+  let cumulative = 0;
+  return sorted.map((e) => {
+    cumulative += e.price * e.quantity;
+    return { price: e.price, quantity: e.quantity, total: cumulative, depthPct: 0 };
   });
+}
 
-  // liveCandles only tracks the incremental WS updates; history is merged in
-  // at render time so it always appears regardless of arrival order.
-  const [liveCandles, setLiveCandles] = useState<KlineCandle[] | null>(null);
+// Both sides normalise against the larger cumulative total, so the deepest row
+// on the heavier side reads 100% and the two curves share one scale.
+function withDepthPct(rows: DepthRow[], maxTotal: number): DepthRow[] {
+  return rows.map((r) => ({ ...r, depthPct: Math.min(100, Math.round((r.total / maxTotal) * 100)) }));
+}
 
-  // Reset the live buffer whenever the pair or interval changes
+function DepthPanel({
+  symbol,
+  buyOrders,
+  sellOrders,
+  isConnected,
+}: {
+  symbol: string;
+  buyOrders: OrderBookEntry[];
+  sellOrders: OrderBookEntry[];
+  isConnected: boolean;
+}) {
+  const [viewMode, setViewMode] = useState<DepthViewMode>("both");
+  const [rowLimit, setRowLimit] = useState<number>(15);
+  const [precision, setPrecision] = useState<number>(2);
+
+  const bidRows = useMemo(() => buildDepthRows(buyOrders, "bid"), [buyOrders]);
+  const askRows = useMemo(() => buildDepthRows(sellOrders, "ask"), [sellOrders]);
+
+  const bidTotal = bidRows[bidRows.length - 1]?.total ?? 0;
+  const askTotal = askRows[askRows.length - 1]?.total ?? 0;
+  const maxTotal = Math.max(bidTotal, askTotal, 1);
+
+  const bids = useMemo(() => withDepthPct(bidRows, maxTotal), [bidRows, maxTotal]);
+  const asks = useMemo(() => withDepthPct(askRows, maxTotal), [askRows, maxTotal]);
+
+  // Asks render highest-first so the lowest ask sits just above the spread.
+  const displayAsks = useMemo(() => asks.slice(0, rowLimit).reverse(), [asks, rowLimit]);
+  const displayBids = useMemo(() => bids.slice(0, rowLimit), [bids, rowLimit]);
+
+  const bestBid = bids[0]?.price ?? null;
+  const bestAsk = asks[0]?.price ?? null;
+  const spread = bestBid !== null && bestAsk !== null ? bestAsk - bestBid : 0;
+  const spreadPct = bestAsk !== null && spread > 0 ? (spread / bestAsk) * 100 : 0;
+  const midPrice = bestBid !== null && bestAsk !== null ? (bestAsk + bestBid) / 2 : null;
+
+  const bookTotal = bidTotal + askTotal;
+  const buyPct = bookTotal > 0 ? Math.round((bidTotal / bookTotal) * 100) : 50;
+  const sellPct = 100 - buyPct;
+
+  // Tick direction from the mid, which moves with the book even though the
+  // chart panel is not handed a last-trade price.
+  const prevMidRef = useRef<number | null>(null);
+  const [direction, setDirection] = useState<"up" | "down" | "neutral">("neutral");
   useEffect(() => {
-    setLiveCandles(null);
-    setEnd(0);
-    setWsReady(false);
-    setRestFallback(false);
-  }, [symbol, interval]);
+    if (midPrice === null) return;
+    const prev = prevMidRef.current;
+    prevMidRef.current = midPrice;
+    if (prev === null || prev === midPrice) return;
+    setDirection(midPrice > prev ? "up" : "down");
+  }, [midPrice]);
 
-  // Track whether the shared socket is up.
-  useEffect(() => {
-    const unsubStatus = wsClient.onStatusChange(setWsConnected);
-    return unsubStatus;
-  }, []);
+  const [base = "BTC", quote = "USDT"] = symbol.split("/");
 
-  // Fall back to HTTP whenever the socket is not connected, and while it is
-  // connected wait briefly for the candle stream; if it never answers, use
-  // HTTP so the chart still has history. Markets with no candle WS stream
-  // (futures) always go through REST.
-  useEffect(() => {
-    if (!candleRequest) {
-      setRestFallback(true);
-      return;
-    }
-    if (wsReady) {
-      setRestFallback(false);
-      return;
-    }
-    if (!wsConnected) {
-      setRestFallback(true);
-      return;
-    }
-    setRestFallback(false);
-    const timer = setTimeout(() => setRestFallback(true), 5000);
-    return () => clearTimeout(timer);
-  }, [candleRequest, wsConnected, wsReady]);
+  const fmtPrice = (v: number | null) =>
+    v === null
+      ? "--"
+      : v.toLocaleString("en-US", { minimumFractionDigits: precision, maximumFractionDigits: precision });
+  const fmtQty = (v: number) =>
+    v ? v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : "0.00";
+  const fmtTotal = (v: number) =>
+    v ? v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
+  const fmtNotional = (v: number) => `$${v.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 
-  // Each market's candle WS stream expects a different pair spelling.
-  const wsPair = MARKET_WS_PAIR[market](symbol);
+  // Cumulative curves in a fixed 400x220 viewBox: x runs 20 -> 380 across the
+  // two sides from the mid, y is the cumulative notional capped at 160.
+  const { bidPath, askPath } = useMemo(() => {
+    if (bids.length === 0 && asks.length === 0) return { bidPath: "", askPath: "" };
 
-  useEffect(() => {
-    if (!candleRequest) return;
-    const payload = { type: candleRequest, data: { pair: wsPair, interval } };
-    const unsubscribe = wsClient.subscribe("candle", payload, (data) => {
-      const rawCandles = data?.candles;
-      if (!Array.isArray(rawCandles) || rawCandles.length === 0) return;
-      const incoming = rawCandles.map(toLiveCandle).filter((c): c is LiveCandle => c !== null);
-      if (incoming.length === 0) return;
-      // Candles tagged with a different pair/interval belong to another subscription.
-      const matched = incoming.filter(
-        (c) =>
-          (!c.symbol || pairKey(c.symbol) === pairKey(symbol)) &&
-          (!c.interval || c.interval === interval)
-      );
-      if (matched.length === 0) return;
-      setWsReady(true);
-      setRestFallback(false);
-      setLiveCandles((prev) => {
-        const base = prev && prev.length > 0 ? prev : [];
-        const next = [...base];
-        for (const candle of matched) {
-          const idx = next.findIndex((k) => k.time === candle.time);
-          if (idx >= 0) next[idx] = candle;
-          else next.push(candle);
-        }
-        return next.sort((a, b) => a.time - b.time);
+    const build = (rows: DepthRow[], directionX: 1 | -1) => {
+      if (rows.length === 0) return "";
+      const points = rows.map((r, idx) => {
+        const x = 200 + directionX * (idx / Math.max(rows.length - 1, 1)) * 180;
+        const y = 200 - Math.min(160, (r.total / maxTotal) * 150);
+        return `${x.toFixed(1)} ${y.toFixed(1)}`;
       });
-    });
-    return unsubscribe;
-  }, [candleRequest, wsPair, interval, symbol]);
-
-  const candles = useMemo(() => {
-    const base = historyCandles ?? [];
-    if (!liveCandles || liveCandles.length === 0) return base;
-    const byTime = new Map(base.map((c) => [c.time, c]));
-    for (const c of liveCandles) byTime.set(c.time, c);
-    return [...byTime.values()].sort((a, b) => a.time - b.time);
-  }, [historyCandles, liveCandles]);
-
-  const n = candles?.length ?? 0;
-  const wsPending = !wsReady && !restFallback && !isLoading && n === 0;
-  const effEnd = end === 0 ? Math.min(count, n) : Math.min(end, n);
-  const visible = candles?.slice(Math.max(0, effEnd - count), effEnd) ?? [];
-
-  const zoom = (factor: number) => {
-    if (!n) return;
-    const next = clamp(Math.round(count * factor), MIN_VISIBLE, n);
-    setCount(next);
-    setEnd(clamp(effEnd, next, n)); // preserve right edge while zooming
-  };
-
-  useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      if (!n) return;
-      e.preventDefault();
-      const rect = el.getBoundingClientRect();
-      const ratio = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-      const factor = e.deltaY > 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR;
-      const next = clamp(Math.round(count * factor), MIN_VISIBLE, n);
-      const anchor = effEnd - count + ratio * count; // candle under the cursor
-      setCount(next);
-      setEnd(clamp(Math.round(anchor + next * (1 - ratio)), next, n));
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  });
-
-  const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    // Pressing the zoom/arrow buttons must not start a drag: setPointerCapture
-    // would retarget the browser's click event to this wrapper and swallow it.
-    if ((e.target as HTMLElement)?.closest?.("button")) return;
-    dragRef.current = { startX: e.clientX, startEnd: effEnd };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-  const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    const drag = dragRef.current;
-    if (!drag || !n) return;
-    const rect = wrapperRef.current?.getBoundingClientRect();
-    if (!rect || rect.width === 0) return;
-    const delta = Math.round((e.clientX - drag.startX) * (count / rect.width));
-    setEnd(clamp(drag.startEnd - delta, count, n));
-  };
-  const handlePointerUp = () => {
-    dragRef.current = null;
-  };
-
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-
-    const redraw = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const dpr = window.devicePixelRatio || 1;
-      const { width, height } = wrapper.getBoundingClientRect();
-      canvas.width = Math.max(1, width * dpr);
-      canvas.height = Math.max(1, height * dpr);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        drawCandles(ctx, width, height, visible, symbol, interval, !wsPending && !isLoading && !isError);
-      }
+      return `L ${points.join(" L ")}`;
     };
 
-    redraw();
-    const ro = new ResizeObserver(redraw);
-    ro.observe(wrapper);
-    return () => ro.disconnect();
-  }, [candles, symbol, interval, count, end, visible, wsPending, isLoading, isError]);
+    return { bidPath: build(bids, -1), askPath: build(asks, 1) };
+  }, [bids, asks, maxTotal]);
+
+  const hasBook = bids.length > 0 || asks.length > 0;
+  const controlClass =
+    "text-[10px] font-semibold px-2 h-6 rounded bg-white/[0.06] text-white/60 hover:text-white/90 transition-colors";
 
   return (
-    <div
-      ref={wrapperRef}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      className="relative w-full h-full cursor-grab active:cursor-grabbing touch-none select-none"
-    >
-      <canvas ref={canvasRef} className="block" />
-      {(wsPending || ((isLoading || isError) && n === 0)) && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-          <div className="w-5 h-5 border-2 border-white/20 border-t-primary rounded-full animate-spin" />
-          <span className="text-xs text-white/40">
-            {wsPending ? "Connecting to live chart..." : isLoading ? "Loading chart data..." : "Failed to load chart data"}
-          </span>
+    <div className="w-full min-w-0 flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-3">
+      {/* Market depth liquidity curve + cumulative stats */}
+      <section className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 shrink-0">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold text-white/90">Market Depth Liquidity</span>
+          <span className="text-[10px] text-white/35">Cumulative Curves</span>
         </div>
-      )}
-      {n > 0 && !isLoading && (
-        <div className="absolute bottom-2 right-2 z-10 flex flex-col rounded-md overflow-hidden border border-white/10 bg-black/50">
-          <button
-            aria-label="Zoom in"
-            onClick={() => zoom(1 / ZOOM_FACTOR)}
-            className="flex items-center justify-center w-7 h-7 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <FiPlus size={13} />
-          </button>
-          <button
-            aria-label="Zoom out"
-            onClick={() => zoom(ZOOM_FACTOR)}
-            className="flex items-center justify-center w-7 h-7 text-white/60 hover:text-white hover:bg-white/10 transition-colors border-t border-white/10"
-          >
-            <FiMinus size={13} />
-          </button>
-          <button
-            aria-label="Show most recent candles"
-            onClick={() => setEnd(0)}
-            className="flex items-center justify-center w-7 h-7 text-white/60 hover:text-white hover:bg-white/10 transition-colors border-t border-white/10"
-          >
-            <FiChevronsRight size={13} />
-          </button>
+
+        {hasBook ? (
+          <svg viewBox="0 0 400 220" preserveAspectRatio="none" className="w-full h-[200px]">
+            <defs>
+              <linearGradient id="depthBidGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={DEPTH_BID} stopOpacity="0.4" />
+                <stop offset="100%" stopColor={DEPTH_BID} stopOpacity="0.02" />
+              </linearGradient>
+              <linearGradient id="depthAskGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={DEPTH_ASK} stopOpacity="0.4" />
+                <stop offset="100%" stopColor={DEPTH_ASK} stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+
+            <line x1="0" y1="200" x2="400" y2="200" stroke="rgba(255,255,255,0.06)" />
+            <line x1="0" y1="100" x2="400" y2="100" stroke="rgba(255,255,255,0.04)" strokeDasharray="3 3" />
+            <line x1="200" y1="0" x2="200" y2="200" stroke="rgba(255,255,255,0.08)" strokeDasharray="4 4" />
+
+            {bidPath && (
+              <>
+                <path d={`M 20 200 ${bidPath} L 200 200 Z`} fill="url(#depthBidGradient)" />
+                <path d={`M 20 200 ${bidPath}`} fill="none" stroke={DEPTH_BID} strokeWidth="2" />
+              </>
+            )}
+            {askPath && (
+              <>
+                <path d={`M 200 200 ${askPath} L 380 200 Z`} fill="url(#depthAskGradient)" />
+                <path d={`M 200 200 ${askPath}`} fill="none" stroke={DEPTH_ASK} strokeWidth="2" />
+              </>
+            )}
+
+            <circle cx="200" cy="195" r="4" fill={DEPTH_ACCENT} />
+          </svg>
+        ) : (
+          <div className="w-full h-[200px] flex items-center justify-center text-xs text-white/30">
+            Awaiting order book depth to plot liquidity curve...
+          </div>
+        )}
+
+        <div className="flex items-center justify-center text-[10px] text-white/40 font-mono -mt-1">
+          Mid: {fmtPrice(midPrice)}
         </div>
-      )}
-    </div>
-  );
-}
 
-// ── Depth chart (canvas, order book from backend WS) ─────────────────────────
-function drawDepth(
-  ctx: CanvasRenderingContext2D,
-  w: number,
-  h: number,
-  buyOrders: OrderBookEntry[],
-  sellOrders: OrderBookEntry[]
-) {
-  ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = APP_CHART_BACKGROUND;
-  ctx.fillRect(0, 0, w, h);
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+          <div className="rounded bg-black/25 border border-white/[0.06] px-2 py-1.5">
+            <div className="text-[10px] text-white/40">Total Bid Volume</div>
+            <div className="text-xs font-bold font-mono tabular-nums text-success-6">{fmtNotional(bidTotal)}</div>
+          </div>
+          <div className="rounded bg-black/25 border border-white/[0.06] px-2 py-1.5">
+            <div className="text-[10px] text-white/40">Total Ask Volume</div>
+            <div className="text-xs font-bold font-mono tabular-nums text-error-1">{fmtNotional(askTotal)}</div>
+          </div>
+          <div className="rounded bg-black/25 border border-white/[0.06] px-2 py-1.5">
+            <div className="text-[10px] text-white/40">Order Ratio</div>
+            <div className="text-xs font-bold font-mono tabular-nums text-white/90">
+              {buyPct}% : {sellPct}%
+            </div>
+          </div>
+          <div className="rounded bg-black/25 border border-white/[0.06] px-2 py-1.5">
+            <div className="text-[10px] text-white/40">Socket State</div>
+            <div
+              className={clsx(
+                "text-xs font-bold font-mono capitalize",
+                isConnected ? "text-success-6" : "text-warning-1"
+              )}
+            >
+              {isConnected ? "connected" : "reconnecting"}
+            </div>
+          </div>
+        </div>
+      </section>
 
-  if (buyOrders.length === 0 && sellOrders.length === 0) {
-    ctx.fillStyle = "rgba(255,255,255,0.3)";
-    ctx.font = "13px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("No depth data", w / 2, h / 2);
-    return;
-  }
+      {/* Order book depth ladder */}
+      <section className="rounded-lg border border-white/[0.06] bg-white/[0.02] flex flex-col min-h-0">
+        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-white/[0.06]">
+          <span className="text-xs font-semibold text-white/90">Order Book Depth</span>
+          <div className="flex items-center gap-1.5">
+            {(["both", "bids", "asks"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setViewMode(m)}
+                title={m === "both" ? "Both asks & bids" : `${m} only`}
+                className={clsx(
+                  "text-[10px] font-semibold px-2 h-6 rounded transition-colors capitalize",
+                  viewMode === m ? "bg-white/15 text-white" : "bg-white/[0.06] text-white/50 hover:text-white/80"
+                )}
+              >
+                {m}
+              </button>
+            ))}
+            <select
+              value={precision}
+              onChange={(e) => setPrecision(Number(e.target.value))}
+              className={clsx(controlClass, "cursor-pointer")}
+            >
+              {PRECISION_OPTIONS.map((p) => (
+                <option key={p} value={p} className="bg-[#1c1e27]">
+                  {p === 1 ? "0.1" : p === 2 ? "0.01" : "0.0001"}
+                </option>
+              ))}
+            </select>
+            <select
+              value={rowLimit}
+              onChange={(e) => setRowLimit(Number(e.target.value))}
+              className={clsx(controlClass, "cursor-pointer")}
+            >
+              {DEPTH_ROW_OPTIONS.map((n) => (
+                <option key={n} value={n} className="bg-[#1c1e27]">
+                  {n} rows
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-  const sortedBids = [...buyOrders].sort((a, b) => b.price - a.price);
-  const sortedAsks = [...sellOrders].sort((a, b) => a.price - b.price);
+        <div className="grid grid-cols-3 px-3 py-1.5 text-[10px] text-white/40">
+          <span>Price ({quote})</span>
+          <span className="text-right">Size ({base})</span>
+          <span className="text-right">Total ({quote})</span>
+        </div>
 
-  const cumBids: { price: number; cum: number }[] = [];
-  const cumAsks: { price: number; cum: number }[] = [];
-  let cum = 0;
-  for (const o of sortedBids) { cum += o.quantity; cumBids.push({ price: o.price, cum }); }
-  cum = 0;
-  for (const o of sortedAsks) { cum += o.quantity; cumAsks.push({ price: o.price, cum }); }
+        <div className="max-h-[420px] overflow-y-auto">
+          {viewMode !== "bids" &&
+            (displayAsks.length > 0 ? (
+              displayAsks.map((row, i) => (
+                <div
+                  key={`ask-${i}`}
+                  className="relative grid grid-cols-3 px-3 py-[3px] hover:bg-white/[0.03]"
+                >
+                  <div
+                    className="absolute top-0 bottom-0 right-0 bg-error-1/[0.12] pointer-events-none"
+                    style={{ width: `${row.depthPct}%` }}
+                  />
+                  <span className="relative z-10 text-[11px] font-mono tabular-nums font-semibold text-error-1">
+                    {fmtPrice(row.price)}
+                  </span>
+                  <span className="relative z-10 text-[11px] font-mono tabular-nums text-white/80 text-right">
+                    {fmtQty(row.quantity)}
+                  </span>
+                  <span className="relative z-10 text-[11px] font-mono tabular-nums text-white/40 text-right">
+                    {fmtTotal(row.total)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="py-4 text-center text-[11px] text-white/30">No active asks</div>
+            ))}
 
-  if (!cumBids.length || !cumAsks.length) return;
+          <div className="flex items-center justify-between px-3 py-2 my-1.5 rounded bg-black/35 border-l-[3px] border-l-blue-1">
+            <span
+              className={clsx(
+                "text-sm font-bold font-mono tabular-nums flex items-center gap-1.5",
+                direction === "up" ? "text-success-6" : direction === "down" ? "text-error-1" : "text-white"
+              )}
+            >
+              {fmtPrice(midPrice)}
+              {direction === "up" ? <FiArrowUp size={13} /> : direction === "down" ? <FiArrowDown size={13} /> : null}
+            </span>
+            <span className="text-[10px] text-white/40">
+              Spread: {fmtPrice(spread)} ({spreadPct.toFixed(3)}%)
+            </span>
+          </div>
 
-  const minPrice = cumBids[cumBids.length - 1].price;
-  const maxPrice = cumAsks[cumAsks.length - 1].price;
-  const maxCum = Math.max(cumBids[cumBids.length - 1].cum, cumAsks[cumAsks.length - 1].cum);
-  const pad = 30;
+          {viewMode !== "asks" &&
+            (displayBids.length > 0 ? (
+              displayBids.map((row, i) => (
+                <div
+                  key={`bid-${i}`}
+                  className="relative grid grid-cols-3 px-3 py-[3px] hover:bg-white/[0.03]"
+                >
+                  <div
+                    className="absolute top-0 bottom-0 right-0 bg-success-6/[0.12] pointer-events-none"
+                    style={{ width: `${row.depthPct}%` }}
+                  />
+                  <span className="relative z-10 text-[11px] font-mono tabular-nums font-semibold text-success-6">
+                    {fmtPrice(row.price)}
+                  </span>
+                  <span className="relative z-10 text-[11px] font-mono tabular-nums text-white/80 text-right">
+                    {fmtQty(row.quantity)}
+                  </span>
+                  <span className="relative z-10 text-[11px] font-mono tabular-nums text-white/40 text-right">
+                    {fmtTotal(row.total)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="py-4 text-center text-[11px] text-white/30">No active bids</div>
+            ))}
+        </div>
 
-  const px = (p: number) => pad + ((p - minPrice) / (maxPrice - minPrice)) * (w - pad * 2);
-  const cy = (c: number) => h - pad - (c / maxCum) * (h - pad * 2);
-
-  ctx.beginPath();
-  ctx.moveTo(px(cumBids[0].price), h - pad);
-  for (const { price, cum: c } of cumBids) ctx.lineTo(px(price), cy(c));
-  ctx.lineTo(px(cumBids[cumBids.length - 1].price), h - pad);
-  ctx.closePath();
-  ctx.fillStyle = "rgba(38, 166, 154, 0.25)";
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(px(cumBids[0].price), cy(cumBids[0].cum));
-  for (const { price, cum: c } of cumBids) ctx.lineTo(px(price), cy(c));
-  ctx.strokeStyle = "#26a69a";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(px(cumAsks[0].price), h - pad);
-  for (const { price, cum: c } of cumAsks) ctx.lineTo(px(price), cy(c));
-  ctx.lineTo(px(cumAsks[cumAsks.length - 1].price), h - pad);
-  ctx.closePath();
-  ctx.fillStyle = "rgba(239, 83, 80, 0.25)";
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(px(cumAsks[0].price), cy(cumAsks[0].cum));
-  for (const { price, cum: c } of cumAsks) ctx.lineTo(px(price), cy(c));
-  ctx.strokeStyle = "#ef5350";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  const midPrice = (minPrice + maxPrice) / 2;
-  ctx.beginPath();
-  ctx.setLineDash([4, 4]);
-  ctx.moveTo(px(midPrice), pad);
-  ctx.lineTo(px(midPrice), h - pad);
-  ctx.strokeStyle = "rgba(255,255,255,0.15)";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  ctx.fillStyle = "rgba(255,255,255,0.4)";
-  ctx.font = "10px monospace";
-  ctx.textAlign = "left";
-  ctx.fillText(minPrice.toLocaleString(), pad, h - 8);
-  ctx.textAlign = "center";
-  ctx.fillText(midPrice.toLocaleString(), px(midPrice), h - 8);
-  ctx.textAlign = "right";
-  ctx.fillText(maxPrice.toLocaleString(), w - pad, h - 8);
-}
-
-function DepthChart({ buyOrders, sellOrders }: { buyOrders: OrderBookEntry[]; sellOrders: OrderBookEntry[] }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    const redraw = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const dpr = window.devicePixelRatio || 1;
-      const { width, height } = wrapper.getBoundingClientRect();
-      canvas.width = Math.max(1, width * dpr);
-      canvas.height = Math.max(1, height * dpr);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        drawDepth(ctx, width, height, buyOrders, sellOrders);
-      }
-    };
-    redraw();
-    const ro = new ResizeObserver(redraw);
-    ro.observe(wrapper);
-    return () => ro.disconnect();
-  }, [buyOrders, sellOrders]);
-
-  return (
-    <div ref={wrapperRef} className="w-full h-full">
-      <canvas ref={canvasRef} className="block" />
+        {/* Buy/sell depth imbalance */}
+        <div className="px-3 pt-2.5 pb-3 mt-1 border-t border-white/[0.06] shrink-0">
+          <div className="flex items-center justify-between text-[10px] font-semibold mb-1.5">
+            <span className="text-success-6">Buy Depth: {buyPct}%</span>
+            <span className="text-error-1">Sell Depth: {sellPct}%</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-error-1/60 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-success-6 transition-[width] duration-200"
+              style={{ width: `${buyPct}%` }}
+            />
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
-function OrderLevelOverlay({ levels, priceRange }: { levels: OrderLevel[]; priceRange?: Props["priceRange"] }) {
-  const validLevels = levels.filter((level) => Number.isFinite(level.price) && level.price > 0);
-  if (validLevels.length === 0) return null;
-
-  const rangeValues = [
-    ...validLevels.map((level) => level.price),
-    ...(Number.isFinite(priceRange?.min) && priceRange?.min ? [priceRange.min] : []),
-    ...(Number.isFinite(priceRange?.max) && priceRange?.max ? [priceRange.max] : []),
-  ];
-  const min = Math.min(...rangeValues);
-  const max = Math.max(...rangeValues);
-  const span = Math.max(max - min, max * 0.002, 1);
-  const paddedMin = min - span * 0.25;
-  const paddedMax = max + span * 0.25;
-
-  const topForPrice = (price: number) => {
-    const position = 1 - (price - paddedMin) / (paddedMax - paddedMin);
-    return Math.min(92, Math.max(8, position * 100));
-  };
-
-  return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 bottom-0 z-20 overflow-hidden">
-      {validLevels.map((level) => {
-        const style = LEVEL_STYLES[level.color];
-        return (
-          <div
-            key={level.id}
-            className="absolute left-0 right-0 flex items-center"
-            style={{ top: `${topForPrice(level.price)}%` }}
-          >
-            <div className="h-px flex-1 border-t border-dashed" style={{ borderColor: style.line }} />
-            <div
-              className="mr-2 rounded px-2 py-1 text-[10px] font-bold text-white shadow-lg"
-              style={{ backgroundColor: style.bg }}
-            >
-              <span>{level.label}</span>
-              <span className="ml-1 tabular-nums">
-                {level.price.toLocaleString("en-US", { maximumFractionDigits: 6 })}
-              </span>
-              {level.detail && <span className="ml-1 opacity-80">{level.detail}</span>}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot", orderBook, orderLevels = [], priceRange }: Props) {
+// Lightweight Charts is the only renderer. `priceRange` is kept on the public
+// props because all three trade pages pass it, but no renderer consumes it now
+// that the canvas engine (which drew the 24h band) is gone.
+export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot", orderBook, orderLevels = [] }: Props) {
   const [interval, setIntervalVal] = useState<Interval>("15m");
   const [view, setView] = useState<View>("chart");
 
@@ -747,12 +420,21 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
       {/* Chart views */}
       {view === "chart" ? (
         <div className="relative flex-1 min-h-0 overflow-hidden">
-          <CandlestickChart symbol={symbol} interval={interval} market={market} />
-          <OrderLevelOverlay levels={orderLevels} priceRange={priceRange} />
+          <LwcCandlestickChart
+            symbol={symbol}
+            interval={interval}
+            market={market}
+            orderLevels={orderLevels}
+          />
         </div>
       ) : (
-        <div className="flex-1 min-h-0">
-          <DepthChart buyOrders={bids} sellOrders={asks} />
+        <div className="flex-1 min-h-0 flex">
+          <DepthPanel
+            symbol={symbol}
+            buyOrders={bids}
+            sellOrders={asks}
+            isConnected={orderBook?.isConnected ?? false}
+          />
         </div>
       )}
     </div>

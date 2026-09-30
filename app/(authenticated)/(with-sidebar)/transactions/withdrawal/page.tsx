@@ -125,6 +125,7 @@ function WithdrawalInner() {
     withdrawalPending,
     withdrawableAmountAfterNetworkFee,
     networkFee,
+    networkFeeKnown,
     networkFeeLoading,
     minimumWithdrawal,
     walletType,
@@ -223,6 +224,9 @@ function WithdrawalInner() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-xs text-white/30">via</span>
+                  {selectedNetwork.image && (
+                    <img src={selectedNetwork.image} alt={selectedNetwork.symbol} width={20} height={20} className="rounded-full shrink-0" />
+                  )}
                   <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg">
                     {selectedNetwork.symbol || selectedNetwork.name}
                   </span>
@@ -367,14 +371,18 @@ function WithdrawalInner() {
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04]">
                       <span className="text-sm text-white/50">Network Fee</span>
                       <span className="text-sm font-bold text-white/70">
-                        {networkFeeLoading ? "Calculating..." : networkFee ?? "—"}{" "}
+                        {networkFeeLoading
+                          ? "Calculating..."
+                          : networkFeeKnown
+                            ? networkFee.toFixed(8)
+                            : "—"}{" "}
                         <span className="text-white/40 font-medium text-xs">{selectedCoin?.symbol}</span>
                       </span>
                     </div>
                     <div className="flex items-center justify-between px-4 py-3">
                       <span className="text-sm text-white/50 font-semibold">Amount Received</span>
                       <span className={`text-sm font-bold ${withdrawableAmountAfterNetworkFee > 0 ? "text-success-6" : "text-error-1"}`}>
-                        {withdrawableAmountAfterNetworkFee < 0 ? 0 : withdrawableAmountAfterNetworkFee}{" "}
+                        {(withdrawableAmountAfterNetworkFee < 0 ? 0 : withdrawableAmountAfterNetworkFee).toFixed(8)}{" "}
                         <span className="text-white/40 font-medium text-xs">{selectedCoin?.symbol}</span>
                       </span>
                     </div>
