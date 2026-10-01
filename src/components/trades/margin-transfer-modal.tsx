@@ -18,7 +18,7 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
 
   useQueryClient();
 
-  const { coins: portfolioResponse, refreshBalances } = usePortfolioWs();
+  const { coins: portfolioResponse, refreshBalances } = usePortfolioWs({ coins: true });
 
   const parseNum = (val: any) => {
     if (!val) return 0;

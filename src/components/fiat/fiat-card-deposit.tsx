@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, NumberInput, PasswordInput, Select, TextInput } from "@mantine/core";
+import { Button, NumberInput, PasswordInput, TextInput } from "@mantine/core";
 import { FiCreditCard } from "react-icons/fi";
 import { ModalClose } from "../icons/modal-close";
 import { OtpInput } from "../settings/otp-input";
 import { useFiatCardDeposit } from "@/src/hooks/use-fiat-deposit";
+import { FiatAssetSelector } from "./fiat-asset-selector";
 
 const inputClass =
   "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 focus:!shadow-[0_0_10px_rgba(77,119,240,0.12)] !rounded-xl !h-[56px] !text-white !text-sm !transition-all !duration-200 placeholder:!text-white/20";
@@ -14,13 +15,6 @@ const cardInputClass = {
   input: `${inputClass} !font-mono !tracking-wider`,
   section: "!text-white/40 hover:!text-white",
 } as const;
-
-const assetSelectClass = {
-  input: `${inputClass} !text-white`,
-  dropdown: "!bg-[#181a20] !border !border-white/[0.08]",
-  option: "!text-white hover:!bg-white/[0.04]",
-  label: "!mt-0",
-};
 
 function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -167,6 +161,11 @@ export const FiatCardDeposit = () => {
     threeDsPending,
     coinSymbols,
     coinSymbolsLoading,
+    hasMoreCoins,
+    isLoadingMoreCoins,
+    isCoinsError,
+    loadMoreCoins,
+    retryCoins,
   } = useFiatCardDeposit();
 
   const expiryValid =
@@ -201,17 +200,19 @@ export const FiatCardDeposit = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">You receive</label>
-            <Select
-              data={coinSymbols}
-              placeholder={coinSymbolsLoading ? "Loading assets…" : "Select an asset"}
-              autoComplete="new-password"
+            <FiatAssetSelector
+              value={form.values.symbol}
+              onChange={(value) => form.setFieldValue("symbol", value)}
+              assets={coinSymbols}
+              isLoading={coinSymbolsLoading}
+              isLoadingMore={isLoadingMoreCoins}
+              hasMore={hasMoreCoins}
+              onLoadMore={loadMoreCoins}
+              isError={isCoinsError}
+              onRetry={retryCoins}
+              placeholder="Select an asset"
               name="card-receive-asset"
               id="card-receive-asset"
-              data-1p-ignore="true"
-              data-lpignore="true"
-              data-form-type="other"
-              {...form.getInputProps("symbol")}
-              classNames={assetSelectClass}
             />
           </div>
           <div className="flex flex-col gap-2">

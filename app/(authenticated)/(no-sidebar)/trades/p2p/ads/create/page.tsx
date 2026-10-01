@@ -125,7 +125,7 @@ function CreateAdPageInner() {
   const currentMarketPrice = selectedAsset === "USDT" ? 1 : feed.price;
 
   // Real balance from funding account via WebSocket portfolio channel
-  const { coins: portfolioCoins } = usePortfolioWs();
+  const { coins: portfolioCoins } = usePortfolioWs({ coins: true });
 
   const balanceArray = Array.isArray(portfolioCoins) ? portfolioCoins : [];
   const assetBalanceInfo = balanceArray.find((b: any) =>

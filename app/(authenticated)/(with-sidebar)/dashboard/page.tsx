@@ -36,6 +36,7 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { DashboardSkeleton } from "@/src/components/skeletons/with-sidebar";
 import { KickstartJourney } from "@/src/components/dashboard/kickstart-journey";
 import { isKycApproved } from "@/src/lib/normalize-kyc-status";
+import { DepositAlertProvider } from "@/src/components/shared/deposit-alert-provider";
 
 const depositChannels = [
   {
@@ -103,13 +104,18 @@ function DashboardInner() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  // Use live WebSocket portfolio — already subscribed globally, no extra fetch needed
-  const { coins: wsPortfolio } = usePortfolioWs();
+  // Live portfolio holdings for the "Holding" tab. Only the per-coin stream is
+  // needed here — the Total Assets card below asks for `get_portfolio_balance`
+  // itself, so this page never opens the margin/futures/allocations streams.
+  const { coins: wsPortfolio } = usePortfolioWs({ coins: true });
 
   const { data: kycStatus, refetch: refetchKycStatus } = useQuery({
     queryKey: userKeys.kycStatus,
     queryFn: () => userService.getKycStatus(),
     select: (res) => res?.data?.status,
+    // Shares this key with the sidebar's profile card, so the two dedupe into
+    // one request. Manual refetch still works after the TTL.
+    staleTime: 5 * 60_000,
   });
 
   const isKycComplete = Boolean(user?.isIDverified || isKycApproved(kycStatus));
@@ -277,6 +283,7 @@ function DashboardInner() {
 
   return (
     <main className="flex flex-col gap-6 w-full page-enter">
+      <DepositAlertProvider />
       {/* Top Bar - Flat design */}
       <div className="animate-fade-up px-5 max-[1150px]:px-4 flex items-center justify-between py-4 bg-[#181a20] border border-white/[0.06] rounded-2xl w-full max-[1150px]:rounded-xl">
         <div className="flex gap-4 items-center">

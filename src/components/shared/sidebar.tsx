@@ -243,10 +243,13 @@ function SectionLabel({ label }: { label: string }) {
 
 export function UserProfileCard() {
   const user = useUserStore((s) => s.user);
-  const { data: kycStatus } = useQuery({
+const { data: kycStatus } = useQuery({
     queryKey: userKeys.kycStatus,
     queryFn: () => userService.getKycStatus(),
     select: (res) => res?.data?.status,
+    // Verification status only moves when the user completes a KYC step, and
+    // the same key is read by the dashboard — one fetch serves both.
+    staleTime: 5 * 60_000,
   });
 
   const displayName = user

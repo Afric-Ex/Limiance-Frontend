@@ -87,7 +87,7 @@ function FiatWithdrawInner() {
     emailVerificationLoading,
   } = useFiatWithdrawal();
 
-  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs();
+  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs({ coins: true });
   const limit = 30;
 
   const coinPortfolio = form.values.symbol

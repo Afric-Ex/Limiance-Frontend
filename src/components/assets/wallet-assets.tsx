@@ -7,7 +7,7 @@ import { InlineLoading } from "../shared/inline-loading";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 export const WalletAssets = () => {
-  const { allocations, isAllocationsLoading: isLoading } = usePortfolioWs();
+  const { allocations, isAllocationsLoading: isLoading } = usePortfolioWs({ allocations: true });
 
   return (
     <div className="flex flex-col gap-4">

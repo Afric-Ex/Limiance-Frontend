@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "@mantine/form";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { fiatKeys, fiatService } from "../services/fiat";
+import { tradingKeys, tradingService } from "../services/trading";
 import { TemporaryDepositAccount } from "../types/fiat";
 import { errorMessageHandler } from "../lib/error-handler";
 import { successNotification } from "../lib/notification-handler";
 import { useDepositStore } from "../stores/deposit-store";
+import { useInfiniteList } from "./use-infinite-list";
 
 const unwrap = <T,>(res: any): T => {
   let cur = res;
@@ -20,44 +22,61 @@ const unwrap = <T,>(res: any): T => {
   return cur as T;
 };
 
-// Coins the fiat rails support. The quote endpoint returns the whole rate table
-// when called without a symbol, which is exactly the set of assets you can buy
-// with NGN — so the deposit/card pickers are driven by it instead of a guess.
+// Coins the deposit/card pickers offer. `trading/listed_tokens` is the backend's
+// own supported-token list and answers one row per token per chain, so it's paged
+// in and collapsed to one symbol per token here. Falls back to a small curated
+// set while the first page is loading, or if the request fails.
 const FALLBACK_FIAT_SYMBOLS = ["USDT", "USDC", "BTC", "ETH", "SOL"];
+const FIAT_SYMBOLS_PAGE_SIZE = 50;
 
 export const useFiatCoinSymbols = () => {
-  const { data, isLoading } = useQuery({
-    queryKey: fiatKeys.quote,
-    queryFn: () => fiatService.getQuote(),
-    select: (res: any): string[] => {
-      let body = res?.data && typeof res.data === "object" ? res.data : res;
-      if (body && !Array.isArray(body) && typeof body === "object") {
-        body = (body as { rates?: unknown }).rates ?? body;
-      }
-      const list = Array.isArray(body) ? body : null;
-      const symbols = list
-        ? list
-            .map((q: any) => String(q?.symbol ?? "").toUpperCase().trim())
-            .filter(Boolean)
-        : body && typeof body === "object"
-          ? Object.keys(body as Record<string, unknown>).map((s) => s.toUpperCase())
-          : [];
-      const unique = [...new Set(symbols)];
-      return unique.length ? unique : FALLBACK_FIAT_SYMBOLS;
-    },
-    staleTime: 5 * 60 * 1000,
+  const {
+    items,
+    isPending,
+    isFetchingNextPage,
+    hasNextPage,
+    isError,
+    refetch,
+    fetchNextPage,
+  } = useInfiniteList({
+    queryKey: tradingKeys.listedTokens(),
+    limit: FIAT_SYMBOLS_PAGE_SIZE,
+    fetchPage: ({ page, limit }) => tradingService.listedTokens({ page, limit }),
+    // Rows repeat a symbol once per chain (CNGN arrives four times), and the
+    // same symbol can straddle a page boundary, so dedupe on the key.
+    getItemId: (token: { symbol?: string }) => token?.symbol,
   });
 
+  const coinSymbols = useMemo(() => {
+    const symbols = items
+      .map((token: any) => String(token?.symbol ?? "").trim().toUpperCase())
+      .filter(Boolean);
+    return symbols.length ? symbols : FALLBACK_FIAT_SYMBOLS;
+  }, [items]);
+
   return {
-    coinSymbols: data ?? FALLBACK_FIAT_SYMBOLS,
-    coinSymbolsLoading: isLoading,
+    coinSymbols,
+    coinSymbolsLoading: isPending,
+    hasMoreCoins: hasNextPage,
+    isLoadingMoreCoins: isFetchingNextPage,
+    isCoinsError: isError,
+    loadMoreCoins: fetchNextPage,
+    retryCoins: refetch,
   };
 };
 
 export const useFiatBankDeposit = () => {
   const queryClient = useQueryClient();
   const markPendingDeposit = useDepositStore((state) => state.markPending);
-  const { coinSymbols, coinSymbolsLoading } = useFiatCoinSymbols();
+  const {
+    coinSymbols,
+    coinSymbolsLoading,
+    hasMoreCoins,
+    isLoadingMoreCoins,
+    isCoinsError,
+    loadMoreCoins,
+    retryCoins,
+  } = useFiatCoinSymbols();
   const form = useForm({
     initialValues: { symbol: "USDT", bankCode: "", amount: "" },
   });
@@ -136,6 +155,11 @@ export const useFiatBankDeposit = () => {
     banksLoading,
     coinSymbols,
     coinSymbolsLoading,
+    hasMoreCoins,
+    isLoadingMoreCoins,
+    isCoinsError,
+    loadMoreCoins,
+    retryCoins,
     rate,
     rateLoading,
     form,
@@ -151,7 +175,15 @@ export const useFiatBankDeposit = () => {
 export const useFiatCardDeposit = () => {
   const queryClient = useQueryClient();
   const markPendingDeposit = useDepositStore((state) => state.markPending);
-  const { coinSymbols, coinSymbolsLoading } = useFiatCoinSymbols();
+  const {
+    coinSymbols,
+    coinSymbolsLoading,
+    hasMoreCoins,
+    isLoadingMoreCoins,
+    isCoinsError,
+    loadMoreCoins,
+    retryCoins,
+  } = useFiatCoinSymbols();
   const form = useForm({
     initialValues: {
       symbol: "USDT",
@@ -251,6 +283,11 @@ export const useFiatCardDeposit = () => {
     form,
     coinSymbols,
     coinSymbolsLoading,
+    hasMoreCoins,
+    isLoadingMoreCoins,
+    isCoinsError,
+    loadMoreCoins,
+    retryCoins,
     paying,
     pay,
     pendingReference,

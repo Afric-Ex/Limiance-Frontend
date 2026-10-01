@@ -4,8 +4,14 @@ import { SelectDepositMethod } from "../components/assets/select-deposit-method"
 import { InternalTransfer } from "../components/transactions/internal-transfer";
 import { ExternalTransfer } from "../components/transactions/external-transfer";
 import { useUserStore } from "../stores/user-store";
-import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
+/**
+ * Modal openers for the deposit/transfer flows.
+ *
+ * Deliberately opens no WebSocket stream: this hook is called from the global
+ * header and mobile nav, so a portfolio subscription here would run on every
+ * page. Callers that need holdings ask for them themselves via `usePortfolioWs`.
+ */
 export const useAssets = () => {
   const handleOpenDepositModal = () => {
     modals.open({
@@ -30,13 +36,9 @@ export const useAssets = () => {
 
   useUserStore((state) => state.user);
 
-  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs();
-
   return {
     handleOpenDepositModal,
     handleOpenInternalTransferModal,
     handleOpenExternalTransferModal,
-    portfolio,
-    portfolioLoading,
   };
 };

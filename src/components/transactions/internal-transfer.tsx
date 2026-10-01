@@ -43,7 +43,7 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
   const user = useUserStore((state) => state.user);
 
   // Use WebSocket for real-time portfolio balances (REST endpoint unreliable)
-  const { coins: portfolio, refreshBalances } = usePortfolioWs();
+  const { coins: portfolio, refreshBalances } = usePortfolioWs({ coins: true });
 
   const walletBalanceKey = form.values.sourceWallet === "spot" ? "spotBalance" : form.values.sourceWallet === "futures" ? "futuresBalance" : form.values.sourceWallet === "margin" ? "marginBalance" : "fundingBalance";
   const coinEntry = portfolio?.find((p: any) => p.symbol === selectedCoin.symbol || p.symbol?.toLowerCase() === selectedCoin.symbol?.toLowerCase());

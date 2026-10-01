@@ -42,7 +42,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
   const rateEnabled =
     !!fromCoin.symbol && !!toCoin.symbol && !!amount && +amount > 0;
 
-  const { coins: portfolio, refreshBalances } = usePortfolioWs();
+  const { coins: portfolio, refreshBalances } = usePortfolioWs({ coins: true });
 
   // hydrate name + image when modal opens with a pre-set symbol
   useEffect(() => {

@@ -147,11 +147,10 @@ export function useCandleFeed(symbol: string, interval: string, market: ChartMar
     setRestFallback(false);
   }, [symbol, interval]);
 
-  // Track whether the shared socket is up.
-  useEffect(() => {
-    const unsubStatus = wsClient.onStatusChange(setWsConnected);
-    return unsubStatus;
-  }, []);
+  // Track whether the shared socket is up. Only while this chart is mounted —
+  // the status listener used to be permanent, so a closed chart still held the
+  // connection open.
+  useEffect(() => wsClient.onStatusChange(setWsConnected), []);
 
   // Fall back to HTTP whenever the socket is not connected, and while it is
   // connected wait briefly for the candle stream; if it never answers, use

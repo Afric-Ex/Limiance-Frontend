@@ -244,7 +244,7 @@ export default function Header() {
         )}
         <CiMenuBurger
           className="cursor-pointer"
-          size="28"
+          size="24"
           color="white"
           onClick={open}
         />

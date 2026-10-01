@@ -14,7 +14,7 @@ interface FundingAccountTransferGateProps {
 export const FundingAccountTransferGate = ({ isOpen, onClose, asset: assetSymbol, onTransferComplete }: FundingAccountTransferGateProps) => {
   const [amount, setAmount] = useState<number | "">("");
 
-  const { coins: portfolio } = usePortfolioWs();
+  const { coins: portfolio } = usePortfolioWs({ coins: true });
 
   const spotBalance = parseFloat(
     portfolio?.find((p: any) => p.symbol.toUpperCase() === assetSymbol.toUpperCase())?.spotBalance || "0"

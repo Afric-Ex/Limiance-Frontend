@@ -20,12 +20,18 @@ import { DepositSuccessModal } from "@/src/components/transactions/deposit-succe
  */
 export function DepositAlertProvider() {
   const user = useUserStore((state) => state.user);
+  const hasPendingDeposit = useDepositStore((state) => state.pending.length > 0);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !hasPendingDeposit) return;
 
     // No send payload: the server pushes balance changes to the authenticated
     // socket, so we only need the handler registered for this topic.
+    //
+    // Gated on there actually being a deposit in flight. `claimCredit` can only
+    // ever match a symbol in the pending list, so with nothing pending this
+    // subscription is a handler that discards every frame — while holding the
+    // socket open on every page for the life of the tab.
     const unsubscribe = wsClient.subscribe("balance_update", null, (data) => {
       const store = useDepositStore.getState();
       const credit = store.claimCredit(data);
@@ -38,7 +44,7 @@ export function DepositAlertProvider() {
     });
 
     return unsubscribe;
-  }, [user]);
+  }, [user, hasPendingDeposit]);
 
   return null;
 }

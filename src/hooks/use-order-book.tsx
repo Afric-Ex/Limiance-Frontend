@@ -69,11 +69,16 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
   // True once a book snapshot for the current pair has been received. Used to
   // self-heal when the backend only pushes one snapshot per stream start.
   const receivedBookRef = useRef(false);
+  // Distinguishes "we got a book" from "we retried once and gave up", so the
+  // heal timer can stand down entirely rather than waking every 3s forever.
+  const healSucceeded = useRef(false);
 
   const fetchHttpFallback = useCallback(async () => {
     // Margin/futures order books are websocket-only — no HTTP endpoints exist
     // for them (they 404). Spot keeps HTTP as a fallback.
     if (market !== "spot") return;
+    // Same rule for spot: a live socket is already delivering this book.
+    if (wsClient.getIsConnected()) return;
     try {
       const res = await api.get(`trading/${market}/orderbook`, { params: { symbol: pair } });
       const payload = res.data?.data || res.data || {};
@@ -122,16 +127,15 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
   useEffect(() => {
     fetchHttpFallback();
     receivedBookRef.current = false;
+    healSucceeded.current = false;
 
     const wsPair = wsPairForMarket(pair, market);
     const payload = { type: `get_${market}_order_books`, data: { pair: wsPair } };
 
-    const unsubscribeStatus = wsClient.onStatusChange((connected) => {
-      setData((prev) => ({ ...prev, isConnected: connected }));
-      if (!connected) {
-        fetchHttpFallback();
-      }
-    });
+    // Only open the status listener while this screen is mounted — subscribing
+    // to it with no stream active was what kept the socket warm on pages that
+    // show no order book.
+    let unsubscribeStatus: (() => void) | null = null;
 
     // Listen on every possible response topic for this market. All of them share
     // the same subscription payload and map into the same handler.
@@ -175,23 +179,39 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
       });
     };
 
-    const unsubscribeMessages = RESPONSE_TOPICS[market].map((responseTopic) =>
-      wsClient.subscribe(responseTopic, payload, handleBookMessage)
+    // Subscribe to the first response topic this market can use. The others are
+    // alternates for backends that answer on a different channel — subscribing
+    // to all of them cost one request frame each per pair for a stream that is
+    // already open. If the primary stays silent, the heal timer below retries.
+    const unsubscribeMessages = wsClient.subscribe(
+      RESPONSE_TOPICS[market][0],
+      payload,
+      handleBookMessage
     );
+
+    unsubscribeStatus = wsClient.onStatusChange((connected) => {
+      setData((prev) => ({ ...prev, isConnected: connected }));
+      if (!connected) fetchHttpFallback();
+    });
 
     // The backend sends a single order-book snapshot when a stream starts and
     // does not re-push it while the stream is already active. If that snapshot
     // is missed (e.g. subscribe races a reconnect), the book would stay empty,
     // so keep re-requesting the stream until an update has actually arrived.
+    // Backs off to 10s once it has succeeded so an idle book costs nothing.
     const healTimer = setInterval(() => {
-      if (receivedBookRef.current) return;
+      if (receivedBookRef.current) {
+        if (healSucceeded.current) return;
+        healSucceeded.current = true;
+        return;
+      }
       if (wsClient.getIsConnected()) wsClient.send(payload);
     }, 3000);
 
     return () => {
       clearInterval(healTimer);
-      unsubscribeStatus();
-      unsubscribeMessages.forEach((unsub) => unsub());
+      unsubscribeStatus?.();
+      unsubscribeMessages();
     };
   }, [pair, market, fetchHttpFallback]);
 

@@ -66,7 +66,12 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
   const isBuy = (side: unknown) => String(side ?? "").toUpperCase() === "BUY";
 
   // ── Data (WebSocket for live balance) ────────────────────────────────────
-  const { balances, coins: portfolio, isLoading: portLoading, marginAccount } = usePortfolioWs();
+  // Margin panel: derived margin balance (from holdings) + the margin account
+  // (borrowed funds, equity, leverage). No futures/allocations stream needed.
+  const { balances, coins: portfolio, isLoading: portLoading, marginAccount } = usePortfolioWs({
+    coins: true,
+    margin: true,
+  });
   const marginBalance = balances["margin"];
   const balLoading = portLoading;
 

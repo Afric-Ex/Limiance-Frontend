@@ -26,11 +26,11 @@ export default function Logo({
       <Image
         src={LogoImage}
         alt="Limiance"
-        width={177}
+        width={120}
         height={40}
         priority
         style={{ width: "auto", height: "auto" }}
-        className={clsx(imageClasses ?? "w-[177px] max-sm:w-[142px]", "object-contain")}
+        className={clsx(imageClasses ?? "w-[177px] max-sm:w-[130px] mt-2", "object-contain")}
       />
     </Link>
   );

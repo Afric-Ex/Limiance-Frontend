@@ -162,7 +162,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
   const [base, quote] = pair.split("/");
 
-  const { coins: portfolioResponse, refreshBalances } = usePortfolioWs();
+  const { coins: portfolioResponse, refreshBalances } = usePortfolioWs({ coins: true });
 
   const quoteAsset = portfolioResponse?.find((a: any) => a.symbol === quote);
   const baseAsset = portfolioResponse?.find((a: any) => a.symbol === base);

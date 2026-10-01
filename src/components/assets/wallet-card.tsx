@@ -29,8 +29,12 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
   };
   const singleAccount = title ? accountMap[title] : undefined;
 
-  // Use WebSocket for real-time balance data
-  const { balances, isLoading: balanceLoading } = usePortfolioWs();
+  // Real-time balance data. `balances.total` comes from get_portfolio_balance;
+  // per-account balances are derived from get_portfolio. Ask for whichever this
+  // card actually renders so a page never opens both streams unnecessarily.
+  const { balances, isLoading: balanceLoading } = usePortfolioWs(
+    singleAccount ? { coins: true } : { balance: true }
+  );
 
   // Pick the right account balance; "total" is the overall from backend
   const acctBal = singleAccount ? balances[singleAccount] : balances["total"];

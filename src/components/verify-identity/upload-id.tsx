@@ -20,7 +20,7 @@ export const UploadId = ({
   const [backUploaded, setBackUploaded] = useState(false);
 
   const { mutate: uploadFront, isPending: frontLoading } = useMutation({
-    mutationFn: async (file: File): Promise<any> => {
+    mutationFn: async (_file: File): Promise<any> => {
       errorNotification("Direct document upload is no longer supported here. Please use the Persona verification flow.");
       throw new Error("Legacy KYC upload flow is disabled");
     },
@@ -32,7 +32,7 @@ export const UploadId = ({
   });
 
   const { mutate: uploadBack, isPending: backLoading } = useMutation({
-    mutationFn: async (file: File): Promise<any> => {
+    mutationFn: async (_file: File): Promise<any> => {
       errorNotification("Direct document upload is no longer supported here. Please use the Persona verification flow.");
       throw new Error("Legacy KYC upload flow is disabled");
     },

@@ -426,8 +426,16 @@ export const tradingService = {
     return response.data;
   },
 
-  listedTokens: async (): Promise<{ data: { symbol: string; name?: string; logo?: string }[] } | null> => {
-    const response = await api.get("trading/listed_tokens");
+  listedTokens: async (params?: {
+    page?: number;
+    limit?: number;
+    query?: string;
+    isTradable?: boolean;
+  }): Promise<{
+    data: { symbol: string; name?: string; logo?: string }[];
+    totalRecords?: string | number;
+  } | null> => {
+    const response = await api.get("trading/listed_tokens", { params });
     return response.data;
   },
 

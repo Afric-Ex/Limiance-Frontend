@@ -8,7 +8,7 @@ import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { ConvertAsset } from "../transactions/convert-asset";
 
 export const CoinAssets = () => {
-  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs();
+  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs({ coins: true });
 
   return (
     <Table
