@@ -38,11 +38,20 @@ function MyAdsPageInner() {
   const activeCount = ads.filter((a) => a.active).length;
   const inactiveCount = ads.filter((a) => !a.active).length;
 
+  const [togglingAdId, setTogglingAdId] = useState<string | null>(null);
+
   const handleToggle = (ad: UserAds["data"][0]) => {
+    setTogglingAdId(ad.id);
     if (ad.active) {
-      deactivate(ad.id, { onSuccess: () => refetch() });
+      deactivate(ad.id, { 
+        onSuccess: () => refetch(),
+        onSettled: () => setTogglingAdId(null)
+      });
     } else {
-      reactivate(ad.id, { onSuccess: () => refetch() });
+      reactivate(ad.id, { 
+        onSuccess: () => refetch(),
+        onSettled: () => setTogglingAdId(null)
+      });
     }
   };
 
@@ -193,7 +202,7 @@ function MyAdsPageInner() {
                     <Button
                       size="sm"
                       variant="outline"
-                      loading={deactivating || reactivating}
+                      loading={(deactivating || reactivating) && togglingAdId === ad.id}
                       className={
                         isActive
                           ? "!border-[#FBA42A]/40 !text-[#FBA42A] hover:!bg-[#FBA42A]/10 !rounded-lg"
