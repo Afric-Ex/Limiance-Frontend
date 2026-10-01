@@ -103,7 +103,9 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
     fetchHttpFallback();
 
     const normalisedPair = pair.replace("/", "-").toUpperCase();
-    const payload = { type: "get_market_data", data: { pair: normalisedPair } };
+    // The feed streams every market on this topic, so the server no longer
+    // needs the pair in the request: filtering happens client-side below.
+    const payload = { type: "get_market_data" };
 
     // Attached only while this screen is mounted, so a market feed can't keep
     // the socket alive on pages that show no prices.
