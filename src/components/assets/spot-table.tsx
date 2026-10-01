@@ -14,7 +14,7 @@ export const SpotTable = () => {
   const [hideSmallBalances, setHideSmallBalances] = useState(false);
   const router = useRouter();
 
-  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs();
+  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs({ coins: true });
 
   return (
     <div className="flex flex-col gap-6">

@@ -28,7 +28,7 @@ function extractBase(pair: string): string {
 export const AssetTrendChart = () => {
   const [period, setPeriod] = useState<Period>("30D");
 
-  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs();
+  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs({ coins: true });
 
   const { data: moversRaw, isLoading: moversLoading } = useQuery({
     queryKey: ["pnl-movers"],

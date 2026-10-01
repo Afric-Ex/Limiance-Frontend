@@ -1,6 +1,6 @@
 import { useForm } from "@mantine/form";
 import { useQuery } from "@tanstack/react-query";
-import { tradingService } from "../services/trading";
+import { tradingKeys, tradingService } from "../services/trading";
 import { usePortfolioWs } from "./use-portfolio-ws";
 
 export const useP2P = () => {
@@ -36,11 +36,13 @@ export const useP2P = () => {
     },
   });
 
-  const { coins: portfolio } = usePortfolioWs();
+  const { coins: portfolio } = usePortfolioWs({ coins: true });
 
   const { data: tokensRaw, isLoading: isLoadingTokens } = useQuery({
-    queryKey: ["listed-tokens"],
-    queryFn: tradingService.listedTokens,
+    queryKey: tradingKeys.listedTokens(),
+    // Wrapped, not passed by reference: react-query calls the queryFn with its
+    // context object, which would be forwarded to the endpoint as params.
+    queryFn: () => tradingService.listedTokens(),
     staleTime: Infinity,
     retry: false,
   });

@@ -63,7 +63,7 @@ function AdvertiserRegisterPageInner() {
   });
 
   // Fetch real funding balance via WebSocket portfolio channel
-  const { coins: portfolioCoins } = usePortfolioWs();
+  const { coins: portfolioCoins } = usePortfolioWs({ coins: true });
 
   const balanceArray = Array.isArray(portfolioCoins) ? portfolioCoins : [];
   const fundingBalance = balanceArray.reduce((acc: number, b: any) =>

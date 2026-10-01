@@ -7,7 +7,7 @@ import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 export const MarginFunds = () => {
   const router = useRouter();
-  const { coins: portfolio, isLoading } = usePortfolioWs();
+  const { coins: portfolio, isLoading } = usePortfolioWs({ coins: true });
 
   if (isLoading) return <InlineLoading />;
 

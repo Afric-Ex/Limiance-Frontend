@@ -52,6 +52,9 @@ export const LanguageDropdown = ({ isMobile }: { isMobile?: boolean }) => {
       const res = await api.get("/languages");
       return res.data?.data ?? res.data ?? [];
     },
+    // The language list changes about never, and this component sits behind a
+    // dropdown the user may never open.
+    staleTime: Infinity,
   });
 
   const languages =

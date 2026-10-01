@@ -56,6 +56,14 @@ export type WsMessageHandler = (data: any, rawMessage: any) => void;
 export type WsStatusHandler = (connected: boolean) => void;
 
 /**
+ * Grace period before an idle socket is torn down. Navigation unmounts the old
+ * page's subscribers and mounts the new page's in the same React commit, so a
+ * zero-delay close would thrash the connection on every route change (and burn a
+ * handshake round-trip). A short delay lets a same-tick replacement cancel it.
+ */
+const IDLE_CLOSE_DELAY_MS = 2000;
+
+/**
  * Deterministic JSON serialisation: object keys are sorted recursively so two
  * structurally identical payloads always produce the same string no matter what
  * order the caller built the keys in. JSON.stringify can't be used here — it
@@ -101,6 +109,7 @@ class WebSocketClient {
   private topicIndex = new Map<string, Set<string>>();
   private statusHandlers = new Set<WsStatusHandler>();
   private intentionalClose = false;
+  private idleCloseTimeout: NodeJS.Timeout | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -123,6 +132,30 @@ class WebSocketClient {
       this.retryCount = 0;
       this.connect();
     }
+  }
+
+  /**
+   * Close the socket once nothing is subscribed any more.
+   *
+   * Without this the socket stays open for the life of the tab: the last
+   * unsubscribe leaves an idle connection that still gets heartbeats and still
+   * receives every server push, on pages that no longer display it. Deferred so
+   * a route change (unmount old page, mount new page in one commit) reuses the
+   * connection instead of reconnecting.
+   */
+  private scheduleIdleClose() {
+    if (this.idleCloseTimeout) return;
+    this.idleCloseTimeout = setTimeout(() => {
+      this.idleCloseTimeout = null;
+      if (this.subscriptions.size > 0) return;
+      this.disconnect();
+    }, IDLE_CLOSE_DELAY_MS);
+  }
+
+  private cancelIdleClose() {
+    if (!this.idleCloseTimeout) return;
+    clearTimeout(this.idleCloseTimeout);
+    this.idleCloseTimeout = null;
   }
 
   public getIsConnected(): boolean {
@@ -169,6 +202,7 @@ class WebSocketClient {
   public connect() {
     if (typeof window === "undefined") return;
     if (this.isConnected || this.isConnecting) return;
+    this.cancelIdleClose();
 
     const explicitUrl = process.env.NEXT_PUBLIC_WS_URL;
     if (!explicitUrl) {
@@ -306,6 +340,7 @@ class WebSocketClient {
   ): () => void {
     const key = subscriptionKey(topic, sendPayload);
     let sub = this.subscriptions.get(key);
+    const isNewSubscription = !sub;
     if (!sub) {
       sub = {
         topic,
@@ -323,8 +358,10 @@ class WebSocketClient {
 
     sub.handlers.add(handler);
 
-    // If socket is open, send payload immediately; if not connected, connect()
-    if (this.isConnected && sendPayload) {
+    // Only the 1st handler for a (topic, payload) starts the server stream.
+    // Re-sending on every extra handler makes N mounted consumers of one topic
+    // cost N frames, and the server answers each one with a full snapshot.
+    if (isNewSubscription && this.isConnected && sendPayload) {
       this.send(sendPayload);
     } else if (!this.isConnected && !this.isConnecting) {
       this.connect();
@@ -343,6 +380,9 @@ class WebSocketClient {
           keys.delete(key);
           if (keys.size === 0) this.topicIndex.delete(topic);
         }
+        // Nothing is listening any more: tear the socket down rather than
+        // leaving it open (and pushed to) for the rest of the tab's life.
+        if (this.subscriptions.size === 0) this.scheduleIdleClose();
       }
     };
   }

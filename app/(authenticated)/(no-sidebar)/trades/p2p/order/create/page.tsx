@@ -59,7 +59,7 @@ function PreOrderScreenContent() {
   const fiatAmount = userAction === "Buy" ? numAmount : numAmount * price;
 
   // Fetch portfolio (WebSocket channel) to get the per-asset funding balance (supports fractional amounts)
-  const { coins: portfolio, isLoading: balanceLoading } = usePortfolioWs();
+  const { coins: portfolio, isLoading: balanceLoading } = usePortfolioWs({ coins: true });
 
   const userCoin = portfolio?.find(
     (p: any) => p.symbol.toUpperCase() === (ad?.asset ?? "").toUpperCase()

@@ -136,7 +136,7 @@ function WithdrawalInner() {
     resolvedWalletId,
   } = useWithdrawal();
 
-  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs();
+  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs({ coins: true });
 
   // Per-asset balance for the selected coin, in coin units
   const coinPortfolio = selectedCoin?.symbol

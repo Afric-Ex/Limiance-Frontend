@@ -23,7 +23,13 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
 
   const queryClient = useQueryClient();
 
-  const { coins: portfolioResponse, refreshBalances, marginAccount, balances } = usePortfolioWs();
+  // Margin screens need the per-coin holdings (asset price + margin balance),
+  // the margin account (borrowed/equity/leverage caps) and the derived margin
+  // balance. This is the only surface that asks for all three.
+  const { coins: portfolioResponse, refreshBalances, marginAccount, balances } = usePortfolioWs({
+    coins: true,
+    margin: true,
+  });
 
   const parseNum = (val: any) => {
     if (!val) return 0;

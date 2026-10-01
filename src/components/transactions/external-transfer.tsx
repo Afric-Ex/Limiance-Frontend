@@ -16,7 +16,7 @@ import { IoChevronDown } from "react-icons/io5";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 export const ExternalTransfer = () => {
-  const { coins: portfolio, refreshBalances } = usePortfolioWs();
+  const { coins: portfolio, refreshBalances } = usePortfolioWs({ coins: true });
   const [activeStep, setActiveStep] = useState<"request" | "transfer">("request");
   const [selectedCoin, setSelectedCoin] = useState<SelectedCoin>({
     name: "",

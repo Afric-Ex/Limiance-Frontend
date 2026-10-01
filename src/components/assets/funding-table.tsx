@@ -23,7 +23,7 @@ export const FundingTable = () => {
   const [search, setSearch] = useState("");
   const { handleOpenDepositModal, handleOpenInternalTransferModal } = useAssets();
 
-  const { coins: portfolio, isLoading } = usePortfolioWs();
+  const { coins: portfolio, isLoading } = usePortfolioWs({ coins: true });
 
   const visibleAssets = portfolio?.filter((item: any) => {
     const passesZero = hideZero ? !!+item.fundingBalance : true;

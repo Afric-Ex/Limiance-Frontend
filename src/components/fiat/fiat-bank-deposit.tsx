@@ -1,23 +1,17 @@
 "use client";
 
 import React from "react";
-import { Button, NumberInput, Select } from "@mantine/core";
+import { Button, NumberInput } from "@mantine/core";
 import { FiCreditCard } from "react-icons/fi";
 import { MdOutlineContentCopy, MdOutlineTimer } from "react-icons/md";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 import { IoChevronDownOutline } from "react-icons/io5";
 import { Copy } from "../shared/copy";
 import { useFiatBankDeposit } from "@/src/hooks/use-fiat-deposit";
+import { FiatAssetSelector } from "./fiat-asset-selector";
 
 const inputClass =
   "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 focus:!shadow-[0_0_10px_rgba(77,119,240,0.12)] !rounded-xl !h-[56px] !text-white !text-sm !transition-all !duration-200 placeholder:!text-white/20";
-
-const bankSelectClass = {
-  input: `${inputClass} !text-white`,
-  dropdown: "!bg-[#181a20] !border !border-white/[0.08]",
-  option: "!text-white hover:!bg-white/[0.04]",
-  label: "!mt-0",
-};
 
 const formatCountdown = (seconds: number) => {
   const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
@@ -31,6 +25,11 @@ export const FiatBankDeposit = () => {
     banksLoading,
     coinSymbols,
     coinSymbolsLoading,
+    hasMoreCoins,
+    isLoadingMoreCoins,
+    isCoinsError,
+    loadMoreCoins,
+    retryCoins,
     form,
     account,
     expirySeconds,
@@ -182,31 +181,33 @@ export const FiatBankDeposit = () => {
         </div>
         <div className="flex flex-col gap-2">
           <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">You receive</label>
-          <Select
-            data={coinSymbols}
-            placeholder={coinSymbolsLoading ? "Loading assets…" : "Select an asset"}
-            autoComplete="new-password"
+          <FiatAssetSelector
+            value={form.values.symbol}
+            onChange={(value) => form.setFieldValue("symbol", value)}
+            assets={coinSymbols}
+            isLoading={coinSymbolsLoading}
+            isLoadingMore={isLoadingMoreCoins}
+            hasMore={hasMoreCoins}
+            onLoadMore={loadMoreCoins}
+            isError={isCoinsError}
+            onRetry={retryCoins}
+            placeholder="Select an asset"
             name="fiat-receive-asset"
             id="fiat-receive-asset"
-            data-1p-ignore="true"
-            data-lpignore="true"
-            data-form-type="other"
-            {...form.getInputProps("symbol")}
-            classNames={bankSelectClass}
           />
         </div>
       </div>
 
       {/* Bank */}
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Preferred settlement bank</label>
+        <label className="text-xs pl-1 font-semibold text-white/40 uppercase tracking-wider">Preferred settlement bank</label>
         <div className="relative">
           <select
             {...form.getInputProps("bankCode")}
             name="settlement-bank"
             id="settlement-bank"
             autoComplete="off"
-            className={`${inputClass} w-full !appearance-none !cursor-pointer !pr-10 [&>option]:!bg-[#181a20] [&>option]:!text-white [&>option]:!text-sm`}
+            className={`${inputClass} px-2 w-full !appearance-none !cursor-pointer !pr-10 [&>option]:!bg-[#181a20] [&>option]:!text-white [&>option]:!text-sm`}
           >
             <option value="">
               {banksLoading ? "Loading banks…" : "Select a bank"}
@@ -224,7 +225,7 @@ export const FiatBankDeposit = () => {
       </div>
 
       {/* summary strip */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 max-[630px]:flex max-[630px]:flex-col gap-3">
         <div className="flex flex-col gap-1 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
           <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">You pay</span>
           <span className="text-sm font-bold text-white tabular-nums">

@@ -76,7 +76,9 @@ function SpotTrades() {
   const feed = useMarketFeed(selectedPair);
   const orderBook = useOrderBook(selectedPair, "spot");
   const queryClient = useQueryClient();
-  const { refreshBalances } = usePortfolioWs();
+  // Refresh-only: the order form below owns the portfolio subscription for this
+  // screen, so this page just needs a way to nudge it after a trade fills.
+  const { refreshBalances } = usePortfolioWs({});
 
   const { data: openOrders, isLoading: openOrdersLoading } = useQuery({
     queryKey: tradingKeys.openOrders(selectedPair),

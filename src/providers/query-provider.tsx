@@ -10,10 +10,17 @@ function QueryProvider({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             retry: () => false,
-            // With SSR, we usually want to set some default staleTime
-            // above 0 to avoid refetching immediately on the client
-            staleTime: 0,
+            // Pages remounting on navigation used to refetch everything they
+            // displayed, because a 0 staleTime marks cached data stale the
+            // instant a component subscribes. That turned every route change
+            // into a burst of duplicate requests for data the app had just
+            // fetched. Individual queries that need fresher data raise this
+            // (see use-infinite-list, use-candle-feed) rather than lowering it.
+            staleTime: 30_000,
             refetchOnWindowFocus: false,
+            // Don't hold cancelled/obsolete requests open once the screen that
+            // asked for them is gone.
+            refetchOnReconnect: false,
           },
         },
       })

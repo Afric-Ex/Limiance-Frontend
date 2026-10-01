@@ -69,6 +69,9 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
   const fetchHttpFallback = useCallback(async () => {
     const now = Date.now();
     if (now - lastFallbackAt.current < 30_000) return; // throttle: max once per 30s
+    // Don't hit REST while the socket is healthy and already pushing this pair —
+    // that just burns a request for data we are about to receive anyway.
+    if (wsClient.getIsConnected()) return;
     lastFallbackAt.current = now;
 
     try {
@@ -102,11 +105,11 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
     const normalisedPair = pair.replace("/", "-").toUpperCase();
     const payload = { type: "get_market_data", data: { pair: normalisedPair } };
 
+    // Attached only while this screen is mounted, so a market feed can't keep
+    // the socket alive on pages that show no prices.
     const unsubscribeStatus = wsClient.onStatusChange((connected) => {
       setData((prev) => ({ ...prev, isConnected: connected }));
-      if (!connected) {
-        fetchHttpFallback();
-      }
+      if (!connected) fetchHttpFallback();
     });
 
     const unsubscribeMessages = wsClient.subscribe(

@@ -21,7 +21,9 @@ function safeParse(val: string | null | undefined): number {
 }
 
 export function useWalletBalances(): UseWalletBalancesReturn {
-  const { balances, isLoading, isConnected } = usePortfolioWs();
+  // Funding comes from the per-coin stream (derived), the trading total from
+  // get_portfolio_balance — both are rendered by the wallet card.
+  const { balances, isLoading, isConnected } = usePortfolioWs({ coins: true, balance: true });
 
   const funding = useMemo(() => {
     const b = balances?.funding;

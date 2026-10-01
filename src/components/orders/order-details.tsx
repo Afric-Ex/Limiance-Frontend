@@ -6,7 +6,6 @@ import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import {
-  fmtDate,
   fmtDateTime,
   fmtNum,
   getPair,
