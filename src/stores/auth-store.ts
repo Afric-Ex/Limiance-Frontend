@@ -1,7 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
-interface AuthState {
+export interface AuthState {
   rememberMe: boolean;
   setRememberMe: (value: boolean) => void;
   country: string;
@@ -12,6 +11,9 @@ interface AuthState {
   setPhone: (value: string) => void;
   otp: string;
   setOtp: (value: string) => void;
+  verificationToken: string | null;
+  setVerificationToken: (value: string | null) => void;
+  reset: () => void;
   pending2FAUserId: string | null;
   pending2FAChallengeToken: string | null;
   pending2FAMethod: "totp" | "email";
@@ -20,9 +22,7 @@ interface AuthState {
   clearPendingLogin2FA: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
+export const useAuthStore = create<AuthState>()((set) => ({
       rememberMe: false,
       country: "",
       setCountry: (value) => set({ country: value }),
@@ -32,6 +32,20 @@ export const useAuthStore = create<AuthState>()(
       setPhone: (value) => set({ phone: value }),
       otp: "",
       setOtp: (value) => set({ otp: value }),
+      verificationToken: null,
+      setVerificationToken: (value) => set({ verificationToken: value }),
+      reset: () => set({
+        rememberMe: false,
+        country: "",
+        email: "",
+        phone: "",
+        otp: "",
+        verificationToken: null,
+        pending2FAUserId: null,
+        pending2FAChallengeToken: null,
+        pending2FAMethod: "email",
+        pending2FARememberMe: false,
+      }),
       setRememberMe: (value) => set({ rememberMe: value }),
       pending2FAUserId: null,
       pending2FAChallengeToken: null,
@@ -41,20 +55,4 @@ export const useAuthStore = create<AuthState>()(
         set({ pending2FAUserId: userId, pending2FAChallengeToken: challengeToken ?? null, pending2FAMethod: method, pending2FARememberMe: rememberMe }),
       clearPendingLogin2FA: () =>
         set({ pending2FAUserId: null, pending2FAChallengeToken: null, pending2FAMethod: "email", pending2FARememberMe: false }),
-    }),
-    {
-      name: "auth-store",
-      partialize: (state) => ({
-        rememberMe: state.rememberMe,
-        country: state.country,
-        email: state.email,
-        phone: state.phone,
-        otp: state.otp,
-        pending2FAUserId: state.pending2FAUserId,
-        pending2FAChallengeToken: state.pending2FAChallengeToken,
-        pending2FAMethod: state.pending2FAMethod,
-        pending2FARememberMe: state.pending2FARememberMe,
-      }),
-    }
-  )
-);
+    }));

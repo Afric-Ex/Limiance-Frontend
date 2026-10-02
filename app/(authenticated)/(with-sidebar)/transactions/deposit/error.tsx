@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { redactDiagnostic } from "@/src/lib/pii-policy";
 
 export default function Error({
   error,
@@ -10,7 +11,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Deposit page error:", error);
+    console.error("Deposit page error:", redactDiagnostic({ error }));
   }, [error]);
 
   return (

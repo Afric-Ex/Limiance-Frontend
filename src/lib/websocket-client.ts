@@ -1,6 +1,7 @@
 "use client";
 
 import { handleLogout } from "./handle-logout";
+import { redactDiagnostic } from "./pii-policy";
 
 /** Check if JWT token has expired based on its 'exp' claim */
 function isTokenExpired(token: string): boolean {
@@ -194,7 +195,7 @@ class WebSocketClient {
       try {
         handler(status);
       } catch (err) {
-        console.error("[WebSocketClient] Error in status handler:", err);
+        console.error("[WebSocketClient] Error in status handler:", redactDiagnostic({ error: err }));
       }
     });
   }
@@ -255,7 +256,10 @@ class WebSocketClient {
               try {
                 handler(msg.data, msg);
               } catch (handlerErr) {
-                console.error(`[WebSocketClient] Handler error for ${type}:`, handlerErr);
+                console.error(
+                  `[WebSocketClient] Handler error for ${type}`,
+                  redactDiagnostic({ error: handlerErr })
+                );
               }
             });
           }
@@ -308,7 +312,7 @@ class WebSocketClient {
         this.ws.send(JSON.stringify(payload));
         return true;
       } catch (err) {
-        console.error("[WebSocketClient] Send error:", err);
+        console.error("[WebSocketClient] Send error:", redactDiagnostic({ error: err }));
         return false;
       }
     }

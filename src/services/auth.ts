@@ -3,6 +3,7 @@ import { normalizeUser } from "../lib/normalize-user";
 import { normalizeKycStatus } from "../lib/normalize-kyc-status";
 import { authDebug, describeAuthPayload } from "../lib/auth-debug";
 import { ApiResponse } from "../types/api";
+import { useAuthStore } from "../stores/auth-store";
 import {
   Login,
   LoginResponse,
@@ -12,90 +13,9 @@ import {
   VerifyEmail,
 } from "../types/auth";
 
-export const stripBearer = (value?: string | null) => {
-  if (!value) return null;
-  return value.replace(/^Bearer\s+/i, "").trim();
-};
-
-const isIgnoredTokenKey = (normalizedKey: string) =>
-  normalizedKey.includes("refresh") ||
-  normalizedKey.includes("session") ||
-  normalizedKey.includes("captcha") ||
-  normalizedKey.includes("pass") ||
-  normalizedKey.includes("verify");
-
-const isPreferredTokenKey = (normalizedKey: string) =>
-  normalizedKey.includes("accesstoken") ||
-  normalizedKey === "authtoken" ||
-  normalizedKey === "token" ||
-  normalizedKey === "jwt" ||
-  normalizedKey === "authorization";
-
-export const findAuthToken = (value: any, seen = new WeakSet<object>()): string | null => {
-  if (!value) return null;
-
-  if (typeof value === "string") {
-    return null;
-  }
-
-  if (typeof value !== "object") {
-    return null;
-  }
-
-  if (seen.has(value)) {
-    return null;
-  }
-  seen.add(value);
-
-  for (const [key, raw] of Object.entries(value)) {
-    const normalizedKey = key.toLowerCase().replace(/[_-\s]/g, "");
-    const token = typeof raw === "string" ? stripBearer(raw) : null;
-    if (
-      token &&
-      isPreferredTokenKey(normalizedKey) &&
-      !isIgnoredTokenKey(normalizedKey)
-    ) {
-      return token;
-    }
-  }
-
-  for (const raw of Object.values(value)) {
-    const nested = findAuthToken(raw, seen);
-    if (nested) return nested;
-  }
-
-  return null;
-};
-
-const getHeaderToken = (headers: any) =>
-  stripBearer(
-    headers?.authorization ||
-      headers?.Authorization ||
-      headers?.["x-access-token"] ||
-      headers?.["x-auth-token"] ||
-      headers?.["x-user-accesstoken"] ||
-      headers?.["x-user-access-token"]
-  );
-
-const normalizeAuthPayload = (payload: any, headers?: any) => {
-  const token =
-    payload?.accessToken ||
-    payload?.access_token ||
-    payload?.token ||
-    payload?.jwt ||
-    payload?.data?.accessToken ||
-    payload?.data?.access_token ||
-    payload?.data?.token ||
-    payload?.data?.jwt ||
-    findAuthToken(payload) ||
-    getHeaderToken(headers);
-
-  if (token && !payload?.accessToken) {
-    payload.accessToken = token;
-  }
-
-  return payload;
-};
+// Authentication is established by the backend session cookie. The frontend
+// deliberately does not extract, normalize, or persist access tokens.
+const normalizeAuthPayload = (payload: any) => payload;
 
 export const auth = {
   register: async (data: Register): Promise<ApiResponse<RegisterResponse>> => {
@@ -122,7 +42,7 @@ export const auth = {
       passToken: data.passToken,
       genTime: data.genTime,
     });
-    response.data = normalizeAuthPayload(response.data, response.headers);
+    response.data = normalizeAuthPayload(response.data);
     authDebug("login-response", {
       status: response.status,
       headers: Object.keys(response.headers ?? {}),
@@ -134,7 +54,7 @@ export const auth = {
     return response;
   },
   verifyEmail: async (data: VerifyEmail): Promise<ApiResponse<any>> => {
-    const verifyToken = typeof window !== "undefined" ? sessionStorage.getItem("verify-token") : null;
+    const verifyToken = useAuthStore.getState().verificationToken;
     const response = await api.post(
       "users/verify_email",
       { email: data.email, otp: data.otp },
@@ -156,7 +76,7 @@ export const auth = {
     otp?: string;
     email?: string;
   }): Promise<ApiResponse<any>> => {
-    const verifyToken = typeof window !== "undefined" ? sessionStorage.getItem("verify-token") : null;
+    const verifyToken = useAuthStore.getState().verificationToken;
     const response = await api.post(
       "users/reset_password",
       {
@@ -196,7 +116,7 @@ export const auth = {
           ? Object.keys(response.data)
           : [],
     });
-    response.data = normalizeAuthPayload(response.data, response.headers);
+    response.data = normalizeAuthPayload(response.data);
     if (response?.data?.data) {
       response.data.data = normalizeUser(response.data.data);
     }

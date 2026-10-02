@@ -1,18 +1,11 @@
-/** Read auth-token directly from document.cookie */
-function readAuthToken(): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/(?:^|;\s*)auth-token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : null;
-}
+import { sessionCoordinator } from "./session-coordinator";
+import { useAuthStore } from "../stores/auth-store";
+import { useUserStore } from "../stores/user-store";
 
-function clearSession() {
-  if (typeof document !== "undefined") {
-    document.cookie = `auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
-  }
-  if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("auth-token");
-    localStorage.removeItem("user-store");
-  }
+function clearSession(reason: "manual" | "unauthorized" | "expired" | "account-switch") {
+  useAuthStore.getState().reset();
+  useUserStore.getState().reset();
+  sessionCoordinator.logout(reason);
 }
 
 export const handleLogout = (error?: any) => {
@@ -33,16 +26,7 @@ export const handleLogout = (error?: any) => {
         return;
       }
 
-      // Only actually log out if there IS a token (i.e. the session truly expired).
-      // If there is no token yet, this is probably a pre-auth request — ignore it.
-      const existingToken =
-        (typeof localStorage !== "undefined" ? localStorage.getItem("auth-token") : null) ||
-        readAuthToken();
-      if (!existingToken || existingToken === "undefined" || existingToken === "null") {
-        return;
-      }
-
-      clearSession();
+      clearSession("unauthorized");
       if (
         typeof location !== "undefined" &&
         location.pathname !== "/auth/login" &&
@@ -53,7 +37,7 @@ export const handleLogout = (error?: any) => {
     }
   } else {
     // Manual logout call (no error) — always clear session
-    clearSession();
+    clearSession("manual");
     if (
       typeof location !== "undefined" &&
       location.pathname !== "/auth/login" &&

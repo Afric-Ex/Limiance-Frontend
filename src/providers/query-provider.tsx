@@ -2,6 +2,12 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React, { ReactNode, useState } from "react";
+import { useEffect } from "react";
+import { sessionCoordinator } from "@/src/lib/session-coordinator";
+import { useAuthStore } from "@/src/stores/auth-store";
+import { useUserStore } from "@/src/stores/user-store";
+import { clearP2PUserActions } from "@/src/lib/p2p-user-actions";
+import { wsClient } from "@/src/lib/websocket-client";
 
 function QueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -25,6 +31,13 @@ function QueryProvider({ children }: { children: ReactNode }) {
         },
       })
   );
+  useEffect(() => sessionCoordinator.subscribe(() => {
+    useAuthStore.getState().reset();
+    useUserStore.getState().reset();
+    clearP2PUserActions();
+    queryClient.clear();
+    wsClient.disconnect();
+  }), [queryClient]);
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );

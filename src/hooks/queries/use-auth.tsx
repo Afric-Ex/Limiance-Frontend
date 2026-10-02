@@ -1,4 +1,4 @@
-import { auth, findAuthToken } from "@/src/services/auth";
+import { auth } from "@/src/services/auth";
 import { authDebug, describeAuthPayload } from "@/src/lib/auth-debug";
 import { Login, LoginResponse } from "@/src/types/auth";
 import { mutate } from "../use-query-factory";
@@ -16,6 +16,7 @@ import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { modals } from "@mantine/modals";
 import { errorNotification, successNotification } from "@/src/lib/notification-handler";
 import { useUserStore } from "@/src/stores/user-store";
+import { sessionCoordinator } from "@/src/lib/session-coordinator";
 
 type OtpFormValues = {
   otp: string;
@@ -43,6 +44,7 @@ export const useAuth = () => {
   const setEmail = useAuthStore((state) => state.setEmail);
   const otp = useAuthStore((state) => state.otp);
   const setOtp = useAuthStore((state) => state.setOtp);
+  const setVerificationToken = useAuthStore((state) => state.setVerificationToken);
   const pending2FAUserId = useAuthStore((state) => state.pending2FAUserId);
   const pending2FAChallengeToken = useAuthStore((state) => state.pending2FAChallengeToken);
   const pending2FAMethod = useAuthStore((state) => state.pending2FAMethod);
@@ -52,21 +54,6 @@ export const useAuth = () => {
   const setUser = useUserStore((state) => state.setUser);
 
   const { push } = useRouter();
-  const getLoginToken = (payload: any) =>
-    payload?.accessToken ||
-    payload?.access_token ||
-    payload?.token ||
-    payload?.jwt ||
-    payload?.authToken ||
-    payload?.auth_token ||
-    payload?.data?.accessToken ||
-    payload?.data?.access_token ||
-    payload?.data?.token ||
-    payload?.data?.jwt ||
-    payload?.data?.authToken ||
-    payload?.data?.auth_token ||
-    findAuthToken(payload);
-
   const getLoginUser = (payload: any) =>
     payload?.user ||
     payload?.data?.user ||
@@ -109,63 +96,20 @@ export const useAuth = () => {
     return "totp" as const;
   };
 
-  const getStoredAuthToken = () => {
-    if (typeof localStorage !== "undefined") {
-      const token = localStorage.getItem("auth-token");
-      if (token && token !== "undefined" && token !== "null") return token;
-    }
-
-    if (typeof document !== "undefined") {
-      const match = document.cookie.match(/(?:^|;\s*)auth-token=([^;]*)/);
-      const token = match ? decodeURIComponent(match[1]) : null;
-      if (token && token !== "undefined" && token !== "null") return token;
-    }
-
-    return null;
-  };
-
   const persistLoginSession = (payload: any) => {
-    const responseToken = getLoginToken(payload);
-    const storedToken = getStoredAuthToken();
-    const token = responseToken || storedToken;
-
     authDebug("persist-session", {
       payload: describeAuthPayload(payload),
-      responseToken: responseToken
-        ? { length: responseToken.length, looksJwt: responseToken.split(".").length === 3 }
-        : null,
-      storedToken: storedToken
-        ? { length: storedToken.length, looksJwt: storedToken.split(".").length === 3 }
-        : null,
-      selected: responseToken ? "response" : storedToken ? "stored" : "none",
+      credentialMode: "http-only-cookie",
     });
 
-    if (!token || token === "undefined" || token === "null") {
-      errorNotification("Login succeeded, but no auth token was returned.");
-      return false;
-    }
-
-    if (typeof document !== "undefined") {
-      document.cookie = `auth-token=${encodeURIComponent(token)}; path=/; max-age=2592000; SameSite=Lax`;
-    }
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem("auth-token", token);
-    }
-
-    authDebug("persist-complete", { cookieAndStorageWritten: true });
-
-    setUser(getLoginUser(payload));
+    const user = getLoginUser(payload);
+    if (user) setUser(user);
     clearPendingLogin2FA();
     return true;
   };
 
   const clearStoredAuthToken = () => {
-    if (typeof document !== "undefined") {
-      document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    }
-    if (typeof localStorage !== "undefined") {
-      localStorage.removeItem("auth-token");
-    }
+    sessionCoordinator.logout("account-switch");
   };
 
   // FORM FIELDS
@@ -209,7 +153,7 @@ export const useAuth = () => {
   const { mutate: register, isPending } = mutate(auth.register, {
     onSuccess: (_data: any, variables) => {
       if (typeof window !== "undefined" && _data?.accessToken) {
-        sessionStorage.setItem("verify-token", _data.accessToken);
+        setVerificationToken(_data.accessToken);
       }
       successNotification("Registration successful");
       setCountry("");
@@ -270,7 +214,12 @@ export const useAuth = () => {
       // Some deployed API versions omit requiresSecondFactor/totpRequired after
       // accepting email OTP, but also return no access token. The email step has
       // still advanced the server challenge, so continue with the authenticator.
-      if (pending2FAMethod === "email" && !getLoginToken(data) && pending2FAChallengeToken) {
+      if (
+        pending2FAMethod === "email" &&
+        !data?.authenticated &&
+        !data?.data?.user &&
+        pending2FAChallengeToken
+      ) {
         setPendingLogin2FA(
           pending2FAUserId || pending2FAChallengeToken,
           pending2FARememberMe,
@@ -292,9 +241,9 @@ export const useAuth = () => {
     auth.resetPassword,
     {
       onSuccess: () => {
-        // Clear the temporary verify token
+      // Clear the temporary in-memory verification token.
         if (typeof window !== "undefined") {
-          sessionStorage.removeItem("verify-token");
+          setVerificationToken(null);
         }
         modals.open({
           children: (
@@ -325,7 +274,7 @@ export const useAuth = () => {
     
     // Only clear the verify-token if we are NOT going to reset-password
     if (referrer !== "forgot_password" && typeof window !== "undefined") {
-      sessionStorage.removeItem("verify-token");
+      setVerificationToken(null);
       setEmail("");
     }
     
@@ -366,12 +315,10 @@ export const useAuth = () => {
       onSuccess: (_data: any) => {
         modals.closeAll();
         successNotification("Successful");
-        // Store the temporary token returned by forgot_password so that
-        // verify_email and reset_password can use it as Authorization header.
-        // We store as verify-token (NOT auth-token) to avoid triggering the
-        // middleware redirect to /dashboard.
+        // Keep the temporary challenge token in memory only so the verification
+        // and reset-password requests can use it as an Authorization header.
         if (typeof window !== "undefined" && _data?.accessToken) {
-          sessionStorage.setItem("verify-token", _data.accessToken);
+          setVerificationToken(_data.accessToken);
         }
         modals.open({
           children: (

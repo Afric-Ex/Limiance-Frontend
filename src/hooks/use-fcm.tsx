@@ -5,6 +5,7 @@ import { getToken, onMessage } from "firebase/messaging";
 import { messaging } from "@/src/lib/firebase";
 import { notificationService } from "@/src/services/notification";
 import toast from "react-hot-toast";
+import { redactDiagnostic } from "@/src/lib/pii-policy";
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 const STORAGE_KEY = "fcm_token_registered";
@@ -63,7 +64,7 @@ export function useFCM() {
             sessionStorage.setItem(STORAGE_KEY, "true");
           } catch (err) {
             // Non-fatal: the user can still use the app without push token saved
-            console.error("[useFCM] Failed to save FCM token to backend:", err);
+            console.error("[useFCM] Failed to save FCM token to backend", redactDiagnostic({ error: err }));
             tokenSentRef.current = false;
           }
         }
@@ -130,7 +131,7 @@ export function useFCM() {
         return () => unsubscribe();
       } catch (err) {
         // Swallow errors — push notifications should never break the app
-        console.error("[useFCM] Initialization error:", err);
+        console.error("[useFCM] Initialization error", redactDiagnostic({ error: err }));
       }
     };
 

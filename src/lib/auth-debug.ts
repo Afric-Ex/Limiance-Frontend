@@ -1,15 +1,14 @@
+import { redactDiagnostic } from "./pii-policy";
+
 const tokenKeyPattern = /(access|auth|token|jwt|refresh|session|captcha|pass|verify)/i;
 
 export const isAuthDebugEnabled = () => {
-  if (typeof window === "undefined") return false;
-  const queryEnabled = new URLSearchParams(window.location.search).get("auth-debug") === "1";
-  if (queryEnabled) sessionStorage.setItem("auth-debug", "1");
-  return queryEnabled || localStorage.getItem("auth-debug") === "1" || sessionStorage.getItem("auth-debug") === "1";
+  return process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_AUTH_DEBUG === "1";
 };
 
 export const authDebug = (event: string, details: Record<string, unknown>) => {
   if (isAuthDebugEnabled()) {
-    console.info(`[auth-debug] ${event} ${JSON.stringify(details)}`);
+    console.info(`[auth-debug] ${event}`, redactDiagnostic(details));
   }
 };
 

@@ -11,7 +11,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "audit:tokens": "node scripts/audit-tokens.mjs"
+    "audit:tokens": "node scripts/audit-tokens.mjs",
+    "audit:pii": "node scripts/audit-pii.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@mantine/core": "^7.17.8",
@@ -49,6 +51,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^20.17.16",
     "@types/react": "^19",
     "@types/react-dom": "^19",

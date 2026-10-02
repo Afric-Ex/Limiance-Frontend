@@ -1,7 +1,6 @@
 "use client";
 
 import { useAuth } from "@/src/hooks/queries/use-auth";
-import { useAuthStore } from "@/src/stores/auth-store";
 import { PinInput, Loader } from "@mantine/core";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { Verify2FAPageSkeleton } from "@/src/components/skeletons/auth";
@@ -70,11 +69,11 @@ function Verify2FAPageInner() {
   });
 
   useEffect(() => {
-    setAuthStoreHydrated(useAuthStore.persist.hasHydrated());
-    return useAuthStore.persist.onFinishHydration(() => setAuthStoreHydrated(true));
+    // Auth challenge state is memory-only; there is no browser hydration step.
+    setAuthStoreHydrated(true);
   }, []);
 
-  // Wait for persisted challenge state before deciding this route was opened directly.
+  // Decide whether this route was opened with an active in-memory challenge.
   useEffect(() => {
     if (authStoreHydrated && !pending2FAUserId) push("/auth/login");
   }, [authStoreHydrated, pending2FAUserId, push]);

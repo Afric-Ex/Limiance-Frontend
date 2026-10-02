@@ -1,6 +1,8 @@
-import axios from "axios";
+import axios, { InternalAxiosRequestConfig } from "axios";
 import { handleLogout } from "./handle-logout";
 import { authDebug } from "./auth-debug";
+import { sanitizeUrl } from "./pii-policy";
+import { sessionCoordinator } from "./session-coordinator";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL;
 const rootBaseURL = baseURL?.replace(/\/api\/v1\/?$/, "");
@@ -17,6 +19,7 @@ export const REQUEST_TIMEOUT_MS = 30_000;
 export const api = axios.create({
   baseURL,
   timeout: REQUEST_TIMEOUT_MS,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -25,39 +28,42 @@ export const api = axios.create({
 export const apiRoot = axios.create({
   baseURL: rootBaseURL || baseURL,
   timeout: REQUEST_TIMEOUT_MS,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-/** Get auth token — localStorage first (reliable), then cookie (for SSR fallback) */
-function getAuthToken(): string | null {
-  // Try localStorage first — most reliable in browser
-  if (typeof localStorage !== "undefined") {
-    const lsToken = localStorage.getItem("auth-token");
-    if (lsToken && lsToken !== "undefined" && lsToken !== "null") return lsToken;
-  }
-  // Fallback to document.cookie
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/(?:^|;\s*)auth-token=([^;]*)/);
-  const cookieToken = match ? decodeURIComponent(match[1]) : null;
-  return cookieToken && cookieToken !== "undefined" && cookieToken !== "null"
-    ? cookieToken
-    : null;
-}
+type SessionRequestConfig = InternalAxiosRequestConfig & {
+  __sessionGeneration?: number;
+  __sessionController?: AbortController;
+};
+
+const pendingControllers = new Set<AbortController>();
+
+// Logout invalidates work that was started under the previous session. Axios
+// will reject these requests as cancelled instead of allowing old responses to
+// update stores or query caches after an account switch.
+sessionCoordinator.subscribe(() => {
+  pendingControllers.forEach((controller) => controller.abort());
+  pendingControllers.clear();
+});
 
 const attachInterceptors = (client: typeof api) => {
   client.interceptors.request.use(
     (config) => {
-      const token = getAuthToken();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      const sessionConfig = config as SessionRequestConfig;
+      sessionConfig.__sessionGeneration = sessionCoordinator.getGeneration();
+      if (typeof AbortController !== "undefined" && !config.signal) {
+        const controller = new AbortController();
+        sessionConfig.__sessionController = controller;
+        config.signal = controller.signal;
+        pendingControllers.add(controller);
       }
       authDebug("request-auth", {
         method: config.method,
-        url: config.url,
-        authHeaderAttached: Boolean(token),
-        tokenLength: token?.length ?? 0,
+        url: sanitizeUrl(config.url),
+        credentialMode: "http-only-cookie",
       });
       return config;
     },
@@ -67,23 +73,37 @@ const attachInterceptors = (client: typeof api) => {
   );
 
   client.interceptors.response.use(
-    (response) => response,
+    (response) => {
+      const sessionConfig = response.config as SessionRequestConfig;
+      if (sessionConfig.__sessionController) {
+        pendingControllers.delete(sessionConfig.__sessionController);
+      }
+      if (sessionConfig.__sessionGeneration !== sessionCoordinator.getGeneration()) {
+        const staleError = new Error("Stale session response discarded") as Error & {
+          code?: string;
+        };
+        staleError.code = "ERR_SESSION_STALE";
+        return Promise.reject(staleError);
+      }
+      return response;
+    },
     (error) => {
+      const sessionConfig = error?.config as SessionRequestConfig | undefined;
+      if (sessionConfig?.__sessionController) {
+        pendingControllers.delete(sessionConfig.__sessionController);
+      }
+      if (error?.code === "ERR_CANCELED" || error?.code === "ERR_SESSION_STALE") {
+        return Promise.reject(error);
+      }
       // Global error handling
       authDebug("response-error", {
         status: error?.response?.status,
-        url: error?.config?.url,
+        url: sanitizeUrl(error?.config?.url),
         responseKeys:
           error?.response?.data && typeof error.response.data === "object"
             ? Object.keys(error.response.data)
             : [],
-        responseMessage:
-          typeof error?.response?.data?.message === "string"
-            ? error.response.data.message
-            : typeof error?.response?.data?.error === "string"
-              ? error.response.data.error
-              : null,
-        authTokenPresent: Boolean(getAuthToken()),
+        responseMessage: "[REDACTED]",
       });
       handleLogout(error);
       return Promise.reject(error);
