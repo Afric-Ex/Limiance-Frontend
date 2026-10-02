@@ -68,9 +68,16 @@ function SpotTrades() {
   const [quickOrderSide, setQuickOrderSide] = useState<"buy" | "sell">("buy");
   const [tpslPreview, setTpslPreview] = useState<TpslPreview>({});
   // Last placed trade — shown as an orange FILL tag on the chart
-  const [placedFill, setPlacedFill] = useState<{ side: string; price: number; quantity: number } | null>(null);
+  const [placedFill, setPlacedFill] = useState<{
+    side: string;
+    price: number;
+    quantity: number;
+    takeProfit?: number;
+    stopLoss?: number;
+  } | null>(null);
   useEffect(() => {
     setPlacedFill(null);
+    setTpslPreview({});
   }, [selectedPair]);
 
   const feed = useMarketFeed(selectedPair);
@@ -230,8 +237,8 @@ function SpotTrades() {
   const effectiveMarketPrice = feed.price ?? selectedMarket?.last_price ?? selectedMarket?.lastPrice ?? selectedMarket?.price ?? orderBookMidPrice;
   const chartOrderLevels: OrderLevel[] = (openOrders ?? []).flatMap((order: any) => {
     const entry = Number(order.price ?? order.entryPrice);
-    const takeProfit = Number(order.takeProfit);
-    const stopLoss = Number(order.stopLoss);
+    const takeProfit = Number(order.takeProfit ?? order.take_profit ?? order.take_profit_price ?? order.tp_trigger_price ?? order.tp_price ?? order.tp);
+    const stopLoss = Number(order.stopLoss ?? order.stop_loss ?? order.stop_loss_price ?? order.sl_trigger_price ?? order.sl_price ?? order.sl);
     const side = String(order.side ?? "").toUpperCase();
     const amount = Number(order.amount ?? order.quantity);
 
@@ -276,11 +283,29 @@ function SpotTrades() {
   // Orange tag for the trade the user just placed
   if (placedFill && Number.isFinite(placedFill.price) && placedFill.price > 0) {
     chartOrderLevels.push({
-      id: `fill-${placedFill.side}-${placedFill.price}-${Date.now()}`,
+      id: `fill-${placedFill.side}-${placedFill.price}-${placedFill.quantity}`,
       label: "FILL",
       price: placedFill.price,
       color: "fill",
       detail: `${placedFill.side.toUpperCase()}${placedFill.quantity ? ` ${placedFill.quantity}` : ""}`,
+    });
+  }
+  if (placedFill?.takeProfit && Number.isFinite(placedFill.takeProfit) && placedFill.takeProfit > 0) {
+    chartOrderLevels.push({
+      id: `placed-${placedFill.side}-tp`,
+      label: "TP",
+      price: placedFill.takeProfit,
+      color: "tp",
+      detail: `${placedFill.side.toUpperCase()} · placed`,
+    });
+  }
+  if (placedFill?.stopLoss && Number.isFinite(placedFill.stopLoss) && placedFill.stopLoss > 0) {
+    chartOrderLevels.push({
+      id: `placed-${placedFill.side}-sl`,
+      label: "SL",
+      price: placedFill.stopLoss,
+      color: "sl",
+      detail: `${placedFill.side.toUpperCase()} · placed`,
     });
   }
 

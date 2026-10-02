@@ -8,7 +8,13 @@ import type { KlineCandle } from "@/src/types/trading";
 export type ChartMarket = "spot" | "margin" | "futures";
 
 // Normalize any pair spelling ("BTC/USDT", "BTC-USDT", "BTCUSDT") to one key.
-const pairKey = (v: string) => String(v ?? "").replace(/[/\\\-_\s]/g, "").toUpperCase();
+const pairKey = (v: string) => String(v ?? "").replace(/[/\\\-_:\s]/g, "").toUpperCase();
+
+const canonicalPair = (value: string) => {
+  const raw = String(value ?? "").trim().toUpperCase();
+  const parts = raw.split(/[\/\-_:\s]+/).filter(Boolean);
+  return parts.length === 2 ? `${parts[0]}/${parts[1]}` : raw;
+};
 
 // Backend WS candle stream request types per market.
 const MARKET_CANDLE_REQUEST: Partial<Record<ChartMarket, string>> = {
@@ -23,8 +29,8 @@ const MARKET_CANDLE_REQUEST: Partial<Record<ChartMarket, string>> = {
 //                          error with "Error receiving OHLC data")
 //   futures → "BTCUSDT"   (compact, per confirmed backend shape)
 const MARKET_WS_PAIR: Record<ChartMarket, (symbol: string) => string> = {
-  spot: (s) => s.replace("/", "-").toUpperCase(),
-  margin: (s) => s,
+  spot: (s) => canonicalPair(s).replace("/", "-"),
+  margin: (s) => canonicalPair(s),
   futures: (s) => pairKey(s),
 };
 
@@ -35,36 +41,62 @@ interface LiveCandle extends KlineCandle {
 }
 
 function toLiveCandle(c: any): LiveCandle | null {
-  if (!c || !Number.isFinite(Number(c.o))) return null;
-  const rawTime = Number(c.t);
+  if (Array.isArray(c)) {
+    const [time, open, high, low, close, volume, symbol, interval, closed] = c;
+    c = { time, open, high, low, close, volume, symbol, interval, closed };
+  }
+  const source = c?.kline ?? c?.candle ?? c;
+  if (!source || typeof source !== "object") return null;
+  const rawOpen = Number(source.o ?? source.open);
+  const rawHigh = Number(source.h ?? source.high);
+  const rawLow = Number(source.l ?? source.low);
+  const rawClose = Number(source.c ?? source.close);
+  if (![rawOpen, rawHigh, rawLow, rawClose].every(Number.isFinite)) return null;
+  const rawTime = Number(source.t ?? source.time ?? source.openTime ?? source.open_time ?? source.timestamp);
+  if (!Number.isFinite(rawTime) || rawTime <= 0) return null;
   return {
     time: Number.isFinite(rawTime) && rawTime > 0 && rawTime < 1e12 ? rawTime * 1000 : rawTime,
-    open: Number(c.o),
-    high: Number(c.h),
-    low: Number(c.l),
-    close: Number(c.c),
-    volume: Number(c.v),
-    symbol: String(c.s ?? ""),
-    interval: String(c.i ?? ""),
-    closed: c.x === true,
+    open: rawOpen,
+    high: rawHigh,
+    low: rawLow,
+    close: rawClose,
+    volume: Number(source.v ?? source.volume ?? 0),
+    symbol: String(source.s ?? source.symbol ?? source.pair ?? ""),
+    interval: String(source.i ?? source.interval ?? ""),
+    closed: source.x === true || source.closed === true || source.isClosed === true,
   };
 }
 
 // ── Backend kline normalisation ──────────────────────────────────────────────
 // Accepts response envelopes of {Data:[...]}, {data:[...]}, {result:[...]} or raw arrays,
 // and candles as either objects ({t,o,c,h,l,v} / {time,open,high,low,close,volume}) or Binance-style arrays.
-const SLICE_VARIANTS = ["Data", "data", "result", "klines", "candles"] as const;
+const SLICE_VARIANTS = ["Data", "data", "result", "payload", "kline", "candle", "klines", "candles"] as const;
+
+function looksLikeCandleArray(value: unknown): value is unknown[] {
+  return (
+    Array.isArray(value) &&
+    value.length >= 6 &&
+    !Array.isArray(value[0]) &&
+    Number.isFinite(Number(value[0])) &&
+    Number.isFinite(Number(value[1]))
+  );
+}
 
 function unwrapKlines(raw: any): any[] {
+  if (looksLikeCandleArray(raw)) return [raw];
   let value = raw;
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 4; i++) {
     if (value && typeof value === "object") {
-      const inner = value?.data;
-      if (Array.isArray(inner)) return inner;
       const found = SLICE_VARIANTS.find((k) => Array.isArray(value?.[k]));
       if (found) return value[found];
+      const inner = value?.data;
+      if (looksLikeCandleArray(inner)) return [inner];
       if (typeof inner === "object" && inner !== null) value = inner;
-      else break;
+      else {
+        const nested = SLICE_VARIANTS.find((k) => value?.[k] && typeof value[k] === "object");
+        if (nested) value = value[nested];
+        else break;
+      }
     }
   }
   return Array.isArray(value) ? value : [];
@@ -87,21 +119,39 @@ function normalizeKlines(raw: any): KlineCandle[] {
         };
       }
       if (c === null || typeof c !== "object") return null;
-      if (!Number.isFinite(Number(c.open ?? c.o))) return null;
-      const rawTime = Number(c.time ?? c.t ?? c.openTime ?? c.open_time ?? c.timestamp);
+      const source = c.kline ?? c.candle ?? c;
+      const rawOpen = Number(source.open ?? source.o);
+      const rawHigh = Number(source.high ?? source.h);
+      const rawLow = Number(source.low ?? source.l);
+      const rawClose = Number(source.close ?? source.c);
+      if (![rawOpen, rawHigh, rawLow, rawClose].every(Number.isFinite)) return null;
+      const rawTime = Number(source.time ?? source.t ?? source.openTime ?? source.open_time ?? source.timestamp);
       const time =
         Number.isFinite(rawTime) && rawTime > 0 && rawTime < 1e12 ? rawTime * 1000 : rawTime;
       return {
         time,
-        open: Number(c.open ?? c.o),
-        high: Number(c.high ?? c.h),
-        low: Number(c.low ?? c.l),
-        close: Number(c.close ?? c.c),
-        volume: Number(c.volume ?? c.v ?? 0),
+        open: rawOpen,
+        high: rawHigh,
+        low: rawLow,
+        close: rawClose,
+        volume: Number(source.volume ?? source.v ?? 0),
       };
     })
-    .filter((c): c is KlineCandle => c !== null && Number.isFinite(c.open) && Number.isFinite(c.close))
+    .filter((c): c is KlineCandle => c !== null && Number.isFinite(c.time) && c.time > 0)
     .sort((a, b) => a.time - b.time);
+}
+
+function extractLiveCandles(raw: any): any[] {
+  if (looksLikeCandleArray(raw)) return [raw];
+  if (Array.isArray(raw)) return raw;
+  if (!raw || typeof raw !== "object") return [];
+  for (const key of ["candles", "klines", "kline", "candle", "Data", "data", "result", "payload"]) {
+    const value = raw[key];
+    if (value === undefined) continue;
+    const nested = extractLiveCandles(value);
+    if (nested.length > 0) return nested;
+  }
+  return raw.o !== undefined || raw.open !== undefined ? [raw] : [];
 }
 
 export interface CandleFeed {
@@ -175,20 +225,20 @@ export function useCandleFeed(symbol: string, interval: string, market: ChartMar
   }, [candleRequest, wsConnected, wsReady]);
 
   const wsPair = MARKET_WS_PAIR[market](symbol);
+  const requestedPairKey = pairKey(symbol);
 
   useEffect(() => {
     if (!candleRequest) return;
     const payload = { type: candleRequest, data: { pair: wsPair, interval } };
     const unsubscribe = wsClient.subscribe("candle", payload, (data) => {
-      const rawCandles = data?.candles;
-      if (!Array.isArray(rawCandles) || rawCandles.length === 0) return;
+      const rawCandles = extractLiveCandles(data);
       const incoming = rawCandles.map(toLiveCandle).filter((c): c is LiveCandle => c !== null);
       if (incoming.length === 0) return;
       // Candles tagged with a different pair/interval belong to another subscription.
       const matched = incoming.filter(
         (c) =>
-          (!c.symbol || pairKey(c.symbol) === pairKey(symbol)) &&
-          (!c.interval || c.interval === interval)
+          (!c.symbol || pairKey(c.symbol) === requestedPairKey) &&
+          (!c.interval || String(c.interval).toLowerCase() === interval.toLowerCase())
       );
       if (matched.length === 0) return;
       setWsReady(true);
@@ -205,7 +255,7 @@ export function useCandleFeed(symbol: string, interval: string, market: ChartMar
       });
     });
     return unsubscribe;
-  }, [candleRequest, wsPair, interval, symbol]);
+  }, [candleRequest, wsPair, interval, symbol, requestedPairKey]);
 
   const candles = useMemo(() => {
     const base = historyCandles ?? [];

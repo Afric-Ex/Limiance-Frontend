@@ -38,6 +38,18 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
 
   // Pick the right account balance; "total" is the overall from backend
   const acctBal = singleAccount ? balances[singleAccount] : balances["total"];
+  const [balanceWaitExpired, setBalanceWaitExpired] = React.useState(false);
+  const hasUsdBalance = acctBal?.inUsd != null;
+
+  React.useEffect(() => {
+    setBalanceWaitExpired(false);
+    if (hasUsdBalance) return;
+
+    const timeout = window.setTimeout(() => setBalanceWaitExpired(true), 45_000);
+    return () => window.clearTimeout(timeout);
+  }, [hasUsdBalance, singleAccount]);
+
+  const showBalanceLoader = !hasUsdBalance && !balanceWaitExpired;
 
   const safeNum = (val: string | null | undefined) => {
     const n = parseFloat(val ?? "");
@@ -112,7 +124,7 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
               <BalanceRevealControl />
             </div>
 
-            {balanceLoading ? (
+            {showBalanceLoader ? (
               <Skeleton variant="balance" />
             ) : (
               <>
@@ -135,7 +147,7 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
               <span className="text-xs font-semibold uppercase tracking-wider text-white/40">
                 Today&apos;s P&L
               </span>
-              {balanceLoading ? (
+              {showBalanceLoader ? (
                 <Skeleton variant="text" width="100px" height="14px" />
               ) : (
                 <span className={clsx("flex items-center gap-1 text-sm font-mono font-bold", isPnlUp ? "text-[#25AB42]" : "text-error-1")}>

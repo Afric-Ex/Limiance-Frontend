@@ -31,7 +31,13 @@ interface Props {
   compactSide?: "buy" | "sell";
   onLeverageChangeEnd?: (val: number) => void;
   onTpslChange?: (preview: TpslPreview) => void;
-  onFill?: (fill: { side: "buy" | "sell"; price: number; quantity: number }) => void;
+  onFill?: (fill: {
+    side: "buy" | "sell";
+    price: number;
+    quantity: number;
+    takeProfit?: number;
+    stopLoss?: number;
+  }) => void;
 }
 
 const PERCENT_MARKS = [
@@ -252,6 +258,8 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           side: "buy",
           price: activeTab === "market" ? (marketPrice ?? +p.price) : +p.price,
           quantity: +p.quantity,
+          takeProfit: parseNum(buyTp) || undefined,
+          stopLoss: parseNum(buySl) || undefined,
         });
       }
       successNotification("Buy order placed");
@@ -271,6 +279,8 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           side: "sell",
           price: activeTab === "market" ? (marketPrice ?? +p.price) : +p.price,
           quantity: +p.quantity,
+          takeProfit: parseNum(sellTp) || undefined,
+          stopLoss: parseNum(sellSl) || undefined,
         });
       }
       successNotification("Sell order placed");

@@ -23,7 +23,17 @@ import {
  * createPriceLine instead of manual canvas drawing.
  */
 
-export type DrawingTool = "trendline" | "ray" | "hray" | "rectangle" | "fib";
+export type DrawingTool =
+  | "trendline"
+  | "ray"
+  | "extended"
+  | "hray"
+  | "hline"
+  | "vline"
+  | "rectangle"
+  | "channel"
+  | "fib"
+  | "fibext";
 
 /** Stroke widths the style bar offers. Kept narrow so a drawing never out-shouts the candles. */
 export type DrawingLineWidth = 1 | 2 | 3 | 4;
@@ -34,9 +44,14 @@ export type DrawingPoint = { time: number; price: number };
 export const DRAWING_LABELS: Record<DrawingTool, string> = {
   trendline: "Trend line",
   ray: "Ray",
+  extended: "Extended line",
   hray: "Horizontal ray",
+  hline: "Horizontal line",
+  vline: "Vertical line",
   rectangle: "Rectangle",
+  channel: "Parallel channel",
   fib: "Fibonacci retracement",
+  fibext: "Fibonacci extension",
 };
 
 
@@ -50,13 +65,24 @@ export type Drawing = {
   tool: DrawingTool;
   /** Denormalised so a per-symbol query never needs a join. */
   symbol: string;
-  /** One point for hray, two for everything else. */
+  /** One to three anchors, depending on the selected tool. */
   points: DrawingPoint[];
   color?: string;
   lineWidth?: DrawingLineWidth;
 };
 
-export const DRAWING_TOOLS: readonly DrawingTool[] = ["trendline", "ray", "hray", "rectangle", "fib"];
+export const DRAWING_TOOLS: readonly DrawingTool[] = [
+  "trendline",
+  "ray",
+  "extended",
+  "hray",
+  "hline",
+  "vline",
+  "rectangle",
+  "channel",
+  "fib",
+  "fibext",
+];
 
 /**
  * The ray is two-click like trendline/rectangle/fib: two points are the only
@@ -64,15 +90,21 @@ export const DRAWING_TOOLS: readonly DrawingTool[] = ["trendline", "ray", "hray"
  * invent a default the user cannot predict. It also buys a live preview between
  * the clicks, which is what makes Escape meaningful.
  */
-export const CLICKS_REQUIRED: Record<DrawingTool, 1 | 2> = {
+export const CLICKS_REQUIRED: Record<DrawingTool, 1 | 2 | 3> = {
   hray: 1,
+  hline: 1,
+  vline: 1,
   trendline: 2,
   ray: 2,
+  extended: 2,
   rectangle: 2,
   fib: 2,
+  channel: 3,
+  fibext: 3,
 };
 
 export const FIB_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1] as const;
+export const FIB_EXTENSION_LEVELS = [0, 0.382, 0.618, 1, 1.272, 1.618, 2] as const;
 
 /** Presentation values the chart owns; passed in so the palette stays single-sourced. */
 export type DrawingStyle = {
@@ -133,6 +165,16 @@ type Geometry =
       anchors: Pt[];
       labels: AxisLabel[];
       levels: readonly FibLevel[];
+    }
+  | {
+      kind: "channel";
+      baseFrom: Pt;
+      baseTo: Pt;
+      parallelFrom: Pt;
+      parallelTo: Pt;
+      anchors: Pt[];
+      labels: AxisLabel[];
+      tolerance: number;
     };
 
 let idCounter = 0;
@@ -168,6 +210,23 @@ function extendRight(a: Pt, b: Pt, rightX: number): Pt {
   const dx = b.x - a.x;
   if (Math.abs(dx) < 1e-6) return { x: rightX, y: a.y };
   return { x: rightX, y: a.y + ((b.y - a.y) / dx) * (rightX - a.x) };
+}
+
+function extendBoth(a: Pt, b: Pt, leftX: number, rightX: number): { from: Pt; to: Pt } {
+  const dx = b.x - a.x;
+  if (Math.abs(dx) < 1e-6) return { from: { x: a.x, y: 0 }, to: { x: a.x, y: Number.MAX_SAFE_INTEGER } };
+  const slope = (b.y - a.y) / dx;
+  return {
+    from: { x: leftX, y: a.y + slope * (leftX - a.x) },
+    to: { x: rightX, y: a.y + slope * (rightX - a.x) },
+  };
+}
+
+function offsetSegment(a: Pt, b: Pt, offset: Pt): { from: Pt; to: Pt } {
+  return {
+    from: { x: a.x + offset.x, y: a.y + offset.y },
+    to: { x: b.x + offset.x, y: b.y + offset.y },
+  };
 }
 
 function distanceToSegment(px: number, py: number, a: Pt, b: Pt): number {
@@ -229,7 +288,7 @@ class DrawingRenderer implements IPrimitivePaneRenderer {
   drawBackground(target: DrawingTarget): void {
     const geometry = this.owner.geometry;
     if (!geometry || geometry.kind !== "box") return;
-    target.useBitmapCoordinateSpace((scope) => {
+    target.useMediaCoordinateSpace((scope) => {
       const { context: ctx } = scope;
       ctx.save();
       ctx.fillStyle = withAlpha(this.owner.displayStyle.color, FILL_ALPHA);
@@ -241,25 +300,41 @@ class DrawingRenderer implements IPrimitivePaneRenderer {
   draw(target: DrawingTarget, utils?: DrawingUtils): void {
     const geometry = this.owner.geometry;
     if (!geometry) return;
-    target.useBitmapCoordinateSpace((scope) => {
+    target.useMediaCoordinateSpace((scope) => {
       const { context: ctx } = scope;
       const { color, background } = this.owner.displayStyle;
       const selected = this.owner.isDrawingSelected;
-      // The context is pre-scaled by the device pixel ratio, so widths and radii
-      // are in bitmap pixels and have to be scaled to stay crisp instead of
-      // thinning out on HiDPI.
-      const ratio = scope.horizontalPixelRatio || 1;
 
       ctx.save();
-      ctx.lineWidth = this.owner.strokeWidthPx * ratio;
+      ctx.lineWidth = this.owner.strokeWidthPx;
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
 
-      if (geometry.kind === "line") {
+    if (geometry.kind === "line") {
+      ctx.beginPath();
+      ctx.moveTo(geometry.from.x, geometry.from.y);
+      ctx.lineTo(geometry.to.x, geometry.to.y);
+      ctx.stroke();
+      } else if (geometry.kind === "channel") {
+        ctx.save();
+        ctx.fillStyle = withAlpha(color, FILL_ALPHA);
         ctx.beginPath();
-        ctx.moveTo(geometry.from.x, geometry.from.y);
-        ctx.lineTo(geometry.to.x, geometry.to.y);
-        ctx.stroke();
+        ctx.moveTo(geometry.baseFrom.x, geometry.baseFrom.y);
+        ctx.lineTo(geometry.baseTo.x, geometry.baseTo.y);
+        ctx.lineTo(geometry.parallelTo.x, geometry.parallelTo.y);
+        ctx.lineTo(geometry.parallelFrom.x, geometry.parallelFrom.y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        for (const [from, to] of [
+          [geometry.baseFrom, geometry.baseTo],
+          [geometry.parallelFrom, geometry.parallelTo],
+        ] as const) {
+          ctx.beginPath();
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
+          ctx.stroke();
+        }
       } else {
         for (const level of geometry.levels) {
           ctx.beginPath();
@@ -280,9 +355,9 @@ class DrawingRenderer implements IPrimitivePaneRenderer {
       if (selected) {
         for (const anchor of geometry.anchors) {
           ctx.beginPath();
-          ctx.arc(anchor.x, anchor.y, ANCHOR_RADIUS_PX * ratio, 0, Math.PI * 2);
+          ctx.arc(anchor.x, anchor.y, ANCHOR_RADIUS_PX, 0, Math.PI * 2);
           ctx.fill();
-          ctx.lineWidth = RING_WIDTH_PX * ratio;
+          ctx.lineWidth = RING_WIDTH_PX;
           ctx.strokeStyle = background;
           ctx.stroke();
         }
@@ -367,7 +442,9 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
   labelAnchor(): PixelPoint | null {
     const geometry = this.geometry;
     if (!geometry) return null;
-    return geometry.kind === "line" ? { x: geometry.to.x, y: geometry.to.y } : { x: geometry.right, y: geometry.top };
+    if (geometry.kind === "line") return { x: geometry.to.x, y: geometry.to.y };
+    if (geometry.kind === "channel") return { x: geometry.parallelTo.x, y: geometry.parallelTo.y };
+    return { x: geometry.right, y: geometry.top };
   }
 
   /** Painted geometry for the current frame, or null when there is nothing to paint. */
@@ -450,6 +527,20 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
     if (geometry.kind === "line") {
       const distance = distanceToSegment(x, y, geometry.from, geometry.to);
       if (distance > geometry.tolerance) return null;
+      return { ...hovered, distance, hitTestPriority: 1 };
+    }
+    if (geometry.kind === "channel") {
+      const distance = Math.min(
+        distanceToSegment(x, y, geometry.baseFrom, geometry.baseTo),
+        distanceToSegment(x, y, geometry.parallelFrom, geometry.parallelTo)
+      );
+      if (distance > geometry.tolerance) {
+        const minX = Math.min(geometry.baseFrom.x, geometry.parallelFrom.x);
+        const maxX = Math.max(geometry.baseTo.x, geometry.parallelTo.x);
+        const minY = Math.min(geometry.baseFrom.y, geometry.parallelTo.y, geometry.baseTo.y, geometry.parallelFrom.y);
+        const maxY = Math.max(geometry.baseFrom.y, geometry.parallelFrom.y, geometry.baseTo.y, geometry.parallelFrom.y);
+        if (x < minX || x > maxX || y < minY || y > maxY) return null;
+      }
       return { ...hovered, distance, hitTestPriority: 1 };
     }
     if (x < geometry.left || x > geometry.right || y < geometry.top || y > geometry.bottom) return null;
@@ -537,7 +628,8 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
     if (!param) return null;
 
     const required = CLICKS_REQUIRED[this.drawing.tool] ?? 2;
-    if (this.drawing.points.length < required) return null;
+    const minimum = required === 1 ? 1 : 2;
+    if (this.drawing.points.length < minimum) return null;
 
     const { chart, series } = param;
     const timeScale = chart.timeScale();
@@ -551,15 +643,26 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
       prices.push(point.price);
     }
 
-    const [first, second] = anchors;
+    const [first, second, third] = anchors;
 
-    if (this.drawing.tool === "hray") {
+    if (this.drawing.tool === "hray" || this.drawing.tool === "hline") {
       return {
         kind: "line",
-        from: { x: 0, y: first.y },
+        from: { x: this.drawing.tool === "hray" ? first.x : 0, y: first.y },
         to: { x: chart.paneSize().width, y: first.y },
         anchors: [first],
         labels: [{ price: prices[0], text: this.style.formatPrice(prices[0]) }],
+        tolerance: HIT_TOLERANCE_HRAY_PX,
+      };
+    }
+
+    if (this.drawing.tool === "vline") {
+      return {
+        kind: "line",
+        from: { x: first.x, y: 0 },
+        to: { x: first.x, y: chart.paneSize().height },
+        anchors: [first],
+        labels: [],
         tolerance: HIT_TOLERANCE_HRAY_PX,
       };
     }
@@ -582,22 +685,58 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
       };
     }
 
+    if (this.drawing.tool === "extended") {
+      const extended = extendBoth(first, second, 0, chart.paneSize().width);
+      return { kind: "line", ...extended, anchors, labels: [], tolerance: HIT_TOLERANCE_PX };
+    }
+
+    if (this.drawing.tool === "channel") {
+      const baseDx = second.x - first.x;
+      const baseDy = second.y - first.y;
+      const baseLength = Math.hypot(baseDx, baseDy);
+      const rawOffset = third
+        ? { x: third.x - first.x, y: third.y - first.y }
+        : { x: 0, y: 0 };
+      const normal = baseLength > 1e-6
+        ? { x: -baseDy / baseLength, y: baseDx / baseLength }
+        : { x: 0, y: 0 };
+      const offsetAmount = rawOffset.x * normal.x + rawOffset.y * normal.y;
+      const offset = { x: normal.x * offsetAmount, y: normal.y * offsetAmount };
+      const parallel = offsetSegment(first, second, offset);
+      return {
+        kind: "channel",
+        baseFrom: first,
+        baseTo: second,
+        parallelFrom: parallel.from,
+        parallelTo: parallel.to,
+        anchors: third ? [first, second, third] : [first, second],
+        labels: [],
+        tolerance: HIT_TOLERANCE_PX,
+      };
+    }
+
     const levels: FibLevel[] = [];
-    if (this.drawing.tool === "fib") {
-      for (const ratio of FIB_LEVELS) {
-        const price = prices[0] + (prices[1] - prices[0]) * ratio;
+    if (this.drawing.tool === "fib" || this.drawing.tool === "fibext") {
+      const ratios = this.drawing.tool === "fib" ? FIB_LEVELS : FIB_EXTENSION_LEVELS;
+      const fibOrigin = this.drawing.tool === "fibext" && third ? prices[2] : prices[0];
+      const fibRange = prices[1] - prices[0];
+      for (const ratio of ratios) {
+        const price = fibOrigin + fibRange * ratio;
         const y = series.priceToCoordinate(price);
         if (y === null) continue;
-        levels.push({ y, price, dashed: ratio === 0.5 });
+        levels.push({ y, price, dashed: ratio === 0.5 || ratio === 1.272 || ratio === 1.618 });
       }
     }
 
+    const boxStart = this.drawing.tool === "fibext" && third ? second : first;
+    const boxEnd = this.drawing.tool === "fibext" && third ? third : second;
+
     return {
       kind: "box",
-      left: Math.min(first.x, second.x),
-      right: Math.max(first.x, second.x),
-      top: Math.min(first.y, second.y),
-      bottom: Math.max(first.y, second.y),
+      left: Math.min(boxStart.x, boxEnd.x),
+      right: Math.max(boxStart.x, boxEnd.x),
+      top: Math.min(first.y, second.y, third?.y ?? second.y),
+      bottom: Math.max(first.y, second.y, third?.y ?? second.y),
       anchors,
       levels,
       labels: levels.map((level) => ({ price: level.price, text: this.style.formatPrice(level.price) })),

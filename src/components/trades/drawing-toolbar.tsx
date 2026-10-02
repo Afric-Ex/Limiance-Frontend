@@ -2,12 +2,16 @@
 import type { IconType } from "react-icons";
 import {
   FaArrowTrendUp,
+  FaArrowsLeftRight,
+  FaChartArea,
   FaChartLine,
   FaDivide,
   FaHandPointer,
+  FaLayerGroup,
   FaRotateLeft,
   FaRotateRight,
   FaRulerHorizontal,
+  FaRulerVertical,
   FaShapes,
   FaTrashCan,
 } from "react-icons/fa6";
@@ -28,9 +32,14 @@ const POINTER: ToolEntry = {
 const TOOLS: ToolEntry[] = [
   { tool: "trendline", label: DRAWING_LABELS.trendline, Icon: FaArrowTrendUp, hint: "Click two points" },
   { tool: "ray", label: DRAWING_LABELS.ray, Icon: FaChartLine, hint: "Click an anchor, then a direction" },
+  { tool: "extended", label: DRAWING_LABELS.extended, Icon: FaArrowsLeftRight, hint: "Click two points; extend both directions" },
   { tool: "hray", label: DRAWING_LABELS.hray, Icon: FaRulerHorizontal, hint: "Click one price" },
+  { tool: "hline", label: DRAWING_LABELS.hline, Icon: FaRulerHorizontal, hint: "Click one price; draw across the chart" },
+  { tool: "vline", label: DRAWING_LABELS.vline, Icon: FaRulerVertical, hint: "Click one time; draw through the chart" },
   { tool: "rectangle", label: DRAWING_LABELS.rectangle, Icon: FaShapes, hint: "Click two opposite corners" },
+  { tool: "channel", label: DRAWING_LABELS.channel, Icon: FaLayerGroup, hint: "Click base start, base end, then channel width" },
   { tool: "fib", label: DRAWING_LABELS.fib, Icon: FaDivide, hint: "Click the 0% and 100% anchors" },
+  { tool: "fibext", label: DRAWING_LABELS.fibext, Icon: FaChartArea, hint: "Click A, B, then the extension origin" },
 ];
 
 const BUTTON =
@@ -50,6 +59,7 @@ export function DrawingToolbar({
   canDelete,
   onDelete,
   pending,
+  pendingHint,
   canUndo,
   canRedo,
   onUndo,
@@ -60,13 +70,14 @@ export function DrawingToolbar({
   canDelete: boolean;
   onDelete: () => void;
   pending: boolean;
+  pendingHint?: string;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
 }) {
   return (
-    <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex flex-col rounded-md overflow-hidden border border-white/10 bg-[#181a20]/95">
+    <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex max-h-[78%] flex-col overflow-y-auto rounded-md border border-white/10 bg-[#181a20]/95 [scrollbar-width:none]">
       <ToolButton entry={POINTER} active={tool === "pointer"} onSelect={onSelectTool} />
       <div className="h-px bg-white/10" />
       {TOOLS.map((entry) => (
@@ -75,6 +86,7 @@ export function DrawingToolbar({
           entry={entry}
           active={tool === entry.tool}
           pending={pending && tool === entry.tool}
+          pendingHint={pending && tool === entry.tool ? pendingHint : undefined}
           onSelect={onSelectTool}
         />
       ))}
@@ -117,11 +129,13 @@ function ToolButton({
   entry,
   active,
   pending = false,
+  pendingHint,
   onSelect,
 }: {
   entry: ToolEntry;
   active: boolean;
   pending?: boolean;
+  pendingHint?: string;
   onSelect: (tool: ToolbarTool) => void;
 }) {
   const { tool, label, hint, Icon } = entry;
@@ -131,7 +145,7 @@ function ToolButton({
       onClick={() => onSelect(tool)}
       aria-label={label}
       aria-pressed={active}
-      title={pending ? "Escape to cancel" : `${label} — ${hint}`}
+      title={pending ? (pendingHint ?? "Next anchor") + " · Escape to cancel" : label + " — " + hint}
       className={`${BUTTON} ${active ? ACTIVE : IDLE}`}
     >
       <Icon size={13} />
