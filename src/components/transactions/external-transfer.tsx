@@ -334,7 +334,8 @@ export const ExternalTransfer = () => {
               disabled={!selectedCoin.symbol || !amount || +amount <= 0}
               className="h-[52px] flex-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white font-bold transition-all active:scale-[0.98] disabled:text-white/30"
             >
-              Continue to Transfer
+              <span className="sm:hidden">Transfer</span>
+              <span className="hidden sm:inline">Continue to Transfer</span>
             </button>
           </div>
         </div>

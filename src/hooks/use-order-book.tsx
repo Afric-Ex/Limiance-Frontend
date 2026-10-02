@@ -43,7 +43,11 @@ const symbolMatches = (tag: unknown, pair: string) => {
 //                            stream but return null levels)
 //   futures → "BTC/USDT"   (slashed — the backend matches the pair with the
 //                           slash separator, not compact "BTCUSDT")
-const wsPairForMarket = (pair: string, _market: OrderBookMarket) => pair.toUpperCase();
+const wsPairForMarket = (pair: string, _market: OrderBookMarket) => {
+  const raw = String(pair ?? "").trim().toUpperCase();
+  const parts = raw.split(/[\/\-_:\s]+/).filter(Boolean);
+  return parts.length === 2 ? `${parts[0]}/${parts[1]}` : raw;
+};
 
 // The backend pushes order books on a per-market response type:
 //   spot/margin → "order_book_update"  (data.orderBook.{buyOrders,sellOrders})
@@ -86,18 +90,21 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
       // The REST envelope mirrors the websocket book: buyOrders/sellOrders.
       // bids/asks and buy/sell are accepted as aliases so the fallback keeps
       // working if the endpoint is normalised to the usual exchange shape.
-      const rawBids = payload.buyOrders ?? payload.bids ?? payload.buy;
-      const rawAsks = payload.sellOrders ?? payload.asks ?? payload.sell;
+      const rawBids = payload.buyOrders ?? payload.bids ?? payload.buy ?? payload.b;
+      const rawAsks = payload.sellOrders ?? payload.asks ?? payload.sell ?? payload.a;
       if (!Array.isArray(rawBids) && !Array.isArray(rawAsks)) return;
 
-      const buyOrders = (Array.isArray(rawBids) ? rawBids : []).slice(0, 50).map((b: any) => ({
-        price: parseFloat(b.price ?? b[0] ?? "0"),
-        quantity: parseFloat(b.quantity ?? b.size ?? b[1] ?? "0"),
-      }));
-      const sellOrders = (Array.isArray(rawAsks) ? rawAsks : []).slice(0, 50).map((a: any) => ({
-        price: parseFloat(a.price ?? a[0] ?? "0"),
-        quantity: parseFloat(a.quantity ?? a.size ?? a[1] ?? "0"),
-      }));
+      const normalize = (entries: any): OrderBookEntry[] =>
+        (Array.isArray(entries) ? entries : [])
+          .slice(0, 50)
+          .map((e: any) => ({
+            price: Number(e?.price ?? e?.p ?? e?.[0] ?? 0),
+            quantity: Number(e?.quantity ?? e?.size ?? e?.q ?? e?.[1] ?? 0),
+          }))
+          .filter((e) => Number.isFinite(e.price) && e.price > 0 && Number.isFinite(e.quantity) && e.quantity > 0);
+
+      const buyOrders = normalize(rawBids);
+      const sellOrders = normalize(rawAsks);
 
       // Never let an empty REST snapshot wipe a live websocket book — this
       // fallback also re-runs on every disconnect, which would otherwise blank
@@ -139,43 +146,66 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
 
     // Listen on every possible response topic for this market. All of them share
     // the same subscription payload and map into the same handler.
-    const handleBookMessage = (dataPayload: any) => {
+    const handleBookMessage = (dataPayload: any, rawMessage: any) => {
       // spot/margin nest the book under data.orderBook (or data.data.orderBook);
       // futures carry buy/sell directly on the payload.
-      const book = dataPayload?.orderBook ?? dataPayload?.data?.orderBook ?? dataPayload?.data ?? dataPayload;
+      const book =
+        dataPayload?.orderBook ??
+        dataPayload?.order_book ??
+        dataPayload?.data?.orderBook ??
+        dataPayload?.data?.order_book ??
+        dataPayload?.book ??
+        dataPayload?.data ??
+        dataPayload;
       if (!book) return;
 
       // The backend tags each order-book update with a symbol/pair. Only accept
       // the book for the pair we asked for, otherwise a shared stream can show
       // another pair's book or a stale one.
-      const bookSymbol = dataPayload?.symbol ?? dataPayload?.pair ?? book?.symbol ?? book?.pair;
+      const bookSymbol =
+        dataPayload?.symbol ??
+        dataPayload?.pair ??
+        book?.symbol ??
+        book?.pair ??
+        rawMessage?.symbol ??
+        rawMessage?.pair;
       if (bookSymbol && !symbolMatches(bookSymbol, pair)) return;
 
-      const normalize = (entries: any): OrderBookEntry[] => {
-        if (!Array.isArray(entries)) return [];
-        return entries.slice(0, 50).map((e: any) => ({
-          price: parseFloat(e.price ?? e[0] ?? "0"),
-          quantity: parseFloat(e.quantity ?? e.size ?? e[1] ?? "0"),
-        }));
-      };
+      const normalize = (entries: any): OrderBookEntry[] =>
+        (Array.isArray(entries) ? entries : [])
+          .slice(0, 50)
+          .map((e: any) => ({
+            price: Number(e?.price ?? e?.p ?? e?.[0] ?? 0),
+            quantity: Number(e?.quantity ?? e?.size ?? e?.q ?? e?.[1] ?? 0),
+          }))
+          .filter((e) => Number.isFinite(e.price) && e.price > 0 && Number.isFinite(e.quantity) && e.quantity > 0);
 
-      const rawBuy = book.buyOrders ?? book.bids ?? book.buy;
-      const rawSell = book.sellOrders ?? book.asks ?? book.sell;
+      const rawBuy = book.buyOrders ?? book.bids ?? book.buy ?? book.b;
+      const rawSell = book.sellOrders ?? book.asks ?? book.sell ?? book.a;
       if (!Array.isArray(rawBuy) && !Array.isArray(rawSell)) return;
 
       receivedBookRef.current = true;
-      const buyOrders = normalize(rawBuy);
-      const sellOrders = normalize(rawSell);
+      setData((previous) => {
+        // Some futures feeds send incremental bid/ask updates instead of a
+        // complete snapshot. Preserve the missing side rather than blanking it.
+        const buyOrders = Array.isArray(rawBuy) ? normalize(rawBuy) : previous.buyOrders;
+        const sellOrders = Array.isArray(rawSell) ? normalize(rawSell) : previous.sellOrders;
+        const totalBuyVolume = buyOrders.reduce((sum, entry) => sum + entry.quantity, 0);
+        const totalSellVolume = sellOrders.reduce((sum, entry) => sum + entry.quantity, 0);
+        const total = totalBuyVolume + totalSellVolume;
+        const buyPercentage = Number(book.buyPercentage ?? book.bidPercentage);
+        const sellPercentage = Number(book.sellPercentage ?? book.askPercentage);
 
-      setData({
-        buyOrders,
-        sellOrders,
-        buyPercentage: book.buyPercentage ?? null,
-        sellPercentage: book.sellPercentage ?? null,
-        totalBuyVolume: book.totalBuyVolume ?? null,
-        totalSellVolume: book.totalSellVolume ?? null,
-        isConnected: true,
-        lastUpdated: new Date(),
+        return {
+          buyOrders,
+          sellOrders,
+          buyPercentage: Number.isFinite(buyPercentage) ? buyPercentage : total > 0 ? (totalBuyVolume / total) * 100 : null,
+          sellPercentage: Number.isFinite(sellPercentage) ? sellPercentage : total > 0 ? (totalSellVolume / total) * 100 : null,
+          totalBuyVolume: Number.isFinite(Number(book.totalBuyVolume)) ? Number(book.totalBuyVolume) : totalBuyVolume,
+          totalSellVolume: Number.isFinite(Number(book.totalSellVolume)) ? Number(book.totalSellVolume) : totalSellVolume,
+          isConnected: true,
+          lastUpdated: new Date(),
+        };
       });
     };
 
@@ -183,10 +213,8 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
     // alternates for backends that answer on a different channel — subscribing
     // to all of them cost one request frame each per pair for a stream that is
     // already open. If the primary stays silent, the heal timer below retries.
-    const unsubscribeMessages = wsClient.subscribe(
-      RESPONSE_TOPICS[market][0],
-      payload,
-      handleBookMessage
+    const unsubscribeMessages = RESPONSE_TOPICS[market].map((topic) =>
+      wsClient.subscribe(topic, payload, handleBookMessage)
     );
 
     unsubscribeStatus = wsClient.onStatusChange((connected) => {
@@ -211,7 +239,7 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
     return () => {
       clearInterval(healTimer);
       unsubscribeStatus?.();
-      unsubscribeMessages();
+      unsubscribeMessages.forEach((unsubscribe) => unsubscribe());
     };
   }, [pair, market, fetchHttpFallback]);
 

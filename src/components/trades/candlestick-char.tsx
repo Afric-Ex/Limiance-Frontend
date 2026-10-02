@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { FiArrowUp, FiArrowDown } from "react-icons/fi";
+import { FiArrowUp, FiArrowDown, FiMaximize2, FiMinimize2 } from "react-icons/fi";
 import clsx from "clsx";
 import type { OrderBookEntry } from "@/src/hooks/use-order-book";
 
@@ -374,19 +374,109 @@ function DepthPanel({
 export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot", orderBook, orderLevels = [] }: Props) {
   const [interval, setIntervalVal] = useState<Interval>("15m");
   const [view, setView] = useState<View>("chart");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [usesFullscreenFallback, setUsesFullscreenFallback] = useState(false);
+  const chartRootRef = useRef<HTMLDivElement>(null);
+  const fullscreenFallbackRef = useRef(false);
+  const marketLabel = market === "futures" ? "Futures" : market === "margin" ? "Margin" : "Spot";
+  const bookLive = orderBook?.isConnected ?? false;
 
   const bids = orderBook?.buyOrders ?? [];
   const asks = orderBook?.sellOrders ?? [];
 
+  const exitFullscreen = useCallback(async () => {
+    const root = chartRootRef.current;
+    fullscreenFallbackRef.current = false;
+    setUsesFullscreenFallback(false);
+    setIsFullscreen(false);
+
+    if (typeof document !== "undefined" && document.fullscreenElement === root) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        // The browser may already have exited fullscreen (for example after a
+        // system-level Escape action). The local state is already reconciled.
+      }
+    }
+  }, []);
+
+  const enterFullscreen = useCallback(async () => {
+    const root = chartRootRef.current;
+    if (!root) return;
+
+    if (typeof document !== "undefined" && root.requestFullscreen) {
+      try {
+        await root.requestFullscreen({ navigationUI: "hide" });
+        return;
+      } catch {
+        // Some mobile browsers expose the API but reject it for an element
+        // that is not directly activated. Use the viewport fallback below.
+      }
+    }
+
+    fullscreenFallbackRef.current = true;
+    setUsesFullscreenFallback(true);
+    setIsFullscreen(true);
+  }, []);
+
+  useEffect(() => {
+    const root = chartRootRef.current;
+    if (!root || typeof document === "undefined") return;
+
+    const onFullscreenChange = () => {
+      const active = document.fullscreenElement === root;
+      if (active) {
+        fullscreenFallbackRef.current = false;
+        setUsesFullscreenFallback(false);
+        setIsFullscreen(true);
+      } else if (!fullscreenFallbackRef.current) {
+        setIsFullscreen(false);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      void exitFullscreen();
+    };
+
+    // Capture Escape before the chart's drawing shortcuts so it always exits
+    // analysis mode first, even when a drawing is selected.
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [exitFullscreen, isFullscreen]);
+
   return (
-    <div className="w-full h-full bg-[#181a20] relative flex flex-col">
-      {/* top bar */}
-      <div className="flex items-center justify-between px-3 border-b border-white/[0.06] shrink-0 h-9">
-        <div className="flex items-center">
+    <div
+      ref={chartRootRef}
+      className={clsx(
+        "w-full h-full bg-[#181a20] relative flex flex-col overflow-hidden",
+        isFullscreen && "w-screen h-[100dvh]",
+        isFullscreen && usesFullscreenFallback && "fixed inset-0 z-[1000]"
+      )}
+      data-market={market}
+    >
+      {/* One shared control surface for all three trading products. */}
+      <div className="flex items-center justify-between gap-2 px-2 border-b border-white/[0.06] shrink-0 min-h-10">
+        <div className="flex items-center shrink-0">
           {(["chart", "depth"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
+              aria-pressed={view === v}
               className={`text-xs font-semibold px-3 h-9 border-b-2 transition-colors capitalize ${
                 view === v
                   ? "text-white border-white"
@@ -395,26 +485,48 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
             >
               {v === "chart" ? "Chart" : "Depth"}
             </button>
-          ))}
+            ))}
         </div>
 
         {view === "chart" && (
-          <div className="flex items-center gap-0.5">
-            {INTERVALS.map((iv) => (
-              <button
-                key={iv}
-                onClick={() => setIntervalVal(iv)}
-                className={`text-[11px] font-semibold px-2 h-7 rounded transition-colors ${
-                  interval === iv
-                    ? "text-white bg-white/10"
-                    : "text-white/40 hover:text-white/60"
-                }`}
-              >
-                {iv}
-              </button>
-            ))}
+          <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
+            <div className="flex items-center justify-end gap-0.5 min-w-max">
+              {INTERVALS.map((iv) => (
+                <button
+                  key={iv}
+                  onClick={() => setIntervalVal(iv)}
+                  aria-pressed={interval === iv}
+                  className={`text-[11px] font-semibold px-2 h-7 rounded transition-colors ${
+                    interval === iv
+                      ? "text-white bg-white/10"
+                      : "text-white/40 hover:text-white/60"
+                  }`}
+                >
+                  {iv}
+                </button>
+              ))}
+            </div>
           </div>
         )}
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => void (isFullscreen ? exitFullscreen() : enterFullscreen())}
+            aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
+            title={isFullscreen ? "Exit full screen" : "Enter full screen"}
+            className="inline-flex h-7 w-7 items-center justify-center rounded text-white/55 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:text-white"
+          >
+            {isFullscreen ? <FiMinimize2 size={14} /> : <FiMaximize2 size={14} />}
+          </button>
+          <div className="hidden sm:flex items-center gap-2 text-[10px] font-medium text-white/45">
+            <span className="rounded bg-white/[0.06] px-1.5 py-1 text-white/60">{marketLabel}</span>
+            <span className="inline-flex items-center gap-1.5" title="Order book WebSocket status">
+              <span className={clsx("h-1.5 w-1.5 rounded-full", bookLive ? "bg-success-6" : "bg-warning-1")} />
+              {bookLive ? "Live" : "Reconnecting"}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Chart views */}

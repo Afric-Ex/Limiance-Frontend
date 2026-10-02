@@ -147,7 +147,13 @@ function FuturesTradesInner() {
   const [, setOrderBookOpen] = useState(false);
   const [mobileMode, setMobileMode] = useState<"trade" | "chart">("trade");
   // Last placed trade — shown as an orange FILL tag on the chart
-  const [placedFill, setPlacedFill] = useState<{ side: string; price: number; quantity: number } | null>(null);
+  const [placedFill, setPlacedFill] = useState<{
+    side: string;
+    price: number;
+    quantity: number;
+    takeProfit?: number;
+    stopLoss?: number;
+  } | null>(null);
   useEffect(() => {
     setPlacedFill(null);
   }, [selectedPair]);
@@ -433,11 +439,29 @@ function FuturesTradesInner() {
   // Orange tag for the trade the user just placed
   if (placedFill && Number.isFinite(placedFill.price) && placedFill.price > 0) {
     chartOrderLevels.push({
-      id: `fill-${placedFill.side}-${placedFill.price}-${Date.now()}`,
+      id: `fill-${placedFill.side}-${placedFill.price}-${placedFill.quantity}`,
       label: "FILL",
       price: placedFill.price,
       color: "fill",
       detail: `${placedFill.side.toUpperCase()}${placedFill.quantity ? ` ${placedFill.quantity}` : ""}`,
+    });
+  }
+  if (placedFill?.takeProfit && Number.isFinite(placedFill.takeProfit) && placedFill.takeProfit > 0) {
+    chartOrderLevels.push({
+      id: `placed-${placedFill.side}-tp`,
+      label: "TP",
+      price: placedFill.takeProfit,
+      color: "tp",
+      detail: `${placedFill.side.toUpperCase()} · placed`,
+    });
+  }
+  if (placedFill?.stopLoss && Number.isFinite(placedFill.stopLoss) && placedFill.stopLoss > 0) {
+    chartOrderLevels.push({
+      id: `placed-${placedFill.side}-sl`,
+      label: "SL",
+      price: placedFill.stopLoss,
+      color: "sl",
+      detail: `${placedFill.side.toUpperCase()} · placed`,
     });
   }
 
@@ -568,7 +592,13 @@ function FuturesTradesInner() {
       return tradingService.placeFuturesOrder(payload);
     },
     onSuccess: (_, side) => {
-      setPlacedFill({ side, price: workingPrice, quantity });
+      setPlacedFill({
+        side,
+        price: workingPrice,
+        quantity,
+        takeProfit: Number(takeProfit) > 0 ? Number(takeProfit) : undefined,
+        stopLoss: Number(stopLoss) > 0 ? Number(stopLoss) : undefined,
+      });
       successNotification(`Futures ${side} order placed successfully`);
       refreshBalances();
       refetchOpenOrders();

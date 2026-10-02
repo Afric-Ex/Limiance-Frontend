@@ -57,9 +57,14 @@ const LEVEL_COLORS: Record<OrderLevel["color"], { line: string; axis: string }> 
 const TOOL_COLORS: Record<DrawingTool, string> = {
   trendline: LEVEL_COLORS.entry.line,
   ray: LEVEL_COLORS.tp.line,
+  extended: LEVEL_COLORS.entry.line,
   hray: LEVEL_COLORS.sl.line,
+  hline: LEVEL_COLORS.sl.line,
+  vline: LEVEL_COLORS.entry.line,
   rectangle: LEVEL_COLORS.fill.line,
+  channel: LEVEL_COLORS.tp.line,
   fib: "rgba(255,255,255,0.70)",
+  fibext: "rgba(255,255,255,0.70)",
 };
 
 /**
@@ -82,6 +87,39 @@ const LABEL_OFFSET_PX = 10;
 
 /** Stable identity for symbols with no drawings, so derived effects do not churn. */
 const NO_DRAWINGS: readonly Drawing[] = Object.freeze([]);
+const DRAWINGS_STORAGE_PREFIX = "limiance.chart.drawings.v1";
+
+function readStoredDrawings(market: ChartMarket): Record<string, Drawing[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = JSON.parse(
+      localStorage.getItem(DRAWINGS_STORAGE_PREFIX + "." + market) ?? "{}"
+    );
+    if (!raw || typeof raw !== "object") return {};
+    return Object.fromEntries(
+      Object.entries(raw)
+        .map(([symbol, value]) => [
+          symbol,
+          Array.isArray(value)
+            ? value.filter(
+                (drawing: any) =>
+                  drawing &&
+                  typeof drawing.id === "string" &&
+                  typeof drawing.tool === "string" &&
+                  Array.isArray(drawing.points) &&
+                  drawing.points.every(
+                    (point: any) =>
+                      Number.isFinite(point?.time) && Number.isFinite(point?.price)
+                  )
+              )
+            : [],
+        ])
+        .filter(([, value]) => Array.isArray(value))
+    ) as Record<string, Drawing[]>;
+  } catch {
+    return {};
+  }
+}
 
 /** Undo/redo stacks, one pair per symbol so history is not shared across pairs. */
 type DrawingHistory = { past: Drawing[][]; future: Drawing[][] };
@@ -102,7 +140,7 @@ type DrawingDrag = {
   originPixels: PixelPoint[];
 };
 
-type PendingDrawing = { tool: DrawingTool; p1: DrawingPoint };
+type PendingDrawing = { tool: DrawingTool; points: DrawingPoint[] };
 
 /** Grab radius of the OHLC magnet, in pane pixels. */
 const MAGNET_PX = 6;
@@ -136,6 +174,21 @@ function snapToOhlc(
   return best ?? price;
 }
 
+function chartTimeToSeconds(time: Time | null | undefined): number | null {
+  if (typeof time === "number") return Number.isFinite(time) ? time : null;
+  if (typeof time === "string") {
+    const parsed = Date.parse(time);
+    return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : null;
+  }
+  if (time && typeof time === "object") {
+    const day = time as { year?: number; month?: number; day?: number };
+    if (Number.isFinite(day.year) && Number.isFinite(day.month) && Number.isFinite(day.day)) {
+      return Math.floor(Date.UTC(day.year!, day.month! - 1, day.day!) / 1000);
+    }
+  }
+  return null;
+}
+
 /**
  * Screen point → time/price. Prefers param.time, which is a real bar time of the
  * current interval, so anchors are always snapped to a bar. coordinateToTime is
@@ -152,21 +205,13 @@ function pointFromParam(
   bars?: Map<number, KlineCandle>
 ): DrawingPoint | null {
   if (!param.point) return null;
-  const time = typeof param.time === "number" ? param.time : chart.timeScale().coordinateToTime(param.point.x);
-  if (typeof time !== "number") return null;
+  const time = chartTimeToSeconds(param.time) ?? chartTimeToSeconds(chart.timeScale().coordinateToTime(param.point.x));
+  if (time === null) return null;
   const price = series.coordinateToPrice(param.point.y);
   if (price === null || !Number.isFinite(price)) return null;
   if (!bars) return { time, price };
   const snapped = snapToOhlc(bars.get(time), series, price);
   return snapped === price ? { time, price } : { time, price: snapped };
-}
-
-// TEMP DIAGNOSTIC: remove once the drawing-click regression is fixed.
-// Latest entry is mirrored on window.DRAW_DEBUG so it can be read on demand
-// rather than spamming the console.
-let drawDebugCrosshairLogged = false;
-function drawDebug(event: string, data: Record<string, unknown>) {
-  (window as unknown as Record<string, unknown>).DRAW_DEBUG = { event, ...data };
 }
 
 function styleFor(drawing: Drawing): DrawingStyle {
@@ -257,6 +302,7 @@ export function LwcCandlestickChart({
   const ma25SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const ma99SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
+  const orderLevelsRef = useRef<OrderLevel[]>(orderLevels);
   // Live primitive per drawing id, and a symbol-keyed store of drawings that the
   // chart rebuild cannot touch. Drawings live in React state, not in the chart
   // instance, so they survive the teardown/rebuild on every symbol/interval change.
@@ -285,11 +331,24 @@ export function LwcCandlestickChart({
   // Last pair/interval the viewport was fitted to, so live ticks do not reset it.
   const fittedRef = useRef<string | null>(null);
   const [legend, setLegend] = useState<{ o: number; h: number; l: number; c: number; v?: number; ma7?: number; ma25?: number; ma99?: number } | null>(null);
-  const [drawingsBySymbol, setDrawingsBySymbol] = useState<Record<string, Drawing[]>>({});
+  const [drawingsBySymbol, setDrawingsBySymbol] = useState<Record<string, Drawing[]>>(() =>
+    readStoredDrawings(market)
+  );
   const [historyBySymbol, setHistoryBySymbol] = useState<Record<string, DrawingHistory>>({});
   const [tool, setToolState] = useState<ToolbarTool>("pointer");
   const [pending, setPendingState] = useState<PendingDrawing | null>(null);
   const [selectedId, setSelectedIdState] = useState<string | null>(null);
+
+  // TradingView-style drawings are user annotations, not transient ticks:
+  // keep them per market and symbol so pair switching/remounting does not erase
+  // the analysis the trader just made.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(
+      DRAWINGS_STORAGE_PREFIX + "." + market,
+      JSON.stringify(drawingsBySymbol)
+    );
+  }, [drawingsBySymbol, market]);
 
   const drawings = drawingsBySymbol[symbol] ?? NO_DRAWINGS;
   const history = historyBySymbol[symbol];
@@ -334,8 +393,9 @@ export function LwcCandlestickChart({
   const addDrawing = useCallback(
     (drawing: Drawing) => {
       commitDrawings((current) => [...current, drawing]);
+      setSelectedId(drawing.id);
     },
-    [commitDrawings]
+    [commitDrawings, setSelectedId]
   );
 
   const removeDrawing = useCallback(
@@ -501,6 +561,22 @@ export function LwcCandlestickChart({
   const { candles, isLoading, isError, wsPending } = useCandleFeed(symbol, interval, market);
   const n = candles.length;
 
+  const syncPriceLines = useCallback((series: ISeriesApi<"Candlestick">, levels: readonly OrderLevel[]) => {
+    for (const line of priceLinesRef.current) series.removePriceLine(line);
+    priceLinesRef.current = levels
+      .filter((level) => Number.isFinite(level.price) && level.price > 0)
+      .map((level) =>
+        series.createPriceLine({
+          price: level.price,
+          color: LEVEL_COLORS[level.color].line,
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: level.detail ? level.label + " · " + level.detail : level.label,
+        })
+      );
+  }, []);
+
   // Bar lookup for the magnet, keyed on the same UTC-seconds normalisation the
   // series data uses, so a snapped price always comes from the bar under the
   // pointer rather than a near-miss neighbour.
@@ -587,6 +663,7 @@ export function LwcCandlestickChart({
     ma25SeriesRef.current = ma25Series;
     ma99SeriesRef.current = ma99Series;
     priceLinesRef.current = [];
+    syncPriceLines(candlesSeries, orderLevelsRef.current);
 
     // Drawings are keyed by symbol in React state, so the rebuild re-attaches
     // them to the new series rather than inheriting anything from the old chart.
@@ -595,22 +672,15 @@ export function LwcCandlestickChart({
     syncPanMode();
 
     const onCrosshair = (param: MouseEventParams<Time>) => {
-      if (!drawDebugCrosshairLogged) {
-        drawDebugCrosshairLogged = true;
-        drawDebug("crosshair", {
-          time: param.time,
-          timeType: typeof param.time,
-          point: param.point,
-          tool: toolRef.current,
-        });
-      }
       // Live preview of a drawing whose first point is already placed. The
       // primitive is left with a single point when the pointer leaves the pane,
       // which paints nothing rather than a stale segment.
       const pendingDrawing = pendingRef.current;
       if (pendingDrawing) {
         const cursor = pointFromParam(chart, candlesSeries, param, barByTimeRef.current);
-        previewRef.current?.setPoints(cursor ? [pendingDrawing.p1, cursor] : [pendingDrawing.p1]);
+        previewRef.current?.setPoints(
+          cursor ? [...pendingDrawing.points, cursor] : pendingDrawing.points
+        );
       }
 
       if (!param.time || !param.point) {
@@ -636,15 +706,6 @@ export function LwcCandlestickChart({
 
     const onChartClick = (param: MouseEventParams<Time>) => {
       const point = pointFromParam(chart, candlesSeries, param, barByTimeRef.current);
-      drawDebug("click", {
-        time: param.time,
-        timeType: typeof param.time,
-        point: param.point,
-        resolved: point,
-        tool: toolRef.current,
-        pending: Boolean(pendingRef.current),
-        hoveredKind: param.hoveredInfo?.sourceKind ?? null,
-      });
       if (!point) return;
       const activeTool = toolRef.current;
 
@@ -653,38 +714,50 @@ export function LwcCandlestickChart({
         const id =
           hovered && hovered.sourceKind === "series-primitive" && typeof hovered.objectId === "string"
             ? hovered.objectId
-            : null;
+            : typeof param.hoveredObjectId === "string"
+              ? param.hoveredObjectId
+              : null;
         setSelectedId(id && primitivesRef.current.has(id) ? id : null);
         return;
       }
 
       const pendingDrawing = pendingRef.current;
       if (!pendingDrawing) {
-        // First click of a two-point tool: place the anchor and start the preview.
-        if (CLICKS_REQUIRED[activeTool] === 2) {
+        // Start every multi-click tool with a live preview. The preview receives
+        // the current cursor point on crosshair moves, so channels and fib
+        // extensions remain understandable before the final click.
+        if (CLICKS_REQUIRED[activeTool] > 1) {
           const previewDrawing = createDrawing(activeTool, symbol, [point]);
           const preview = new DrawingPrimitive(previewDrawing, styleFor(previewDrawing));
           preview.setCursorStyle("crosshair");
           candlesSeries.attachPrimitive(preview);
           previewRef.current = preview;
           previewSeriesRef.current = candlesSeries;
-          setPending({ tool: activeTool, p1: point });
+          setPending({ tool: activeTool, points: [point] });
         } else {
           addDrawing(createDrawing(activeTool, symbol, [point]));
         }
         return;
       }
 
-      // Second click: the click point is the second anchor, so a click without
-      // any mouse movement in between still lands where the user aimed.
-      if (point.time !== pendingDrawing.p1.time || point.price !== pendingDrawing.p1.price) {
-        addDrawing(createDrawing(pendingDrawing.tool, symbol, [pendingDrawing.p1, point]));
+      const nextPoints = [...pendingDrawing.points, point];
+      const required = CLICKS_REQUIRED[pendingDrawing.tool];
+      const lastPoint = pendingDrawing.points[pendingDrawing.points.length - 1];
+      const isDuplicate = point.time === lastPoint.time && point.price === lastPoint.price;
+      if (isDuplicate) return;
+
+      if (nextPoints.length >= required) {
+        addDrawing(createDrawing(pendingDrawing.tool, symbol, nextPoints.slice(0, required)));
+        detachPreview();
+        setPending(null);
+      } else {
+        // Multi-stage tools (channel/fib extension) keep the first anchors and
+        // wait for the next semantic click instead of finalising too early.
+        previewRef.current?.setPoints(nextPoints);
+        setPending({ tool: pendingDrawing.tool, points: nextPoints });
       }
-      detachPreview();
-      setPending(null);
     };
     chart.subscribeClick(onChartClick);
-    drawDebug("chart-built", { symbol, interval, tool: toolRef.current });
 
     return () => {
       chart.unsubscribeCrosshairMove(onCrosshair);
@@ -706,7 +779,7 @@ export function LwcCandlestickChart({
       chartRef.current = null;
       chart.remove();
     };
-  }, [symbol, interval, addDrawing, detachPreview, setPending, setSelectedId, syncPanMode, syncPrimitives]);
+  }, [symbol, interval, addDrawing, detachPreview, setPending, setSelectedId, syncPanMode, syncPrimitives, syncPriceLines]);
 
   // Data. setData on every feed change is cheap at 500 points; swap to
   // series.update() for the last bar if tick volume ever matters.
@@ -738,25 +811,15 @@ export function LwcCandlestickChart({
     }
   }, [candles, symbol, interval]);
 
-  // Order levels as native price lines — they share the series' coordinate
-  // space, so they cannot drift out of alignment with the candles.
+  // Keep the latest levels in a ref so an interval/pair chart rebuild can
+  // replay them immediately, then update the current series without rebuilding
+  // the chart when an order or TP/SL changes.
   useEffect(() => {
+    orderLevelsRef.current = orderLevels;
     const series = candleSeriesRef.current;
     if (!series) return;
-    for (const line of priceLinesRef.current) series.removePriceLine(line);
-    priceLinesRef.current = orderLevels
-      .filter((level) => Number.isFinite(level.price) && level.price > 0)
-      .map((level) =>
-        series.createPriceLine({
-          price: level.price,
-          color: LEVEL_COLORS[level.color].line,
-          lineWidth: 1,
-          lineStyle: LineStyle.Dashed,
-          axisLabelVisible: true,
-          title: level.label,
-        })
-      );
-  }, [orderLevels]);
+    syncPriceLines(series, orderLevels);
+  }, [orderLevels, syncPriceLines]);
 
   // Drawings for the active symbol. This is the second of the two attach points:
   // the chart-build effect handles the teardown/rebuild, this one handles the
@@ -1185,6 +1248,7 @@ export function LwcCandlestickChart({
         canDelete={selectedId !== null}
         onDelete={() => selectedIdRef.current && removeDrawing(selectedIdRef.current)}
         pending={pending !== null}
+        pendingHint={pending ? "Click anchor " + (pending.points.length + 1) + " of " + CLICKS_REQUIRED[pending.tool] : undefined}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={undo}
