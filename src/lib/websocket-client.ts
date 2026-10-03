@@ -1,57 +1,9 @@
 "use client";
 
-import { handleLogout } from "./handle-logout";
 import { redactDiagnostic } from "./pii-policy";
-
-/** Check if JWT token has expired based on its 'exp' claim */
-function isTokenExpired(token: string): boolean {
-  if (!token) return false;
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return false;
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    const decoded = JSON.parse(jsonPayload);
-    if (decoded.exp && typeof decoded.exp === "number") {
-      const isExpired = Date.now() >= decoded.exp * 1000;
-      if (isExpired) {
-        console.warn(
-          `[WebSocketClient] Token expired at ${new Date(decoded.exp * 1000).toLocaleString()}`
-        );
-      }
-      return isExpired;
-    }
-  } catch {
-    // If parsing fails, proceed without assuming expired
-  }
-  return false;
-}
-
-import { getCookie } from "cookies-next";
-
-/** Mirror axios.ts: localStorage first (raw token), then cookies-next/document.cookie (URL-decoded). */
-function getAuthToken(): string {
-  if (typeof localStorage !== "undefined") {
-    const lsToken = localStorage.getItem("auth-token");
-    if (lsToken && lsToken !== "undefined" && lsToken !== "null") return lsToken;
-  }
-  try {
-    const nextCookie = getCookie("auth-token");
-    if (nextCookie && typeof nextCookie === "string" && nextCookie !== "undefined" && nextCookie !== "null") {
-      return decodeURIComponent(nextCookie);
-    }
-  } catch {}
-  if (typeof document === "undefined") return "";
-  const match = document.cookie.match(/(?:^|;\s*)auth-token=([^;]*)/);
-  const cookieToken = match ? decodeURIComponent(match[1]) : "";
-  return cookieToken && cookieToken !== "undefined" && cookieToken !== "null" ? cookieToken : "";
-}
+import { resolveSocketTarget } from "./ws-url";
+import { handleLogout } from "./handle-logout";
+import { sessionCoordinator } from "./session-coordinator";
 
 export type WsMessageHandler = (data: any, rawMessage: any) => void;
 export type WsStatusHandler = (connected: boolean) => void;
@@ -63,6 +15,24 @@ export type WsStatusHandler = (connected: boolean) => void;
  * handshake round-trip). A short delay lets a same-tick replacement cancel it.
  */
 const IDLE_CLOSE_DELAY_MS = 2000;
+
+/**
+ * Close codes that mean the server looked at our session and refused it.
+ * Reconnecting would produce the same answer forever, so the client stops and
+ * lets the session-coordinator/logout path clear state instead.
+ */
+const AUTH_FAILURE_CODES = new Set([1008, 4401, 4403]);
+
+/**
+ * Opt out of the same-origin proxy only. Never a way to re-enable URL tokens.
+ *
+ * The read below is deliberately a literal `process.env.NEXT_PUBLIC_WS_PROXY`
+ * rather than `process.env[PROXY_OPT_OUT_ENV]`: Next.js only inlines
+ * `NEXT_PUBLIC_*` values it can see written out verbatim in the client bundle, so
+ * a computed lookup would resolve to `undefined` in the browser and the opt-out
+ * could never be switched on.
+ */
+const PROXY_OPT_OUT_ENV = "NEXT_PUBLIC_WS_PROXY";
 
 /**
  * Deterministic JSON serialisation: object keys are sorted recursively so two
@@ -111,6 +81,8 @@ class WebSocketClient {
   private statusHandlers = new Set<WsStatusHandler>();
   private intentionalClose = false;
   private idleCloseTimeout: NodeJS.Timeout | null = null;
+  /** Set on auth-rejection close codes to prevent futile reconnect loops. */
+  private authFailed = false;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -121,10 +93,17 @@ class WebSocketClient {
           this.handleNetworkRestore();
         }
       });
+      // Logout, session expiry, or a logout broadcast from another tab. Reset
+      // the auth-failure latch so the next login can open a fresh socket.
+      sessionCoordinator.subscribe(() => {
+        this.authFailed = false;
+        this.disconnect();
+      });
     }
   }
 
   private handleNetworkRestore() {
+    if (this.authFailed) return;
     if (!this.isConnected && !this.isConnecting && this.subscriptions.size > 0) {
       if (this.reconnectTimeout) {
         clearTimeout(this.reconnectTimeout);
@@ -200,37 +179,57 @@ class WebSocketClient {
     });
   }
 
+  /**
+   * Same-origin WebSocket endpoint, or `null` when nothing is configured.
+   *
+   * `/ws-proxy` is a Next.js rewrite onto the backend's `/api/v1/ws`, so the
+   * handshake is first-party and the browser attaches the session cookie on its
+   * own. Going direct (`NEXT_PUBLIC_WS_PROXY=false`) is a deployment escape
+   * hatch for hosts that terminate WebSockets outside Next.js — the backend must
+   * then authenticate the upgrade from the request cookie itself, because
+   * nothing is ever appended to that URL either.
+   */
+  private resolveSocketUrl(): string | null {
+    const useSameOriginProxy = process.env.NEXT_PUBLIC_WS_PROXY !== "false";
+    const target = resolveSocketTarget({
+      pageProtocol: window.location.protocol,
+      host: window.location.host,
+      useSameOriginProxy,
+      directUrl: process.env.NEXT_PUBLIC_WS_URL,
+    });
+
+    if (!target && !useSameOriginProxy) {
+      console.warn(
+        `[WebSocketClient] ${PROXY_OPT_OUT_ENV}=false but NEXT_PUBLIC_WS_URL is missing or unusable — not connecting`
+      );
+    }
+    return target;
+  }
+
   public connect() {
     if (typeof window === "undefined") return;
     if (this.isConnected || this.isConnecting) return;
+    if (this.authFailed) return;
     this.cancelIdleClose();
 
-    const explicitUrl = process.env.NEXT_PUBLIC_WS_URL;
-    if (!explicitUrl) {
-      console.warn("[WebSocketClient] NEXT_PUBLIC_WS_URL is not set");
-      return;
-    }
-
-    const isHttps = window.location.protocol === "https:";
-    const safeUrl = isHttps ? explicitUrl.replace(/^ws:\/\//, "wss://") : explicitUrl;
-    const token = getAuthToken();
-    if (token && isTokenExpired(token)) {
-      console.warn("[WebSocketClient] Current auth token is expired. Triggering session refresh/logout.");
-      handleLogout();
-      return;
-    }
+    const url = this.resolveSocketUrl();
+    if (!url) return;
 
     this.isConnecting = true;
     this.intentionalClose = false;
 
     try {
-      const url = token ? `${safeUrl}?auth-token=${token}` : safeUrl;
+      // No credential of any kind is appended: the handshake is a plain
+      // same-origin GET, and the session is whatever cookie the browser already
+      // holds for this origin. Tokens in a URL leak into proxy logs, browser
+      // history and `Sec-WebSocket-Protocol` echoes.
       const socket = new WebSocket(url);
       this.ws = socket;
 
       socket.onopen = () => {
         this.isConnecting = false;
         this.retryCount = 0;
+        this.authFailed = false;
         this.notifyStatus(true);
         this.startHeartbeat();
 
@@ -268,11 +267,26 @@ class WebSocketClient {
         }
       };
 
-      socket.onclose = () => {
+      socket.onclose = (event) => {
         this.isConnecting = false;
         this.notifyStatus(false);
         this.stopHeartbeat();
         this.ws = null;
+
+        // Server rejected the session. `handleLogout` runs synchronously through
+        // the session coordinator (which also closes this socket and clears
+        // local state), so the latch is set *after* it — otherwise the
+        // coordinator's own reset would immediately re-enable reconnecting.
+        if (AUTH_FAILURE_CODES.has(event.code)) {
+          console.warn(
+            "[WebSocketClient] session rejected (close code " +
+              event.code +
+              "); stopping reconnection"
+          );
+          void handleLogout();
+          this.authFailed = true;
+          return;
+        }
 
         if (!this.intentionalClose && this.subscriptions.size > 0) {
           this.scheduleReconnect();
@@ -293,6 +307,7 @@ class WebSocketClient {
   }
 
   private scheduleReconnect() {
+    if (this.authFailed) return;
     if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
 
     // Exponential backoff with jitter: 1.5s -> 3s -> 6s -> max 15s

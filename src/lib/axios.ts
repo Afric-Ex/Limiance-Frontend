@@ -3,9 +3,30 @@ import { handleLogout } from "./handle-logout";
 import { authDebug } from "./auth-debug";
 import { sanitizeUrl } from "./pii-policy";
 import { sessionCoordinator } from "./session-coordinator";
+import { resolveBackendUrlsFromEnv } from "./backend-url";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL;
-const rootBaseURL = baseURL?.replace(/\/api\/v1\/?$/, "");
+/**
+ * Same-origin proxy prefixes. The browser must never talk to the backend
+ * directly: the backend answers cross-origin requests with
+ * `Access-Control-Allow-Origin: *` alongside `Access-Control-Allow-Credentials: true`,
+ * which is a combination the spec rejects for credentialed requests — so every
+ * direct browser call fails CORS. Going through Next.js makes the request
+ * same-origin, which also means the session cookie is attached as a first-party
+ * cookie and no CORS headers are needed at all.
+ */
+export const PROXY_PREFIX = "/proxy";
+export const PROXY_ROOT_PREFIX = "/proxy-root";
+
+const backend = resolveBackendUrlsFromEnv(process.env);
+
+/**
+ * On the server there is no origin to be same-origin with, so requests go
+ * straight to the backend — there is no CORS there and no cookie jar to rely on.
+ */
+const isBrowser = typeof window !== "undefined";
+const apiBaseURL = isBrowser ? PROXY_PREFIX : backend?.apiBaseUrl;
+const apiRootBaseURL = isBrowser ? PROXY_ROOT_PREFIX : backend?.rootBaseUrl;
+
 
 /**
  * Hard cap on every request the app makes. Axios defaults to no timeout, so a
@@ -17,7 +38,7 @@ const rootBaseURL = baseURL?.replace(/\/api\/v1\/?$/, "");
 export const REQUEST_TIMEOUT_MS = 30_000;
 
 export const api = axios.create({
-  baseURL,
+  baseURL: apiBaseURL,
   timeout: REQUEST_TIMEOUT_MS,
   withCredentials: true,
   headers: {
@@ -26,7 +47,7 @@ export const api = axios.create({
 });
 
 export const apiRoot = axios.create({
-  baseURL: rootBaseURL || baseURL,
+  baseURL: apiRootBaseURL,
   timeout: REQUEST_TIMEOUT_MS,
   withCredentials: true,
   headers: {
@@ -105,7 +126,7 @@ const attachInterceptors = (client: typeof api) => {
             : [],
         responseMessage: "[REDACTED]",
       });
-      handleLogout(error);
+      void handleLogout(error);
       return Promise.reject(error);
     }
   );

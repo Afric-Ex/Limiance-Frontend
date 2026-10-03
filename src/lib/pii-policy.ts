@@ -1,6 +1,9 @@
 "use client";
 
-const SENSITIVE_KEY_PATTERN = /(access|auth|token|jwt|refresh|session|captcha|pass|secret|otp|code|email|phone|name|address|kyc|identity|document|account|bank|card|payment|balance|position|order|transaction|review|details|payload|body|query|fragment)/i;
+// `cookie` and `header` matter even though they are not credentials by name: a
+// `Set-Cookie` or `Cookie` header *is* the session, so anything captured under
+// those keys has to be dropped wholesale rather than walked into.
+const SENSITIVE_KEY_PATTERN = /(access|auth|token|jwt|refresh|session|captcha|pass|secret|otp|code|email|phone|name|address|kyc|identity|document|account|bank|card|payment|balance|position|order|transaction|review|details|payload|body|query|fragment|cookie|header|bearer|credential)/i;
 
 export const LEGACY_SENSITIVE_STORAGE_KEYS = [
   "auth-token",
@@ -59,11 +62,8 @@ export const clearSensitiveClientArtifacts = (): void => {
   } catch {
     // Storage can be unavailable in hardened/private browser contexts.
   }
-  // This clears legacy readable cookies only. HttpOnly session cookies must be
-  // revoked by the backend logout endpoint.
-  try {
-    document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-  } catch {
-    // Cookie access can be denied by browser privacy policy.
-  }
+  // Deliberately does NOT touch `document.cookie`. The session cookie is HttpOnly,
+  // so script can neither read nor clear it, and writing an auth cookie from
+  // JavaScript is exactly the behaviour this policy forbids. Revocation is the
+  // backend's job: see the logout call in src/lib/handle-logout.ts.
 };

@@ -3,7 +3,6 @@ import { normalizeUser } from "../lib/normalize-user";
 import { normalizeKycStatus } from "../lib/normalize-kyc-status";
 import { authDebug, describeAuthPayload } from "../lib/auth-debug";
 import { ApiResponse } from "../types/api";
-import { useAuthStore } from "../stores/auth-store";
 import {
   Login,
   LoginResponse,
@@ -13,9 +12,10 @@ import {
   VerifyEmail,
 } from "../types/auth";
 
-// Authentication is established by the backend session cookie. The frontend
-// deliberately does not extract, normalize, or persist access tokens.
-const normalizeAuthPayload = (payload: any) => payload;
+// Authentication is established by the backend session cookie. Nothing here
+// extracts, normalizes, or persists an access token, and no endpoint sends an
+// Authorization header: every call relies on the cookie the browser attaches to
+// same-origin `/proxy` requests.
 
 export const auth = {
   register: async (data: Register): Promise<ApiResponse<RegisterResponse>> => {
@@ -42,7 +42,6 @@ export const auth = {
       passToken: data.passToken,
       genTime: data.genTime,
     });
-    response.data = normalizeAuthPayload(response.data);
     authDebug("login-response", {
       status: response.status,
       headers: Object.keys(response.headers ?? {}),
@@ -53,13 +52,17 @@ export const auth = {
     }
     return response;
   },
+  /**
+   * Invalidate the backend session so the HttpOnly cookie stops authenticating.
+   * The browser cannot clear the cookie itself, so this is the only thing that
+   * makes logout survive a reload or a back-button navigation.
+   */
+  logout: async (): Promise<ApiResponse<any>> => {
+    const response = await api.post("users/logout", {});
+    return response;
+  },
   verifyEmail: async (data: VerifyEmail): Promise<ApiResponse<any>> => {
-    const verifyToken = useAuthStore.getState().verificationToken;
-    const response = await api.post(
-      "users/verify_email",
-      { email: data.email, otp: data.otp },
-      verifyToken ? { headers: { Authorization: `Bearer ${verifyToken}` } } : undefined
-    );
+    const response = await api.post("users/verify_email", { email: data.email, otp: data.otp });
     return response;
   },
   forgotPassword: async (data: {
@@ -76,19 +79,22 @@ export const auth = {
     otp?: string;
     email?: string;
   }): Promise<ApiResponse<any>> => {
-    const verifyToken = useAuthStore.getState().verificationToken;
-    const response = await api.post(
-      "users/reset_password",
-      {
-        email: data.email,
-        code: data.otp,
-        newPassword: data.password,
-        confirmPassword: data.confirmPassword,
-      },
-      verifyToken ? { headers: { Authorization: `Bearer ${verifyToken}` } } : undefined
-    );
+    const response = await api.post("users/reset_password", {
+      email: data.email,
+      code: data.otp,
+      newPassword: data.password,
+      confirmPassword: data.confirmPassword,
+    });
     return response;
   },
+  /**
+   * Third-party KYC provider token, not a Limiance session credential.
+   *
+   * The Sumsub Web SDK requires it in the page, so it cannot move to a cookie or
+   * be dropped from the flow. It stays in React state for the lifetime of the
+   * verification widget: never written to storage, never placed in a URL, and
+   * never logged.
+   */
   startKyc: async (): Promise<{
     data: { accessToken?: string; inquiryId?: string; sessionToken?: string; token?: string };
   }> => {
@@ -116,7 +122,6 @@ export const auth = {
           ? Object.keys(response.data)
           : [],
     });
-    response.data = normalizeAuthPayload(response.data);
     if (response?.data?.data) {
       response.data.data = normalizeUser(response.data.data);
     }

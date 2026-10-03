@@ -17,6 +17,7 @@ import { modals } from "@mantine/modals";
 import { errorNotification, successNotification } from "@/src/lib/notification-handler";
 import { useUserStore } from "@/src/stores/user-store";
 import { sessionCoordinator } from "@/src/lib/session-coordinator";
+import { revokeBackendSession } from "@/src/lib/handle-logout";
 
 type OtpFormValues = {
   otp: string;
@@ -44,7 +45,7 @@ export const useAuth = () => {
   const setEmail = useAuthStore((state) => state.setEmail);
   const otp = useAuthStore((state) => state.otp);
   const setOtp = useAuthStore((state) => state.setOtp);
-  const setVerificationToken = useAuthStore((state) => state.setVerificationToken);
+
   const pending2FAUserId = useAuthStore((state) => state.pending2FAUserId);
   const pending2FAChallengeToken = useAuthStore((state) => state.pending2FAChallengeToken);
   const pending2FAMethod = useAuthStore((state) => state.pending2FAMethod);
@@ -96,19 +97,38 @@ export const useAuth = () => {
     return "totp" as const;
   };
 
-  const persistLoginSession = (payload: any) => {
+  const persistLoginSession = async (payload: any) => {
     authDebug("persist-session", {
       payload: describeAuthPayload(payload),
       credentialMode: "http-only-cookie",
     });
 
     const user = getLoginUser(payload);
-    if (user) setUser(user);
+    if (user) {
+      setUser(user);
+    } else {
+      // Cookie-only backends are free to answer a successful login with an
+      // empty body: the credential is the Set-Cookie, not the payload. Ask the
+      // authenticated `/user` endpoint who we are so the app still has an
+      // identity to render.
+      try {
+        await useUserStore.getState().fetchUser();
+      } catch {
+        // fetchUser already surfaces its own error; the redirect below still
+        // lands on a page that will retry.
+      }
+    }
     clearPendingLogin2FA();
     return true;
   };
 
-  const clearStoredAuthToken = () => {
+  /**
+   * Signing in while a session cookie is still around would otherwise leave the
+   * previous session valid on the backend. Revoke it first so an account switch
+   * cannot leave the old account reachable.
+   */
+  const clearStoredAuthToken = async () => {
+    await revokeBackendSession();
     sessionCoordinator.logout("account-switch");
   };
 
@@ -152,9 +172,6 @@ export const useAuth = () => {
 
   const { mutate: register, isPending } = mutate(auth.register, {
     onSuccess: (_data: any, variables) => {
-      if (typeof window !== "undefined" && _data?.accessToken) {
-        setVerificationToken(_data.accessToken);
-      }
       successNotification("Registration successful");
       setCountry("");
       setEmail(variables.email);
@@ -163,7 +180,7 @@ export const useAuth = () => {
   })();
 
   const { mutate: login, isPending: loginLoading } = mutate(auth.login, {
-    onSuccess: (data: LoginResponse, variables) => {
+    onSuccess: async (data: LoginResponse, variables) => {
       const requiresSecondFactor = requiresLoginSecondFactor(data);
       const challengeToken = getLoginChallengeToken(data);
       const userId = getLoginChallengeUserId(data);
@@ -177,10 +194,10 @@ export const useAuth = () => {
         errorNotification("Your login session could not be started. Please log in again.");
         return;
       }
-      if (persistLoginSession(data)) {
-        successNotification("Login successful");
-        window.location.href = "/dashboard";
-      }
+      await persistLoginSession(data);
+      successNotification("Login successful");
+      console.log("Login successful, redirecting to dashboard");
+      // window.location.href = "/dashboard";
     },
     onError: (error: any) => {
       if (error?.response?.data?.error === "Account is not verified, resend verification code") {
@@ -190,7 +207,7 @@ export const useAuth = () => {
   })();
 
   const { mutate: verifyLogin2FA, isPending: verifyLogin2FALoading } = mutate(auth.verifyLogin2FA, {
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (requiresLoginSecondFactor(data)) {
         const challengeToken = getLoginChallengeToken(data);
 
@@ -230,10 +247,9 @@ export const useAuth = () => {
         return;
       }
 
-      if (persistLoginSession(data)) {
-        successNotification("Login successful");
-        window.location.href = "/dashboard";
-      }
+      await persistLoginSession(data);
+      successNotification("Login successful");
+      window.location.href = "/dashboard";
     },
   })();
 
@@ -241,10 +257,6 @@ export const useAuth = () => {
     auth.resetPassword,
     {
       onSuccess: () => {
-      // Clear the temporary in-memory verification token.
-        if (typeof window !== "undefined") {
-          setVerificationToken(null);
-        }
         modals.open({
           children: (
             <SuccessModal
@@ -272,9 +284,8 @@ export const useAuth = () => {
     const params = new URLSearchParams(new URL(url).search);
     const referrer = params.get("referrer");
     
-    // Only clear the verify-token if we are NOT going to reset-password
+    // Only clear the email if we are NOT going to reset-password
     if (referrer !== "forgot_password" && typeof window !== "undefined") {
-      setVerificationToken(null);
       setEmail("");
     }
     
@@ -315,11 +326,6 @@ export const useAuth = () => {
       onSuccess: (_data: any) => {
         modals.closeAll();
         successNotification("Successful");
-        // Keep the temporary challenge token in memory only so the verification
-        // and reset-password requests can use it as an Authorization header.
-        if (typeof window !== "undefined" && _data?.accessToken) {
-          setVerificationToken(_data.accessToken);
-        }
         modals.open({
           children: (
             <SuccessModal
@@ -346,8 +352,8 @@ export const useAuth = () => {
     register({ ...values, country });
   });
 
-  const submitLogin = (values: Login) => {
-    clearStoredAuthToken();
+  const submitLogin = async (values: Login) => {
+    await clearStoredAuthToken();
     login({
       ...values,
       userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Mozilla/5.0",

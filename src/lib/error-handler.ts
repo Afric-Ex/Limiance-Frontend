@@ -67,11 +67,9 @@ export const errorMessageHandler = (obj: ErrorType) => {
         {
           const resendEmail = async () => {
             try {
-              const res: any = await auth.forgotPassword({
+              await auth.forgotPassword({
                 email: useAuthStore.getState().email,
               });
-              const tempToken = res?.data?.accessToken;
-              if (tempToken) useAuthStore.getState().setVerificationToken(tempToken);
               successNotification("OTP has been resent to your mail");
               location.href = "/auth/verify-email";
             } catch (error) {
@@ -81,7 +79,7 @@ export const errorMessageHandler = (obj: ErrorType) => {
           resendEmail();
         }
       } else {
-        handleLogout(obj);
+        void handleLogout(obj);
       }
     }
     if (obj.response.status === 500) {

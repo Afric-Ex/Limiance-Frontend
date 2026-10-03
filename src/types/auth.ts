@@ -30,7 +30,6 @@ export interface RegisterResponse {
   error: string;
   message: string;
   success: boolean;
-  accessToken: string;
 }
 
 export interface LoginResponse {
@@ -38,8 +37,6 @@ export interface LoginResponse {
   error: string;
   message: string;
   success: boolean;
-  accessToken: string;
-  refreshToken: string;
   needs_2fa?: boolean;
   needs2FA?: boolean;
   user_id?: string;
@@ -95,6 +92,5 @@ export interface ForgotPasswordResponse {
   statusCode: number;
   error: string;
   message: string;
-  accessToken: string;
   success: boolean;
 }

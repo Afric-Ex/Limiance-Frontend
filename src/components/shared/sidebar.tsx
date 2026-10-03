@@ -291,7 +291,7 @@ const { data: kycStatus } = useQuery({
         </div>
 
         <button
-          onClick={() => handleLogout()}
+          onClick={() => void handleLogout()}
           title="Sign out"
           className="flex-shrink-0 p-1.5 rounded-lg text-white/30 hover:text-sell hover:bg-sell/10 transition-all duration-200"
         >

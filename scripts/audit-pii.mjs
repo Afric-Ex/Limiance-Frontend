@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCAN_DIRS = ["src", "app", "middleware.ts", "next.config.ts"];
@@ -30,24 +30,55 @@ const checks = [
   ["verification token written to browser storage", /(?:localStorage|sessionStorage)\.setItem\(\s*["'`]verify-token/i],
   ["P2P identity data written to localStorage", /localStorage\.setItem\(\s*["'`]p2p-(?:blocked|reported|advertiser)/i],
   ["auth token written to a JavaScript-readable cookie", /document\.cookie\s*=.*auth-token=\$\{/i],
+  ["credential appended to a URL", /[?&](?:access_token|refresh_token|auth_token|auth-token|session[_-]?token|jwt)=/i],
+  ["Authorization header set by app code", /(?:headers\s*:\s*\{[^}]*Authorization|setRequestHeader\(\s*["'`]Authorization)["'`]?\s*[:,)]/i],
+  ["bearer credential literal", /["'`]Bearer\s+\$\{/i],
+  ["session cookie read from JavaScript", /document\.cookie\b[^;\n]{0,60}(?:auth-token|auth_token|session)/i],
+  ["credential persisted to browser storage", /(?:localStorage|sessionStorage)\.setItem\(\s*["'`][^"'`]*(?:token|password|secret|credential|jwt)/i],
+  ["cookies-next client auth helper imported", /from\s+["']cookies-next(?:\/[^"']*)?["']/i],
+  ["browser API client pointed at the backend origin", /baseURL\s*:\s*(?:process\.env\.NEXT_PUBLIC_API_URL|`\$\{[^}]*NEXT_PUBLIC_API_URL)/i],
 ];
 
-const findings = [];
-for (const file of SCAN_DIRS.flatMap((entry) => filesIn(entry))) {
-  const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
-  lines.forEach((line, index) => {
-    for (const [label, pattern] of checks) {
-      if (pattern.test(line)) findings.push(`${path.relative(ROOT, file).replaceAll("\\", "/")}:${index + 1} ${label}`);
-    }
-  });
-}
+/** Exported so the self-check can prove each pattern fires and each stays quiet. */
+export const auditPatterns = checks;
 
-console.log("Limiance PII boundary audit");
-if (findings.length) {
-  console.error(`✗ ${findings.length} blocking finding(s)`);
-  findings.forEach((finding) => console.error(`  - ${finding}`));
-  console.error("Release is blocked until every finding is removed or explicitly approved.");
-  process.exitCode = 1;
-} else {
-  console.log("✓ No prohibited PII or credential writes found.");
+/** Comment lines describe the rules; they must not be scanned for violations. */
+const COMMENT_LINE = /^\s*(\/\/|\*|\/\*)/;
+
+/** Violations on a single source line, ignoring comments. */
+export const findViolations = (line) => {
+  if (COMMENT_LINE.test(line)) return [];
+  const hits = [];
+  for (const [label, pattern] of checks) {
+    if (pattern.test(line)) hits.push(label);
+  }
+  return hits;
+};
+
+export const runAudit = () => {
+  const findings = [];
+  for (const file of SCAN_DIRS.flatMap((entry) => filesIn(entry))) {
+    const relative = path.relative(ROOT, file).replaceAll("\\", "/");
+    fs.readFileSync(file, "utf8")
+      .split(/\r?\n/)
+      .forEach((line, index) => {
+        for (const label of findViolations(line)) {
+          findings.push(`${relative}:${index + 1} ${label}`);
+        }
+      });
+  }
+  return findings;
+};
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const findings = runAudit();
+  console.log("Limiance PII boundary audit");
+  if (findings.length) {
+    console.error(`✗ ${findings.length} blocking finding(s)`);
+    findings.forEach((finding) => console.error(`  - ${finding}`));
+    console.error("Release is blocked until every finding is removed or explicitly approved.");
+    process.exitCode = 1;
+  } else {
+    console.log("✓ No prohibited PII or credential writes found.");
+  }
 }

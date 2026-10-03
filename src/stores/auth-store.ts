@@ -11,8 +11,6 @@ export interface AuthState {
   setPhone: (value: string) => void;
   otp: string;
   setOtp: (value: string) => void;
-  verificationToken: string | null;
-  setVerificationToken: (value: string | null) => void;
   reset: () => void;
   pending2FAUserId: string | null;
   pending2FAChallengeToken: string | null;
@@ -32,15 +30,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
       setPhone: (value) => set({ phone: value }),
       otp: "",
       setOtp: (value) => set({ otp: value }),
-      verificationToken: null,
-      setVerificationToken: (value) => set({ verificationToken: value }),
       reset: () => set({
         rememberMe: false,
         country: "",
         email: "",
         phone: "",
         otp: "",
-        verificationToken: null,
         pending2FAUserId: null,
         pending2FAChallengeToken: null,
         pending2FAMethod: "email",
