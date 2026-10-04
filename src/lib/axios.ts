@@ -35,7 +35,7 @@ const apiRootBaseURL = isBrowser ? PROXY_ROOT_PREFIX : backend?.rootBaseUrl;
  * is aborted and rejects like any other error, so `data` stays empty and the
  * caller's loading state ends. A per-request `timeout` still overrides this.
  */
-export const REQUEST_TIMEOUT_MS = 30_000;
+export const REQUEST_TIMEOUT_MS = 90_000;
 
 export const api = axios.create({
   baseURL: apiBaseURL,
