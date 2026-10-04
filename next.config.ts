@@ -1,25 +1,36 @@
 import type { NextConfig } from "next";
+import { resolveBackendUrlsFromEnv } from "./src/lib/backend-url";
+
+const backend = resolveBackendUrlsFromEnv(process.env);
 
 const nextConfig: NextConfig = {
   async rewrites() {
-    const backendUrl = process.env.BACKEND_URL;
-    if (!backendUrl) {
+    if (!backend) {
       console.warn(
-        "[next.config] BACKEND_URL is not set — /proxy and /ws-proxy rewrites are disabled."
+        "[next.config] BACKEND_URL/NEXT_PUBLIC_API_URL is not set to an absolute http(s) URL — /proxy, /proxy-root and /ws-proxy rewrites are disabled."
       );
       return [];
     }
+
+    // The destination host comes only from configuration. Everything after the
+    // origin is the incoming path, so a request can reach backend endpoints but
+    // can never be used to make this server proxy to an arbitrary host.
     return [
       {
-        source: '/proxy/:path*',
-        destination: `${backendUrl}/:path*`,
+        source: "/proxy/:path*",
+        destination: `${backend.apiBaseUrl}/:path*`,
       },
       {
-        source: '/ws-proxy',
-        destination: `${backendUrl}/api/v1/ws`,
+        source: "/proxy-root/:path*",
+        destination: `${backend.rootBaseUrl}/:path*`,
+      },
+      {
+        source: "/ws-proxy",
+        destination: `${backend.apiBaseUrl}/ws`,
       },
     ];
   },
+
   async headers() {
     const csp = [
       "default-src 'self'",

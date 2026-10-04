@@ -1,6 +1,7 @@
 import { auth } from "../services/auth";
 import { errorNotification, successNotification } from "./notification-handler";
 import { handleLogout } from "./handle-logout";
+import { useAuthStore } from "../stores/auth-store";
 
 export type ErrorType = {
   response?: {
@@ -63,18 +64,12 @@ export const errorMessageHandler = (obj: ErrorType) => {
         obj.response.data?.error ===
         "Account is not verified, resend verification code"
       ) {
-        if (obj.response.config?.data) {
-          const requestData = JSON.parse(obj.response.config?.data);
-
+        {
           const resendEmail = async () => {
             try {
-              const res: any = await auth.forgotPassword({
-                email: requestData?.emailOrPhone,
+              await auth.forgotPassword({
+                email: useAuthStore.getState().email,
               });
-              const tempToken = res?.data?.accessToken;
-              if (typeof window !== "undefined" && tempToken) {
-                sessionStorage.setItem("verify-token", tempToken);
-              }
               successNotification("OTP has been resent to your mail");
               location.href = "/auth/verify-email";
             } catch (error) {
@@ -84,7 +79,7 @@ export const errorMessageHandler = (obj: ErrorType) => {
           resendEmail();
         }
       } else {
-        handleLogout(obj);
+        void handleLogout(obj);
       }
     }
     if (obj.response.status === 500) {

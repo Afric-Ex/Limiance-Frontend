@@ -1,65 +1,87 @@
-/** Read auth-token directly from document.cookie */
-function readAuthToken(): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/(?:^|;\s*)auth-token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : null;
+import { sessionCoordinator } from "./session-coordinator";
+import { useAuthStore } from "../stores/auth-store";
+import { useUserStore } from "../stores/user-store";
+import { auth } from "../services/auth";
+
+/**
+ * True for the duration of a backend revocation call.
+ *
+ * The revocation request travels through the same axios client as everything
+ * else, so a failure on it re-enters this module from the response interceptor.
+ * Without this guard a 401 on `users/logout` would log the user out again (and
+ * try to revoke again) instead of settling on the already-cleared local state.
+ */
+let revoking = false;
+
+function clearSession(reason: "manual" | "unauthorized" | "expired" | "account-switch") {
+  useAuthStore.getState().reset();
+  useUserStore.getState().reset();
+  sessionCoordinator.logout(reason);
 }
 
-function clearSession() {
-  if (typeof document !== "undefined") {
-    document.cookie = `auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+const redirectToLogin = () => {
+  if (
+    typeof location !== "undefined" &&
+    location.pathname !== "/auth/login" &&
+    !location.pathname.includes("/auth/signup")
+  ) {
+    window.location.href = "/auth/login";
   }
-  if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("auth-token");
-    localStorage.removeItem("user-store");
-  }
-}
+};
 
-export const handleLogout = (error?: any) => {
+/**
+ * Tell the backend to invalidate the session cookie.
+ *
+ * Without this the HttpOnly cookie stays valid until it expires, so "log out"
+ * would only clear local state: a reload, a back button or another tab would
+ * silently restore the session. Best effort by design — a network failure must
+ * not stop the user from leaving the session. Only meaningful for an explicit
+ * action; on a 401 the server has already rejected the session and there is
+ * nothing left to revoke.
+ */
+export const revokeBackendSession = async (): Promise<void> => {
+  if (typeof window === "undefined" || revoking) return;
+  revoking = true;
+  try {
+    await auth.logout();
+  } catch {
+    // Intentionally ignored — see above.
+  } finally {
+    revoking = false;
+  }
+};
+
+export const handleLogout = async (error?: any) => {
+  if (revoking) return;
+
   if (error) {
-    if (error.response?.status === 401) {
-      const errorMsg = String(
-        error.response?.data?.error || error.response?.data?.message || ""
-      );
+    if (error.response?.status !== 401) return;
 
-      // These 401s are not "session expired" — don't log the user out
-      if (
-        errorMsg === "Account is not verified, resend verification code" ||
-        errorMsg.toLowerCase().includes("identity verification") ||
-        errorMsg.toLowerCase().includes("kyc") ||
-        errorMsg.toLowerCase().includes("authorization token not provided") ||
-        errorMsg.toLowerCase().includes("token not provided")
-      ) {
-        return;
-      }
+    const errorMsg = String(
+      error.response?.data?.error || error.response?.data?.message || ""
+    );
 
-      // Only actually log out if there IS a token (i.e. the session truly expired).
-      // If there is no token yet, this is probably a pre-auth request — ignore it.
-      const existingToken =
-        (typeof localStorage !== "undefined" ? localStorage.getItem("auth-token") : null) ||
-        readAuthToken();
-      if (!existingToken || existingToken === "undefined" || existingToken === "null") {
-        return;
-      }
-
-      clearSession();
-      if (
-        typeof location !== "undefined" &&
-        location.pathname !== "/auth/login" &&
-        !location.pathname.includes("/auth/signup")
-      ) {
-        window.location.href = "/auth/login";
-      }
-    }
-  } else {
-    // Manual logout call (no error) — always clear session
-    clearSession();
+    // These 401s are not "session expired" — they mean the backend refused this
+    // request for a domain reason while no session exists yet. Note that
+    // "credential missing" is deliberately *not* in this list: under cookie auth
+    // an absent or rejected session cookie is exactly what must end the session.
     if (
-      typeof location !== "undefined" &&
-      location.pathname !== "/auth/login" &&
-      !location.pathname.includes("/auth/signup")
+      errorMsg === "Account is not verified, resend verification code" ||
+      errorMsg.toLowerCase().includes("identity verification") ||
+      errorMsg.toLowerCase().includes("kyc")
     ) {
-      window.location.href = "/auth/login";
+      return;
     }
+
+    // The server already rejected this session; nothing left to revoke.
+    clearSession("unauthorized");
+    redirectToLogin();
+    return;
   }
+
+  // Manual logout — revoke server-side first so the cookie is dead before the
+  // browser lands back on a page that would otherwise still be "logged in".
+  await revokeBackendSession();
+  clearSession("manual");
+  redirectToLogin();
 };

@@ -1,4 +1,4 @@
-import { auth, findAuthToken } from "@/src/services/auth";
+import { auth } from "@/src/services/auth";
 import { authDebug, describeAuthPayload } from "@/src/lib/auth-debug";
 import { Login, LoginResponse } from "@/src/types/auth";
 import { mutate } from "../use-query-factory";
@@ -16,6 +16,8 @@ import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { modals } from "@mantine/modals";
 import { errorNotification, successNotification } from "@/src/lib/notification-handler";
 import { useUserStore } from "@/src/stores/user-store";
+import { sessionCoordinator } from "@/src/lib/session-coordinator";
+import { revokeBackendSession } from "@/src/lib/handle-logout";
 
 type OtpFormValues = {
   otp: string;
@@ -43,6 +45,7 @@ export const useAuth = () => {
   const setEmail = useAuthStore((state) => state.setEmail);
   const otp = useAuthStore((state) => state.otp);
   const setOtp = useAuthStore((state) => state.setOtp);
+
   const pending2FAUserId = useAuthStore((state) => state.pending2FAUserId);
   const pending2FAChallengeToken = useAuthStore((state) => state.pending2FAChallengeToken);
   const pending2FAMethod = useAuthStore((state) => state.pending2FAMethod);
@@ -52,21 +55,6 @@ export const useAuth = () => {
   const setUser = useUserStore((state) => state.setUser);
 
   const { push } = useRouter();
-  const getLoginToken = (payload: any) =>
-    payload?.accessToken ||
-    payload?.access_token ||
-    payload?.token ||
-    payload?.jwt ||
-    payload?.authToken ||
-    payload?.auth_token ||
-    payload?.data?.accessToken ||
-    payload?.data?.access_token ||
-    payload?.data?.token ||
-    payload?.data?.jwt ||
-    payload?.data?.authToken ||
-    payload?.data?.auth_token ||
-    findAuthToken(payload);
-
   const getLoginUser = (payload: any) =>
     payload?.user ||
     payload?.data?.user ||
@@ -109,63 +97,42 @@ export const useAuth = () => {
     return "totp" as const;
   };
 
-  const getStoredAuthToken = () => {
-    if (typeof localStorage !== "undefined") {
-      const token = localStorage.getItem("auth-token");
-      if (token && token !== "undefined" && token !== "null") return token;
-    }
-
-    if (typeof document !== "undefined") {
-      const match = document.cookie.match(/(?:^|;\s*)auth-token=([^;]*)/);
-      const token = match ? decodeURIComponent(match[1]) : null;
-      if (token && token !== "undefined" && token !== "null") return token;
-    }
-
-    return null;
-  };
-
-  const persistLoginSession = (payload: any) => {
-    const responseToken = getLoginToken(payload);
-    const storedToken = getStoredAuthToken();
-    const token = responseToken || storedToken;
-
+  const persistLoginSession = async (payload: any) => {
     authDebug("persist-session", {
       payload: describeAuthPayload(payload),
-      responseToken: responseToken
-        ? { length: responseToken.length, looksJwt: responseToken.split(".").length === 3 }
-        : null,
-      storedToken: storedToken
-        ? { length: storedToken.length, looksJwt: storedToken.split(".").length === 3 }
-        : null,
-      selected: responseToken ? "response" : storedToken ? "stored" : "none",
+      credentialMode: "http-only-cookie",
     });
 
-    if (!token || token === "undefined" || token === "null") {
-      errorNotification("Login succeeded, but no auth token was returned.");
-      return false;
+    const user = getLoginUser(payload);
+    if (user) {
+      setUser(user);
+    } else {
+      // Cookie-only backends are free to answer a successful login with an
+      // empty body: the credential is the Set-Cookie, not the payload. Ask the
+      // authenticated `/user` endpoint who we are so the app still has an
+      // identity to render.
+      try {
+        await useUserStore.getState().fetchUser();
+      } catch {
+        // fetchUser already surfaces its own error; the redirect below still
+        // lands on a page that will retry.
+      }
     }
-
-    if (typeof document !== "undefined") {
-      document.cookie = `auth-token=${encodeURIComponent(token)}; path=/; max-age=2592000; SameSite=Lax`;
-    }
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem("auth-token", token);
-    }
-
-    authDebug("persist-complete", { cookieAndStorageWritten: true });
-
-    setUser(getLoginUser(payload));
     clearPendingLogin2FA();
     return true;
   };
 
-  const clearStoredAuthToken = () => {
-    if (typeof document !== "undefined") {
-      document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    }
-    if (typeof localStorage !== "undefined") {
-      localStorage.removeItem("auth-token");
-    }
+  /**
+   * Signing in while a session cookie is still around would otherwise leave the
+   * previous session valid on the backend. Revoke it first so an account switch
+   * cannot leave the old account reachable.
+   */
+  const clearStoredAuthToken = async () => {
+    // Revoke the old backend session so an account switch can't leave it valid.
+    // Do NOT call sessionCoordinator.logout() here — that bumps the generation
+    // counter, which would cause the response interceptor to reject the
+    // upcoming login response as "stale session" (ERR_SESSION_STALE).
+    await revokeBackendSession();
   };
 
   // FORM FIELDS
@@ -208,9 +175,6 @@ export const useAuth = () => {
 
   const { mutate: register, isPending } = mutate(auth.register, {
     onSuccess: (_data: any, variables) => {
-      if (typeof window !== "undefined" && _data?.accessToken) {
-        sessionStorage.setItem("verify-token", _data.accessToken);
-      }
       successNotification("Registration successful");
       setCountry("");
       setEmail(variables.email);
@@ -219,7 +183,7 @@ export const useAuth = () => {
   })();
 
   const { mutate: login, isPending: loginLoading } = mutate(auth.login, {
-    onSuccess: (data: LoginResponse, variables) => {
+    onSuccess: async (data: LoginResponse, variables) => {
       const requiresSecondFactor = requiresLoginSecondFactor(data);
       const challengeToken = getLoginChallengeToken(data);
       const userId = getLoginChallengeUserId(data);
@@ -233,12 +197,13 @@ export const useAuth = () => {
         errorNotification("Your login session could not be started. Please log in again.");
         return;
       }
-      if (persistLoginSession(data)) {
-        successNotification("Login successful");
-        window.location.href = "/dashboard";
-      }
+      await persistLoginSession(data);
+      successNotification("Login successful");
+      console.log("Login successful, redirecting to dashboard");
+      window.location.href = "/dashboard";
     },
     onError: (error: any) => {
+      console.error("Login error:", error);
       if (error?.response?.data?.error === "Account is not verified, resend verification code") {
         setEmail(loginForm.values.emailOrPhone);
       }
@@ -246,7 +211,7 @@ export const useAuth = () => {
   })();
 
   const { mutate: verifyLogin2FA, isPending: verifyLogin2FALoading } = mutate(auth.verifyLogin2FA, {
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (requiresLoginSecondFactor(data)) {
         const challengeToken = getLoginChallengeToken(data);
 
@@ -270,7 +235,12 @@ export const useAuth = () => {
       // Some deployed API versions omit requiresSecondFactor/totpRequired after
       // accepting email OTP, but also return no access token. The email step has
       // still advanced the server challenge, so continue with the authenticator.
-      if (pending2FAMethod === "email" && !getLoginToken(data) && pending2FAChallengeToken) {
+      if (
+        pending2FAMethod === "email" &&
+        !data?.authenticated &&
+        !data?.data?.user &&
+        pending2FAChallengeToken
+      ) {
         setPendingLogin2FA(
           pending2FAUserId || pending2FAChallengeToken,
           pending2FARememberMe,
@@ -281,10 +251,9 @@ export const useAuth = () => {
         return;
       }
 
-      if (persistLoginSession(data)) {
-        successNotification("Login successful");
-        window.location.href = "/dashboard";
-      }
+      await persistLoginSession(data);
+      successNotification("Login successful");
+      window.location.href = "/dashboard";
     },
   })();
 
@@ -292,10 +261,6 @@ export const useAuth = () => {
     auth.resetPassword,
     {
       onSuccess: () => {
-        // Clear the temporary verify token
-        if (typeof window !== "undefined") {
-          sessionStorage.removeItem("verify-token");
-        }
         modals.open({
           children: (
             <SuccessModal
@@ -323,9 +288,8 @@ export const useAuth = () => {
     const params = new URLSearchParams(new URL(url).search);
     const referrer = params.get("referrer");
     
-    // Only clear the verify-token if we are NOT going to reset-password
+    // Only clear the email if we are NOT going to reset-password
     if (referrer !== "forgot_password" && typeof window !== "undefined") {
-      sessionStorage.removeItem("verify-token");
       setEmail("");
     }
     
@@ -366,13 +330,6 @@ export const useAuth = () => {
       onSuccess: (_data: any) => {
         modals.closeAll();
         successNotification("Successful");
-        // Store the temporary token returned by forgot_password so that
-        // verify_email and reset_password can use it as Authorization header.
-        // We store as verify-token (NOT auth-token) to avoid triggering the
-        // middleware redirect to /dashboard.
-        if (typeof window !== "undefined" && _data?.accessToken) {
-          sessionStorage.setItem("verify-token", _data.accessToken);
-        }
         modals.open({
           children: (
             <SuccessModal
@@ -399,8 +356,7 @@ export const useAuth = () => {
     register({ ...values, country });
   });
 
-  const submitLogin = (values: Login) => {
-    clearStoredAuthToken();
+  const submitLogin = async (values: Login) => {
     login({
       ...values,
       userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Mozilla/5.0",

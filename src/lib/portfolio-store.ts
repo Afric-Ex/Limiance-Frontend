@@ -1,6 +1,5 @@
 "use client";
 
-import { getCookie } from "cookies-next";
 import { api } from "@/src/lib/axios";
 import { wsClient } from "@/src/lib/websocket-client";
 import {
@@ -131,12 +130,6 @@ const emptyState = (): PortfolioStoreState => ({
   },
 });
 
-const hasAuthToken = (): boolean =>
-  Boolean(
-    (typeof localStorage !== "undefined" ? localStorage.getItem("auth-token") : null) ||
-      getCookie("auth-token")
-  );
-
 class PortfolioStore {
   private state: PortfolioStoreState = emptyState();
   private listeners = new Set<() => void>();
@@ -217,11 +210,6 @@ class PortfolioStore {
     this.setPending(topic, !hasCachedData);
 
     if (!this.ensureStatusListener()) return;
-
-    if (!hasAuthToken()) {
-      void this.fetchOverHttp(topic);
-      return;
-    }
 
     const { topic: responseTopic, payload } = TOPIC_REQUEST[topic];
     this.unsubs[topic] = wsClient.subscribe(responseTopic, payload, (raw, full) => {
@@ -374,7 +362,7 @@ class PortfolioStore {
     const wanted = ALL_PORTFOLIO_TOPICS.filter((t) => this.refCounts[t] > 0);
     if (wanted.length === 0) return;
 
-    if (wsClient.getIsConnected() && hasAuthToken()) {
+    if (wsClient.getIsConnected()) {
       wanted.forEach((topic) => wsClient.send(TOPIC_REQUEST[topic].payload));
     } else {
       wanted.forEach((topic) => void this.fetchOverHttp(topic));

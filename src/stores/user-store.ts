@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { userService } from "../services/user";
 import { errorMessageHandler } from "../lib/error-handler";
 import { LoginResponse } from "../types/auth";
-import { persist } from "zustand/middleware";
 
 interface UserState {
   user: null | LoginResponse["data"];
@@ -14,11 +13,10 @@ interface UserState {
   fetchUser: () => Promise<void>;
   selectedCoinsHistory: string[];
   setSelectedCoinsHistory: (value: string[]) => void;
+  reset: () => void;
 }
 
-export const useUserStore = create<UserState>()(
-  persist(
-    (set) => ({
+export const useUserStore = create<UserState>()((set) => ({
       user: null,
       hideBalance: false,
       selectedCoinsHistory: [],
@@ -27,6 +25,7 @@ export const useUserStore = create<UserState>()(
       setUser: (value) => set({ user: value }),
       setHideBalance: (value) => set({ hideBalance: value }),
       setSelectedCoinsHistory: (value) => set({ selectedCoinsHistory: value }),
+      reset: () => set({ user: null, hideBalance: false, selectedCoinsHistory: [], loading: false, error: null }),
 
       fetchUser: async () => {
         set({ loading: true, error: null });
@@ -47,14 +46,4 @@ export const useUserStore = create<UserState>()(
           set({ error: "Failed to fetch user", loading: false });
         }
       },
-    }),
-    {
-      name: "user-store",
-      partialize: (state) => ({
-        user: state.user,
-        selectedCoinsHistory: state.selectedCoinsHistory,
-        hideBalance: state.hideBalance,
-      }),
-    }
-  )
-);
+    }));

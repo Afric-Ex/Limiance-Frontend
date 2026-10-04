@@ -1,9 +1,32 @@
-import axios from "axios";
+import axios, { InternalAxiosRequestConfig } from "axios";
 import { handleLogout } from "./handle-logout";
 import { authDebug } from "./auth-debug";
+import { sanitizeUrl } from "./pii-policy";
+import { sessionCoordinator } from "./session-coordinator";
+import { resolveBackendUrlsFromEnv } from "./backend-url";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL;
-const rootBaseURL = baseURL?.replace(/\/api\/v1\/?$/, "");
+/**
+ * Same-origin proxy prefixes. The browser must never talk to the backend
+ * directly: the backend answers cross-origin requests with
+ * `Access-Control-Allow-Origin: *` alongside `Access-Control-Allow-Credentials: true`,
+ * which is a combination the spec rejects for credentialed requests — so every
+ * direct browser call fails CORS. Going through Next.js makes the request
+ * same-origin, which also means the session cookie is attached as a first-party
+ * cookie and no CORS headers are needed at all.
+ */
+export const PROXY_PREFIX = "/proxy";
+export const PROXY_ROOT_PREFIX = "/proxy-root";
+
+const backend = resolveBackendUrlsFromEnv(process.env);
+
+/**
+ * On the server there is no origin to be same-origin with, so requests go
+ * straight to the backend — there is no CORS there and no cookie jar to rely on.
+ */
+const isBrowser = typeof window !== "undefined";
+const apiBaseURL = isBrowser ? PROXY_PREFIX : backend?.apiBaseUrl;
+const apiRootBaseURL = isBrowser ? PROXY_ROOT_PREFIX : backend?.rootBaseUrl;
+
 
 /**
  * Hard cap on every request the app makes. Axios defaults to no timeout, so a
@@ -15,49 +38,61 @@ const rootBaseURL = baseURL?.replace(/\/api\/v1\/?$/, "");
 export const REQUEST_TIMEOUT_MS = 30_000;
 
 export const api = axios.create({
-  baseURL,
+  baseURL: apiBaseURL,
   timeout: REQUEST_TIMEOUT_MS,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
 export const apiRoot = axios.create({
-  baseURL: rootBaseURL || baseURL,
+  baseURL: apiRootBaseURL,
   timeout: REQUEST_TIMEOUT_MS,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-/** Get auth token — localStorage first (reliable), then cookie (for SSR fallback) */
-function getAuthToken(): string | null {
-  // Try localStorage first — most reliable in browser
-  if (typeof localStorage !== "undefined") {
-    const lsToken = localStorage.getItem("auth-token");
-    if (lsToken && lsToken !== "undefined" && lsToken !== "null") return lsToken;
-  }
-  // Fallback to document.cookie
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/(?:^|;\s*)auth-token=([^;]*)/);
-  const cookieToken = match ? decodeURIComponent(match[1]) : null;
-  return cookieToken && cookieToken !== "undefined" && cookieToken !== "null"
-    ? cookieToken
-    : null;
-}
+type SessionRequestConfig = InternalAxiosRequestConfig & {
+  __sessionGeneration?: number;
+  __sessionController?: AbortController;
+};
+
+const pendingControllers = new Set<AbortController>();
+
+// Logout invalidates work that was started under the previous session. Axios
+// will reject these requests as cancelled instead of allowing old responses to
+// update stores or query caches after an account switch.
+sessionCoordinator.subscribe(() => {
+  pendingControllers.forEach((controller) => controller.abort());
+  pendingControllers.clear();
+});
+
+/**
+ * Endpoints where a 401 is a domain error ("bad credentials", "unverified
+ * account", etc.) rather than a session-expired signal. The global interceptor
+ * must NOT trigger the logout/redirect flow for these — the caller handles them.
+ */
+const AUTH_ENDPOINT_RE =
+  /users\/(login|register|verify_email|forgot_password|reset_password)\b/;
 
 const attachInterceptors = (client: typeof api) => {
   client.interceptors.request.use(
     (config) => {
-      const token = getAuthToken();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      const sessionConfig = config as SessionRequestConfig;
+      sessionConfig.__sessionGeneration = sessionCoordinator.getGeneration();
+      if (typeof AbortController !== "undefined" && !config.signal) {
+        const controller = new AbortController();
+        sessionConfig.__sessionController = controller;
+        config.signal = controller.signal;
+        pendingControllers.add(controller);
       }
       authDebug("request-auth", {
         method: config.method,
-        url: config.url,
-        authHeaderAttached: Boolean(token),
-        tokenLength: token?.length ?? 0,
+        url: sanitizeUrl(config.url),
+        credentialMode: "http-only-cookie",
       });
       return config;
     },
@@ -67,25 +102,45 @@ const attachInterceptors = (client: typeof api) => {
   );
 
   client.interceptors.response.use(
-    (response) => response,
+    (response) => {
+      const sessionConfig = response.config as SessionRequestConfig;
+      if (sessionConfig.__sessionController) {
+        pendingControllers.delete(sessionConfig.__sessionController);
+      }
+      if (sessionConfig.__sessionGeneration !== sessionCoordinator.getGeneration()) {
+        const staleError = new Error("Stale session response discarded") as Error & {
+          code?: string;
+        };
+        staleError.code = "ERR_SESSION_STALE";
+        return Promise.reject(staleError);
+      }
+      return response;
+    },
     (error) => {
+      const sessionConfig = error?.config as SessionRequestConfig | undefined;
+      if (sessionConfig?.__sessionController) {
+        pendingControllers.delete(sessionConfig.__sessionController);
+      }
+      if (error?.code === "ERR_CANCELED" || error?.code === "ERR_SESSION_STALE") {
+        return Promise.reject(error);
+      }
       // Global error handling
       authDebug("response-error", {
         status: error?.response?.status,
-        url: error?.config?.url,
+        url: sanitizeUrl(error?.config?.url),
         responseKeys:
           error?.response?.data && typeof error.response.data === "object"
             ? Object.keys(error.response.data)
             : [],
-        responseMessage:
-          typeof error?.response?.data?.message === "string"
-            ? error.response.data.message
-            : typeof error?.response?.data?.error === "string"
-              ? error.response.data.error
-              : null,
-        authTokenPresent: Boolean(getAuthToken()),
+        responseMessage: "[REDACTED]",
       });
-      handleLogout(error);
+      // Don't trigger the logout flow for auth endpoints — a 401 on login,
+      // register, verify, or password-reset is a domain error, not a
+      // session-expired signal that should clear state and redirect.
+      const requestUrl: string = error?.config?.url ?? "";
+      if (!AUTH_ENDPOINT_RE.test(requestUrl)) {
+        void handleLogout(error);
+      }
       return Promise.reject(error);
     }
   );

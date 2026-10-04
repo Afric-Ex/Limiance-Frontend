@@ -94,19 +94,7 @@ export default function Header() {
   const [authHydrated, setAuthHydrated] = useState(false);
 
   useEffect(() => {
-    const persist = useUserStore.persist;
-
-    if (!persist) {
-      setAuthHydrated(true);
-      return;
-    }
-
-    if (persist.hasHydrated()) {
-      setAuthHydrated(true);
-      return;
-    }
-
-    return persist.onFinishHydration(() => setAuthHydrated(true));
+    setAuthHydrated(true);
   }, []);
 
   const [opened, { open, close }] = useDisclosure(false);

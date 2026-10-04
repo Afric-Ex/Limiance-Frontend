@@ -313,7 +313,7 @@ export const MobileNavbar = ({
             </div>
             <div
               onClick={() => {
-                handleLogout();
+                void handleLogout();
                 close();
               }}
               className="py-5 px-6 flex cursor-pointer hover:bg-gray-9/20 items-center gap-3 border-t border-t-gray-9/40"

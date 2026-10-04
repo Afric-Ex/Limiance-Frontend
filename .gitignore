@@ -19,3 +19,7 @@ DESIGN-*.md
 SKELETON-*.md
 Limiance Gateway.md
 next-env.d.ts
+# Playwright artifacts only — `tests/` holds the tracked security specs and must
+# stay committable.
+test-results
+playwright-report

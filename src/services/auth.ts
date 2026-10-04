@@ -12,90 +12,10 @@ import {
   VerifyEmail,
 } from "../types/auth";
 
-export const stripBearer = (value?: string | null) => {
-  if (!value) return null;
-  return value.replace(/^Bearer\s+/i, "").trim();
-};
-
-const isIgnoredTokenKey = (normalizedKey: string) =>
-  normalizedKey.includes("refresh") ||
-  normalizedKey.includes("session") ||
-  normalizedKey.includes("captcha") ||
-  normalizedKey.includes("pass") ||
-  normalizedKey.includes("verify");
-
-const isPreferredTokenKey = (normalizedKey: string) =>
-  normalizedKey.includes("accesstoken") ||
-  normalizedKey === "authtoken" ||
-  normalizedKey === "token" ||
-  normalizedKey === "jwt" ||
-  normalizedKey === "authorization";
-
-export const findAuthToken = (value: any, seen = new WeakSet<object>()): string | null => {
-  if (!value) return null;
-
-  if (typeof value === "string") {
-    return null;
-  }
-
-  if (typeof value !== "object") {
-    return null;
-  }
-
-  if (seen.has(value)) {
-    return null;
-  }
-  seen.add(value);
-
-  for (const [key, raw] of Object.entries(value)) {
-    const normalizedKey = key.toLowerCase().replace(/[_-\s]/g, "");
-    const token = typeof raw === "string" ? stripBearer(raw) : null;
-    if (
-      token &&
-      isPreferredTokenKey(normalizedKey) &&
-      !isIgnoredTokenKey(normalizedKey)
-    ) {
-      return token;
-    }
-  }
-
-  for (const raw of Object.values(value)) {
-    const nested = findAuthToken(raw, seen);
-    if (nested) return nested;
-  }
-
-  return null;
-};
-
-const getHeaderToken = (headers: any) =>
-  stripBearer(
-    headers?.authorization ||
-      headers?.Authorization ||
-      headers?.["x-access-token"] ||
-      headers?.["x-auth-token"] ||
-      headers?.["x-user-accesstoken"] ||
-      headers?.["x-user-access-token"]
-  );
-
-const normalizeAuthPayload = (payload: any, headers?: any) => {
-  const token =
-    payload?.accessToken ||
-    payload?.access_token ||
-    payload?.token ||
-    payload?.jwt ||
-    payload?.data?.accessToken ||
-    payload?.data?.access_token ||
-    payload?.data?.token ||
-    payload?.data?.jwt ||
-    findAuthToken(payload) ||
-    getHeaderToken(headers);
-
-  if (token && !payload?.accessToken) {
-    payload.accessToken = token;
-  }
-
-  return payload;
-};
+// Authentication is established by the backend session cookie. Nothing here
+// extracts, normalizes, or persists an access token, and no endpoint sends an
+// Authorization header: every call relies on the cookie the browser attaches to
+// same-origin `/proxy` requests.
 
 export const auth = {
   register: async (data: Register): Promise<ApiResponse<RegisterResponse>> => {
@@ -122,7 +42,6 @@ export const auth = {
       passToken: data.passToken,
       genTime: data.genTime,
     });
-    response.data = normalizeAuthPayload(response.data, response.headers);
     authDebug("login-response", {
       status: response.status,
       headers: Object.keys(response.headers ?? {}),
@@ -133,13 +52,17 @@ export const auth = {
     }
     return response;
   },
+  /**
+   * Invalidate the backend session so the HttpOnly cookie stops authenticating.
+   * The browser cannot clear the cookie itself, so this is the only thing that
+   * makes logout survive a reload or a back-button navigation.
+   */
+  logout: async (): Promise<ApiResponse<any>> => {
+    const response = await api.post("users/logout", {});
+    return response;
+  },
   verifyEmail: async (data: VerifyEmail): Promise<ApiResponse<any>> => {
-    const verifyToken = typeof window !== "undefined" ? sessionStorage.getItem("verify-token") : null;
-    const response = await api.post(
-      "users/verify_email",
-      { email: data.email, otp: data.otp },
-      verifyToken ? { headers: { Authorization: `Bearer ${verifyToken}` } } : undefined
-    );
+    const response = await api.post("users/verify_email", { email: data.email, otp: data.otp });
     return response;
   },
   forgotPassword: async (data: {
@@ -156,19 +79,22 @@ export const auth = {
     otp?: string;
     email?: string;
   }): Promise<ApiResponse<any>> => {
-    const verifyToken = typeof window !== "undefined" ? sessionStorage.getItem("verify-token") : null;
-    const response = await api.post(
-      "users/reset_password",
-      {
-        email: data.email,
-        code: data.otp,
-        newPassword: data.password,
-        confirmPassword: data.confirmPassword,
-      },
-      verifyToken ? { headers: { Authorization: `Bearer ${verifyToken}` } } : undefined
-    );
+    const response = await api.post("users/reset_password", {
+      email: data.email,
+      code: data.otp,
+      newPassword: data.password,
+      confirmPassword: data.confirmPassword,
+    });
     return response;
   },
+  /**
+   * Third-party KYC provider token, not a Limiance session credential.
+   *
+   * The Sumsub Web SDK requires it in the page, so it cannot move to a cookie or
+   * be dropped from the flow. It stays in React state for the lifetime of the
+   * verification widget: never written to storage, never placed in a URL, and
+   * never logged.
+   */
   startKyc: async (): Promise<{
     data: { accessToken?: string; inquiryId?: string; sessionToken?: string; token?: string };
   }> => {
@@ -196,7 +122,6 @@ export const auth = {
           ? Object.keys(response.data)
           : [],
     });
-    response.data = normalizeAuthPayload(response.data, response.headers);
     if (response?.data?.data) {
       response.data.data = normalizeUser(response.data.data);
     }

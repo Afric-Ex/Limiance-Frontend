@@ -28,42 +28,20 @@ export type ReportedAdvertiser = {
   createdAt: string;
 };
 
-const STORAGE_KEYS = {
-  blockedAdvertisers: "p2p-blocked-advertisers",
-  reportedAdvertisers: "p2p-reported-advertisers",
-  reviews: "p2p-advertiser-reviews",
-} as const;
+// These are intentionally session-memory only. Advertiser names, reviewer
+// identities, order ids, reasons, and free-text reviews are PII-bearing data.
+let blockedAdvertisers: BlockedAdvertiser[] = [];
+let reportedAdvertisers: ReportedAdvertiser[] = [];
+let reviews: StoredP2PReview[] = [];
 
-const isBrowser = () => typeof window !== "undefined";
-
-const readStorage = <T,>(key: string): T[] => {
-  if (!isBrowser()) {
-    return [];
-  }
-
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) {
-      return [];
-    }
-
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const writeStorage = <T,>(key: string, value: T[]) => {
-  if (!isBrowser()) {
-    return;
-  }
-
-  window.localStorage.setItem(key, JSON.stringify(value));
+export const clearP2PUserActions = () => {
+  blockedAdvertisers = [];
+  reportedAdvertisers = [];
+  reviews = [];
 };
 
 export const getBlockedAdvertisers = () =>
-  readStorage<BlockedAdvertiser>(STORAGE_KEYS.blockedAdvertisers);
+  blockedAdvertisers;
 
 export const isAdvertiserBlocked = (advertiserId?: string | null) =>
   !!advertiserId &&
@@ -85,18 +63,15 @@ export const blockAdvertiser = (advertiser: {
     createdAt: new Date().toISOString(),
   });
 
-  writeStorage(STORAGE_KEYS.blockedAdvertisers, current);
+  blockedAdvertisers = current;
 };
 
 export const unblockAdvertiser = (advertiserId: string) => {
-  writeStorage(
-    STORAGE_KEYS.blockedAdvertisers,
-    getBlockedAdvertisers().filter((entry) => entry.id !== advertiserId)
-  );
+  blockedAdvertisers = getBlockedAdvertisers().filter((entry) => entry.id !== advertiserId);
 };
 
 export const getReportedAdvertisers = () =>
-  readStorage<ReportedAdvertiser>(STORAGE_KEYS.reportedAdvertisers);
+  reportedAdvertisers;
 
 export const reportAdvertiser = (report: {
   id: string;
@@ -109,11 +84,11 @@ export const reportAdvertiser = (report: {
     ...report,
     createdAt: new Date().toISOString(),
   });
-  writeStorage(STORAGE_KEYS.reportedAdvertisers, current);
+  reportedAdvertisers = current;
 };
 
 export const getStoredP2PReviews = () =>
-  readStorage<StoredP2PReview>(STORAGE_KEYS.reviews);
+  reviews;
 
 export const getAdvertiserReviews = (advertiserId?: string | null) => {
   if (!advertiserId) {
@@ -137,5 +112,5 @@ export const saveP2PReview = (review: StoredP2PReview) => {
     (entry) => entry.orderMatchId !== review.orderMatchId
   );
   current.unshift(review);
-  writeStorage(STORAGE_KEYS.reviews, current);
+  reviews = current;
 };
