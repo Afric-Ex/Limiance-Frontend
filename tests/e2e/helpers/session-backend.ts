@@ -3,17 +3,17 @@ import type { BrowserContext, Page, Route } from "@playwright/test";
 /**
  * A stand-in for the cookie-session backend.
  *
- * The deployed backend still authenticates with bearer tokens, so the browser
- * tests drive a mock that behaves the way the migration requires: the session
- * lives only in an HttpOnly cookie, `GET /proxy/user` answers from that cookie,
+ * The backend authenticates with an HttpOnly session cookie, so the browser
+ * tests model the production cookie name and attributes: `GET /proxy/user`
+ * answers from that cookie,
  * `POST /proxy/users/logout` expires it, and no endpoint ever returns a token in
  * its body. Everything third-party is blocked, so a test never depends on the
  * captcha vendor, the price feed or the real backend being up.
  */
 
-export const SESSION_COOKIE = "auth-token";
+export const SESSION_COOKIE = "__Host-limiance_session";
 export const SESSION_VALUE = "opaque-session-value";
-export const SESSION_COOKIE_ATTRS = "Path=/; HttpOnly; Secure; SameSite=Strict";
+export const SESSION_COOKIE_ATTRS = "Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Lax";
 
 export interface BackendProbe {
   /** Paths (after the proxy prefix) the app asked the backend for. */
@@ -133,7 +133,7 @@ export const installSessionBackend = async (context: BrowserContext): Promise<Ba
 };
 
 const CREDENTIAL_IN_URL =
-  /(?:auth-token|access[_-]?token|refresh[_-]?token|bearer|verify-token|authorization|session[_-]?token)=/i;
+  /(?:__Host-limiance_session|auth-token|access[_-]?token|refresh[_-]?token|bearer|verify-token|authorization|session[_-]?token)=/i;
 
 /**
  * Clicking a server-rendered form before React attaches its handlers performs a

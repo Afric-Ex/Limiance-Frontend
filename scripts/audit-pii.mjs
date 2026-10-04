@@ -25,15 +25,15 @@ function filesIn(target, output = []) {
 }
 
 const checks = [
-  ["raw auth token in a WebSocket URL", /[?&]auth-token=\$\{|auth-token=\$\{token\}/i],
+  ["raw auth token in a WebSocket URL", /[?&](?:__Host-limiance_session|auth-token)=\$\{|(?:__Host-limiance_session|auth-token)=\$\{token\}/i],
   ["auth token written to localStorage", /localStorage\.setItem\(\s*["'`]auth-token/i],
   ["verification token written to browser storage", /(?:localStorage|sessionStorage)\.setItem\(\s*["'`]verify-token/i],
   ["P2P identity data written to localStorage", /localStorage\.setItem\(\s*["'`]p2p-(?:blocked|reported|advertiser)/i],
-  ["auth token written to a JavaScript-readable cookie", /document\.cookie\s*=.*auth-token=\$\{/i],
-  ["credential appended to a URL", /[?&](?:access_token|refresh_token|auth_token|auth-token|session[_-]?token|jwt)=/i],
+  ["auth token written to a JavaScript-readable cookie", /document\.cookie\s*=.*(?:__Host-limiance_session|auth-token)=\$\{/i],
+  ["credential appended to a URL", /[?&](?:__Host-limiance_session|access_token|refresh_token|auth_token|auth-token|session[_-]?token|jwt)=/i],
   ["Authorization header set by app code", /(?:headers\s*:\s*\{[^}]*Authorization|setRequestHeader\(\s*["'`]Authorization)["'`]?\s*[:,)]/i],
   ["bearer credential literal", /["'`]Bearer\s+\$\{/i],
-  ["session cookie read from JavaScript", /document\.cookie\b[^;\n]{0,60}(?:auth-token|auth_token|session)/i],
+  ["session cookie read from JavaScript", /document\.cookie\b[^;\n]{0,60}(?:__Host-limiance_session|auth-token|auth_token|session)/i],
   ["credential persisted to browser storage", /(?:localStorage|sessionStorage)\.setItem\(\s*["'`][^"'`]*(?:token|password|secret|credential|jwt)/i],
   ["cookies-next client auth helper imported", /from\s+["']cookies-next(?:\/[^"']*)?["']/i],
   ["browser API client pointed at the backend origin", /baseURL\s*:\s*(?:process\.env\.NEXT_PUBLIC_API_URL|`\$\{[^}]*NEXT_PUBLIC_API_URL)/i],

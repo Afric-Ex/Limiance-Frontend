@@ -53,7 +53,7 @@ test.describe("same-origin API proxy", () => {
     expect(session, "login did not set a session cookie").toBeTruthy();
     expect(session!.httpOnly, "session cookie must be HttpOnly").toBe(true);
     expect(session!.secure, "session cookie must be Secure").toBe(true);
-    expect(session!.sameSite).toBe("Strict");
+    expect(session!.sameSite).toBe("Lax");
 
     // The whole point of HttpOnly: script cannot reach it, so the frontend has
     // no way to read, copy or forward the credential.

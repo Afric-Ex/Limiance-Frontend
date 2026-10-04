@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-const forbiddenStorageKeys = /(?:auth-token|auth-store|user-store|verify-token|p2p-|password|otp|access.?token|refresh.?token)/i;
-const forbiddenUrlParts = /(?:auth-token|access[_-]?token|refresh[_-]?token|password|otp|email|phone|kyc)/i;
+const forbiddenStorageKeys = /(?:__Host-limiance_session|auth-token|auth-store|user-store|verify-token|p2p-|password|otp|access.?token|refresh.?token)/i;
+const forbiddenUrlParts = /(?:__Host-limiance_session|auth-token|access[_-]?token|refresh[_-]?token|password|otp|email|phone|kyc)/i;
 
 test.describe("PII browser boundaries", () => {
   test("does not seed credentials or identity state in browser storage", async ({ page }) => {

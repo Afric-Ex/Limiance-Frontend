@@ -70,6 +70,14 @@ sessionCoordinator.subscribe(() => {
   pendingControllers.clear();
 });
 
+/**
+ * Endpoints where a 401 is a domain error ("bad credentials", "unverified
+ * account", etc.) rather than a session-expired signal. The global interceptor
+ * must NOT trigger the logout/redirect flow for these — the caller handles them.
+ */
+const AUTH_ENDPOINT_RE =
+  /users\/(login|register|verify_email|forgot_password|reset_password)\b/;
+
 const attachInterceptors = (client: typeof api) => {
   client.interceptors.request.use(
     (config) => {
@@ -126,7 +134,13 @@ const attachInterceptors = (client: typeof api) => {
             : [],
         responseMessage: "[REDACTED]",
       });
-      void handleLogout(error);
+      // Don't trigger the logout flow for auth endpoints — a 401 on login,
+      // register, verify, or password-reset is a domain error, not a
+      // session-expired signal that should clear state and redirect.
+      const requestUrl: string = error?.config?.url ?? "";
+      if (!AUTH_ENDPOINT_RE.test(requestUrl)) {
+        void handleLogout(error);
+      }
       return Promise.reject(error);
     }
   );

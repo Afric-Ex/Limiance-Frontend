@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
  * it is HttpOnly, so nothing in the browser can read it, and nothing in the
  * browser should try.
  */
-const SESSION_COOKIE = "auth-token";
+const SESSION_COOKIE = "__Host-limiance_session";
 
 /**
  * Paths that must reach Next.js untouched.

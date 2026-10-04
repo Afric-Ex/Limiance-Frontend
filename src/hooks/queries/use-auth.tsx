@@ -128,8 +128,11 @@ export const useAuth = () => {
    * cannot leave the old account reachable.
    */
   const clearStoredAuthToken = async () => {
+    // Revoke the old backend session so an account switch can't leave it valid.
+    // Do NOT call sessionCoordinator.logout() here — that bumps the generation
+    // counter, which would cause the response interceptor to reject the
+    // upcoming login response as "stale session" (ERR_SESSION_STALE).
     await revokeBackendSession();
-    sessionCoordinator.logout("account-switch");
   };
 
   // FORM FIELDS
@@ -197,9 +200,10 @@ export const useAuth = () => {
       await persistLoginSession(data);
       successNotification("Login successful");
       console.log("Login successful, redirecting to dashboard");
-      // window.location.href = "/dashboard";
+      window.location.href = "/dashboard";
     },
     onError: (error: any) => {
+      console.error("Login error:", error);
       if (error?.response?.data?.error === "Account is not verified, resend verification code") {
         setEmail(loginForm.values.emailOrPhone);
       }
@@ -353,7 +357,6 @@ export const useAuth = () => {
   });
 
   const submitLogin = async (values: Login) => {
-    await clearStoredAuthToken();
     login({
       ...values,
       userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Mozilla/5.0",
