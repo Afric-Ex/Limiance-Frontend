@@ -5,8 +5,6 @@ import { FaXmark } from "react-icons/fa6";
 import {
   createChart,
   CandlestickSeries,
-  HistogramSeries,
-  LineSeries,
   ColorType,
   CrosshairMode,
   LineStyle,
@@ -17,10 +15,8 @@ import {
   type Time,
   type UTCTimestamp,
   type CandlestickData,
-  type HistogramData,
 } from "lightweight-charts";
 import { useCandleFeed } from "@/src/components/trades/use-candle-feed";
-import { calculateSMA } from "@/src/components/trades/indicators";
 import {
   CLICKS_REQUIRED,
   DrawingPrimitive,
@@ -256,22 +252,6 @@ function toCandleData(candles: KlineCandle[]) {
   return out.sort((a, b) => a.t - b.t).map((x) => x.d);
 }
 
-function toVolumeData(candles: KlineCandle[]): HistogramData[] {
-  return candles
-    .filter(
-      (c) =>
-        Number.isFinite(c.time) &&
-        c.time > 0 &&
-        Number.isFinite(c.volume) &&
-        [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)
-    )
-    .map((c) => ({
-      time: Math.floor(c.time / 1000) as UTCTimestamp,
-      value: c.volume,
-      color: c.close >= c.open ? "rgba(37,171,66,0.35)" : "rgba(246,70,93,0.35)",
-    }));
-}
-
 const formatPrice = (value: number) => {
   const abs = Math.abs(value);
   const decimals = abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
@@ -303,10 +283,6 @@ export function LwcCandlestickChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
-  const ma7SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-  const ma25SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
-  const ma99SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const orderLevelsRef = useRef<OrderLevel[]>(orderLevels);
   // Live primitive per drawing id, and a symbol-keyed store of drawings that the
@@ -336,10 +312,10 @@ export function LwcCandlestickChart({
   const barByTimeRef = useRef<Map<number, KlineCandle>>(new Map());
   // Last pair/interval the viewport was fitted to, so live ticks do not reset it.
   const fittedRef = useRef<string | null>(null);
-  const candleDataRef = useRef<CandlestickData[] | null>(null);
+  const lastCandleRef = useRef<CandlestickData | null>(null);
   const candleDataContextRef = useRef<string | null>(null);
   const candleDataSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const [legend, setLegend] = useState<{ o: number; h: number; l: number; c: number; v?: number; ma7?: number; ma25?: number; ma99?: number } | null>(null);
+  const [legend, setLegend] = useState<{ o: number; h: number; l: number; c: number } | null>(null);
   const [drawingsBySymbol, setDrawingsBySymbol] = useState<Record<string, Drawing[]>>(() =>
     readStoredDrawings(market)
   );
@@ -622,17 +598,23 @@ export function LwcCandlestickChart({
         vertLines: { color: "rgba(255,255,255,0.03)" },
         horzLines: { color: "rgba(255,255,255,0.05)" },
       },
-      rightPriceScale: { borderColor: "rgba(255,255,255,0.06)", scaleMargins: { top: 0.12, bottom: 0.22 } },
+      rightPriceScale: { borderColor: "rgba(255,255,255,0.06)", scaleMargins: { top: 0.1, bottom: 0.1 } },
       timeScale: {
         borderColor: "rgba(255,255,255,0.06)",
+        barSpacing: 8,
+        minBarSpacing: 2,
         timeVisible: intraday,
         secondsVisible: interval === "1s",
         rightOffset: 4,
+        tickMarkFormatter: (time) => {
+          const seconds = chartTimeToSeconds(time);
+          return seconds === null ? null : formatStamp(seconds, interval);
+        },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: "rgba(255,255,255,0.25)", labelBackgroundColor: "#3b3f4a" },
-        horzLine: { color: "rgba(255,255,255,0.25)", labelBackgroundColor: "#3b3f4a" },
+        vertLine: { color: "rgba(255,255,255,0.25)", labelBackgroundColor: "#3b3f4a", style: LineStyle.Dashed },
+        horzLine: { color: "rgba(255,255,255,0.25)", labelBackgroundColor: "#3b3f4a", style: LineStyle.Dashed },
       },
       // Touch gestures come from the library: one-finger horizontal drag pans,
       // two-finger pinch zooms. No hand-rolled pointer handling needed.
@@ -650,27 +632,14 @@ export function LwcCandlestickChart({
       wickUpColor: BULL_COLOR,
       wickDownColor: BEAR_COLOR,
       borderVisible: false,
+      lastValueVisible: true,
+      priceLineVisible: true,
+      priceLineStyle: LineStyle.Dotted,
+      priceLineWidth: 1,
     });
-
-    // Volume on its own overlay scale, pinned to the bottom of the pane.
-    const volumeSeries = chart.addSeries(HistogramSeries, {
-      priceScaleId: "",
-      priceFormat: { type: "volume" },
-      lastValueVisible: false,
-      priceLineVisible: false,
-    });
-    chart.priceScale("").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
-
-    const ma7Series = chart.addSeries(LineSeries, { color: "#F0B90B", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false });
-    const ma25Series = chart.addSeries(LineSeries, { color: "#E040FB", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false });
-    const ma99Series = chart.addSeries(LineSeries, { color: "#00BCD4", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false });
 
     chartRef.current = chart;
     candleSeriesRef.current = candlesSeries;
-    volumeSeriesRef.current = volumeSeries;
-    ma7SeriesRef.current = ma7Series;
-    ma25SeriesRef.current = ma25Series;
-    ma99SeriesRef.current = ma99Series;
     priceLinesRef.current = [];
     syncPriceLines(candlesSeries, orderLevelsRef.current);
 
@@ -704,12 +673,7 @@ export function LwcCandlestickChart({
         return;
       }
       
-      const v = param.seriesData.get(volumeSeries) as { value: number } | undefined;
-      const ma7 = param.seriesData.get(ma7Series) as { value: number } | undefined;
-      const ma25 = param.seriesData.get(ma25Series) as { value: number } | undefined;
-      const ma99 = param.seriesData.get(ma99Series) as { value: number } | undefined;
-
-      setLegend({ o: bar.open, h: bar.high, l: bar.low, c: bar.close, v: v?.value, ma7: ma7?.value, ma25: ma25?.value, ma99: ma99?.value });
+      setLegend({ o: bar.open, h: bar.high, l: bar.low, c: bar.close });
     };
     chart.subscribeCrosshairMove(onCrosshair);
 
@@ -781,10 +745,6 @@ export function LwcCandlestickChart({
       dragRef.current = null;
       overDrawingRef.current = false;
       candleSeriesRef.current = null;
-      volumeSeriesRef.current = null;
-      ma7SeriesRef.current = null;
-      ma25SeriesRef.current = null;
-      ma99SeriesRef.current = null;
       chartRef.current = null;
       chart.remove();
     };
@@ -794,62 +754,33 @@ export function LwcCandlestickChart({
   // latest bar so the current candle can move without resetting the whole chart.
   useEffect(() => {
     const candlesSeries = candleSeriesRef.current;
-    const volumeSeries = volumeSeriesRef.current;
-    const ma7Series = ma7SeriesRef.current;
-    const ma25Series = ma25SeriesRef.current;
-    const ma99Series = ma99SeriesRef.current;
     const chart = chartRef.current;
-    if (!candlesSeries || !volumeSeries || !chart) return;
+    if (!candlesSeries || !chart) return;
     
     const candleData = toCandleData(candles);
     const key = `${symbol}|${interval}`;
-    const previousCandleData = candleDataRef.current;
-    const isReplacement =
-      previousCandleData !== null && candleData.length === previousCandleData.length;
-    const isAppend =
-      previousCandleData !== null && candleData.length === previousCandleData.length + 1;
     const latestIndex = candleData.length - 1;
-    const sameBar = (left: CandlestickData, right: CandlestickData) =>
-      left.time === right.time &&
-      left.open === right.open &&
-      left.high === right.high &&
-      left.low === right.low &&
-      left.close === right.close;
-    const unchangedPrefix =
-      previousCandleData !== null &&
-      previousCandleData
-        .slice(0, isReplacement ? -1 : undefined)
-        .every((bar, index) => sameBar(bar, candleData[index]));
-    const continuesLatestBar =
-      previousCandleData !== null &&
-      latestIndex >= 0 &&
-      (isReplacement
-        ? previousCandleData[previousCandleData.length - 1].time === candleData[latestIndex].time
-        : isAppend &&
-          previousCandleData[previousCandleData.length - 1].time < candleData[latestIndex].time);
-    const canUpdateLatest =
+    const lastCandle = candleData[latestIndex] ?? null;
+    const previousLastCandle = lastCandleRef.current;
+    const lastCandleTime = lastCandle ? chartTimeToSeconds(lastCandle.time) : null;
+    const previousLastCandleTime = previousLastCandle
+      ? chartTimeToSeconds(previousLastCandle.time)
+      : null;
+    const canUpdateLastCandle =
       candleDataSeriesRef.current === candlesSeries &&
       candleDataContextRef.current === key &&
-      previousCandleData !== null &&
-      previousCandleData.length > 0 &&
-      candleData.length > 0 &&
-      (isReplacement || isAppend) &&
-      unchangedPrefix &&
-      continuesLatestBar;
-    if (canUpdateLatest) {
-      candlesSeries.update(candleData[latestIndex]);
+      previousLastCandleTime !== null &&
+      lastCandle !== null &&
+      lastCandleTime !== null &&
+      lastCandleTime >= previousLastCandleTime;
+    if (canUpdateLastCandle) {
+      candlesSeries.update(lastCandle);
     } else {
       candlesSeries.setData(candleData);
     }
-    candleDataRef.current = candleData;
+    lastCandleRef.current = lastCandle;
     candleDataContextRef.current = key;
     candleDataSeriesRef.current = candlesSeries;
-    volumeSeries.setData(toVolumeData(candles));
-    
-    if (ma7Series) ma7Series.setData(calculateSMA(candleData, 7));
-    if (ma25Series) ma25Series.setData(calculateSMA(candleData, 25));
-    if (ma99Series) ma99Series.setData(calculateSMA(candleData, 99));
-
     // Only reset the viewport when the pair/interval changes. Doing this on
     // every tick would yank the view back on each WS message and make panning
     // and pinch-zoom impossible; the library already keeps the right edge
@@ -1190,10 +1121,6 @@ export function LwcCandlestickChart({
               <span>H <span className="text-white/80">{formatPrice(legend.h)}</span></span>
               <span>L <span className="text-white/80">{formatPrice(legend.l)}</span></span>
               <span>C <span className="text-white/80">{formatPrice(legend.c)}</span></span>
-              {legend.v !== undefined && <span>V <span className="text-white/80">{legend.v.toLocaleString()}</span></span>}
-              {legend.ma7 !== undefined && <span>MA(7) <span className="text-[#F0B90B]">{formatPrice(legend.ma7)}</span></span>}
-              {legend.ma25 !== undefined && <span>MA(25) <span className="text-[#E040FB]">{formatPrice(legend.ma25)}</span></span>}
-              {legend.ma99 !== undefined && <span>MA(99) <span className="text-[#00BCD4]">{formatPrice(legend.ma99)}</span></span>}
             </span>
           )}
         </div>

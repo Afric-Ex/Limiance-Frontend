@@ -77,12 +77,16 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
 
   const { data: rate, isFetching: rateFetching, isError: rateError } = useQuery({
     queryKey: ["conversion-rate-preview", fromCoin.symbol, toCoin.symbol, amount],
-    queryFn: () =>
-      tradingService.conversionRate({
+    queryFn: async () => {
+      const response = await tradingService.conversionRate({
         fromAsset: fromCoin.symbol,
         toAsset: toCoin.symbol,
         quantity: amount,
-      }),
+      });
+      const error = response?.error ?? response?.data?.error;
+      if (error) throw new Error(String(error));
+      return response;
+    },
     select: (res: any) => {
       // The endpoint nests everything under `data.rate` and `data.valuation`,
       // not at the top level — flatten it into the shape the UI reads.
@@ -146,7 +150,13 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
   });
 
   const canSubmit =
-    !!fromCoin.symbol && !!toCoin.symbol && fromCoin.symbol !== toCoin.symbol && !!amount && +amount > 0 && !isPending;
+    !!fromCoin.symbol &&
+    !!toCoin.symbol &&
+    fromCoin.symbol !== toCoin.symbol &&
+    !!amount &&
+    +amount > 0 &&
+    !rateError &&
+    !isPending;
 
   const handleSwap = () => {
     setFromCoin(toCoin);
@@ -188,6 +198,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
             <SupportedListingsDropdown
               selectedCoin={fromCoin}
               setSelectedCoin={setFromCoin}
+              selectDefaultCoin
             />
           </div>
         </div>
@@ -233,6 +244,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
         <SupportedListingsDropdown
           selectedCoin={toCoin}
           setSelectedCoin={setToCoin}
+          selectDefaultCoin
         />
       </div>
 
