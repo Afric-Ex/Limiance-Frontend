@@ -28,8 +28,7 @@ export default function middleware(req: NextRequest) {
   if (isPassthrough(pathname)) return NextResponse.next();
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
-  const isAuthPage = pathname.startsWith("/auth");
-  const isProtected = !isAuthPage && pathname !== "/";
+  const isProtected = !pathname.startsWith("/auth") && pathname !== "/";
 
   if (isProtected && !token) {
     const url = req.nextUrl.clone();
@@ -37,12 +36,9 @@ export default function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (isAuthPage && token) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
-
+  // A stale HttpOnly cookie can remain after an API 401. Keep auth pages
+  // reachable so the client can show login instead of bouncing back to a
+  // protected page that will immediately fail authentication again.
   return NextResponse.next();
 }
 

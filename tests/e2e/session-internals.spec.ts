@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { NextRequest } from "next/server";
 import { resolveBackendUrls, resolveBackendUrlsFromEnv } from "../../src/lib/backend-url";
 import { redactDiagnostic, sanitizeUrl } from "../../src/lib/pii-policy";
+import middleware from "../../middleware";
 
 /**
  * Pure-function checks for the pieces the migration rests on. These need no
@@ -59,6 +61,28 @@ test.describe("backend URL normalization", () => {
     ).toBe("https://public.example.test/api/v1");
 
     expect(resolveBackendUrlsFromEnv({})).toBeNull();
+  });
+});
+
+test.describe("session redirects", () => {
+  test("keeps login reachable when a stale session cookie remains", () => {
+    const request = new NextRequest("https://app.example.test/auth/login", {
+      headers: { cookie: "__Host-limiance_session=stale" },
+    });
+
+    const response = middleware(request);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  test("still redirects protected pages to login when there is no session", () => {
+    const request = new NextRequest("https://app.example.test/dashboard");
+
+    const response = middleware(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://app.example.test/auth/login");
   });
 });
 
