@@ -159,6 +159,7 @@ export interface CandleFeed {
   candles: KlineCandle[];
   isLoading: boolean;
   isError: boolean;
+  historyFetched: boolean;
   /** True while the socket is up but no candle has arrived for this pair/interval. */
   wsPending: boolean;
 }
@@ -174,7 +175,12 @@ export function useCandleFeed(symbol: string, interval: string, market: ChartMar
   const [wsConnected, setWsConnected] = useState(false);
   const [restFallback, setRestFallback] = useState(false);
 
-  const { data: historyCandles, isLoading, isError } = useQuery({
+  const {
+    data: historyCandles,
+    isLoading,
+    isError,
+    isFetched: historyFetched,
+  } = useQuery({
     queryKey: tradingKeys.klineData(symbol, interval, market),
     queryFn: () => tradingService.klineData({ symbol, interval, limit: 1000, market }),
     select: (res) => normalizeKlines(res),
@@ -269,6 +275,7 @@ export function useCandleFeed(symbol: string, interval: string, market: ChartMar
     candles,
     isLoading,
     isError,
+    historyFetched,
     wsPending: !wsReady && !restFallback && !isLoading && candles.length === 0,
   };
 }

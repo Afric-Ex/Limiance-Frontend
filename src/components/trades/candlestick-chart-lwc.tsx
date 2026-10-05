@@ -1,6 +1,6 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { FiChevronsRight } from "react-icons/fi";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FiBarChart2, FiChevronsRight } from "react-icons/fi";
 import { FaXmark } from "react-icons/fa6";
 import {
   createChart,
@@ -260,7 +260,12 @@ const formatPrice = (value: number) => {
 
 const formatStamp = (time: number, interval: string) => {
   const d = new Date(time * 1000);
-  if (interval === "1D" || interval === "1W") return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (["1d", "1w", "1mn", "6mh", "1y"].includes(interval)) {
+    if (interval === "1y") {
+      return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    }
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
   return d.toLocaleString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
@@ -543,8 +548,9 @@ export function LwcCandlestickChart({
     drawingsRef.current = drawingsBySymbol;
   }, [drawingsBySymbol]);
 
-  const { candles, isLoading, isError, wsPending } = useCandleFeed(symbol, interval, market);
+  const { candles, isLoading, isError, historyFetched, wsPending } = useCandleFeed(symbol, interval, market);
   const n = candles.length;
+  const hasChartData = useMemo(() => toCandleData(candles).length > 0, [candles]);
 
   const syncPriceLines = useCallback((series: ISeriesApi<"Candlestick">, levels: readonly OrderLevel[]) => {
     for (const line of priceLinesRef.current) series.removePriceLine(line);
@@ -583,7 +589,7 @@ export function LwcCandlestickChart({
     // cleanup can share this reference.
     const livePrimitives = primitivesRef.current;
 
-    const intraday = interval !== "1D" && interval !== "1W";
+    const intraday = !["1d", "1w", "1mn", "6mh", "1y"].includes(interval);
     const chart = createChart(container, {
       autoSize: true,
       layout: {
@@ -1097,7 +1103,14 @@ export function LwcCandlestickChart({
   const last = candles[candles.length - 1];
   const changePct = first && last && first.open ? ((last.close - first.open) / first.open) * 100 : null;
 
-  const showSpinner = wsPending || ((isLoading || isError) && n === 0);
+  const waitingForInitialData = !historyFetched && wsPending;
+  const showSpinner = !hasChartData && (isLoading || waitingForInitialData);
+  const showLoadError = isError && !hasChartData && !isLoading;
+  const showEmptyState =
+    !hasChartData &&
+    !isLoading &&
+    !isError &&
+    (historyFetched || !wsPending);
   const drawing = tool !== "pointer";
 
   return (
@@ -1130,8 +1143,24 @@ export function LwcCandlestickChart({
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
           <div className="w-5 h-5 border-2 border-white/20 border-t-primary rounded-full animate-spin" />
           <span className="text-xs text-white/40">
-            {wsPending ? "Connecting to live chart..." : isLoading ? "Loading chart data..." : "Failed to load chart data"}
+            {waitingForInitialData ? "Connecting to live chart..." : "Loading chart data..."}
           </span>
+        </div>
+      )}
+
+      {(showEmptyState || showLoadError) && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-4">
+          <div className="flex max-w-xs flex-col items-center gap-2 text-center">
+            <FiBarChart2 size={24} className="text-white/25" />
+            <span className="text-sm font-semibold text-white/60">
+              {showLoadError ? "Unable to load chart data" : "No chart data available"}
+            </span>
+            <span className="text-xs leading-relaxed text-white/35">
+              {showLoadError
+                ? "Please try again later."
+                : `There is no candle data for ${symbol} at this interval. Try another interval.`}
+            </span>
+          </div>
         </div>
       )}
 
