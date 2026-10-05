@@ -31,12 +31,24 @@ export const assetKeys = {
     filters,
   ],
   allWallets: (params?: any) => ["all-wallets", params],
+  whitelistedWithdrawalAddresses: (chain: string) => [
+    "whitelisted-withdrawal-addresses",
+    chain,
+  ],
   convertAsset: ["convert-asset"],
   externalTransferCode: (asset: string) => ["external-transfer-code", asset],
   walletById: (id: string) => ["wallet-by-id", id],
 } as const;
 
 export const asset = {
+  whitelistedWithdrawalAddresses: async (chain: string) => {
+    const response = await api.get("wallet/whitelist", { params: { chain } });
+    return response.data;
+  },
+  addWhitelistedWithdrawalAddress: async (data: { chain: string; address: string }) => {
+    const response = await api.post("wallet/whitelist", data);
+    return response.data;
+  },
   internalTransfer: async (data: {
     symbol: string;
     fromBalance: string;

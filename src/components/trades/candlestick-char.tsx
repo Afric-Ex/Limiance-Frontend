@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { FiArrowUp, FiArrowDown, FiMaximize2, FiMinimize2 } from "react-icons/fi";
+import { FiArrowUp, FiArrowDown, FiChevronDown, FiMaximize2, FiMinimize2 } from "react-icons/fi";
 import clsx from "clsx";
 import type { OrderBookEntry } from "@/src/hooks/use-order-book";
 
@@ -12,7 +12,18 @@ const LwcCandlestickChart = dynamic(
   { ssr: false }
 );
 
-const INTERVALS = ["1s", "1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"] as const;
+const QUICK_INTERVALS = ["1s", "1m", "3m", "5m", "15m", "30m", "1h", "4h"] as const;
+const MORE_INTERVALS = [
+  { value: "1d", label: "1D" },
+  { value: "1w", label: "1W" },
+  { value: "1mn", label: "1M" },
+  { value: "6mh", label: "6M" },
+  { value: "1y", label: "1Y" },
+] as const;
+const INTERVALS = [
+  ...QUICK_INTERVALS,
+  ...MORE_INTERVALS.map(({ value }) => value),
+] as const;
 type Interval = (typeof INTERVALS)[number];
 type View = "chart" | "depth";
 
@@ -491,7 +502,7 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
         {view === "chart" && (
           <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
             <div className="flex items-center justify-end gap-0.5 min-w-max">
-              {INTERVALS.map((iv) => (
+              {QUICK_INTERVALS.map((iv) => (
                 <button
                   key={iv}
                   onClick={() => setIntervalVal(iv)}
@@ -505,6 +516,35 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
                   {iv}
                 </button>
               ))}
+              <div className="relative flex h-7 items-center">
+                <select
+                  aria-label="More chart intervals"
+                  value={MORE_INTERVALS.some(({ value }) => value === interval) ? interval : ""}
+                  onChange={(event) => {
+                    const value = event.currentTarget.value;
+                    if (MORE_INTERVALS.some((item) => item.value === value)) {
+                      setIntervalVal(value as Interval);
+                    }
+                  }}
+                  className={`h-7 appearance-none rounded bg-white/[0.06] pl-2 pr-6 text-[11px] font-semibold outline-none transition-colors ${
+                    MORE_INTERVALS.some(({ value }) => value === interval)
+                      ? "text-white"
+                      : "text-white/50 hover:text-white/80"
+                  }`}
+                >
+                  <option value="" disabled>More</option>
+                  {MORE_INTERVALS.map(({ value, label }) => (
+                    <option key={value} value={value} className="bg-[#181a20] text-white">
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <FiChevronDown
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-1.5 text-white/50"
+                  size={12}
+                />
+              </div>
             </div>
           </div>
         )}

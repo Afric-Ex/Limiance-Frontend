@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Copy } from "@/src/components/shared/copy";
 import {
   Accordion,
@@ -8,6 +9,7 @@ import {
   AccordionPanel,
   Button,
   LoadingOverlay,
+  Modal,
   NumberInput,
   Popover,
   PopoverDropdown,
@@ -19,10 +21,11 @@ import {
   TableThead,
   TableTr,
   Skeleton as MantineSkeleton,
+  Select,
   TextInput,
   Tooltip,
 } from "@mantine/core";
-import { MdKeyboardArrowRight, MdOutlineHelp, MdOutlineSendToMobile } from "react-icons/md";
+import { MdAccountBalanceWallet, MdKeyboardArrowRight, MdOutlineHelp, MdOutlineSendToMobile } from "react-icons/md";
 import { FiXCircle } from "react-icons/fi";
 import { TokenNetworkModal } from "@/src/components/transactions/token-network-modal";
 import { useWithdrawal } from "@/src/hooks/use-withdrawal";
@@ -31,13 +34,14 @@ import { InlineLoading } from "@/src/components/shared/inline-loading";
 import { WalletDropdown } from "@/src/components/assets/wallet-dropdown";
 import { assetKeys, asset } from "@/src/services/asset";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { truncateCryptoAddress } from "@/src/utils/truncate-address";
 import { useInfiniteList } from "@/src/hooks/use-infinite-list";
 import { InfiniteScrollTrigger } from "@/src/components/shared/infinite-scroll-trigger";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { WithdrawalSkeleton } from "@/src/components/skeletons/orders";
+import { errorMessageHandler } from "@/src/lib/error-handler";
 
 const faqs = [
   {
@@ -113,6 +117,52 @@ function validateAddress(address: string, networkSymbol: string): string | null 
   return null;
 }
 
+type WhitelistedAddress = {
+  address: string;
+  chain?: string;
+};
+
+function findWhitelistEntries(value: unknown, depth = 0): unknown[] | null {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== "object" || depth > 3) return null;
+
+  const record = value as Record<string, unknown>;
+  if (typeof record.address === "string") return [record];
+
+  for (const key of ["data", "addresses", "whitelist", "items", "results"]) {
+    if (key in record) {
+      const entries = findWhitelistEntries(record[key], depth + 1);
+      if (entries) return entries;
+    }
+  }
+  return null;
+}
+
+function parseWhitelistAddresses(response: unknown): WhitelistedAddress[] {
+  const entries = findWhitelistEntries(response) ?? [];
+  return entries.flatMap((entry) => {
+    if (typeof entry === "string" && entry.trim()) {
+      return [{ address: entry.trim() }];
+    }
+    if (!entry || typeof entry !== "object") return [];
+
+    const record = entry as Record<string, unknown>;
+    const address = record.address ?? record.wallet_address;
+    if (typeof address !== "string" || !address.trim()) return [];
+
+    const chain = record.chain ?? record.network ?? record.blockchain;
+    return [{
+      address: address.trim(),
+      ...(typeof chain === "string" ? { chain } : {}),
+    }];
+  });
+}
+
+function truncateWhitelistAddress(address: string): string {
+  if (address.length <= 20) return address;
+  return `${address.slice(0, 8)}...${address.slice(-9)}`;
+}
+
 function WithdrawalInner() {
   const {
     selectedCoin,
@@ -173,8 +223,67 @@ function WithdrawalInner() {
   });
 
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
+  const [whitelistModalOpened, { open: openWhitelistModal, close: closeWhitelistModal }] = useDisclosure(false);
+  const [whitelistAddress, setWhitelistAddress] = useState("");
+  const queryClient = useQueryClient();
+  const selectedWhitelistChain =
+    selectedNetwork?.blockchain || selectedNetwork?.symbol || "";
+
+  const {
+    data: whitelistedAddresses = [],
+    isLoading: whitelistLoading,
+    isError: whitelistError,
+    refetch: refetchWhitelist,
+  } = useQuery({
+    queryKey: assetKeys.whitelistedWithdrawalAddresses(selectedWhitelistChain),
+    queryFn: async () => {
+      const response = await asset.whitelistedWithdrawalAddresses(selectedWhitelistChain);
+      if (
+        response &&
+        typeof response === "object" &&
+        (("error" in response && response.error) ||
+          ("success" in response && response.success === false))
+      ) {
+        throw new Error(
+          "error" in response && response.error
+            ? String(response.error)
+            : "Unable to load whitelisted withdrawal addresses."
+        );
+      }
+      return parseWhitelistAddresses(response);
+    },
+    enabled: !!selectedWhitelistChain,
+  });
+
+  const selectedChainNames = [
+    selectedNetwork?.blockchain,
+    selectedNetwork?.symbol,
+    selectedNetwork?.name,
+  ]
+    .filter(Boolean)
+    .map((chain) => String(chain).toLowerCase());
+  const addressesForNetwork = whitelistedAddresses.filter(
+    ({ chain }) => !chain || selectedChainNames.includes(chain.toLowerCase())
+  );
+
+  const addWhitelistedAddress = useMutation({
+    mutationFn: (data: { chain: string; address: string }) =>
+      asset.addWhitelistedWithdrawalAddress(data),
+    onSuccess: (_response, variables) => {
+      form.setFieldValue("address", variables.address);
+      setWhitelistAddress("");
+      closeWhitelistModal();
+      void queryClient.invalidateQueries({
+        queryKey: ["whitelisted-withdrawal-addresses"],
+      });
+    },
+    onError: (error) => errorMessageHandler(error as any),
+  });
 
   const addressError = form.values.address && selectedNetwork?.symbol
+    && !addressesForNetwork.some(
+      ({ address }) => address.toLowerCase() === form.values.address.toLowerCase()
+    )
     ? validateAddress(form.values.address, selectedNetwork.symbol)
     : null;
 
@@ -198,14 +307,75 @@ function WithdrawalInner() {
         }}
       />
 
+      <Modal
+        opened={whitelistModalOpened}
+        onClose={closeWhitelistModal}
+        title="Add whitelisted account"
+        centered
+        classNames={{
+          content: "!bg-[#181a20] !border !border-white/[0.08]",
+          header: "!bg-[#181a20] !text-white",
+          title: "!text-white !font-bold",
+          close: "!text-white/50 hover:!bg-white/[0.06]",
+        }}
+      >
+        <div className="flex flex-col gap-4">
+          <TextInput
+            label="Wallet address"
+            placeholder="Enter wallet address"
+            value={whitelistAddress}
+            onChange={(event) => setWhitelistAddress(event.currentTarget.value)}
+            error={
+              whitelistAddress
+                ? validateAddress(whitelistAddress, selectedNetwork.symbol)
+                : null
+            }
+            classNames={{ input: inputClass, label: "!text-white/50 !mb-2" }}
+          />
+          <Button
+            fullWidth
+            loading={addWhitelistedAddress.isPending}
+            disabled={
+              !whitelistAddress.trim() ||
+              !!validateAddress(whitelistAddress.trim(), selectedNetwork.symbol)
+            }
+            className="disabled:!bg-primary/35 disabled:!text-white/65 disabled:!opacity-80 disabled:!shadow-none disabled:!cursor-not-allowed"
+            onClick={() => {
+              const address = whitelistAddress.trim();
+              const error = validateAddress(address, selectedNetwork.symbol);
+              if (error) return;
+              addWhitelistedAddress.mutate({
+                chain: selectedNetwork.blockchain || selectedNetwork.symbol,
+                address,
+              });
+            }}
+          >
+            Add whitelisted account
+          </Button>
+          <div className="flex items-center gap-3 text-xs font-semibold text-white/35">
+            <span className="h-px flex-1 bg-white/[0.08]" />
+            OR
+            <span className="h-px flex-1 bg-white/[0.08]" />
+          </div>
+          <Button
+            fullWidth
+            variant="default"
+            leftSection={<MdAccountBalanceWallet size={18} />}
+            className="!h-12 !border-primary/40 !bg-gradient-to-r !from-primary/20 !to-violet-500/20 !text-white !font-bold !shadow-[0_0_18px_rgba(77,119,240,0.16)] hover:!border-primary/70 hover:!from-primary/30 hover:!to-violet-500/30 hover:!shadow-[0_0_24px_rgba(77,119,240,0.28)]"
+          >
+            Connect wallet
+          </Button>
+        </div>
+      </Modal>
+
       {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 max-[1150px]:gap-4 items-start max-[1150px]:flex max-[1150px]:flex-col">
+      <div className="grid grid-cols-1 min-[1151px]:grid-cols-[minmax(0,1fr)_380px] gap-6 max-[1150px]:gap-4 items-start">
 
         {/* Left: Steps */}
-        <div className="flex flex-col gap-4">
+        <div className="flex w-full min-w-0 flex-col gap-4">
 
           {/* Step 1: Coin & Network */}
-          <div className="bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl flex flex-col gap-5 max-[1150px]:gap-4">
+          <div className="w-full min-w-0 bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl flex flex-col gap-5 max-[1150px]:gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <StepBadge num={1} />
@@ -222,7 +392,7 @@ function WithdrawalInner() {
             </div>
 
             {selectedCoin.symbol && selectedNetwork.name ? (
-              <div className="flex items-center gap-4 px-4 py-3 bg-white/[0.02] border border-white/[0.04] rounded-xl">
+              <div className="flex min-w-0 items-center gap-4 px-4 py-3 bg-white/[0.02] border border-white/[0.04] rounded-xl max-[480px]:gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   {selectedCoin.image && (
                     <img src={selectedCoin.image} alt={selectedCoin.symbol} width={28} height={28} className="rounded-full shrink-0" />
@@ -232,7 +402,7 @@ function WithdrawalInner() {
                     <span className="text-xs text-white/40 truncate">{selectedCoin.name}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 max-[480px]:gap-1">
                   <span className="text-xs text-white/30">via</span>
                   {selectedNetwork.image && (
                     <img src={selectedNetwork.image} alt={selectedNetwork.symbol} width={20} height={20} className="rounded-full shrink-0" />
@@ -254,30 +424,44 @@ function WithdrawalInner() {
           </div>
 
           {/* Step 2: Withdrawal Details */}
-          <div className={`bg-[#181a20] border rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl flex flex-col gap-6 max-[1150px]:gap-4 transition-all ${selectedNetwork.name ? "border-white/[0.06]" : "border-white/[0.03] opacity-60 pointer-events-none"}`}>
+          <div className={`w-full min-w-0 bg-[#181a20] border rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl flex flex-col gap-6 max-[1150px]:gap-4 transition-all ${selectedWhitelistChain ? "border-white/[0.06]" : "border-white/[0.03] opacity-60 pointer-events-none"}`}>
             <div className="flex items-center gap-3">
               <StepBadge num={2} />
               <h3 className="text-base font-bold text-white">Withdrawal Details</h3>
             </div>
 
+            {!selectedWhitelistChain ? (
+              <p className="text-sm text-white/40">Select a chain above</p>
+            ) : whitelistLoading ? (
+              <div className="flex justify-center py-3"><InlineLoading /></div>
+            ) : whitelistError ? (
+              <Button variant="subtle" color="red" onClick={() => void refetchWhitelist()}>
+                Unable to load whitelisted accounts. Retry
+              </Button>
+            ) : addressesForNetwork.length === 0 ? (
+              <Button fullWidth onClick={openWhitelistModal}>
+                Add whitelisted account
+              </Button>
+            ) : (
+              <>
             {/* Address */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Recipient Address</label>
-              <TextInput
-                classNames={{
-                  input: inputClass,
-                  section: "!w-fit !right-3",
-                }}
-                placeholder="Enter recipient wallet address"
+              <Select
+                classNames={{ input: inputClass, dropdown: "!bg-[#181a20] !border-white/[0.08]" }}
+                placeholder="Select a whitelisted address"
+                data={addressesForNetwork.map(({ address }) => ({
+                  value: address,
+                  label: address,
+                }))}
+                value={form.values.address || null}
+                onChange={(value) => form.setFieldValue("address", value ?? "")}
                 error={addressError}
-                rightSection={
-                  form.values.address ? (
-                    <button onClick={() => form.setFieldValue("address", "")}>
-                      <FiXCircle size={18} className="cursor-pointer text-white/30 hover:text-primary transition-colors" />
-                    </button>
-                  ) : null
-                }
-                {...form.getInputProps("address")}
+                renderOption={({ option }) => (
+                  <span className="block w-full break-all font-mono text-xs leading-5 text-white/80">
+                    {truncateWhitelistAddress(option.value)}
+                  </span>
+                )}
               />
             </div>
 
@@ -456,11 +640,13 @@ function WithdrawalInner() {
             >
               Confirm Withdrawal
             </Button>
+              </>
+            )}
           </div>
         </div>
 
         {/* Right: FAQ */}
-        <div className="sticky top-6 bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl max-[1150px]:relative max-[1150px]:top-0 flex flex-col gap-5 max-[1150px]:gap-4 w-full">
+        <div className="min-[1151px]:sticky min-[1151px]:top-6 bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl flex flex-col gap-5 max-[1150px]:gap-4 w-full min-w-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center text-white/50">
               <MdOutlineHelp size={18} />
