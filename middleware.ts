@@ -5,7 +5,19 @@ import { NextRequest, NextResponse } from "next/server";
  * it is HttpOnly, so nothing in the browser can read it, and nothing in the
  * browser should try.
  */
-const SESSION_COOKIE = "__Host-limiance_session";
+const SESSION_COOKIE = "limiance_session";
+const LEGACY_SESSION_COOKIE = "__Host-limiance_session";
+
+const clearLegacySessionCookie = (response: NextResponse): NextResponse => {
+  response.cookies.set(LEGACY_SESSION_COOKIE, "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+  return response;
+};
 
 /**
  * Paths that must reach Next.js untouched.
@@ -33,13 +45,13 @@ export default function middleware(req: NextRequest) {
   if (isProtected && !token) {
     const url = req.nextUrl.clone();
     url.pathname = "/auth/login";
-    return NextResponse.redirect(url);
+    return clearLegacySessionCookie(NextResponse.redirect(url));
   }
 
   // A stale HttpOnly cookie can remain after an API 401. Keep auth pages
   // reachable so the client can show login instead of bouncing back to a
   // protected page that will immediately fail authentication again.
-  return NextResponse.next();
+  return clearLegacySessionCookie(NextResponse.next());
 }
 
 export const config = {
