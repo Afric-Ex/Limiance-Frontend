@@ -40,8 +40,8 @@ import type { KlineCandle } from "@/src/types/trading";
 import type { OrderLevel } from "@/src/components/trades/candlestick-char";
 
 const APP_CHART_BACKGROUND = "#181a20";
-const BULL_COLOR = "#25AB42";
-const BEAR_COLOR = "#F6465D";
+const BULL_COLOR = "#16c784";
+const BEAR_COLOR = "#ea3943";
 
 const LEVEL_COLORS: Record<OrderLevel["color"], { line: string; axis: string }> = {
   entry: { line: "#3b82f6", axis: "#2563eb" },
@@ -247,7 +247,7 @@ function toCandleData(candles: KlineCandle[]) {
   const out: { t: number; d: CandlestickData }[] = [];
   for (const c of candles) {
     if (!Number.isFinite(c.time) || c.time <= 0) continue;
-    if (![c.open, c.high, c.low, c.close].every(Number.isFinite)) continue;
+    if (![c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)) continue;
     const time = Math.floor(c.time / 1000) as UTCTimestamp;
     if (seen.has(time)) continue;
     seen.add(time);
@@ -258,7 +258,13 @@ function toCandleData(candles: KlineCandle[]) {
 
 function toVolumeData(candles: KlineCandle[]): HistogramData[] {
   return candles
-    .filter((c) => Number.isFinite(c.time) && c.time > 0 && Number.isFinite(c.volume))
+    .filter(
+      (c) =>
+        Number.isFinite(c.time) &&
+        c.time > 0 &&
+        Number.isFinite(c.volume) &&
+        [c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)
+    )
     .map((c) => ({
       time: Math.floor(c.time / 1000) as UTCTimestamp,
       value: c.volume,
@@ -330,6 +336,9 @@ export function LwcCandlestickChart({
   const barByTimeRef = useRef<Map<number, KlineCandle>>(new Map());
   // Last pair/interval the viewport was fitted to, so live ticks do not reset it.
   const fittedRef = useRef<string | null>(null);
+  const candleDataRef = useRef<CandlestickData[] | null>(null);
+  const candleDataContextRef = useRef<string | null>(null);
+  const candleDataSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const [legend, setLegend] = useState<{ o: number; h: number; l: number; c: number; v?: number; ma7?: number; ma25?: number; ma99?: number } | null>(null);
   const [drawingsBySymbol, setDrawingsBySymbol] = useState<Record<string, Drawing[]>>(() =>
     readStoredDrawings(market)
@@ -781,8 +790,8 @@ export function LwcCandlestickChart({
     };
   }, [symbol, interval, addDrawing, detachPreview, setPending, setSelectedId, syncPanMode, syncPrimitives, syncPriceLines]);
 
-  // Data. setData on every feed change is cheap at 500 points; swap to
-  // series.update() for the last bar if tick volume ever matters.
+  // Full loads/history changes replace the series; live updates touch only the
+  // latest bar so the current candle can move without resetting the whole chart.
   useEffect(() => {
     const candlesSeries = candleSeriesRef.current;
     const volumeSeries = volumeSeriesRef.current;
@@ -793,7 +802,48 @@ export function LwcCandlestickChart({
     if (!candlesSeries || !volumeSeries || !chart) return;
     
     const candleData = toCandleData(candles);
-    candlesSeries.setData(candleData);
+    const key = `${symbol}|${interval}`;
+    const previousCandleData = candleDataRef.current;
+    const isReplacement =
+      previousCandleData !== null && candleData.length === previousCandleData.length;
+    const isAppend =
+      previousCandleData !== null && candleData.length === previousCandleData.length + 1;
+    const latestIndex = candleData.length - 1;
+    const sameBar = (left: CandlestickData, right: CandlestickData) =>
+      left.time === right.time &&
+      left.open === right.open &&
+      left.high === right.high &&
+      left.low === right.low &&
+      left.close === right.close;
+    const unchangedPrefix =
+      previousCandleData !== null &&
+      previousCandleData
+        .slice(0, isReplacement ? -1 : undefined)
+        .every((bar, index) => sameBar(bar, candleData[index]));
+    const continuesLatestBar =
+      previousCandleData !== null &&
+      latestIndex >= 0 &&
+      (isReplacement
+        ? previousCandleData[previousCandleData.length - 1].time === candleData[latestIndex].time
+        : isAppend &&
+          previousCandleData[previousCandleData.length - 1].time < candleData[latestIndex].time);
+    const canUpdateLatest =
+      candleDataSeriesRef.current === candlesSeries &&
+      candleDataContextRef.current === key &&
+      previousCandleData !== null &&
+      previousCandleData.length > 0 &&
+      candleData.length > 0 &&
+      (isReplacement || isAppend) &&
+      unchangedPrefix &&
+      continuesLatestBar;
+    if (canUpdateLatest) {
+      candlesSeries.update(candleData[latestIndex]);
+    } else {
+      candlesSeries.setData(candleData);
+    }
+    candleDataRef.current = candleData;
+    candleDataContextRef.current = key;
+    candleDataSeriesRef.current = candlesSeries;
     volumeSeries.setData(toVolumeData(candles));
     
     if (ma7Series) ma7Series.setData(calculateSMA(candleData, 7));
@@ -804,10 +854,10 @@ export function LwcCandlestickChart({
     // every tick would yank the view back on each WS message and make panning
     // and pinch-zoom impossible; the library already keeps the right edge
     // pinned when the user is already at it.
-    const key = `${symbol}|${interval}`;
     if (fittedRef.current !== key) {
       fittedRef.current = key;
-      chart.timeScale().fitContent();
+      const total = candleData.length;
+      chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - 70), to: total + 4 });
     }
   }, [candles, symbol, interval]);
 

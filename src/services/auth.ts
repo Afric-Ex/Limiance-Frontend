@@ -41,6 +41,8 @@ export const auth = {
       captchaOutput: data.captchaOutput,
       passToken: data.passToken,
       genTime: data.genTime,
+    }, {
+      headers: { "X-Client-Type": "web" },
     });
     authDebug("login-response", {
       status: response.status,

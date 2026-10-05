@@ -52,6 +52,11 @@ export const errorMessageHandler = (obj: ErrorType) => {
       errorNotification(String(msg));
     }
   };
+  // These requests were deliberately aborted after navigation or a session
+  // change; they are not actionable errors for the user.
+  if (obj.code === "ERR_CANCELED" || obj.code === "ERR_SESSION_STALE") {
+    return;
+  }
   // A timed-out request never reaches the server, so it has no response body to
   // describe. Report it in plain language rather than leaking axios's
   // "timeout of 30000ms exceeded" string at the user.
