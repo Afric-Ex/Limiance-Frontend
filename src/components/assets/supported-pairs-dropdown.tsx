@@ -11,7 +11,7 @@ import Image from "next/image";
 import { Search } from "../icons/search";
 import { icons } from "./icons";
 import { InlineLoading } from "../shared/inline-loading";
-import { Dispatch, SetStateAction, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { useDisclosure } from "@mantine/hooks";
 import { SelectedCoin } from "@/src/hooks/use-deposit";
 import { assetKeys, asset } from "@/src/services/asset";
@@ -30,9 +30,11 @@ const normalize = (value: unknown) => String(value ?? "").trim().toLowerCase();
 export const SupportedListingsDropdown = ({
   selectedCoin,
   setSelectedCoin,
+  selectDefaultCoin = false,
 }: {
   setSelectedCoin: Dispatch<SetStateAction<SelectedCoin>>;
   selectedCoin: SelectedCoin;
+  selectDefaultCoin?: boolean;
 }) => {
   const [opened, { toggle, close }] = useDisclosure(false);
   const [tokenQuery, setTokenQuery] = useState("");
@@ -85,6 +87,24 @@ export const SupportedListingsDropdown = ({
     return [...bySymbol.values()];
   }, [allTokens]);
 
+  useEffect(() => {
+    if (!selectDefaultCoin) return;
+    const token = selectedCoin.symbol
+      ? supportedTokens.find(
+          (item) => item.symbol.toLowerCase() === selectedCoin.symbol.toLowerCase()
+        )
+      : supportedTokens[0];
+    if (!token || (selectedCoin.symbol && selectedCoin.name)) return;
+
+    setSelectedCoin({
+      name: token.name,
+      symbol: token.symbol,
+      image: token.image,
+      contractAddress: token.contractAddress,
+      blockchain: token.blockchain,
+    });
+  }, [selectDefaultCoin, selectedCoin.name, selectedCoin.symbol, setSelectedCoin, supportedTokens]);
+
   const filteredTokens = tokenQuery.trim()
     ? supportedTokens.filter(
         (t) =>
@@ -114,19 +134,16 @@ export const SupportedListingsDropdown = ({
         >
           {supportedTokensLoading ? (
             <InlineLoading />
-          ) : selectedCoin?.name ? (
+          ) : selectedCoin?.symbol ? (
             <span className="flex items-center gap-2">
-              <img
-                src={selectedCoin?.image}
-                width={24}
-                height={24}
-                alt="selected coin"
-              />
+              {selectedCoin.image && (
+                <img src={selectedCoin.image} width={24} height={24} alt="selected coin" />
+              )}
               <span className="flex items-center gap-1">
                 <span className="text-xs font-bold">
                   {selectedCoin?.symbol}
                 </span>
-                <span className="text-8px">{selectedCoin?.name}</span>
+                {selectedCoin.name && <span className="text-8px">{selectedCoin.name}</span>}
               </span>
             </span>
           ) : (
