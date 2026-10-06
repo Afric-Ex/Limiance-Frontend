@@ -114,7 +114,7 @@ export default function WhitelistedWalletsPage() {
   const addresses = whitelistQuery.data ?? [];
 
   return (
-    <main className="flex flex-col gap-6 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter">
+    <main className="flex flex-col gap-6 max-[1150px]:pb-[90px] page-enter">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Whitelisted Wallets</h1>

@@ -5,11 +5,14 @@ import { Loader, Popover, TextInput } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IoChevronDownOutline } from "react-icons/io5";
 import { Search } from "../icons/search";
+import { uniqueFiatAssetSymbols } from "@/src/lib/fiat-assets";
+import { getCryptoIcon } from "@/src/utils/crypto-icons";
 
 interface FiatAssetSelectorProps {
   value: string;
   onChange: (value: string) => void;
   assets: string[];
+  assetImages?: Record<string, string>;
   isLoading?: boolean;
   isLoadingMore?: boolean;
   hasMore?: boolean;
@@ -38,6 +41,7 @@ export const FiatAssetSelector = ({
   value,
   onChange,
   assets,
+  assetImages = {},
   isLoading,
   isLoadingMore,
   hasMore,
@@ -53,8 +57,13 @@ export const FiatAssetSelector = ({
 
   const filteredAssets = useMemo(() => {
     const search = query.trim().toUpperCase();
-    return search ? assets.filter((a) => a.toUpperCase().includes(search)) : assets;
+    const uniqueAssets = uniqueFiatAssetSymbols(assets);
+    return search
+      ? uniqueAssets.filter((asset) => asset.toUpperCase().includes(search))
+      : uniqueAssets;
   }, [assets, query]);
+  const getAssetImage = (symbol: string) =>
+    assetImages[symbol.toUpperCase()] || getCryptoIcon(symbol);
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     if (!hasMore || isLoadingMore || !onLoadMore) return;
@@ -91,7 +100,24 @@ export const FiatAssetSelector = ({
           className={`${targetClass} w-full flex items-center justify-between px-4 gap-2`}
         >
           <span className={`truncate ${value ? "text-white" : "text-white/20"}`}>
-            {value || (isLoading ? "Loading assets…" : placeholder)}
+            {value ? (
+              <span className="flex min-w-0 items-center gap-2">
+                {getAssetImage(value) ? (
+                  <img
+                    src={getAssetImage(value)}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-5 w-5 shrink-0 rounded-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : null}
+                <span className="truncate">{value}</span>
+              </span>
+            ) : (
+              isLoading ? "Loading assets…" : placeholder
+            )}
           </span>
           <IoChevronDownOutline size={18} className="text-white/40 shrink-0" />
         </div>
@@ -134,7 +160,20 @@ export const FiatAssetSelector = ({
                   : "bg-white/[0.02] text-white/80 hover:bg-white/[0.06]"
               }`}
             >
-              {asset}
+              <span className="flex items-center gap-2">
+                {getAssetImage(asset) ? (
+                  <img
+                    src={getAssetImage(asset)}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-5 w-5 shrink-0 rounded-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : null}
+                {asset}
+              </span>
             </button>
           ))}
 

@@ -62,7 +62,7 @@ function P2PMarketplacePageInner() {
 
   return (
     <P2PLayout>
-      <div className="w-full max-w-7xl mx-auto py-6 max-[1150px]:px-4 max-[1150px]:pb-[90px] max-[1150px]:py-4 page-enter">
+      <div className="w-full max-w-7xl mx-auto py-6 max-[1150px]:pb-[90px] max-[1150px]:py-4 page-enter">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
