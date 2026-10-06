@@ -31,7 +31,8 @@ const modalStyles = {
 };
 
 const tableClassNames = {
-  th: "!py-3 !px-3 first:!pl-5 !text-[11px] !font-medium !uppercase !tracking-wider !text-white/40 !border-b !border-white/[0.06] !bg-transparent",
+  table: "min-w-max",
+  th: "!py-3 !px-3 first:!pl-5 !whitespace-nowrap !text-[11px] !font-medium !uppercase !tracking-wider !text-white/40 !border-b !border-white/[0.06] !bg-transparent",
   tr: "!border-b !border-white/[0.06] last:!border-0 hover:!bg-white/[0.02] !transition-colors",
   td: "!py-4 !px-3 first:!pl-5 !text-sm",
 };
@@ -292,38 +293,41 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
 
       {/* ── Funds / Positions Tabs ────────────────────────────────────────── */}
       <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] px-2 pr-4">
-          <div className="flex items-center gap-1">
-            {[
-              { value: "funds", label: "Funds" },
-              { value: "positions", label: "Positions" },
-              { value: "borrow_history", label: "Borrow History" },
-              { value: "liquidation_history", label: "Liquidation History" },
-            ].map((t) => (
-              <button
-                key={t.value}
-                onClick={() => setPanelTab(t.value)}
-                className={clsx(
-                  "relative px-4 pt-4 pb-3 text-sm font-semibold transition-colors",
-                  panelTab === t.value
-                    ? "text-white"
-                    : "text-white/40 hover:text-white/70"
-                )}
-              >
-                {t.label}
-                {panelTab === t.value && (
-                  <span className="absolute inset-x-3 bottom-0 h-[2px] rounded-full bg-primary" />
-                )}
-              </button>
-            ))}
+        <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-2 pr-4 max-[1150px]:flex-col max-[1150px]:items-stretch">
+          <div className="min-w-0 max-[1150px]:-mx-2 max-[1150px]:overflow-x-auto max-[1150px]:px-2">
+            <div className="flex w-max items-center gap-1 whitespace-nowrap">
+              {[
+                { value: "funds", label: "Funds" },
+                { value: "positions", label: "Positions" },
+                { value: "borrow_history", label: "Borrow History" },
+                { value: "liquidation_history", label: "Liquidation History" },
+              ].map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => setPanelTab(t.value)}
+                  className={clsx(
+                    "relative px-4 pt-4 pb-3 text-sm font-semibold transition-colors",
+                    panelTab === t.value
+                      ? "text-white"
+                      : "text-white/40 hover:text-white/70"
+                  )}
+                >
+                  {t.label}
+                  {panelTab === t.value && (
+                    <span className="absolute inset-x-3 bottom-0 h-[2px] rounded-full bg-primary" />
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
           {panelTab === "funds" && (
-            <div className="flex items-center gap-3 pb-2">
+            <div className="flex items-center gap-3 pb-2 max-[1150px]:w-full max-[1150px]:justify-between">
               <Checkbox
                 classNames={{
+                  root: "!shrink-0",
                   input: "!bg-transparent !border-white/20 checked:!bg-primary checked:!border-primary",
-                  label: "!text-xs !text-white/40",
+                  label: "!whitespace-nowrap !text-xs !text-white/40",
                 }}
                 label="Hide zero-balance assets"
                 checked={hideZero}

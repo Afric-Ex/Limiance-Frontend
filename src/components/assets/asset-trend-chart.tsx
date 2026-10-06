@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { InlineLoading } from "../shared/inline-loading";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import dayjs from "dayjs";
+import { FiChevronDown } from "react-icons/fi";
 
 type Period = "7D" | "30D" | "90D" | "180D";
 
@@ -26,7 +27,7 @@ function extractBase(pair: string): string {
 }
 
 export const AssetTrendChart = () => {
-  const [period, setPeriod] = useState<Period>("30D");
+  const [period, setPeriod] = useState<Period>("7D");
 
   const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs({ coins: true });
 
@@ -212,20 +213,24 @@ export const AssetTrendChart = () => {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1 text-xs font-semibold">
-          {(["7D", "30D", "90D", "180D"] as Period[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-2.5 py-0.5 rounded transition-colors ${
-                period === p
-                  ? "bg-primary/20 text-primary"
-                  : "text-white/40 hover:text-white"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
+        <div className="relative flex items-center">
+          <select
+            aria-label="Asset trend period"
+            value={period}
+            onChange={(event) => setPeriod(event.currentTarget.value as Period)}
+            className="h-8 appearance-none rounded-lg border border-white/[0.08] bg-[#181a20] pl-3 pr-8 text-xs font-semibold text-white outline-none transition-colors hover:border-white/20 focus:border-primary/50"
+          >
+            {(["7D", "30D", "90D", "180D"] as Period[]).map((p) => (
+              <option key={p} value={p} className="bg-[#181a20] text-white">
+                {p}
+              </option>
+            ))}
+          </select>
+          <FiChevronDown
+            aria-hidden="true"
+            className="pointer-events-none absolute right-2 text-white/50"
+            size={14}
+          />
         </div>
       </div>
 

@@ -33,19 +33,20 @@ export const SpotTable = () => {
           {portfolioLoading ? (
             <InlineLoading />
           ) : (
-            <div className="w-full overflow-auto">
+            <div className="w-full overflow-x-auto">
               <Table
                 classNames={{
+                  table: "min-w-[720px]",
                   th: "text-white/40 text-xs font-medium uppercase tracking-wider py-3 border-b border-white/[0.06]",
                   tr: "border-b border-white/[0.06] hover:bg-white/[0.02] transition-colors",
                   td: "py-4 text-sm text-white",
                 }}
               >
                 <TableTr>
-                  <TableTh>Coin</TableTh>
-                  <TableTh className="max-[1150px]:text-right">Amount</TableTh>
-                  <TableTh className="max-[1150px]:hidden">Price</TableTh>
-                  <TableTh className="max-[1150px]:hidden">Action</TableTh>
+                  <TableTh className="min-w-[240px]">Coin</TableTh>
+                  <TableTh className="min-w-[150px]">Amount</TableTh>
+                  <TableTh className="min-w-[140px] whitespace-nowrap">Price</TableTh>
+                  <TableTh className="min-w-[190px] whitespace-nowrap">Action</TableTh>
                 </TableTr>
                 {portfolio?.map((item: any, index: number) => {
                   const balStr = String(item.spotBalance || item.spot_balance || item.balance || item.free || "0").replace(/,/g, "");
@@ -80,7 +81,7 @@ export const SpotTable = () => {
                           </span>
                         </span>
                       </TableTd>
-                      <TableTd className="max-[1150px]:text-right">
+                      <TableTd>
                         <span className="flex flex-col gap-0.5">
                           <span className="text-sm font-medium text-white">
                             {balNum.toLocaleString(undefined, { maximumFractionDigits: 8 })}
@@ -90,12 +91,12 @@ export const SpotTable = () => {
                           </span>
                         </span>
                       </TableTd>
-                      <TableTd className="max-[1150px]:hidden">
+                      <TableTd className="whitespace-nowrap">
                         <span className="text-sm font-medium text-white">
                           ${priceNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
                         </span>
                       </TableTd>
-                      <TableTd className="max-[1150px]:hidden">
+                      <TableTd className="whitespace-nowrap">
                         <div className="flex items-center gap-4">
                           <span
                             onClick={() => router.push(`/trades/spot`)}

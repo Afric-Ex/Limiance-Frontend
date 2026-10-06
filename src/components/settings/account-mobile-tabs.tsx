@@ -9,12 +9,14 @@ import { UserKey } from "@/src/components/icons/user-key";
 import { Settings } from "@/src/components/icons/settings";
 import { BusinessCard } from "@/src/components/icons/business-card";
 import { Authorization } from "@/src/components/icons/authorization";
+import { Wallet } from "@/src/components/icons/wallet";
 
 const accountNavLinks = [
   { name: "Profile", link: "/account/profile", icon: Account },
   { name: "Verification", link: "/account/kyc", icon: Authorization },
   { name: "Security", link: "/account/security", icon: Secure },
   { name: "API Keys", link: "/account/api-keys", icon: UserKey },
+  { name: "Whitelisted Wallets", link: "/account/whitelisted-wallets", icon: Wallet },
   { name: "Settings", link: "/account/settings", icon: Settings },
   { name: "Payments", link: "/account/payment-methods", icon: BusinessCard },
 ];

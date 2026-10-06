@@ -82,6 +82,32 @@ const numericValue = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+export function deriveFundingBalance(
+  total: AccountBalance | undefined,
+  spot: AccountBalance | undefined,
+  futures: AccountBalance | undefined,
+  margin: AccountBalance | undefined
+): { inUsd: number; inBtc: number } | null {
+  if (!total || !spot || !futures || !margin) return null;
+
+  return {
+    inUsd: Math.max(
+      0,
+      numericValue(total.inUsd) -
+        numericValue(spot.inUsd) -
+        numericValue(futures.inUsd) -
+        numericValue(margin.inUsd)
+    ),
+    inBtc: Math.max(
+      0,
+      numericValue(total.inBtc) -
+        numericValue(spot.inBtc) -
+        numericValue(futures.inBtc) -
+        numericValue(margin.inBtc)
+    ),
+  };
+}
+
 /** Merge duplicate API rows so consumers always receive one row per asset. */
 export function normalizePortfolioCoins(coins: any[]): PortfolioCoin[] {
   const merged = new Map<string, PortfolioCoin>();

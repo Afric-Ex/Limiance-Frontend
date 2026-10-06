@@ -92,6 +92,7 @@ export default function Header() {
   const user = useUserStore((state) => state.user);
   const { handleOpenDepositModal } = useAssets();
   const [authHydrated, setAuthHydrated] = useState(false);
+  const isPublicRoute = pathname === "/" || pathname.startsWith("/auth");
 
   useEffect(() => {
     setAuthHydrated(true);
@@ -152,7 +153,7 @@ export default function Header() {
         ) : null}
       </div>
       <div className="flex max-[1150px]:hidden items-center gap-6">
-        {!authHydrated ? null : !user ? (
+        {!authHydrated || (!user && !isPublicRoute) ? null : !user ? (
           <div className="flex items-center gap-6px">
             <Link href="/auth/login">
               <button className="font-medium py-3 px-5 bg-muted rounded-lg">

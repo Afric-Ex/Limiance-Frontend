@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { usePortfolioWs } from "./use-portfolio-ws";
+import { deriveFundingBalance } from "@/src/lib/portfolio-utils";
 
 interface WalletBalance {
   inUsd: string;
@@ -21,37 +22,36 @@ function safeParse(val: string | null | undefined): number {
 }
 
 export function useWalletBalances(): UseWalletBalancesReturn {
-  // Funding comes from the per-coin stream (derived), the trading total from
-  // get_portfolio_balance — both are rendered by the wallet card.
+  // Total comes from get_portfolio_balance. The other account balances come
+  // from the per-coin stream; Funding and Unified Trading are the remaining
+  // amounts after those account balances are subtracted from Total.
   const { balances, isLoading, isConnected } = usePortfolioWs({ coins: true, balance: true });
 
-  const funding = useMemo(() => {
-    const b = balances?.funding;
-    if (!b) return null;
-    return {
-      inUsd: safeParse(b.inUsd).toFixed(2),
-      inBtc: safeParse(b.inBtc).toFixed(8),
-    };
-  }, [balances?.funding]);
+  const { funding, trading } = useMemo(() => {
+    const total = balances?.total;
+    const fundingBalance = deriveFundingBalance(
+      total,
+      balances?.spot,
+      balances?.futures,
+      balances?.margin
+    );
+    if (!total || !fundingBalance) return { funding: null, trading: null };
+    const totalUsd = safeParse(total.inUsd);
+    const totalBtc = safeParse(total.inBtc);
+    const tradingUsd = Math.max(0, totalUsd - fundingBalance.inUsd);
+    const tradingBtc = Math.max(0, totalBtc - fundingBalance.inBtc);
 
-  const total = useMemo(() => {
-    const b = balances?.total;
-    if (!b) return null;
     return {
-      inUsd: safeParse(b.inUsd),
-      inBtc: safeParse(b.inBtc),
+      funding: {
+        inUsd: fundingBalance.inUsd.toFixed(2),
+        inBtc: fundingBalance.inBtc.toFixed(8),
+      },
+      trading: {
+        inUsd: tradingUsd.toFixed(2),
+        inBtc: tradingBtc.toFixed(8),
+      },
     };
-  }, [balances?.total]);
-
-  const trading = useMemo(() => {
-    if (!total || !funding) return null;
-    const usd = Math.max(0, total.inUsd - safeParse(funding.inUsd));
-    const btc = Math.max(0, total.inBtc - safeParse(funding.inBtc));
-    return {
-      inUsd: usd.toFixed(2),
-      inBtc: btc.toFixed(8),
-    };
-  }, [total, funding]);
+  }, [balances?.total, balances?.spot, balances?.futures, balances?.margin]);
 
   return {
     funding,

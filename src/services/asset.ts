@@ -45,8 +45,16 @@ export const asset = {
     const response = await api.get("wallet/whitelist", { params: { chain } });
     return response.data;
   },
-  addWhitelistedWithdrawalAddress: async (data: { chain: string; address: string }) => {
+  addWhitelistedWithdrawalAddress: async (data: {
+    chain: string;
+    address: string;
+    name: string;
+  }) => {
     const response = await api.post("wallet/whitelist", data);
+    return response.data;
+  },
+  removeWhitelistedWithdrawalAddress: async (data: { chain: string; address: string }) => {
+    const response = await api.delete("wallet/whitelist", { data });
     return response.data;
   },
   internalTransfer: async (data: {

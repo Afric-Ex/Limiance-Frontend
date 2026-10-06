@@ -84,6 +84,7 @@ const mainNavLinks: NavItem[] = [
       { name: "Profile", link: "/account/profile" },
       { name: "Security", link: "/account/security" },
       { name: "API Keys", link: "/account/api-keys" },
+      { name: "Whitelisted Wallets", link: "/account/whitelisted-wallets" },
       { name: "Identity (KYC)", link: "/account/kyc" },
       { name: "Payment Methods", link: "/account/payment-methods" },
     ],

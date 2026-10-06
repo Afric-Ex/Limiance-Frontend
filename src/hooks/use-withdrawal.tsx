@@ -128,7 +128,7 @@ export const useWithdrawal = () => {
                       height={16}
                     />
                     <span className="text-primary font-medium">
-                      {withdrawableAmountAfterNetworkFee}
+                      {withdrawableAmountAfterNetworkFee.toFixed(6)}
                     </span>
                     <span className="font-bold text-gray-14">
                       {selectedCoin?.symbol}
