@@ -17,6 +17,7 @@ import { useBalanceCloak } from "@/src/stores/balance-cloak-store";
 import { Eye } from "../icons/eye";
 import { BsEyeSlashFill } from "react-icons/bs";
 import toast from "react-hot-toast";
+import { MdAccountBalanceWallet, MdCandlestickChart } from "react-icons/md";
 
 export const MyWallet = () => {
   const { push } = useRouter();
@@ -28,7 +29,7 @@ export const MyWallet = () => {
 
   useEffect(() => {
     if (!isConnected && prevConnectedRef.current && !isLoading) {
-      toast.loading("Reconnecting to balance stream...", { id: "wallet-ws" });
+      toast.loading("Reconnecting", { id: "wallet-ws" });
     } else if (isConnected) {
       toast.dismiss("wallet-ws");
     }
@@ -97,7 +98,7 @@ export const MyWallet = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 max-[1150px]:p-4 gap-4 max-[1150px]:gap-3 row-hover transition-colors">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-              <div className="w-3 h-3 rounded-full bg-primary" />
+              <MdAccountBalanceWallet size={17} className="text-primary" />
             </div>
             <div className="flex flex-col">
               <span className="text-base font-semibold max-[1150px]:text-sm">Funding</span>
@@ -145,7 +146,7 @@ export const MyWallet = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 max-[1150px]:p-4 gap-4 max-[1150px]:gap-3 row-hover transition-colors">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-[#F0B90B]/20 flex items-center justify-center flex-shrink-0">
-              <div className="w-3 h-3 bg-[#F0B90B] rounded-sm" />
+              <MdCandlestickChart size={17} className="text-[#F0B90B]" />
             </div>
             <div className="flex flex-col">
               <span className="text-base font-semibold max-[1150px]:text-sm">Unified Trading</span>

@@ -213,7 +213,7 @@ class PortfolioStore {
 
     const { topic: responseTopic, payload } = TOPIC_REQUEST[topic];
     this.unsubs[topic] = wsClient.subscribe(responseTopic, payload, (raw, full) => {
-      this.ingest(topic, full?.data ?? raw);
+      this.ingest(topic, full?.data?.data ?? full?.data ?? raw);
     });
 
     if (this.fallbackTimers[topic]) clearTimeout(this.fallbackTimers[topic]);

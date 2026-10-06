@@ -2,6 +2,7 @@
 
 import LogoImage from "@/public/limiance-wordmark.png";
 import { useUserStore } from "@/src/stores/user-store";
+import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,10 +17,14 @@ export default function Logo({
   onClick?: () => void;
 }) {
   const user = useUserStore((state) => state.user);
+  const pathname = usePathname();
+  const isAuthenticatedArea =
+    pathname !== "/" && !pathname.startsWith("/auth");
+  const destination = user || isAuthenticatedArea ? "/dashboard" : "/";
 
   return (
     <Link
-      href={user ? "/dashboard" : "/"}
+      href={destination}
       onClick={onClick}
       className="flex items-center"
     >

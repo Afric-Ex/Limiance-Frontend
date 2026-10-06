@@ -14,6 +14,7 @@ import { BalanceCloak } from "../shared/balance-cloak";
 import { BalanceRevealControl } from "../shared/balance-reveal-control";
 import { Skeleton } from "../shared/skeleton";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { deriveFundingBalance } from "@/src/lib/portfolio-utils";
 
 export const WalletCard = ({ title, children }: { title?: string; children?: React.ReactNode }) => {
   const { push } = useRouter();
@@ -28,18 +29,33 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
     "Margin": "margin",
   };
   const singleAccount = title ? accountMap[title] : undefined;
+  const isFundingAccount = singleAccount === "funding";
 
   // Real-time balance data. `balances.total` comes from get_portfolio_balance;
   // per-account balances are derived from get_portfolio. Ask for whichever this
   // card actually renders so a page never opens both streams unnecessarily.
   const { balances, isLoading: balanceLoading } = usePortfolioWs(
-    singleAccount ? { coins: true } : { balance: true }
+    isFundingAccount
+      ? { coins: true, balance: true }
+      : singleAccount
+        ? { coins: true }
+        : { balance: true }
   );
 
   // Pick the right account balance; "total" is the overall from backend
   const acctBal = singleAccount ? balances[singleAccount] : balances["total"];
+  const fundingBalance = isFundingAccount
+    ? deriveFundingBalance(
+        balances.total,
+        balances.spot,
+        balances.futures,
+        balances.margin
+      )
+    : null;
   const [balanceWaitExpired, setBalanceWaitExpired] = React.useState(false);
-  const hasUsdBalance = acctBal?.inUsd != null;
+  const hasUsdBalance = isFundingAccount
+    ? fundingBalance != null
+    : acctBal?.inUsd != null;
 
   React.useEffect(() => {
     setBalanceWaitExpired(false);
@@ -56,8 +72,12 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
     return isNaN(n) ? 0 : n;
   };
 
-  const totalUsd = safeNum(acctBal?.inUsd);
-  const totalBtc = safeNum(acctBal?.inBtc);
+  const totalUsd = isFundingAccount
+    ? fundingBalance?.inUsd ?? 0
+    : safeNum(acctBal?.inUsd);
+  const totalBtc = isFundingAccount
+    ? fundingBalance?.inBtc ?? 0
+    : safeNum(acctBal?.inBtc);
 
   // Server-provided 24h P&L (from get_portfolio / get_portfolio_balance).
   // pnlPercentage is a fraction (e.g. 0.00496626) → ×100 for display.
