@@ -24,6 +24,7 @@ export const FiatBankDeposit = () => {
     banks,
     banksLoading,
     coinSymbols,
+    coinImages,
     coinSymbolsLoading,
     hasMoreCoins,
     isLoadingMoreCoins,
@@ -38,14 +39,13 @@ export const FiatBankDeposit = () => {
     confirming,
     confirmDeposit,
     rate,
+    quotedReceivedAmount,
     rateLoading,
   } = useFiatBankDeposit();
 
   const selectedBank = banks?.find((b) => b.code === form.values.bankCode);
   const amountValid = Number(form.values.amount) > 0;
   const canRequest = amountValid && !!form.values.bankCode && !!form.values.symbol;
-  const receivedAmount = amountValid && rate > 0 ? Number(form.values.amount) / rate : 0;
-
   if (account) {
     return (
       <div className="bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 flex flex-col gap-6">
@@ -185,6 +185,7 @@ export const FiatBankDeposit = () => {
             value={form.values.symbol}
             onChange={(value) => form.setFieldValue("symbol", value)}
             assets={coinSymbols}
+            assetImages={coinImages}
             isLoading={coinSymbolsLoading}
             isLoadingMore={isLoadingMoreCoins}
             hasMore={hasMoreCoins}
@@ -243,11 +244,11 @@ export const FiatBankDeposit = () => {
           <span className="text-sm font-bold text-primary tabular-nums">
             {!amountValid
               ? "—"
-              : receivedAmount > 0
-                ? `${receivedAmount.toLocaleString("en-US", { maximumFractionDigits: 6 })} ${form.values.symbol}`
-                : rateLoading
-                  ? "≈ …"
-                  : `${form.values.symbol} ${Number(form.values.amount).toLocaleString()} NGN`}
+              : rateLoading
+                ? "≈ …"
+                : quotedReceivedAmount
+                  ? `${quotedReceivedAmount} ${form.values.symbol}`
+                  : "—"}
           </span>
         </div>
       </div>

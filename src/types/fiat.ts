@@ -6,7 +6,13 @@ export interface FiatBank {
 }
 
 export interface FiatQuote {
+  success?: boolean;
+  error?: string;
+  message?: string;
   symbol?: string;
+  depositAmount?: string;
+  symbolAmountToReceived?: string | number;
+  rate?: string;
   buyRate?: string;
   sellRate?: string;
   currency?: string;

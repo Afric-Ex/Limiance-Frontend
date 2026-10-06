@@ -123,7 +123,7 @@ function PreOrderScreenContent() {
 
   return (
     <P2PLayout>
-      <div className="w-full max-w-4xl mx-auto py-6 max-[1150px]:py-4 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter">
+      <div className="w-full max-w-4xl mx-auto py-6 max-[1150px]:py-4 max-[1150px]:pb-[90px] page-enter">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => router.push("/trades/p2p")} className="text-white/50 hover:text-white transition-colors text-sm flex items-center gap-1">

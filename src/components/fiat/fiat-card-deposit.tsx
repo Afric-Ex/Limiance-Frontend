@@ -160,6 +160,7 @@ export const FiatCardDeposit = () => {
     complete3ds,
     threeDsPending,
     coinSymbols,
+    coinImages,
     coinSymbolsLoading,
     hasMoreCoins,
     isLoadingMoreCoins,
@@ -204,6 +205,7 @@ export const FiatCardDeposit = () => {
               value={form.values.symbol}
               onChange={(value) => form.setFieldValue("symbol", value)}
               assets={coinSymbols}
+              assetImages={coinImages}
               isLoading={coinSymbolsLoading}
               isLoadingMore={isLoadingMoreCoins}
               hasMore={hasMoreCoins}

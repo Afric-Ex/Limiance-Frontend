@@ -10,6 +10,13 @@ import {
 
 export const fiatKeys = {
   quote: ["fiat", "quote"],
+  quoteFor: (params: { depositAmount: string; symbol: string; currency: string }) => [
+    "fiat",
+    "quote",
+    params.depositAmount,
+    params.symbol,
+    params.currency,
+  ],
   banks: ["fiat", "banks"],
   depositAccount: (params: { symbol: string; bankCode: string; amount: string }) => [
     "fiat",
@@ -36,8 +43,12 @@ export const fiatKeys = {
 } as const;
 
 export const fiatService = {
-  getQuote: async (symbol?: string): Promise<FiatQuote> => {
-    const response = await api.post("wallet/fiat/quote", symbol ? { symbol } : {});
+  getQuote: async (data: {
+    depositAmount: string;
+    symbol: string;
+    currency: string;
+  }): Promise<FiatQuote> => {
+    const response = await api.post("wallet/fiat/quote", data);
     return response.data;
   },
 
