@@ -39,7 +39,7 @@ export const useUserStore = create<UserState>()((set) => ({
         } catch (error: any) {
           // Gracefully suppress the 500 Unimplemented error until the live backend is updated
           if (error?.response?.status === 500 && error?.response?.data?.error?.includes("Unimplemented")) {
-            console.warn("Suppressing unimplemented /user backend error");
+            console.warn("Suppressing unimplemented /user_details backend error");
           } else {
             errorMessageHandler(error as any);
           }

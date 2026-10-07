@@ -15,7 +15,7 @@ export const userKeys = {
 
 export const userService = {
   getUser: async (): Promise<ApiResponse<any>> => {
-    const response = await api.get("/user");
+    const response = await api.get("/user_details");
     if (response?.data?.data) {
       response.data.data = normalizeUser(response.data.data);
     }
