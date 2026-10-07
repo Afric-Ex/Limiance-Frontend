@@ -109,7 +109,7 @@ export const useAuth = () => {
     } else {
       // Cookie-only backends are free to answer a successful login with an
       // empty body: the credential is the Set-Cookie, not the payload. Ask the
-      // authenticated `/user` endpoint who we are so the app still has an
+      // authenticated `/user_details` endpoint who we are so the app still has an
       // identity to render.
       try {
         await useUserStore.getState().fetchUser();
