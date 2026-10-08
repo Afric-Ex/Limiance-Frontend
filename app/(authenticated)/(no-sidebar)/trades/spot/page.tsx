@@ -349,7 +349,9 @@ function SpotTrades() {
                     />
                   </div>
                   <div className="max-h-[50vh] overflow-auto py-1">
-                    {filteredMarkets.length === 0 ? (
+                    {feed.marketsLoading ? (
+                      <Skeleton variant="table-row" count={5} columns={2} className="px-2" />
+                    ) : filteredMarkets.length === 0 ? (
                       <div className="text-center py-8 text-xs text-white/30">No pairs found</div>
                     ) : (
                       filteredMarkets.slice(0, 30).map((m) => (
@@ -429,7 +431,9 @@ function SpotTrades() {
                   />
                 </div>
                 <div className="max-h-[360px] overflow-auto py-1">
-                  {filteredMarkets.length === 0 ? (
+                  {feed.marketsLoading ? (
+                    <Skeleton variant="table-row" count={5} columns={2} className="px-2" />
+                  ) : filteredMarkets.length === 0 ? (
                     <div className="text-center py-8 text-xs text-white/30">No pairs found</div>
                   ) : (
                     filteredMarkets.slice(0, 30).map((m) => (
