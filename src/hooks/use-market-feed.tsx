@@ -44,6 +44,7 @@ interface MarketFeedData {
   isConnected: boolean;
   lastUpdated: Date | null;
   markets: MarketItem[];
+  marketsLoading: boolean;
 }
 
 export const useMarketFeed = (pair: string): MarketFeedData => {
@@ -59,6 +60,7 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
     isConnected: false,
     lastUpdated: null,
     markets: [],
+    marketsLoading: true,
   });
 
   // Throttle the HTTP fallback so it fires at most once every 30 seconds.
@@ -92,9 +94,12 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
         volume24h: match ? parseFloat(match.volume ?? match.volume24h ?? "0") : prev.volume24h,
         lastUpdated: new Date(),
         markets: items,
+        marketsLoading: false,
       }));
     } catch {
       // Feed falls back to the last known values; nothing to surface here.
+    } finally {
+      setData((prev) => ({ ...prev, marketsLoading: false }));
     }
   }, [pair]);
 
@@ -136,6 +141,7 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
           isConnected: true,
           lastUpdated: new Date(),
           markets: items,
+          marketsLoading: false,
         }));
       }
     );
