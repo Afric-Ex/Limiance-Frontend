@@ -344,6 +344,12 @@ class WebSocketClient {
     });
   }
 
+  private unsubscribeAllAndRestoreActiveSubscriptions() {
+    if (!this.isConnected) return;
+    this.send({ type: "unsuscribe_all" });
+    this.resubscribeAll();
+  }
+
   /**
    * Subscribes to a message type. Ensures the single socket is connected,
    * sends the initial subscription command if provided, and returns an unsubscribe cleanup function.
@@ -399,6 +405,7 @@ class WebSocketClient {
           keys.delete(key);
           if (keys.size === 0) this.topicIndex.delete(topic);
         }
+        this.unsubscribeAllAndRestoreActiveSubscriptions();
         // Nothing is listening any more: tear the socket down rather than
         // leaving it open (and pushed to) for the rest of the tab's life.
         if (this.subscriptions.size === 0) this.scheduleIdleClose();

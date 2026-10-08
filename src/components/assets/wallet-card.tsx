@@ -14,7 +14,7 @@ import { BalanceCloak } from "../shared/balance-cloak";
 import { BalanceRevealControl } from "../shared/balance-reveal-control";
 import { Skeleton } from "../shared/skeleton";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
-import { deriveFundingBalance } from "@/src/lib/portfolio-utils";
+import type { PortfolioBalanceAccount } from "@/src/lib/portfolio-store";
 
 export const WalletCard = ({ title, children }: { title?: string; children?: React.ReactNode }) => {
   const { push } = useRouter();
@@ -22,41 +22,26 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
     handleOpenInternalTransferModal,
     handleOpenExternalTransferModal,
   } = useAssets();
-  const accountMap: Record<string, string> = {
+  const accountMap: Record<string, PortfolioBalanceAccount> = {
     "Funding Account": "funding",
     "Spot": "spot",
     "Futures": "futures",
     "Margin": "margin",
   };
   const singleAccount = title ? accountMap[title] : undefined;
-  const isFundingAccount = singleAccount === "funding";
 
-  // Real-time balance data. `balances.total` comes from
-  // the `overall_portfolio_balance` response to get_portfolio_balance;
-  // per-account balances are derived from get_portfolio. Ask for whichever this
-  // card actually renders so a page never opens both streams unnecessarily.
+  // Account pages request their own balance alongside portfolio holdings;
+  // the overview requests the overall balance.
   const { balances, isLoading: balanceLoading } = usePortfolioWs(
-    isFundingAccount
-      ? { coins: true, balance: true }
-      : singleAccount
-        ? { coins: true }
-        : { balance: true }
+    singleAccount
+      ? { coins: true, balanceAccount: singleAccount }
+      : { balance: true }
   );
 
-  // Pick the right account balance; "total" is the overall from backend
+  // Pick the account-specific balance or the overall balance.
   const acctBal = singleAccount ? balances[singleAccount] : balances["total"];
-  const fundingBalance = isFundingAccount
-    ? deriveFundingBalance(
-        balances.total,
-        balances.spot,
-        balances.futures,
-        balances.margin
-      )
-    : null;
   const [balanceWaitExpired, setBalanceWaitExpired] = React.useState(false);
-  const hasUsdBalance = isFundingAccount
-    ? fundingBalance != null
-    : acctBal?.inUsd != null;
+  const hasUsdBalance = acctBal?.inUsd != null;
 
   React.useEffect(() => {
     setBalanceWaitExpired(false);
@@ -73,12 +58,8 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
     return isNaN(n) ? 0 : n;
   };
 
-  const totalUsd = isFundingAccount
-    ? fundingBalance?.inUsd ?? 0
-    : safeNum(acctBal?.inUsd);
-  const totalBtc = isFundingAccount
-    ? fundingBalance?.inBtc ?? 0
-    : safeNum(acctBal?.inBtc);
+  const totalUsd = safeNum(acctBal?.inUsd);
+  const totalBtc = safeNum(acctBal?.inBtc);
 
   // Server-provided 24h P&L (from get_portfolio / get_portfolio_balance).
   // pnlPercentage is a fraction (e.g. 0.00496626) → ×100 for display.

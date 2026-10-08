@@ -15,11 +15,10 @@ import {
  * Demand-driven portfolio store.
  *
  * Every portfolio topic is ref-counted. A topic opens its WebSocket stream (and
- * its HTTP fallback) only while at least one mounted consumer declares it needs
+ * its HTTP fallback where one exists) only while at least one mounted consumer declares it needs
  * that topic, and closes it as soon as the last consumer goes away. A page that
- * renders holdings therefore costs `get_portfolio` + `get_portfolio_balance` and
- * nothing else — margin and futures stay quiet until a margin/futures screen
- * actually mounts.
+ * renders holdings therefore costs `get_portfolio` and any requested balance
+ * streams — unrelated account and trading topics stay quiet until requested.
  *
  * State is module-level and shared, so N components reading the same topic share
  * one subscription and one copy of the data (previously each hook instance held
@@ -30,6 +29,10 @@ import {
 export type PortfolioTopic =
   | "portfolio"
   | "balance"
+  | "fundingBalance"
+  | "spotBalance"
+  | "marginBalance"
+  | "futuresBalance"
   | "allocations"
   | "margin"
   | "futures";
@@ -37,10 +40,16 @@ export type PortfolioTopic =
 export const ALL_PORTFOLIO_TOPICS: PortfolioTopic[] = [
   "portfolio",
   "balance",
+  "fundingBalance",
+  "spotBalance",
+  "marginBalance",
+  "futuresBalance",
   "allocations",
   "margin",
   "futures",
 ];
+
+export type PortfolioBalanceAccount = "funding" | "spot" | "margin" | "futures";
 
 /** Which fields of the store a caller reads. Drives what gets subscribed. */
 export interface PortfolioNeeds {
@@ -48,6 +57,8 @@ export interface PortfolioNeeds {
   coins?: boolean;
   /** Overall balance + 24h P&L (`overall_portfolio_balance`) → `balances.total`. */
   balance?: boolean;
+  /** Balance for one wallet returned by `get_portfolio_balance`. */
+  balanceAccount?: PortfolioBalanceAccount;
   /** Allocation breakdown (`get_portfolio_balance_allocations`) → `allocations`. */
   allocations?: boolean;
   /** Margin account state (`get_margin_account`) → `marginAccount`. */
@@ -56,12 +67,19 @@ export interface PortfolioNeeds {
   futures?: boolean;
 }
 
-const TOPIC_OF_NEED: Record<keyof PortfolioNeeds, PortfolioTopic> = {
+const TOPIC_OF_NEED: Record<Exclude<keyof PortfolioNeeds, "balanceAccount">, PortfolioTopic> = {
   coins: "portfolio",
   balance: "balance",
   allocations: "allocations",
   margin: "margin",
   futures: "futures",
+};
+
+const ACCOUNT_BALANCE_TOPIC: Record<PortfolioBalanceAccount, PortfolioTopic> = {
+  funding: "fundingBalance",
+  spot: "spotBalance",
+  margin: "marginBalance",
+  futures: "futuresBalance",
 };
 
 /** Request frame sent for each topic, and the topic its reply arrives on. */
@@ -73,6 +91,22 @@ const TOPIC_REQUEST: Record<PortfolioTopic, { topic: string; payload: object }> 
   balance: {
     topic: "overall_portfolio_balance",
     payload: { type: "get_portfolio_balance", data: { account: "" } },
+  },
+  fundingBalance: {
+    topic: "overall_portfolio_balance",
+    payload: { type: "get_portfolio_balance", data: { account: "funding" } },
+  },
+  spotBalance: {
+    topic: "overall_portfolio_balance",
+    payload: { type: "get_portfolio_balance", data: { account: "spot" } },
+  },
+  marginBalance: {
+    topic: "overall_portfolio_balance",
+    payload: { type: "get_portfolio_balance", data: { account: "margin" } },
+  },
+  futuresBalance: {
+    topic: "overall_portfolio_balance",
+    payload: { type: "get_portfolio_balance", data: { account: "futures" } },
   },
   allocations: {
     topic: "portfolio_balance_allocations",
@@ -88,9 +122,8 @@ const TOPIC_REQUEST: Record<PortfolioTopic, { topic: string; payload: object }> 
   },
 };
 
-/** REST equivalent used when the socket is down or slow. Only ever called for
- *  topics someone actually asked for. */
-const TOPIC_HTTP: Record<PortfolioTopic, () => Promise<any>> = {
+/** REST equivalents where the API has a matching endpoint. */
+const TOPIC_HTTP: Partial<Record<PortfolioTopic, () => Promise<any>>> = {
   portfolio: () => api.get("wallet/portfolio", { params: { limit: 100 } }),
   balance: () => api.get("wallet/balance"),
   allocations: () => api.get("wallet/balance_allocations"),
@@ -124,6 +157,10 @@ const emptyState = (): PortfolioStoreState => ({
   pending: {
     portfolio: false,
     balance: false,
+    fundingBalance: false,
+    spotBalance: false,
+    marginBalance: false,
+    futuresBalance: false,
     allocations: false,
     margin: false,
     futures: false,
@@ -138,6 +175,10 @@ class PortfolioStore {
   private refCounts: Record<PortfolioTopic, number> = {
     portfolio: 0,
     balance: 0,
+    fundingBalance: 0,
+    spotBalance: 0,
+    marginBalance: 0,
+    futuresBalance: 0,
     allocations: 0,
     margin: 0,
     futures: 0,
@@ -148,6 +189,10 @@ class PortfolioStore {
   private lastHttpAt: Record<PortfolioTopic, number> = {
     portfolio: 0,
     balance: 0,
+    fundingBalance: 0,
+    spotBalance: 0,
+    marginBalance: 0,
+    futuresBalance: 0,
     allocations: 0,
     margin: 0,
     futures: 0,
@@ -264,6 +309,14 @@ class PortfolioStore {
         return this.state.coins.length > 0;
       case "balance":
         return this.state.balances.total != null;
+      case "fundingBalance":
+        return this.state.balances.funding != null;
+      case "spotBalance":
+        return this.state.balances.spot != null;
+      case "marginBalance":
+        return this.state.balances.margin != null;
+      case "futuresBalance":
+        return this.state.balances.futures != null;
       case "allocations":
         return this.state.allocations != null;
       case "margin":
@@ -306,6 +359,24 @@ class PortfolioStore {
         };
         break;
       }
+      case "fundingBalance":
+      case "spotBalance":
+      case "marginBalance":
+      case "futuresBalance": {
+        if (!raw || raw.inUsd === undefined) return;
+        const account = topic.replace("Balance", "").toLowerCase();
+        this.state.balances = {
+          ...this.state.balances,
+          [account]: {
+            inUsd: raw.inUsd ?? "0",
+            inBtc: raw.inBtc ?? "0",
+            inNgn: raw.inNgn ?? "0",
+            pnl: raw.pnl ?? "0",
+            pnlPercentage: raw.pnlPercentage ?? "0",
+          },
+        };
+        break;
+      }
       case "allocations": {
         if (!raw || (raw.totalValue === undefined && !raw.allocations)) return;
         this.state.allocations = {
@@ -343,7 +414,9 @@ class PortfolioStore {
     this.httpInFlight.add(topic);
     this.lastHttpAt[topic] = Date.now();
     try {
-      const res = await TOPIC_HTTP[topic]();
+      const fetcher = TOPIC_HTTP[topic];
+      if (!fetcher) return;
+      const res = await fetcher();
       const body = res?.data;
       this.ingest(topic, body?.data !== undefined ? body.data : body);
     } catch {
@@ -376,8 +449,14 @@ export const portfolioStore = new PortfolioStore();
 
 /** Map a caller's declared needs onto the topic list the store ref-counts. */
 export const topicsForNeeds = (needs?: PortfolioNeeds): PortfolioTopic[] => {
-  if (!needs) return ALL_PORTFOLIO_TOPICS;
-  return (Object.keys(TOPIC_OF_NEED) as Array<keyof PortfolioNeeds>)
+  if (!needs) {
+    return ["portfolio", "balance", "allocations", "margin", "futures"];
+  }
+  const topics = (Object.keys(TOPIC_OF_NEED) as Array<keyof typeof TOPIC_OF_NEED>)
     .filter((key) => needs[key])
     .map((key) => TOPIC_OF_NEED[key]);
+  if (needs.balanceAccount) {
+    topics.push(ACCOUNT_BALANCE_TOPIC[needs.balanceAccount]);
+  }
+  return topics;
 };
