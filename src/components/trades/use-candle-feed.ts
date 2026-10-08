@@ -24,14 +24,13 @@ const MARKET_CANDLE_REQUEST: Partial<Record<ChartMarket, string>> = {
 };
 
 // The pair string each market's WS candle stream expects to receive:
-//   spot    → "BTC-USDT"  (dashed, verified live)
-//   margin  → "BTC/USDT"  (dashed with slash — compact BTCUSDT makes the stream
-//                          error with "Error receiving OHLC data")
-//   futures → "BTCUSDT"   (compact, per confirmed backend shape)
+//   spot    → "BTC/USDT"
+//   margin  → "BTC/USDT"
+//   futures → "BTC/USDT"
 const MARKET_WS_PAIR: Record<ChartMarket, (symbol: string) => string> = {
-  spot: (s) => canonicalPair(s).replace("/", "-"),
+  spot: (s) => canonicalPair(s),
   margin: (s) => canonicalPair(s),
-  futures: (s) => pairKey(s),
+  futures: (s) => canonicalPair(s),
 };
 
 interface LiveCandle extends KlineCandle {
