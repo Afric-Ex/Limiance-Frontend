@@ -222,7 +222,7 @@ function MarketsPageInner() {
     return activeRows.slice(start, start + ITEMS_PER_PAGE);
   }, [activeRows, currentPage]);
 
-  const isLoading = !feed.isConnected && spotTokens.length === 0;
+  const isLoading = feed.marketsLoading;
 
   return (
     <main className="flex flex-col gap-6 w-full animate-fade-in pb-8 page-enter">
@@ -231,7 +231,7 @@ function MarketsPageInner() {
         <div>
           <h1 className="text-2xl font-bold text-white">Markets</h1>
           <p className="text-sm text-white/40 mt-1">
-            {spotTokens.length > 0 ? `${spotTokens.length} active pairs` : "Loading listed pairs…"}
+            {isLoading ? "Loading listed pairs…" : `${spotTokens.length} active pairs`}
             {feed.isConnected && (
               <span className="ml-2 inline-flex items-center gap-1 text-success-2 text-xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-success-2 animate-pulse" />
