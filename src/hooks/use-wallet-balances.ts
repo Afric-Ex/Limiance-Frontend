@@ -22,9 +22,9 @@ function safeParse(val: string | null | undefined): number {
 }
 
 export function useWalletBalances(): UseWalletBalancesReturn {
-  // Total comes from get_portfolio_balance. The other account balances come
-  // from the per-coin stream; Funding and Unified Trading are the remaining
-  // amounts after those account balances are subtracted from Total.
+  // Overall and individual funding/trading USD totals come from the
+  // `overall_portfolio_balance` response. The per-coin stream provides a compatibility
+  // fallback and the BTC conversion rate for the account cards.
   const { balances, isLoading, isConnected } = usePortfolioWs({ coins: true, balance: true });
 
   const { funding, trading } = useMemo(() => {
@@ -35,16 +35,36 @@ export function useWalletBalances(): UseWalletBalancesReturn {
       balances?.futures,
       balances?.margin
     );
-    if (!total || !fundingBalance) return { funding: null, trading: null };
+    if (!total) return { funding: null, trading: null };
+
     const totalUsd = safeParse(total.inUsd);
     const totalBtc = safeParse(total.inBtc);
-    const tradingUsd = Math.max(0, totalUsd - fundingBalance.inUsd);
-    const tradingBtc = Math.max(0, totalBtc - fundingBalance.inBtc);
+    const hasServerAccountBalances =
+      total.fundingBalance != null && total.unifiedTradingBalance != null;
+
+    const fallbackFundingBalance = fundingBalance;
+    if (!hasServerAccountBalances && !fallbackFundingBalance) {
+      return { funding: null, trading: null };
+    }
+
+    const fundingUsd = hasServerAccountBalances
+      ? safeParse(total.fundingBalance)
+      : fallbackFundingBalance?.inUsd ?? 0;
+    const tradingUsd = hasServerAccountBalances
+      ? safeParse(total.unifiedTradingBalance)
+      : Math.max(0, totalUsd - fundingUsd);
+    const btcPerUsd = totalUsd > 0 ? totalBtc / totalUsd : 0;
+    const fundingBtc = hasServerAccountBalances
+      ? fundingUsd * btcPerUsd
+      : fallbackFundingBalance?.inBtc ?? 0;
+    const tradingBtc = hasServerAccountBalances
+      ? tradingUsd * btcPerUsd
+      : Math.max(0, totalBtc - fundingBtc);
 
     return {
       funding: {
-        inUsd: fundingBalance.inUsd.toFixed(2),
-        inBtc: fundingBalance.inBtc.toFixed(8),
+        inUsd: fundingUsd.toFixed(2),
+        inBtc: fundingBtc.toFixed(8),
       },
       trading: {
         inUsd: tradingUsd.toFixed(2),

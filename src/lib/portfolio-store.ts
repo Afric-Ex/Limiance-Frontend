@@ -46,7 +46,7 @@ export const ALL_PORTFOLIO_TOPICS: PortfolioTopic[] = [
 export interface PortfolioNeeds {
   /** Per-coin holdings (`get_portfolio`) → `coins` + derived per-account balances. */
   coins?: boolean;
-  /** Aggregate account total + 24h P&L (`get_portfolio_balance`) → `balances.total`. */
+  /** Overall balance + 24h P&L (`overall_portfolio_balance`) → `balances.total`. */
   balance?: boolean;
   /** Allocation breakdown (`get_portfolio_balance_allocations`) → `allocations`. */
   allocations?: boolean;
@@ -71,7 +71,7 @@ const TOPIC_REQUEST: Record<PortfolioTopic, { topic: string; payload: object }> 
     payload: { type: "get_portfolio", data: { page: "1", limit: "100", query: "" } },
   },
   balance: {
-    topic: "portfolio_balance",
+    topic: "overall_portfolio_balance",
     payload: { type: "get_portfolio_balance", data: { account: "" } },
   },
   allocations: {
@@ -300,6 +300,8 @@ class PortfolioStore {
             inNgn: raw.inNgn ?? "0",
             pnl: raw.pnl ?? "0",
             pnlPercentage: raw.pnlPercentage ?? "0",
+            fundingBalance: raw.fundingBalance,
+            unifiedTradingBalance: raw.unifiedTradingBalance,
           },
         };
         break;

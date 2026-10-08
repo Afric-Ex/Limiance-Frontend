@@ -104,9 +104,8 @@ function DashboardInner() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  // Live portfolio holdings for the "Holding" tab. Only the per-coin stream is
-  // needed here — the Total Assets card below asks for `get_portfolio_balance`
-  // itself, so this page never opens the margin/futures/allocations streams.
+  // The per-coin stream powers the "Holding" tab; the Total Assets card uses
+  // the overall USD/BTC totals from get_portfolio_balance.
   const { coins: wsPortfolio } = usePortfolioWs({ coins: true });
 
   const { data: kycStatus, refetch: refetchKycStatus } = useQuery({
