@@ -31,7 +31,8 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
   const singleAccount = title ? accountMap[title] : undefined;
   const isFundingAccount = singleAccount === "funding";
 
-  // Real-time balance data. `balances.total` comes from get_portfolio_balance;
+  // Real-time balance data. `balances.total` comes from
+  // the `overall_portfolio_balance` response to get_portfolio_balance;
   // per-account balances are derived from get_portfolio. Ask for whichever this
   // card actually renders so a page never opens both streams unnecessarily.
   const { balances, isLoading: balanceLoading } = usePortfolioWs(

@@ -44,6 +44,8 @@ export interface AccountBalance {
   inNgn: string;
   pnl: string;
   pnlPercentage: string;
+  fundingBalance?: string;
+  unifiedTradingBalance?: string;
 }
 
 export interface MarginAsset {
