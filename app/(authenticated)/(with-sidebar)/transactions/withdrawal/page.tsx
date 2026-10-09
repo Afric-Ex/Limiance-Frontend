@@ -200,15 +200,19 @@ function WithdrawalInner() {
     .filter(Boolean)
     .map((chain) => String(chain).toLowerCase());
   const addressesForNetwork = whitelistedAddresses.filter(
-    ({ chain }) => !chain || selectedChainNames.includes(chain.toLowerCase())
+    ({ chain, isActive }) =>
+      isActive === true &&
+      (!chain || selectedChainNames.includes(chain.toLowerCase()))
   );
 
-  const addressError = form.values.address && selectedNetwork?.symbol
-    && !addressesForNetwork.some(
-      ({ address }) => address.toLowerCase() === form.values.address.toLowerCase()
-    )
-    ? validateWhitelistAddress(form.values.address, selectedNetwork.symbol)
-    : null;
+  const addressError =
+    form.values.address && selectedNetwork?.symbol
+      ? addressesForNetwork.some(
+          ({ address }) => address.toLowerCase() === form.values.address.toLowerCase()
+        )
+        ? validateWhitelistAddress(form.values.address, selectedNetwork.symbol)
+        : "Select an active whitelisted address"
+      : null;
 
   const amountError =
     +form.values.amount > assetBalance

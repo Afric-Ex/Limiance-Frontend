@@ -154,10 +154,10 @@ function DepositInner() {
       </div>
 
       {/* Main Form + FAQ Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 max-[1150px]:gap-4 items-start max-[1150px]:flex max-[1150px]:flex-col">
+      <div className="grid grid-cols-1 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-6 max-[1150px]:gap-4 items-start">
 
         {/* Main: Deposit card */}
-        <div className="flex flex-col gap-5 bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl min-w-0">
+        <div className="flex w-full min-w-0 flex-col gap-5 bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl">
 
           {/* Coin & Network picker */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -339,7 +339,7 @@ function DepositInner() {
         </div>
 
         {/* Right: FAQ */}
-        <div className="sticky top-6 bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl max-[1150px]:relative max-[1150px]:top-0 flex flex-col gap-5 max-[1150px]:gap-4 w-full">
+        <div className="sticky top-6 bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl max-[1150px]:relative max-[1150px]:top-0 flex flex-col gap-5 max-[1150px]:gap-4 w-full min-w-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center text-white/50">
               <MdOutlineHelp size={18} />

@@ -590,6 +590,7 @@ export function LwcCandlestickChart({
     const livePrimitives = primitivesRef.current;
 
     const intraday = !["1d", "1w", "1mn", "6mh", "1y"].includes(interval);
+    const isMobile = window.matchMedia("(max-width: 640px)").matches;
     const chart = createChart(container, {
       autoSize: true,
       layout: {
@@ -607,7 +608,7 @@ export function LwcCandlestickChart({
       rightPriceScale: { borderColor: "rgba(255,255,255,0.06)", scaleMargins: { top: 0.1, bottom: 0.1 } },
       timeScale: {
         borderColor: "rgba(255,255,255,0.06)",
-        barSpacing: 8,
+        barSpacing: isMobile ? 4 : 8,
         minBarSpacing: 2,
         timeVisible: intraday,
         secondsVisible: interval === "1s",
@@ -794,7 +795,11 @@ export function LwcCandlestickChart({
     if (fittedRef.current !== key) {
       fittedRef.current = key;
       const total = candleData.length;
-      chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, total - 70), to: total + 4 });
+      const initialVisibleBars = window.matchMedia("(max-width: 640px)").matches ? 120 : 70;
+      chart.timeScale().setVisibleLogicalRange({
+        from: Math.max(0, total - initialVisibleBars),
+        to: total + 4,
+      });
     }
   }, [candles, symbol, interval]);
 

@@ -149,7 +149,7 @@ export const MyWallet = () => {
               <MdCandlestickChart size={17} className="text-[#F0B90B]" />
             </div>
             <div className="flex flex-col">
-              <span className="text-base font-semibold max-[1150px]:text-sm">Unified Trading</span>
+              <span className="whitespace-nowrap text-base font-semibold max-[1150px]:text-sm">Unified Trading</span>
               <span className="text-xs text-white/50 w-full max-w-[200px] leading-tight max-[1150px]:text-[10px]">
                 Spot, Futures, Margin
               </span>
