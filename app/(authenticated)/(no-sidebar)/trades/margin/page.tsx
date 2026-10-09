@@ -2,13 +2,17 @@
 
 import { Search } from "@/src/components/icons/search";
 import { PlaceSpot, type TpslPreview } from "@/src/components/trades/place-spot";
+import { TradeRecordsList } from "@/src/components/trades/trade-records-list";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { useOrderBook } from "@/src/hooks/use-order-book";
+import { useRecentTrades } from "@/src/hooks/use-recent-trades";
+import { OrderBookTabs } from "@/src/components/trades/order-book-tabs";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { MarginTradePageSkeleton } from "@/src/components/skeletons/trades";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
+import { readList } from "@/src/lib/api-response";
 import {
   Checkbox,
   Loader,
@@ -110,17 +114,14 @@ function MarginTrades() {
   const { data: marginPositions } = useQuery({
     queryKey: ["margin-positions"],
     queryFn: () => tradingService.marginPositions(),
-    select: (res: any) => {
-      const raw = res?.data ?? res ?? [];
-      return Array.isArray(raw) ? raw : [];
-    },
+    select: (res: unknown) => readList<Record<string, any>>(res),
     retry: false,
     throwOnError: false,
   });
 
   const { data: orderHistory, isLoading: orderHistoryLoading } = useQuery({
-    queryKey: tradingKeys.marginOrderHistory,
-    queryFn: () => tradingService.marginOrderHistory(),
+    queryKey: tradingKeys.orderHistory("margin", selectedPair),
+    queryFn: () => tradingService.marketOrderHistory("margin", { pair: selectedPair }),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
@@ -129,12 +130,12 @@ function MarginTrades() {
     throwOnError: false,
   });
 
-  const normalizedSymbol = selectedPair.replace(/[/\\\-_\s]/g, "").toUpperCase();
+  const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "margin");
 
-  const { data: recentTrades, isLoading: recentTradesLoading } = useQuery({
-    queryKey: tradingKeys.spotRecentTrades(normalizedSymbol),
-    queryFn: () => tradingService.spotRecentTrades({ symbol: normalizedSymbol }),
-    select: (res: any) => (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []),
+  const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
+    queryKey: tradingKeys.tradeHistory("margin", selectedPair),
+    queryFn: () => tradingService.tradeHistory("margin", selectedPair),
+    select: (res: unknown) => readList<Record<string, unknown>>(res),
     retry: false,
     throwOnError: false,
   });
@@ -182,6 +183,37 @@ function MarginTrades() {
 
   const formatPrice = (val: number | null) =>
     val !== null ? val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : null;
+  const normalizedSymbol = selectedPair.replace(/[/\\\-_\s]/g, "").toUpperCase();
+  const formatOrderNumber = (value: unknown) => {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? numberValue.toLocaleString() : "—";
+  };
+  const formatOrderDate = (value: unknown, timeOnly = false) => {
+    if (!value) return "—";
+    const raw = String(value);
+    const date = new Date(raw);
+    if (!Number.isNaN(date.getTime())) return timeOnly ? date.toLocaleTimeString() : date.toLocaleString();
+    return timeOnly ? (raw.split(/\s+/).pop() ?? raw) : raw;
+  };
+  const getOrderPair = (order: any) =>
+    order?.pair || (order?.base && order?.quote ? `${order.base}/${order.quote}` : "—");
+  const isBuySide = (side: unknown) => String(side ?? "").toUpperCase() === "BUY";
+  const renderEmptyOrderBook = () => (
+    <div className="flex flex-col items-center justify-center gap-1 text-center text-xs text-white/35">
+      <span>
+        {orderBook.lastUpdated
+          ? "Margin order book update received, but no bid/ask levels were returned."
+          : orderBook.isConnected
+            ? "Waiting for margin order book update…"
+            : "Connecting to margin order book…"}
+      </span>
+      {orderBook.lastUpdated && (
+        <span className="text-[10px] text-white/25">
+          Last update {orderBook.lastUpdated.toLocaleTimeString()}
+        </span>
+      )}
+    </div>
+  );
 
   const formatTime = (value: unknown) => {
     if (!value) return "—";
@@ -597,7 +629,6 @@ function MarginTrades() {
                   <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
                   <TabsTab value="history">Order History</TabsTab>
                   <TabsTab value="tradeHistory">Trade History</TabsTab>
-                  <TabsTab value="trades">Trades</TabsTab>
                 </TabsList>
                 <div className="pr-4">
                   <Checkbox
@@ -724,53 +755,29 @@ function MarginTrades() {
                 )}
               </TabsPanel>
               <TabsPanel value="tradeHistory">
-                {(() => {
-                  const filled = (orderHistory ?? []).filter((o: any) => o.status === "filled");
-                  return orderHistoryLoading ? (
-                    <div className="p-8 flex justify-center"><Skeleton variant="table-row" count={3} columns={9} className="w-full" /></div>
-                  ) : !filled.length ? (
-                    <div className="flex-1 min-h-[120px] flex flex-col items-center justify-center gap-2">
-                      <p className="text-xs font-medium text-white/30">No trade history</p>
-                    </div>
-                  ) : (
-                    <Table classNames={{ th: "!text-[10px] uppercase !text-white/40 !bg-[#181a20] sticky top-0 z-10 border-b border-white/[0.06]", tr: "row-hover transition-colors border-b border-transparent" }}>
-                      <thead>
-                        <TableTr>
-                          <TableTh>Time</TableTh>
-                          <TableTh>Pair</TableTh>
-                          <TableTh>Type</TableTh>
-                          <TableTh>Side</TableTh>
-                          <TableTh>Price</TableTh>
-                          <TableTh>Amount</TableTh>
-                          <TableTh>Total</TableTh>
-                        </TableTr>
-                      </thead>
-                      <tbody>
-                        {filled.map((order: any, idx: number) => (
-                          <TableTr key={order.id ?? idx}>
-                            <TableTd><span className="text-xs text-white/70">{order.createdAt ? new Date(order.createdAt).toLocaleString() : "—"}</span></TableTd>
-                            <TableTd><span className="text-xs font-semibold">{order.pair ?? `${order.base}/${order.quote}`}</span></TableTd>
-                            <TableTd><span className="text-xs text-white/70 capitalize">{order.type}</span></TableTd>
-                            <TableTd><span className={`text-xs font-bold ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span></TableTd>
-                            <TableTd><span className="text-xs text-white/90">{order.price?.toLocaleString()}</span></TableTd>
-                            <TableTd><span className="text-xs text-white/90">{order.amount ?? order.quantity}</span></TableTd>
-                            <TableTd><span className="text-xs text-white/90">{order.total?.toLocaleString()}</span></TableTd>
-                          </TableTr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  );
-                })()}
-              </TabsPanel>
-              <TabsPanel value="trades">
-                <div className="flex-1 min-h-[120px]">{renderRecentTrades(50)}</div>
+                <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
               </TabsPanel>
             </Tabs>
           </div>
         </div>
 
-        {/* COL 2: Order Book (Desktop Only) */}
-        <div className="hidden min-[1150px]:flex bg-[#181a20] rounded flex-col overflow-hidden min-h-0">
+        {/* COL 2: Order Book and live market trades */}
+        <OrderBookTabs
+          className="hidden min-[1150px]:flex rounded min-h-0"
+          buyOrders={orderBook.buyOrders}
+          sellOrders={orderBook.sellOrders}
+          recentTrades={recentTrades}
+          recentTradesLoading={recentTradesLoading}
+          base={base}
+          quote={quote}
+          currentPrice={feed.price}
+          buyPercentage={orderBook.buyPercentage}
+          sellPercentage={orderBook.sellPercentage}
+          isConnected={orderBook.isConnected}
+          lastUpdated={orderBook.lastUpdated}
+          onSelectPrice={setClickedPrice}
+        />
+        <div className="hidden">
           <div className="px-4 py-3 border-b border-white/[0.06] text-sm text-white/90 font-semibold flex items-center justify-between">
             <span>Order Book</span>
             <div className="flex gap-2">
@@ -798,7 +805,7 @@ function MarginTrades() {
 
             {orderBook.sellOrders.length === 0 && orderBook.buyOrders.length === 0 ? (
               <div className="flex-1 flex items-center justify-center">
-                <span className="text-xs text-white/30">No order data</span>
+                {renderEmptyOrderBook()}
               </div>
             ) : (
               <div className="flex flex-col flex-1">
@@ -979,8 +986,23 @@ function MarginTrades() {
               </button>
             </div>
 
-            {/* Chart View Tabs (Order Book / Trades) */}
-            <Tabs defaultValue="orderbook" classNames={{
+            <OrderBookTabs
+              className="h-[320px] min-[1150px]:hidden shrink-0"
+              buyOrders={orderBook.buyOrders}
+              sellOrders={orderBook.sellOrders}
+              recentTrades={recentTrades}
+              recentTradesLoading={recentTradesLoading}
+              base={base}
+              quote={quote}
+              currentPrice={feed.price}
+              buyPercentage={orderBook.buyPercentage}
+              sellPercentage={orderBook.sellPercentage}
+              isConnected={orderBook.isConnected}
+              lastUpdated={orderBook.lastUpdated}
+              onSelectPrice={setClickedPrice}
+            />
+            {/* Legacy mobile book markup kept hidden while the shared panel handles both tabs. */}
+            <Tabs className="hidden" defaultValue="orderbook" classNames={{
               tab: "!py-3 !px-4 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none font-bold text-sm text-white/50",
               list: "border-b border-white/[0.06] flex items-center before:!border-0 w-full",
               panel: "!p-0"
@@ -992,6 +1014,9 @@ function MarginTrades() {
               
               <TabsPanel value="orderbook">
                 <div className="flex flex-col p-2">
+                  {orderBook.sellOrders.length === 0 && orderBook.buyOrders.length === 0 ? (
+                    <div className="min-h-24">{renderEmptyOrderBook()}</div>
+                  ) : (
                   <div className="grid grid-cols-2 gap-2">
                     {/* Bids (Left) */}
                     <div className="flex flex-col gap-1">
@@ -1026,6 +1051,7 @@ function MarginTrades() {
                       })}
                     </div>
                   </div>
+                  )}
                 </div>
               </TabsPanel>
               
@@ -1090,6 +1116,9 @@ function MarginTrades() {
                   <span className="text-[10px] text-white/40">
                     ${feed.price !== null ? formatPrice(feed.price) : "�"}
                   </span>
+                  {orderBook.sellOrders.length === 0 && orderBook.buyOrders.length === 0 && (
+                    <div className="mt-1 text-[9px] text-white/35">{renderEmptyOrderBook()}</div>
+                  )}
                 </div>
 
                 {/* Bids */}
@@ -1108,6 +1137,66 @@ function MarginTrades() {
               </div>
             </div>
 
+            <div className="min-[1150px]:hidden bg-[#181a20] rounded flex flex-col mt-2 mb-[80px]">
+              <Tabs defaultValue="open">
+                <TabsList className="w-full flex-nowrap overflow-x-auto">
+                  <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
+                  <TabsTab value="history">Order History</TabsTab>
+                  <TabsTab value="tradeHistory">Trade History</TabsTab>
+                </TabsList>
+                <TabsPanel value="open">
+                  {openOrdersLoading ? (
+                    <div className="p-4 text-center text-xs text-white/40">Loading open orders...</div>
+                  ) : !openOrders?.length ? (
+                    <div className="p-4 text-center text-xs text-white/40">No open orders</div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {openOrders.map((order: any, index: number) => (
+                        <div key={order.id ?? index} className="p-3 border-b border-white/[0.06] text-xs">
+                          <div className="flex justify-between">
+                            <span className="font-semibold">{getOrderPair(order)}</span>
+                            <span className={isBuySide(order.side) ? "text-success-5" : "text-error-1"}>{String(order.side ?? "").toUpperCase()}</span>
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-2 text-white/60">
+                            <span>Type: {order.type ?? "—"}</span>
+                            <span>Price: {formatOrderNumber(order.price)}</span>
+                            <span>Amount: {order.amount ?? order.quantity ?? "—"}</span>
+                            <span>Time: {formatOrderDate(order.createdAt)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsPanel>
+                <TabsPanel value="history">
+                  {orderHistoryLoading ? (
+                    <div className="p-4 text-center text-xs text-white/40">Loading order history...</div>
+                  ) : !orderHistory?.length ? (
+                    <div className="p-4 text-center text-xs text-white/40">No order history</div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {orderHistory.map((order: any, index: number) => (
+                        <div key={order.id ?? index} className="p-3 border-b border-white/[0.06] text-xs">
+                          <div className="flex justify-between">
+                            <span className="font-semibold">{getOrderPair(order)}</span>
+                            <span className="text-white/50 capitalize">{order.status ?? "—"}</span>
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-2 text-white/60">
+                            <span>Side: {String(order.side ?? "—").toUpperCase()}</span>
+                            <span>Price: {formatOrderNumber(order.price)}</span>
+                            <span>Amount: {order.amount ?? order.quantity ?? "—"}</span>
+                            <span>Time: {formatOrderDate(order.createdAt)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsPanel>
+                <TabsPanel value="tradeHistory">
+                  <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
+                </TabsPanel>
+              </Tabs>
+            </div>
           </div>
         )}
       </div>

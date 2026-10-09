@@ -2,14 +2,18 @@
 
 import { Search } from "@/src/components/icons/search";
 import { PlaceSpot, type TpslPreview } from "@/src/components/trades/place-spot";
+import { TradeRecordsList } from "@/src/components/trades/trade-records-list";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { useOrderBook } from "@/src/hooks/use-order-book";
+import { useRecentTrades } from "@/src/hooks/use-recent-trades";
+import { OrderBookTabs } from "@/src/components/trades/order-book-tabs";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { SpotTradePageSkeleton } from "@/src/components/skeletons/trades";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
+import { readList } from "@/src/lib/api-response";
 import {
   Checkbox,
   Loader,
@@ -90,17 +94,14 @@ function SpotTrades() {
   const { data: openOrders, isLoading: openOrdersLoading } = useQuery({
     queryKey: tradingKeys.openOrders(selectedPair),
     queryFn: () => tradingService.fetchOpenOrders({ pair: selectedPair }),
-    select: (res: any) => {
-      const raw = res?.data ?? res ?? [];
-      return Array.isArray(raw) ? raw : [];
-    },
+    select: (res: unknown) => readList<Record<string, any>>(res),
     retry: false,
     throwOnError: false,
   });
 
   const { data: orderHistory, isLoading: orderHistoryLoading } = useQuery({
-    queryKey: tradingKeys.orderHistory({ status: "closed" }),
-    queryFn: () => tradingService.spotOrderHistory(),
+    queryKey: tradingKeys.orderHistory("spot", selectedPair),
+    queryFn: () => tradingService.marketOrderHistory("spot", { pair: selectedPair }),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
@@ -109,12 +110,12 @@ function SpotTrades() {
     throwOnError: false,
   });
 
-  const normalizedSymbol = selectedPair.replace(/[/\\\-_\s]/g, "").toUpperCase();
+  const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "spot");
 
-  const { data: recentTrades, isLoading: recentTradesLoading } = useQuery({
-    queryKey: tradingKeys.spotRecentTrades(normalizedSymbol),
-    queryFn: () => tradingService.spotRecentTrades({ symbol: normalizedSymbol }),
-    select: (res: any) => (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []),
+  const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
+    queryKey: tradingKeys.tradeHistory("spot", selectedPair),
+    queryFn: () => tradingService.tradeHistory("spot", selectedPair),
+    select: (res: unknown) => readList<Record<string, unknown>>(res),
     retry: false,
     throwOnError: false,
   });
@@ -557,7 +558,7 @@ function SpotTrades() {
                 <TabsList>
                   <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
                   <TabsTab value="history">Order History</TabsTab>
-                  <TabsTab value="trades">Trade History</TabsTab>
+                  <TabsTab value="tradeHistory">Trade History</TabsTab>
                 </TabsList>
                 <div className="pr-4">
                   <Checkbox
@@ -683,15 +684,30 @@ function SpotTrades() {
                   </Table>
                 )}
               </TabsPanel>
-              <TabsPanel value="trades">
-                <div className="min-h-[120px]">{renderRecentTrades(50)}</div>
+              <TabsPanel value="tradeHistory">
+                <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
               </TabsPanel>
             </Tabs>
           </div>
         </div>
 
-        {/* COL 2: Order Book (Desktop Only) */}
-        <div className="hidden min-[1150px]:flex bg-[#181a20] rounded flex-col overflow-hidden min-h-0">
+        {/* COL 2: Order Book and live market trades */}
+        <OrderBookTabs
+          className="hidden min-[1150px]:flex rounded min-h-0"
+          buyOrders={orderBook.buyOrders}
+          sellOrders={orderBook.sellOrders}
+          recentTrades={recentTrades}
+          recentTradesLoading={recentTradesLoading}
+          base={base}
+          quote={quote}
+          currentPrice={feed.price}
+          buyPercentage={orderBook.buyPercentage}
+          sellPercentage={orderBook.sellPercentage}
+          isConnected={orderBook.isConnected}
+          lastUpdated={orderBook.lastUpdated}
+          onSelectPrice={setClickedPrice}
+        />
+        <div className="hidden">
           <div className="px-4 py-3 border-b border-white/[0.06] text-sm text-white/90 font-semibold flex items-center justify-between">
             <span>Order Book</span>
             <div className="flex gap-2">
@@ -874,8 +890,23 @@ function SpotTrades() {
               </button>
             </div>
 
-            {/* Chart View Tabs (Order Book / Trades) */}
-            <Tabs defaultValue="orderbook" classNames={{
+            <OrderBookTabs
+              className="h-[320px] min-[1150px]:hidden shrink-0"
+              buyOrders={orderBook.buyOrders}
+              sellOrders={orderBook.sellOrders}
+              recentTrades={recentTrades}
+              recentTradesLoading={recentTradesLoading}
+              base={base}
+              quote={quote}
+              currentPrice={feed.price}
+              buyPercentage={orderBook.buyPercentage}
+              sellPercentage={orderBook.sellPercentage}
+              isConnected={orderBook.isConnected}
+              lastUpdated={orderBook.lastUpdated}
+              onSelectPrice={setClickedPrice}
+            />
+            {/* Legacy mobile book markup kept hidden while the shared panel handles both tabs. */}
+            <Tabs className="hidden" defaultValue="orderbook" classNames={{
               tab: "!py-3 !px-4 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none font-bold text-sm text-white/50",
               list: "border-b border-white/[0.06] flex items-center before:!border-0 w-full",
               panel: "!p-0"
@@ -1016,7 +1047,7 @@ function SpotTrades() {
                  <TabsList>
                    <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
                    <TabsTab value="history">Order History</TabsTab>
-                   <TabsTab value="trades">Trades</TabsTab>
+                   <TabsTab value="tradeHistory">Trade History</TabsTab>
                  </TabsList>
                  <TabsPanel value="open">
                  {openOrdersLoading ? (
@@ -1075,8 +1106,8 @@ function SpotTrades() {
                    </div>
                  )}
                  </TabsPanel>
-                 <TabsPanel value="trades">
-                   {renderRecentTrades(30)}
+                 <TabsPanel value="tradeHistory">
+                   <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
                  </TabsPanel>
                </Tabs>
             </div>

@@ -608,8 +608,8 @@ export function LwcCandlestickChart({
       rightPriceScale: { borderColor: "rgba(255,255,255,0.06)", scaleMargins: { top: 0.1, bottom: 0.1 } },
       timeScale: {
         borderColor: "rgba(255,255,255,0.06)",
-        barSpacing: isMobile ? 4 : 8,
-        minBarSpacing: 2,
+        barSpacing: isMobile ? 3.5 : 5,
+        minBarSpacing: 1.5,
         timeVisible: intraday,
         secondsVisible: interval === "1s",
         rightOffset: 4,
@@ -795,7 +795,7 @@ export function LwcCandlestickChart({
     if (fittedRef.current !== key) {
       fittedRef.current = key;
       const total = candleData.length;
-      const initialVisibleBars = window.matchMedia("(max-width: 640px)").matches ? 120 : 70;
+      const initialVisibleBars = window.matchMedia("(max-width: 640px)").matches ? 150 : 130;
       chart.timeScale().setVisibleLogicalRange({
         from: Math.max(0, total - initialVisibleBars),
         to: total + 4,

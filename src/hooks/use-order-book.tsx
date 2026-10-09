@@ -165,10 +165,13 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
       const bookSymbol =
         dataPayload?.symbol ??
         dataPayload?.pair ??
+        dataPayload?.tradingPair ??
         book?.symbol ??
         book?.pair ??
+        book?.tradingPair ??
         rawMessage?.symbol ??
-        rawMessage?.pair;
+        rawMessage?.pair ??
+        rawMessage?.data?.tradingPair;
       if (bookSymbol && !symbolMatches(bookSymbol, pair)) return;
 
       const normalize = (entries: any): OrderBookEntry[] =>

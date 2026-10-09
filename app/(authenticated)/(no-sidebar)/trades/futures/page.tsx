@@ -3,9 +3,13 @@
 import { Search } from '@/src/components/icons/search';
 import { Skeleton } from '@/src/components/shared/skeleton';
 import { OpenFuturesModal } from '@/src/components/trades/open-futures-modal';
+import { TradeRecordsList } from '@/src/components/trades/trade-records-list';
 import { useMarketFeed } from '@/src/hooks/use-market-feed';
 import { useOrderBook } from '@/src/hooks/use-order-book';
+import { useRecentTrades } from '@/src/hooks/use-recent-trades';
+import { OrderBookTabs } from '@/src/components/trades/order-book-tabs';
 import { usePortfolioWs } from '@/src/hooks/use-portfolio-ws';
+import { readList } from '@/src/lib/api-response';
 import { errorMessageHandler } from '@/src/lib/error-handler';
 import { successNotification } from '@/src/lib/notification-handler';
 import { useUserStore } from '@/src/stores/user-store';
@@ -112,6 +116,52 @@ const resolveFuturesPosition = (pos: any, feed: any, selectedPair: string) => {
   return { pair, isLong, size, entryPrice, markPrice, leverage, margin, pnl, roe, tp: pickTpSl(tpRaw), sl: pickTpSl(slRaw) };
 };
 
+const getFuturesPositionId = (position: any) =>
+  String(position.id ?? position._id ?? position.position_id ?? "");
+
+const renderFuturesPositionDetails = (position: any) => {
+  const fields: [string, unknown][] = [
+    ["Position ID", position.id],
+    ["User ID", position.userId],
+    ["Symbol", position.symbol],
+    ["Side", position.side],
+    ["Base", position.base],
+    ["Quote", position.quote],
+    ["Size", position.size],
+    ["Entry Price", position.entryPrice],
+    ["Mark Price", position.markPrice],
+    ["Leverage", position.leverage],
+    ["Margin Mode", position.marginMode],
+    ["Isolated Margin", position.isolatedMarginAmt],
+    ["Initial Margin", position.initialMargin],
+    ["Maintenance Margin", position.maintenanceMargin],
+    ["Unrealized PnL", position.unrealizedPnl],
+    ["Unrealized PnL %", position.unrealizedPnlPct],
+    ["Liquidation Price", position.liquidationPrice],
+    ["Bankruptcy Price", position.bankruptcyPrice],
+    ["Take Profit Price", position.takeProfitPrice],
+    ["Stop Loss Price", position.stopLossPrice],
+    ["Created At", position.createdAt],
+    ["Updated At", position.updatedAt],
+  ];
+
+  return (
+    <details className="mt-2 border-t border-white/[0.06] pt-2">
+      <summary className="cursor-pointer text-[11px] font-semibold text-white/50 hover:text-white/80">
+        Position details
+      </summary>
+      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+        {fields.map(([label, value]) => (
+          <div key={label} className="flex min-w-0 justify-between gap-2">
+            <span className="shrink-0 text-white/40">{label}</span>
+            <span className="truncate text-right text-white/80">{value === undefined || value === null || value === "" ? "—" : String(value)}</span>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+};
+
 type OrderType = 'limit' | 'market' | 'stop';
 type TradeSide = 'buy' | 'sell';
 type MarginMode = 'cross' | 'isolated';
@@ -158,6 +208,7 @@ function FuturesTradesInner() {
     setPlacedFill(null);
   }, [selectedPair]);
   const [quickOrderOpen, setQuickOrderOpen] = useState(false);
+  const [closingPositionIds, setClosingPositionIds] = useState<Set<string>>(() => new Set());
   // Live funding countdown
   const [fundingCountdown, setFundingCountdown] = useState('--:--:--');
 
@@ -176,6 +227,14 @@ function FuturesTradesInner() {
   const { data: futuresOpenOrders, refetch: refetchOpenOrders } = useQuery({
     queryKey: ['futures-open-orders', selectedPair],
     queryFn: () => tradingService.fetchFuturesOpenOrders({ pair: selectedPair }),
+    select: (res: unknown) => readList<Record<string, any>>(res),
+    retry: false,
+    throwOnError: false,
+  });
+
+  const { data: futuresOrderHistory, isLoading: futuresOrderHistoryLoading } = useQuery({
+    queryKey: tradingKeys.orderHistory("futures", selectedPair),
+    queryFn: () => tradingService.marketOrderHistory("futures", { pair: selectedPair }),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
@@ -184,28 +243,17 @@ function FuturesTradesInner() {
     throwOnError: false,
   });
 
-  const { data: futuresOrderHistory } = useQuery({
-    queryKey: ['futures-order-history'],
-    queryFn: () => tradingService.futuresOrderHistory(),
-    select: (res: any) => {
-      const raw = res?.data ?? res ?? [];
-      return Array.isArray(raw) ? raw : [];
-    },
+  const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "futures");
+
+  const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
+    queryKey: tradingKeys.tradeHistory("futures", selectedPair),
+    queryFn: () => tradingService.tradeHistory("futures", selectedPair),
+    select: (res: unknown) => readList<Record<string, unknown>>(res),
     retry: false,
     throwOnError: false,
   });
 
-  const normalizedSymbol = selectedPair.replace(/[/\\\-_\s]/g, "").toUpperCase();
-
-  const { data: recentTrades, isLoading: recentTradesLoading } = useQuery({
-    queryKey: tradingKeys.spotRecentTrades(normalizedSymbol),
-    queryFn: () => tradingService.spotRecentTrades({ symbol: normalizedSymbol }),
-    select: (res: any) => (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []),
-    retry: false,
-    throwOnError: false,
-  });
-
-  const { mutate: closePosition, isPending: closingPosition } = useMutation({
+  const { mutate: closePosition } = useMutation({
     mutationFn: (positionId: string) => tradingService.closeFuturesPosition({ positionId }),
     onSuccess: () => {
       successNotification('Position closed successfully');
@@ -213,9 +261,21 @@ function FuturesTradesInner() {
       refetchOpenOrders();
     },
     onError: (err: any) => errorMessageHandler(err),
+    onSettled: (_data, _error, positionId) => {
+      setClosingPositionIds((current) => {
+        const next = new Set(current);
+        next.delete(positionId);
+        return next;
+      });
+    },
   });
 
-  const { mutate: partialClosePosition, isPending: partialClosing } = useMutation({
+  const closePositionById = (positionId: string) => {
+    setClosingPositionIds((current) => new Set(current).add(positionId));
+    closePosition(positionId);
+  };
+
+  const { mutate: partialClosePosition } = useMutation({
     mutationFn: (data: { positionId: string; close_quantity: string }) =>
       tradingService.partialCloseFuturesPosition(data),
     onSuccess: () => {
@@ -1025,7 +1085,7 @@ function FuturesTradesInner() {
                   <TabsTab value="positions">Positions({futuresPositions.length})</TabsTab>
                   <TabsTab value="open">Open Orders({futuresOpenOrders?.length ?? 0})</TabsTab>
                   <TabsTab value="orders">Order History</TabsTab>
-                  <TabsTab value="trade">Trade History</TabsTab>
+                  <TabsTab value="tradeHistory">Trade History</TabsTab>
                 </TabsList>
                 <div className="pr-4">
                   <Checkbox
@@ -1050,7 +1110,7 @@ function FuturesTradesInner() {
                 ) : (
                   <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
                     <Table classNames={{
-                      table: "min-w-[950px] w-full",
+                      table: "min-w-[1100px] w-full",
                       th: "!text-[10px] uppercase tracking-wide !text-white/40 !border-b !border-white/[0.05] !py-3 !font-medium whitespace-nowrap",
                       td: "!text-sm !text-white/80 !border-b !border-white/[0.03] !py-3 whitespace-nowrap",
                       tr: "hover:!bg-white/[0.02] transition-colors"
@@ -1065,6 +1125,7 @@ function FuturesTradesInner() {
                           <TableTh>Margin</TableTh>
                           <TableTh>Unrealized PNL (ROE%)</TableTh>
                           <TableTh>TP / SL</TableTh>
+                          <TableTh>Details</TableTh>
                           <TableTh className="!pr-4 !text-right">Action</TableTh>
                         </TableTr>
                       </thead>
@@ -1096,6 +1157,7 @@ function FuturesTradesInner() {
                           const {
                             pair, isLong, size, entryPrice, markPrice, leverage, margin, pnl, roe, tp, sl,
                           } = resolveFuturesPosition(pos, feed, selectedPair);
+                          const positionId = getFuturesPositionId(pos);
 
                           // Create a stable key combining available unique fields
                           const stableKey = pos.id || pos._id || pos.position_id || `${pair}-${pos.side}-${size}-${entryPrice}-${leverage}-${idx}`;
@@ -1126,6 +1188,7 @@ function FuturesTradesInner() {
                                   <span className="text-red-400">SL: {sl ?? '—'}</span>
                                 </div>
                               </TableTd>
+                              <TableTd className="whitespace-normal">{renderFuturesPositionDetails(pos)}</TableTd>
                               <TableTd className="!pr-4 !text-right">
                                 <div className="flex justify-end gap-1.5">
                                    <button
@@ -1148,7 +1211,7 @@ function FuturesTradesInner() {
                                               className="w-full h-10 mt-1 rounded bg-amber-500/80 hover:bg-amber-500 text-white text-sm font-semibold transition-colors"
                                               onClick={() => {
                                                 if (!qty || isNaN(Number(qty)) || Number(qty) <= 0) return;
-                                                partialClosePosition({ positionId: pos.id, close_quantity: qty });
+                                                partialClosePosition({ positionId, close_quantity: qty });
                                               }}
                                             >
                                               Confirm Partial Close
@@ -1186,7 +1249,7 @@ function FuturesTradesInner() {
                                             />
                                             <button
                                               className="w-full h-10 mt-2 rounded bg-primary text-white text-sm font-semibold"
-                                              onClick={() => updateTPSL({ positionId: pos.id, take_profit_price: tp, stop_loss_price: sl })}
+                                              onClick={() => updateTPSL({ positionId, take_profit_price: tp, stop_loss_price: sl })}
                                             >
                                               Confirm Update
                                             </button>
@@ -1199,11 +1262,11 @@ function FuturesTradesInner() {
                                     TP/SL
                                   </button>
                                   <button
-                                    onClick={() => closePosition(pos.id)}
-                                    disabled={closingPosition || partialClosing}
+                                    onClick={() => positionId && closePositionById(positionId)}
+                                    disabled={!positionId || closingPositionIds.has(positionId)}
                                     className="text-[11px] font-semibold text-primary hover:underline px-2 py-1 bg-primary/10 rounded disabled:opacity-50"
                                   >
-                                    Close
+                                    {closingPositionIds.has(positionId) ? "Closing..." : "Close"}
                                   </button>
                                 </div>
                               </TableTd>
@@ -1343,14 +1406,34 @@ function FuturesTradesInner() {
                   </div>
                 )}
               </TabsPanel>
-              <TabsPanel value="trade">
-                <div className="flex-1 min-h-0 overflow-auto"><div className="p-3">{renderRecentTrades(50)}</div></div>
+              <TabsPanel value="tradeHistory">
+                <div className="flex-1 min-h-0 overflow-auto">
+                  <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
+                </div>
               </TabsPanel>
             </Tabs>
           </div>
         </div>
 
-        <div className="hidden min-[1150px]:flex bg-[#181a20] rounded flex-col overflow-hidden min-h-0">
+        <OrderBookTabs
+          className="hidden min-[1150px]:flex rounded min-h-0"
+          buyOrders={orderBook.buyOrders}
+          sellOrders={orderBook.sellOrders}
+          recentTrades={recentTrades}
+          recentTradesLoading={recentTradesLoading}
+          base={baseAsset}
+          quote="USDT"
+          currentPrice={feed.price}
+          buyPercentage={orderBook.buyPercentage}
+          sellPercentage={orderBook.sellPercentage}
+          isConnected={orderBook.isConnected}
+          lastUpdated={orderBook.lastUpdated}
+          onSelectPrice={(price) => {
+            setFuturesPrice(price);
+            priceUserEditedRef.current = true;
+          }}
+        />
+        <div className="hidden">
           <div className="px-4 py-3 border-b border-white/[0.06] text-sm text-white/90 font-semibold flex items-center justify-between">
             <span>Order Book</span>
             <div className="flex gap-2">
@@ -1599,8 +1682,26 @@ function FuturesTradesInner() {
               </button>
             </div>
 
-            {/* Chart View Tabs (Order Book / Trades) */}
-            <Tabs defaultValue="orderbook" classNames={{
+            <OrderBookTabs
+              className="h-[320px] min-[1150px]:hidden shrink-0"
+              buyOrders={orderBook.buyOrders}
+              sellOrders={orderBook.sellOrders}
+              recentTrades={recentTrades}
+              recentTradesLoading={recentTradesLoading}
+              base={baseAsset}
+              quote="USDT"
+              currentPrice={feed.price}
+              buyPercentage={orderBook.buyPercentage}
+              sellPercentage={orderBook.sellPercentage}
+              isConnected={orderBook.isConnected}
+              lastUpdated={orderBook.lastUpdated}
+              onSelectPrice={(price) => {
+                setFuturesPrice(price);
+                priceUserEditedRef.current = true;
+              }}
+            />
+            {/* Legacy mobile book markup kept hidden while the shared panel handles both tabs. */}
+            <Tabs className="hidden" defaultValue="orderbook" classNames={{
               tab: "!py-3 !px-4 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none font-bold text-sm text-white/50",
               list: "border-b border-white/[0.06] flex items-center before:!border-0 w-full",
               panel: "!p-0"
@@ -1726,7 +1827,7 @@ function FuturesTradesInner() {
                   <TabsTab value="positions">Positions ({futuresPositions.length})</TabsTab>
                   <TabsTab value="open-orders">Open Orders ({futuresOpenOrders?.length ?? 0})</TabsTab>
                   <TabsTab value="history">Order History</TabsTab>
-                  <TabsTab value="trades">Trade History</TabsTab>
+                  <TabsTab value="tradeHistory">Trade History</TabsTab>
                 </TabsList>
                 <TabsPanel value="positions">
                   <div className="p-4 flex-1 min-h-0 overflow-y-auto flex flex-col">
@@ -1738,12 +1839,13 @@ function FuturesTradesInner() {
                       <div className="flex flex-col gap-3">
                         {futuresPositions.map((pos: any) => {
                           const { pair, isLong, size, entryPrice, markPrice, leverage, margin, pnl, roe, tp, sl } = resolveFuturesPosition(pos, feed, selectedPair);
+                          const positionId = getFuturesPositionId(pos);
                           const pnlSign = pnl >= 0 ? '+' : '';
                           const pnlColor = pnl >= 0 ? 'text-emerald-400' : 'text-red-400';
                           return (
                             <div key={pos.id || pos._id || `${pos.pair}-${pos.side}`} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
                               <div className="flex justify-between items-center">
-                                <span className="text-sm font-bold text-white">{pos.pair} <span className={`text-xs font-bold ${isLong ? 'text-emerald-400' : 'text-red-400'}`}>{pos.side?.toUpperCase()} {leverage}x</span></span>
+                                <span className="text-sm font-bold text-white">{pair} <span className={`text-xs font-bold ${isLong ? 'text-emerald-400' : 'text-red-400'}`}>{pos.side?.toUpperCase()} {leverage}x</span></span>
                                 <div className="text-right">
                                   <span className={`text-sm font-bold tabular-nums ${pnlColor}`}>{pnlSign}{pnl.toFixed(4)}</span>
                                   <span className={`block text-[10px] tabular-nums ${pnlColor}`}>{pnlSign}{roe.toFixed(2)}%</span>
@@ -1757,6 +1859,7 @@ function FuturesTradesInner() {
                                 <div className="flex justify-between col-span-2"><span className="text-white/40">TP</span><span className="text-emerald-400 tabular-nums">{tp ?? '—'}</span></div>
                                 <div className="flex justify-between col-span-2"><span className="text-white/40">SL</span><span className="text-red-400 tabular-nums">{sl ?? '—'}</span></div>
                               </div>
+                              {renderFuturesPositionDetails(pos)}
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => {
@@ -1778,7 +1881,7 @@ function FuturesTradesInner() {
                                             className="w-full h-10 mt-1 rounded bg-amber-500/80 hover:bg-amber-500 text-white text-sm font-semibold transition-colors"
                                             onClick={() => {
                                               if (!qty || isNaN(Number(qty)) || Number(qty) <= 0) return;
-                                              partialClosePosition({ positionId: pos.id, close_quantity: qty });
+                                              partialClosePosition({ positionId, close_quantity: qty });
                                             }}
                                           >
                                             Confirm Partial Close
@@ -1816,7 +1919,7 @@ function FuturesTradesInner() {
                                           />
                                           <button
                                             className="w-full h-10 mt-2 rounded bg-primary text-white text-sm font-semibold"
-                                            onClick={() => updateTPSL({ positionId: pos.id, take_profit_price: tp, stop_loss_price: sl })}
+                                            onClick={() => updateTPSL({ positionId, take_profit_price: tp, stop_loss_price: sl })}
                                           >
                                             Confirm Update
                                           </button>
@@ -1829,11 +1932,11 @@ function FuturesTradesInner() {
                                   TP/SL
                                 </button>
                                 <button
-                                  onClick={() => closePosition(pos.id)}
-                                  disabled={closingPosition || partialClosing}
+                                  onClick={() => positionId && closePositionById(positionId)}
+                                  disabled={!positionId || closingPositionIds.has(positionId)}
                                   className="flex-1 text-[11px] font-semibold text-primary hover:underline px-2 py-1.5 bg-primary/10 rounded disabled:opacity-50"
                                 >
-                                  Close
+                                  {closingPositionIds.has(positionId) ? 'Closing...' : 'Close'}
                                 </button>
                               </div>
                             </div>
@@ -1921,9 +2024,9 @@ function FuturesTradesInner() {
                     )}
                   </div>
                 </TabsPanel>
-                <TabsPanel value="trades">
+                <TabsPanel value="tradeHistory">
                   <div className="p-4 flex-1 min-h-0 overflow-y-auto flex flex-col">
-                    {renderRecentTrades(30)}
+                    <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
                   </div>
                 </TabsPanel>
               </Tabs>
