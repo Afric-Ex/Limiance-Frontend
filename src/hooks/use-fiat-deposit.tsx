@@ -122,7 +122,9 @@ export const useFiatBankDeposit = () => {
     retry: 1,
   });
   const rate = Number(quote?.rate) || 0;
-  const quotedReceivedAmount = getFiatQuoteReceivedAmount(quote?.symbolAmountToReceived);
+  const quotedReceivedAmount = getFiatQuoteReceivedAmount(
+    quote?.symbolAmountToReceive ?? quote?.symbolAmountToReceived
+  );
 
   const { mutate: createAccount, isPending: creatingAccount } = useMutation({
     // Flag the symbol as in-flight here, not on confirm: the credit is driven by

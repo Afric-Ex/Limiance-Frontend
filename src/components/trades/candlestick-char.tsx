@@ -401,9 +401,22 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
     setUsesFullscreenFallback(false);
     setIsFullscreen(false);
 
-    if (typeof document !== "undefined" && document.fullscreenElement === root) {
+    if (typeof document !== "undefined" && root) {
+      const fullscreenDocument = document as Document & {
+        webkitFullscreenElement?: Element | null;
+        webkitExitFullscreen?: () => Promise<void> | void;
+      };
+      const isNativeFullscreen =
+        fullscreenDocument.fullscreenElement === root ||
+        fullscreenDocument.webkitFullscreenElement === root;
+      if (!isNativeFullscreen) return;
+
       try {
-        await document.exitFullscreen();
+        if (fullscreenDocument.exitFullscreen) {
+          await fullscreenDocument.exitFullscreen();
+        } else {
+          await fullscreenDocument.webkitExitFullscreen?.();
+        }
       } catch {
         // The browser may already have exited fullscreen (for example after a
         // system-level Escape action). The local state is already reconciled.
@@ -415,10 +428,27 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
     const root = chartRootRef.current;
     if (!root) return;
 
-    if (typeof document !== "undefined" && root.requestFullscreen) {
+    if (typeof document !== "undefined") {
+      const fullscreenRoot = root as HTMLDivElement & {
+        webkitRequestFullscreen?: () => Promise<void> | void;
+      };
+      const fullscreenDocument = document as Document & {
+        webkitFullscreenElement?: Element | null;
+      };
+
       try {
-        await root.requestFullscreen({ navigationUI: "hide" });
-        return;
+        if (fullscreenRoot.requestFullscreen) {
+          await fullscreenRoot.requestFullscreen({ navigationUI: "hide" });
+        } else {
+          await fullscreenRoot.webkitRequestFullscreen?.();
+        }
+
+        if (
+          fullscreenDocument.fullscreenElement === root ||
+          fullscreenDocument.webkitFullscreenElement === root
+        ) {
+          return;
+        }
       } catch {
         // Some mobile browsers expose the API but reject it for an element
         // that is not directly activated. Use the viewport fallback below.
@@ -433,9 +463,14 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
   useEffect(() => {
     const root = chartRootRef.current;
     if (!root || typeof document === "undefined") return;
+    const fullscreenDocument = document as Document & {
+      webkitFullscreenElement?: Element | null;
+    };
 
     const onFullscreenChange = () => {
-      const active = document.fullscreenElement === root;
+      const active =
+        fullscreenDocument.fullscreenElement === root ||
+        fullscreenDocument.webkitFullscreenElement === root;
       if (active) {
         fullscreenFallbackRef.current = false;
         setUsesFullscreenFallback(false);
@@ -446,7 +481,11 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
     };
 
     document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -478,6 +517,17 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
         isFullscreen && "w-screen h-[100dvh]",
         isFullscreen && usesFullscreenFallback && "fixed inset-0 z-[1000]"
       )}
+      style={
+        isFullscreen
+          ? {
+              width: "100vw",
+              height: "100dvh",
+              ...(usesFullscreenFallback
+                ? { position: "fixed", inset: 0, zIndex: 1000 }
+                : {}),
+            }
+          : undefined
+      }
       data-market={market}
     >
       {/* One shared control surface for all three trading products. */}

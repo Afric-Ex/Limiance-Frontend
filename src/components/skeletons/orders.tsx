@@ -89,7 +89,7 @@ export function DepositSkeleton() {
   return (
     <SkeletonShell>
       <SkeletonHeader titleWidth={160} subtitle />
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+      <div className="grid grid-cols-1 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] gap-6 max-[1150px]:gap-4">
         <SkeletonCard titleWidth={140}>
           <div className="flex flex-col gap-4">
             <Skeleton variant="rect" width="100%" height={56} className="!rounded-xl" />

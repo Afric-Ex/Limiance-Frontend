@@ -11,6 +11,8 @@ export interface FiatQuote {
   message?: string;
   symbol?: string;
   depositAmount?: string;
+  symbolAmountToReceive?: string | number;
+  /** Legacy response field spelling. */
   symbolAmountToReceived?: string | number;
   rate?: string;
   buyRate?: string;
