@@ -987,7 +987,8 @@ function MarginTrades() {
             </div>
 
             <OrderBookTabs
-              className="h-[320px] min-[1150px]:hidden shrink-0"
+              className="min-[1150px]:hidden shrink-0"
+              fixedHeight={320}
               buyOrders={orderBook.buyOrders}
               sellOrders={orderBook.sellOrders}
               recentTrades={recentTrades}
@@ -1066,7 +1067,7 @@ function MarginTrades() {
           <div className="flex flex-col flex-1 overflow-auto custom-scrollbar">
             <div className="flex bg-[#181a20] flex-1">
               {/* Left Side: Trade Form */}
-              <div className="w-[60%] border-r border-white/[0.06]">
+              <div className="w-full">
                 <Tabs
                   classNames={{
                     tab: "!py-3 !px-2 flex-1 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-white !border-b-[2px] !border-transparent !rounded-none font-bold text-xs text-white/40",
@@ -1090,7 +1091,7 @@ function MarginTrades() {
               </div>
 
               {/* Right Side: Stacked Order Book */}
-              <div className="w-[40%] flex flex-col p-1">
+              <div className="hidden">
                 <div className="flex justify-between text-[10px] text-white/40 mb-2 px-1">
                   <span>Price</span><span>Qty</span>
                 </div>
@@ -1137,6 +1138,22 @@ function MarginTrades() {
               </div>
             </div>
 
+            <OrderBookTabs
+              className="min-[1150px]:hidden shrink-0"
+              fixedHeight={320}
+              buyOrders={orderBook.buyOrders}
+              sellOrders={orderBook.sellOrders}
+              recentTrades={recentTrades}
+              recentTradesLoading={recentTradesLoading}
+              base={base}
+              quote={quote}
+              currentPrice={feed.price}
+              buyPercentage={orderBook.buyPercentage}
+              sellPercentage={orderBook.sellPercentage}
+              isConnected={orderBook.isConnected}
+              lastUpdated={orderBook.lastUpdated}
+              onSelectPrice={setClickedPrice}
+            />
             <div className="min-[1150px]:hidden bg-[#181a20] rounded flex flex-col mt-2 mb-[80px]">
               <Tabs defaultValue="open">
                 <TabsList className="w-full flex-nowrap overflow-x-auto">
