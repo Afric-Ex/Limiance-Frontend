@@ -219,17 +219,36 @@ export default function Header() {
         </Link>
       </div>
       
-      <div className="hidden max-[1150px]:flex items-center gap-5">
+      <div className="hidden max-[1150px]:flex items-center gap-3">
         {authHydrated && user && (
-          <PopoverWrapper
-            target={({ toggle }) => (
-              <span onClick={toggle}>
-                <NotificationBell />
-              </span>
-            )}
-          >
-            <NotificationsDropdown />
-          </PopoverWrapper>
+          <>
+            <button
+              onClick={handleOpenDepositModal}
+              className="flex h-8 items-center gap-1 rounded-md bg-primary px-2.5 text-xs font-semibold text-white"
+              aria-label="Deposit"
+            >
+              <FiDownload size={14} />
+              Deposit
+            </button>
+            <PopoverWrapper
+              target={({ toggle }) => (
+                <span onClick={toggle}>
+                  <UserAvatar className="h-7 w-7 cursor-pointer" />
+                </span>
+              )}
+            >
+              <ProfileDropdown />
+            </PopoverWrapper>
+            <PopoverWrapper
+              target={({ toggle }) => (
+                <span onClick={toggle}>
+                  <NotificationBell />
+                </span>
+              )}
+            >
+              <NotificationsDropdown />
+            </PopoverWrapper>
+          </>
         )}
         <CiMenuBurger
           className="cursor-pointer"

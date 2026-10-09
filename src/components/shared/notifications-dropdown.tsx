@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@mantine/core";
 import { MdOutlineQrCode } from "react-icons/md";
@@ -20,6 +20,7 @@ export const useNotificationCount = () => {
 };
 
 export const NotificationsDropdown = () => {
+  const [readFilter, setReadFilter] = useState<"all" | "unread" | "read">("all");
   const storeNotifications = useNotificationStore((state) => state.notifications);
   const { notifications: serverNotifications, error, isLoading } = useNotifications();
   const markAllAsRead = useNotificationStore((state) => state.markAllAsRead);
@@ -32,6 +33,11 @@ export const NotificationsDropdown = () => {
   const notifications =
     storeNotifications.length > 0 ? storeNotifications : serverNotifications;
   const hasItems = notifications && notifications.length > 0;
+  const filteredNotifications = notifications.filter((notif) => {
+    if (readFilter === "unread") return !notif.read;
+    if (readFilter === "read") return notif.read;
+    return true;
+  });
 
   const handleMarkAllRead = () => {
     markAllAsRead();
@@ -71,6 +77,33 @@ export const NotificationsDropdown = () => {
         )}
       </div>
 
+      {hasItems && (
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]" role="group" aria-label="Filter notifications by read status">
+          {([
+            ["all", "All"],
+            ["unread", "Unread"],
+            ["read", "Read"],
+          ] as const).map(([filter, label]) => (
+            <button
+              key={filter}
+              type="button"
+              aria-pressed={readFilter === filter}
+              onClick={() => setReadFilter(filter)}
+              className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                readFilter === filter
+                  ? "bg-primary/20 text-primary"
+                  : "text-white/50 hover:bg-white/[0.05] hover:text-white"
+              }`}
+            >
+              {label}
+              {filter === "unread" && (
+                <span className="ml-1">({notifications.filter((notif) => !notif.read).length})</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-col max-h-[380px] overflow-y-auto custom-scrollbar">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2 text-white/25">
@@ -86,8 +119,15 @@ export const NotificationsDropdown = () => {
               <span className="text-xs font-medium">No recent notifications</span>
             )}
           </div>
+        ) : filteredNotifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 gap-2 text-white/25">
+            <MdOutlineQrCode size={24} />
+            <span className="text-xs font-medium">
+              No {readFilter === "unread" ? "unread" : "read"} notifications
+            </span>
+          </div>
         ) : (
-          notifications.map((notif) => {
+          filteredNotifications.map((notif) => {
             return (
               <div
                 key={notif.id}

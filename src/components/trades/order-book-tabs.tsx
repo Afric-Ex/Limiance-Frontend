@@ -17,6 +17,7 @@ interface OrderBookTabsProps {
   isConnected?: boolean;
   lastUpdated?: Date | null;
   onSelectPrice: (price: number) => void;
+  fixedHeight?: number;
   className?: string;
 }
 
@@ -96,6 +97,7 @@ export function OrderBookTabs({
   isConnected = false,
   lastUpdated = null,
   onSelectPrice,
+  fixedHeight,
   className = "",
 }: OrderBookTabsProps) {
   const maxAsk = Math.max(...sellOrders.map((order) => order.quantity), 0.001);
@@ -122,6 +124,7 @@ export function OrderBookTabs({
     <Tabs
       defaultValue="orderbook"
       className={`flex h-full min-h-0 flex-col overflow-hidden bg-[#181a20] ${className}`}
+      style={fixedHeight ? { height: fixedHeight, flex: "none" } : undefined}
       classNames={{
         root: "flex h-full min-h-0 flex-col overflow-hidden",
         list: "shrink-0 border-b border-white/[0.06] px-3",
@@ -163,7 +166,7 @@ export function OrderBookTabs({
                     type="button"
                     key={`ask-${index}-${order.price}`}
                     onClick={() => onSelectPrice(order.price)}
-                    className="relative grid shrink-0 grid-cols-3 overflow-hidden px-3 py-[3px] text-left hover:bg-white/[0.02]"
+                    className={`relative grid shrink-0 grid-cols-3 overflow-hidden px-3 py-[3px] text-left hover:bg-white/[0.02] ${index >= 5 ? "max-[1150px]:hidden" : ""}`}
                   >
                     <span className="absolute inset-y-0 right-0 bg-error-1/[0.08]" style={{ width: `${Math.min((order.quantity / maxAsk) * 100, 100)}%` }} />
                     <span className="z-10 font-mono text-[11px] font-semibold tabular-nums text-error-1">{formatNumber(order.price, 2)}</span>
@@ -186,7 +189,7 @@ export function OrderBookTabs({
                     type="button"
                     key={`bid-${index}-${order.price}`}
                     onClick={() => onSelectPrice(order.price)}
-                    className="relative grid shrink-0 grid-cols-3 overflow-hidden px-3 py-[3px] text-left hover:bg-white/[0.02]"
+                    className={`relative grid shrink-0 grid-cols-3 overflow-hidden px-3 py-[3px] text-left hover:bg-white/[0.02] ${index >= 5 ? "max-[1150px]:hidden" : ""}`}
                   >
                     <span className="absolute inset-y-0 right-0 bg-success-6/[0.08]" style={{ width: `${Math.min((order.quantity / maxBid) * 100, 100)}%` }} />
                     <span className="z-10 font-mono text-[11px] font-semibold tabular-nums text-success-6">{formatNumber(order.price, 2)}</span>

@@ -433,7 +433,7 @@ function FuturesTradesInner() {
     return () => clearInterval(id);
   }, [feed.nextFundingTime]);
 
-  const [baseAsset] = selectedPair.split('/');
+  const [baseAsset, quoteAsset = "USDT"] = selectedPair.split('/');
   // For stop-limit: futuresPrice is the TRIGGER price, stopLimitPrice is the LIMIT price
   const workingPrice = Number(futuresPrice) || feed.price || 0;
   const effectiveLimitPrice = orderType === 'stop' ? (Number(stopLimitPrice) || workingPrice) : workingPrice;
@@ -1422,7 +1422,7 @@ function FuturesTradesInner() {
           recentTrades={recentTrades}
           recentTradesLoading={recentTradesLoading}
           base={baseAsset}
-          quote="USDT"
+          quote={quoteAsset}
           currentPrice={feed.price}
           buyPercentage={orderBook.buyPercentage}
           sellPercentage={orderBook.sellPercentage}
@@ -1683,7 +1683,8 @@ function FuturesTradesInner() {
             </div>
 
             <OrderBookTabs
-              className="h-[320px] min-[1150px]:hidden shrink-0"
+              className="min-[1150px]:hidden shrink-0"
+              fixedHeight={320}
               buyOrders={orderBook.buyOrders}
               sellOrders={orderBook.sellOrders}
               recentTrades={recentTrades}
@@ -1763,12 +1764,12 @@ function FuturesTradesInner() {
           <div className="flex flex-col flex-1 overflow-auto custom-scrollbar">
             <div className="flex bg-[#181a20] flex-1">
               {/* Left Side: Trade Form */}
-              <div className="w-[60%] border-r border-white/[0.06] px-3 py-4">
+              <div className="w-full px-3 py-4">
                 {tradeFormPanel}
               </div>
 
               {/* Right Side: Stacked Order Book */}
-              <div className="w-[40%] flex flex-col p-1">
+              <div className="hidden">
                 <div className="flex justify-between text-[10px] text-white/40 mb-2 px-1">
                   <span>Price</span><span>Qty</span>
                 </div>
@@ -1811,6 +1812,26 @@ function FuturesTradesInner() {
                 </div>
               </div>
             </div>
+
+            <OrderBookTabs
+              className="min-[1150px]:hidden shrink-0"
+              fixedHeight={320}
+              buyOrders={orderBook.buyOrders}
+              sellOrders={orderBook.sellOrders}
+              recentTrades={recentTrades}
+              recentTradesLoading={recentTradesLoading}
+              base={baseAsset}
+              quote="USDT"
+              currentPrice={feed.price}
+              buyPercentage={orderBook.buyPercentage}
+              sellPercentage={orderBook.sellPercentage}
+              isConnected={orderBook.isConnected}
+              lastUpdated={orderBook.lastUpdated}
+              onSelectPrice={(price) => {
+                setFuturesPrice(price);
+                priceUserEditedRef.current = true;
+              }}
+            />
 
             {/* Positions & Orders Tabs */}
             <div className="bg-[#181a20] rounded flex flex-col mt-2 mb-[80px] h-[320px] overflow-hidden">
