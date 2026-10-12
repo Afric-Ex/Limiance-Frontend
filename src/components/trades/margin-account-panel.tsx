@@ -69,7 +69,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
   // ── Data (WebSocket for live balance) ────────────────────────────────────
   // Margin panel: derived margin balance (from holdings) + the margin account
   // (borrowed funds, equity, leverage). No futures/allocations stream needed.
-  const { balances, coins: portfolio, isLoading: portLoading, marginAccount, refreshBalances } = usePortfolioWs({
+  const { balances, coins: portfolio, isLoading: portLoading, marginAccount, refreshBalances, isRefreshing } = usePortfolioWs({
     coins: true,
     margin: true,
   });
@@ -220,7 +220,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                 title="Refresh balances"
                 className="text-white/40 hover:text-white transition-colors"
               >
-                <MdRefresh size={16} />
+                <MdRefresh size={16} className={isRefreshing ? "animate-spin" : ""} />
               </button>
             </div>
           </div>
@@ -282,7 +282,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
               title="Refresh balances"
               className="text-white/40 hover:text-white transition-colors"
             >
-              <MdRefresh size={16} />
+              <MdRefresh size={16} className={isRefreshing ? "animate-spin" : ""} />
             </button>
           </div>
           {balLoading ? (
@@ -309,7 +309,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
               title="Refresh balances"
               className="text-white/40 hover:text-white transition-colors"
             >
-              <MdRefresh size={16} />
+              <MdRefresh size={16} className={isRefreshing ? "animate-spin" : ""} />
             </button>
           </div>
           {balLoading ? (

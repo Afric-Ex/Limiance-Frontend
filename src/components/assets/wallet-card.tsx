@@ -33,7 +33,7 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
 
   // Account pages request their own balance alongside portfolio holdings;
   // the overview requests the overall balance.
-  const { balances, isLoading: balanceLoading, refreshBalances } = usePortfolioWs(
+  const { balances, isLoading: balanceLoading, refreshBalances, isRefreshing } = usePortfolioWs(
     singleAccount
       ? { coins: true, balanceAccount: singleAccount }
       : { balance: true }
@@ -133,7 +133,7 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
                   title="Refresh balance"
                   className="text-white/40 hover:text-white transition-colors"
                 >
-                  <MdRefresh size={17} />
+                  <MdRefresh size={17} className={isRefreshing ? "animate-spin" : ""} />
                 </button>
               </div>
             </div>

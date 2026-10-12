@@ -217,7 +217,7 @@ function FuturesTradesInner() {
 
   // Futures screen: open positions, per-coin balances and the account total.
   // This is the only surface that opens get_futures_positions.
-  const { balances, coins: portfolio, refreshBalances, futuresPositions } = usePortfolioWs({
+  const { balances, coins: portfolio, refreshBalances, futuresPositions, isRefreshing } = usePortfolioWs({
     coins: true,
     balance: true,
     futures: true,
@@ -699,7 +699,7 @@ function FuturesTradesInner() {
             title="Refresh balance"
             className="text-white/40 hover:text-white transition-colors"
           >
-            <MdRefresh size={14} />
+            <MdRefresh size={14} className={isRefreshing ? "animate-spin" : ""} />
           </button>
           <span className="text-primary text-[10px]">
             {marginMode === 'cross' ? 'Cross' : 'Isolated'}
@@ -1316,7 +1316,7 @@ function FuturesTradesInner() {
                                   title="Refresh balance"
                                   className="text-white/40 hover:text-white transition-colors"
                                 >
-                                  <MdRefresh size={13} />
+                                  <MdRefresh size={13} className={isRefreshing ? "animate-spin" : ""} />
                                 </button>
                               </span>
                               <span className="font-semibold text-white/80 tabular-nums">{equity.toFixed(4)} USDT</span>
@@ -2008,7 +2008,7 @@ function FuturesTradesInner() {
                                       title="Refresh balance"
                                       className="text-white/40 hover:text-white transition-colors"
                                     >
-                                      <MdRefresh size={13} />
+                                      <MdRefresh size={13} className={isRefreshing ? "animate-spin" : ""} />
                                     </button>
                                   </span>
                                   <span className="font-semibold text-white/80 tabular-nums">{equity.toFixed(4)} USDT</span>

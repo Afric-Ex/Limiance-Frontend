@@ -168,7 +168,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
   const [base, quote] = pair.split("/");
 
-  const { coins: portfolioResponse, refreshBalances } = usePortfolioWs({ coins: true });
+  const { coins: portfolioResponse, refreshBalances, isRefreshing } = usePortfolioWs({ coins: true });
 
   const quoteAsset = portfolioResponse?.find((a: any) => a.symbol === quote);
   const baseAsset = portfolioResponse?.find((a: any) => a.symbol === base);
@@ -436,7 +436,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 title="Refresh balance"
                 className="text-white/40 hover:text-white transition-colors"
               >
-                <MdRefresh size={14} />
+                <MdRefresh size={14} className={isRefreshing ? "animate-spin" : ""} />
               </button>
             </span>
           </div>
@@ -510,7 +510,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 title="Refresh balance"
                 className="text-white/40 hover:text-white transition-colors"
               >
-                <MdRefresh size={14} />
+                <MdRefresh size={14} className={isRefreshing ? "animate-spin" : ""} />
               </button>
             </span>
           </div>
