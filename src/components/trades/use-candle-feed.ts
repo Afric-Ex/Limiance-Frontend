@@ -265,6 +265,18 @@ export function useCandleFeed(symbol: string, interval: string, market: ChartMar
   const candles = useMemo(() => {
     const base = historyCandles ?? [];
     if (!liveCandles || liveCandles.length === 0) return base;
+    if (base.length === 0) return liveCandles;
+
+    // Fast-path: if liveCandles only contains recent bars at or after base's last candle
+    const lastBaseTime = base[base.length - 1].time;
+    const firstLiveTime = liveCandles[0].time;
+
+    if (firstLiveTime >= lastBaseTime) {
+      // Overwrite/extend the end of base without full Map rehashing
+      const sliceEnd = firstLiveTime === lastBaseTime ? base.length - 1 : base.length;
+      return [...base.slice(0, sliceEnd), ...liveCandles];
+    }
+
     const byTime = new Map(base.map((c) => [c.time, c]));
     for (const c of liveCandles) byTime.set(c.time, c);
     return [...byTime.values()].sort((a, b) => a.time - b.time);

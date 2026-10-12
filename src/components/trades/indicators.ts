@@ -29,3 +29,19 @@ export function calculateSMA(data: CandlestickData[], period: number): LineData[
 
   return result;
 }
+
+export function calculateSingleSMA(
+  data: CandlestickData[],
+  period: number,
+  index: number = data.length - 1
+): LineData | null {
+  if (index < period - 1 || index >= data.length) return null;
+  let sum = 0;
+  for (let i = index - period + 1; i <= index; i++) {
+    sum += data[i].close;
+  }
+  return {
+    time: data[index].time,
+    value: sum / period,
+  };
+}
