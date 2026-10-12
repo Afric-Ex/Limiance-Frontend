@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { ConvertAsset } from "../transactions/convert-asset";
 import { BalanceCloak } from "../shared/balance-cloak";
 import { BalanceRevealControl } from "../shared/balance-reveal-control";
+import { MdRefresh } from "react-icons/md";
 import { Skeleton } from "../shared/skeleton";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import type { PortfolioBalanceAccount } from "@/src/lib/portfolio-store";
@@ -32,7 +33,7 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
 
   // Account pages request their own balance alongside portfolio holdings;
   // the overview requests the overall balance.
-  const { balances, isLoading: balanceLoading } = usePortfolioWs(
+  const { balances, isLoading: balanceLoading, refreshBalances } = usePortfolioWs(
     singleAccount
       ? { coins: true, balanceAccount: singleAccount }
       : { balance: true }
@@ -123,7 +124,18 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
               <span className="text-xs font-bold uppercase tracking-widest text-primary/70">
                 {title ?? "Total Assets"}
               </span>
-              <BalanceRevealControl />
+              <div className="flex items-center gap-2">
+                <BalanceRevealControl />
+                <button
+                  type="button"
+                  onClick={refreshBalances}
+                  aria-label={`Refresh ${title ?? "total assets"} balance`}
+                  title="Refresh balance"
+                  className="text-white/40 hover:text-white transition-colors"
+                >
+                  <MdRefresh size={17} />
+                </button>
+              </div>
             </div>
 
             {showBalanceLoader ? (

@@ -27,8 +27,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { useAssets } from "@/src/hooks/use-assets";
+import { modals } from "@mantine/modals";
+import { ConvertAsset } from "@/src/components/transactions/convert-asset";
+import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import clsx from "clsx";
-import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { WalletCard } from "@/src/components/assets/wallet-card";
 import { Skeleton } from "@/src/components/shared/skeleton";
@@ -97,7 +99,6 @@ const marketTabs = [
 
 function DashboardInner() {
   const user = useUserStore((state) => state.user);
-  const router = useRouter();
 
   const [activeMarketTab, setActiveMarketTab] = useState("Holding");
   const { handleOpenDepositModal } = useAssets();
@@ -263,6 +264,13 @@ function DashboardInner() {
     return [...displayTokens]
       .sort((a: any, b: any) => (b.volume24h * b.price) - (a.volume24h * a.price))
       .slice(0, 10);
+  };
+
+  const openConvertModal = (symbol: string) => {
+    modals.open({
+      children: <ConvertAsset defaultFromAsset={symbol} />,
+      ...DEFAULT_MODAL_SETTINGS,
+    });
   };
 
   const userInfo = [
@@ -461,7 +469,7 @@ function DashboardInner() {
                       </TableTd>
                     </TableTr>
                   ) : getFilteredTokens().slice(0, 10).map((token: any) => (
-                    <TableTr key={token.pair} className="row-hover cursor-pointer border-b border-transparent transition-colors" onClick={() => router.push(`/trades/spot?pair=${token.pair}`)}>
+                    <TableTr key={token.pair} className="row-hover border-b border-transparent transition-colors">
                       <TableTd className="py-1.5 pl-4 max-[768px]:pl-2 max-[768px]:py-4">
                         <span className="flex items-center gap-2.5 max-[768px]:gap-2.5">
                           {token.image ? (
@@ -476,6 +484,13 @@ function DashboardInner() {
                               {token.symbol}
                             </span>
                             <span className="text-[10px] max-[768px]:text-xs font-medium text-white/30 max-[768px]:text-white/40">{token.pair.split('/')[1]}</span>
+                            <button
+                              type="button"
+                              onClick={() => openConvertModal(token.symbol)}
+                              className="min-[769px]:hidden mt-1 text-primary hover:text-white transition-colors py-1 rounded font-semibold text-xs active:scale-95"
+                            >
+                              Convert
+                            </button>
                           </span>
                         </span>
                       </TableTd>
@@ -500,11 +515,11 @@ function DashboardInner() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(`/trades/spot?pair=${token.pair}`);
+                            openConvertModal(token.symbol);
                           }}
                           className="text-primary hover:text-white transition-colors duration-200 py-1 px-2 rounded font-semibold text-xs active:scale-95"
                         >
-                          Trade
+                          Convert
                         </button>
                       </TableTd>
                     </TableTr>
