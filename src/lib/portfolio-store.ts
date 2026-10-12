@@ -145,6 +145,13 @@ interface PortfolioStoreState {
   isConnected: boolean;
   /** Per-topic pending flags — a topic nobody asked for is never pending. */
   pending: Record<PortfolioTopic, boolean>;
+  /**
+   * Per-topic "user asked to refresh" flags. True from the moment an explicit
+   * refresh() fires a request until that topic's fresh data lands, so the UI
+   * can spin a refresh icon. Unlike `pending`, these are skipped for topics
+   * with cached data and only set by explicit refresh calls.
+   */
+  refreshing: Record<PortfolioTopic, boolean>;
 }
 
 const emptyState = (): PortfolioStoreState => ({
@@ -155,6 +162,17 @@ const emptyState = (): PortfolioStoreState => ({
   futuresPositions: [],
   isConnected: false,
   pending: {
+    portfolio: false,
+    balance: false,
+    fundingBalance: false,
+    spotBalance: false,
+    marginBalance: false,
+    futuresBalance: false,
+    allocations: false,
+    margin: false,
+    futures: false,
+  },
+  refreshing: {
     portfolio: false,
     balance: false,
     fundingBalance: false,
@@ -221,6 +239,12 @@ class PortfolioStore {
     this.emit();
   }
 
+  private setRefreshing(topic: PortfolioTopic, refreshing: boolean) {
+    if (this.state.refreshing[topic] === refreshing) return;
+    this.state.refreshing = { ...this.state.refreshing, [topic]: refreshing };
+    this.emit();
+  }
+
   /** Register one consumer's demand for a set of topics. Returns the matching release. */
   acquire(topics: PortfolioTopic[]): () => void {
     const unique = Array.from(new Set(topics));
@@ -280,6 +304,7 @@ class PortfolioStore {
     this.unsubs[topic]?.();
     delete this.unsubs[topic];
     this.setPending(topic, false);
+    this.setRefreshing(topic, false);
   }
 
   private ensureStatusListener(): boolean {
@@ -397,6 +422,7 @@ class PortfolioStore {
       }
     }
     this.setPending(topic, false);
+    this.setRefreshing(topic, false);
     this.emit();
   }
 
@@ -424,6 +450,8 @@ class PortfolioStore {
       // rather than an eternal spinner.
     } finally {
       this.httpInFlight.delete(topic);
+      // No fresh data arrived — stop any refresh spinner for this topic too.
+      this.setRefreshing(topic, false);
       if (this.refCounts[topic] > 0 && !this.hasDataFor(topic)) {
         this.setPending(topic, false);
       }
@@ -436,6 +464,10 @@ class PortfolioStore {
   refresh = (): void => {
     const wanted = ALL_PORTFOLIO_TOPICS.filter((t) => this.refCounts[t] > 0);
     if (wanted.length === 0) return;
+
+    // Flip on the refresh indicator for every requested topic; it is cleared
+    // as each topic's fresh snapshot arrives (or its REST fallback settles).
+    wanted.forEach((topic) => this.setRefreshing(topic, true));
 
     if (wsClient.getIsConnected()) {
       wanted.forEach((topic) => wsClient.send(TOPIC_REQUEST[topic].payload));

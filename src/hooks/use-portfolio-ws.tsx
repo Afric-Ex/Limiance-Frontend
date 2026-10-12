@@ -5,6 +5,7 @@ import {
   portfolioStore,
   topicsForNeeds,
   type PortfolioNeeds,
+  type PortfolioTopic,
 } from "@/src/lib/portfolio-store";
 import {
   type AccountBalance,
@@ -33,6 +34,10 @@ interface PortfolioWsData {
   isConnected: boolean;
   isLoading: boolean;
   isAllocationsLoading: boolean;
+  /** Per-topic flags set while an explicit refresh() is waiting for fresh data. */
+  refreshing: Record<PortfolioTopic, boolean>;
+  /** True when any of this caller's requested topics is mid-refresh. */
+  isRefreshing: boolean;
   refreshBalances: () => void;
 }
 
@@ -72,6 +77,7 @@ export const usePortfolioWs = (needs?: PortfolioNeeds): PortfolioWsData => {
   const pending = state.pending;
   const isLoading =
     topics.some((t) => pending[t]) && state.coins.length === 0 && state.balances.total == null;
+  const isRefreshing = topics.some((t) => state.refreshing[t]);
 
   return {
     coins: state.coins,
@@ -82,6 +88,8 @@ export const usePortfolioWs = (needs?: PortfolioNeeds): PortfolioWsData => {
     isConnected: state.isConnected,
     isLoading,
     isAllocationsLoading: pending.allocations,
+    refreshing: state.refreshing,
+    isRefreshing,
     refreshBalances: portfolioStore.refresh,
   };
 };
