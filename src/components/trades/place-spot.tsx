@@ -3,7 +3,7 @@ import { modals } from "@mantine/modals";
 import { MarginBorrowRepayModal } from "./margin-borrow-repay-modal";
 import { MarginTransferModal } from "./margin-transfer-modal";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
-import { MdKeyboardArrowRight, MdExpandMore } from "react-icons/md";
+import { MdExpandMore, MdKeyboardArrowRight, MdRefresh } from "react-icons/md";
 import { icons } from "../assets/icons";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -427,7 +427,18 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <span className="text-white/40 text-xs">Avail</span>
-            <span className="text-[11px] text-white/90 font-semibold">{availQuote} {quote}</span>
+            <span className="flex items-center gap-1.5 text-[11px] text-white/90 font-semibold">
+              {availQuote} {quote}
+              <button
+                type="button"
+                onClick={refreshBalances}
+                aria-label="Refresh available quote balance"
+                title="Refresh balance"
+                className="text-white/40 hover:text-white transition-colors"
+              >
+                <MdRefresh size={14} />
+              </button>
+            </span>
           </div>
 
           {activeTab === "oco" ? (
@@ -490,7 +501,18 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <span className="text-white/40 text-xs">Avail</span>
-            <span className="text-[11px] text-white/90 font-semibold">{availBase} {base}</span>
+            <span className="flex items-center gap-1.5 text-[11px] text-white/90 font-semibold">
+              {availBase} {base}
+              <button
+                type="button"
+                onClick={refreshBalances}
+                aria-label="Refresh available base balance"
+                title="Refresh balance"
+                className="text-white/40 hover:text-white transition-colors"
+              >
+                <MdRefresh size={14} />
+              </button>
+            </span>
           </div>
 
           {activeTab === "oco" ? (

@@ -39,7 +39,7 @@ import clsx from 'clsx';
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MdKeyboardArrowDown, MdMoreVert } from 'react-icons/md';
+import { MdKeyboardArrowDown, MdMoreVert, MdRefresh } from 'react-icons/md';
 import { MobileTopBar } from '@/src/components/shared/mobile-top-bar';
 import { IoChevronDown, IoChevronUp, IoSwapHorizontal, IoBarChartOutline, IoListOutline } from 'react-icons/io5';
 import { MobileBottomSheet } from '@/src/components/shared/mobile-bottom-sheet';
@@ -692,6 +692,15 @@ function FuturesTradesInner() {
         <span className="text-white/40" title="Funds available to open new positions (excludes margin locked in open positions)">Available</span>
         <span className="font-semibold text-white/90 flex items-center gap-1">
           {availableQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {futuresQuoteAsset}
+          <button
+            type="button"
+            onClick={refreshBalances}
+            aria-label="Refresh available futures balance"
+            title="Refresh balance"
+            className="text-white/40 hover:text-white transition-colors"
+          >
+            <MdRefresh size={14} />
+          </button>
           <span className="text-primary text-[10px]">
             {marginMode === 'cross' ? 'Cross' : 'Isolated'}
           </span>
@@ -1298,7 +1307,18 @@ function FuturesTradesInner() {
                               <span className="font-semibold text-white/80 tabular-nums">{totalMargin.toFixed(4)} USDT</span>
                             </div>
                             <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] text-white/40 uppercase tracking-wide" title="Wallet Balance + Unrealised PnL. Higher than Available because margin is locked.">Account Equity</span>
+                              <span className="flex items-center gap-1 text-[10px] text-white/40 uppercase tracking-wide" title="Wallet Balance + Unrealised PnL. Higher than Available because margin is locked.">
+                                Account Equity
+                                <button
+                                  type="button"
+                                  onClick={refreshBalances}
+                                  aria-label="Refresh futures account balance"
+                                  title="Refresh balance"
+                                  className="text-white/40 hover:text-white transition-colors"
+                                >
+                                  <MdRefresh size={13} />
+                                </button>
+                              </span>
                               <span className="font-semibold text-white/80 tabular-nums">{equity.toFixed(4)} USDT</span>
                             </div>
                           </div>
@@ -1978,7 +1998,21 @@ function FuturesTradesInner() {
                               <>
                                 <div className="flex justify-between"><span className="text-white/40">Total uPNL</span><span className={`font-bold tabular-nums ${totalPnlColor}`}>{totalPnlSign}{totalPnl.toFixed(4)} USDT</span></div>
                                 <div className="flex justify-between"><span className="text-white/40">Margin Used</span><span className="font-semibold text-white/80 tabular-nums">{totalMargin.toFixed(4)} USDT</span></div>
-                                <div className="flex justify-between"><span className="text-white/40">Account Equity</span><span className="font-semibold text-white/80 tabular-nums">{equity.toFixed(4)} USDT</span></div>
+                                <div className="flex justify-between">
+                                  <span className="flex items-center gap-1 text-white/40">
+                                    Account Equity
+                                    <button
+                                      type="button"
+                                      onClick={refreshBalances}
+                                      aria-label="Refresh futures account balance"
+                                      title="Refresh balance"
+                                      className="text-white/40 hover:text-white transition-colors"
+                                    >
+                                      <MdRefresh size={13} />
+                                    </button>
+                                  </span>
+                                  <span className="font-semibold text-white/80 tabular-nums">{equity.toFixed(4)} USDT</span>
+                                </div>
                               </>
                             );
                           })()}

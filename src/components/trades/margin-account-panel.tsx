@@ -12,7 +12,7 @@ import { SegmentedControl } from "@/src/components/ui/segmented-control";
 import { BalanceRevealControl } from "@/src/components/shared/balance-reveal-control";
 import { useBalanceCloakStore } from "@/src/stores/balance-cloak-store";
 import { useUserStore } from "@/src/stores/user-store";
-import { MdSearch } from "react-icons/md";
+import { MdRefresh, MdSearch } from "react-icons/md";
 import clsx from "clsx";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
@@ -69,7 +69,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
   // ── Data (WebSocket for live balance) ────────────────────────────────────
   // Margin panel: derived margin balance (from holdings) + the margin account
   // (borrowed funds, equity, leverage). No futures/allocations stream needed.
-  const { balances, coins: portfolio, isLoading: portLoading, marginAccount } = usePortfolioWs({
+  const { balances, coins: portfolio, isLoading: portLoading, marginAccount, refreshBalances } = usePortfolioWs({
     coins: true,
     margin: true,
   });
@@ -211,7 +211,18 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
         <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/40">Total Balance</span>
-            <BalanceRevealControl />
+            <div className="flex items-center gap-2">
+              <BalanceRevealControl />
+              <button
+                type="button"
+                onClick={refreshBalances}
+                aria-label="Refresh margin account balances"
+                title="Refresh balances"
+                className="text-white/40 hover:text-white transition-colors"
+              >
+                <MdRefresh size={16} />
+              </button>
+            </div>
           </div>
           {balLoading ? (
             <Skeleton variant="text" width="120px" height="30px" />
@@ -262,7 +273,18 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
 
         {/* Account Equity + Collateral */}
         <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 flex flex-col gap-3">
-          <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/40">Account Equity</span>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/40">Account Equity</span>
+            <button
+              type="button"
+              onClick={refreshBalances}
+              aria-label="Refresh account equity"
+              title="Refresh balances"
+              className="text-white/40 hover:text-white transition-colors"
+            >
+              <MdRefresh size={16} />
+            </button>
+          </div>
           {balLoading ? (
             <Skeleton variant="text" width="90px" height="26px" />
           ) : (
@@ -278,7 +300,18 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
 
         {/* Total Debt */}
         <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 flex flex-col gap-3">
-          <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/40">Total Debt</span>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/40">Total Debt</span>
+            <button
+              type="button"
+              onClick={refreshBalances}
+              aria-label="Refresh account debt"
+              title="Refresh balances"
+              className="text-white/40 hover:text-white transition-colors"
+            >
+              <MdRefresh size={16} />
+            </button>
+          </div>
           {balLoading ? (
             <Skeleton variant="text" width="90px" height="26px" />
           ) : (
