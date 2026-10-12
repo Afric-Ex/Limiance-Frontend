@@ -605,7 +605,7 @@ export function LwcCandlestickChart({
         vertLines: { color: "rgba(255,255,255,0.03)" },
         horzLines: { color: "rgba(255,255,255,0.05)" },
       },
-      rightPriceScale: { borderColor: "rgba(255,255,255,0.06)", scaleMargins: { top: 0.1, bottom: 0.1 } },
+      rightPriceScale: { borderColor: "rgba(255,255,255,0.06)", scaleMargins: { top: 0.25, bottom: 0.25 } },
       timeScale: {
         borderColor: "rgba(255,255,255,0.06)",
         barSpacing: isMobile ? 3.5 : 5,

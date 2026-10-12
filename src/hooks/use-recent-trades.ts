@@ -41,7 +41,7 @@ export function useRecentTrades(pair: string, market: OrderBookMarket) {
     };
 
     const unsubscribe = wsClient.subscribe(
-      "recent_trades",
+      "trades",
       request,
       (payload) => {
         const updates = filterRecentTradesByPair(readTrades(payload), pair);
