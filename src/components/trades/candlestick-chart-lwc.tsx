@@ -5,6 +5,8 @@ import { FaXmark } from "react-icons/fa6";
 import {
   createChart,
   CandlestickSeries,
+  HistogramSeries,
+  LineSeries,
   ColorType,
   CrosshairMode,
   LineStyle,
@@ -15,8 +17,10 @@ import {
   type Time,
   type UTCTimestamp,
   type CandlestickData,
+  type HistogramData,
 } from "lightweight-charts";
 import { useCandleFeed } from "@/src/components/trades/use-candle-feed";
+import { calculateSMA, calculateSingleSMA } from "@/src/components/trades/indicators";
 import {
   CLICKS_REQUIRED,
   DrawingPrimitive,
@@ -252,6 +256,28 @@ function toCandleData(candles: KlineCandle[]) {
   return out.sort((a, b) => a.t - b.t).map((x) => x.d);
 }
 
+function toVolumeData(candles: KlineCandle[]): HistogramData[] {
+  const seen = new Set<number>();
+  const out: { t: number; d: HistogramData }[] = [];
+  for (const c of candles) {
+    if (!Number.isFinite(c.time) || c.time <= 0) continue;
+    if (!Number.isFinite(c.volume)) continue;
+    if (![c.open, c.high, c.low, c.close].every((v) => Number.isFinite(v) && v > 0)) continue;
+    const time = Math.floor(c.time / 1000) as UTCTimestamp;
+    if (seen.has(time)) continue;
+    seen.add(time);
+    out.push({
+      t: time,
+      d: {
+        time,
+        value: c.volume,
+        color: c.close >= c.open ? "rgba(37,171,66,0.35)" : "rgba(246,70,93,0.35)",
+      },
+    });
+  }
+  return out.sort((a, b) => a.t - b.t).map((x) => x.d);
+}
+
 const formatPrice = (value: number) => {
   const abs = Math.abs(value);
   const decimals = abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
@@ -288,6 +314,10 @@ export function LwcCandlestickChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const ma7SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const ma25SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const ma99SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const orderLevelsRef = useRef<OrderLevel[]>(orderLevels);
   // Live primitive per drawing id, and a symbol-keyed store of drawings that the
@@ -320,7 +350,7 @@ export function LwcCandlestickChart({
   const lastCandleRef = useRef<CandlestickData | null>(null);
   const candleDataContextRef = useRef<string | null>(null);
   const candleDataSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const [legend, setLegend] = useState<{ o: number; h: number; l: number; c: number } | null>(null);
+  const [legend, setLegend] = useState<{ o: number; h: number; l: number; c: number; v?: number; ma7?: number; ma25?: number; ma99?: number } | null>(null);
   const [drawingsBySymbol, setDrawingsBySymbol] = useState<Record<string, Drawing[]>>(() =>
     readStoredDrawings(market)
   );
@@ -605,7 +635,7 @@ export function LwcCandlestickChart({
         vertLines: { color: "rgba(255,255,255,0.03)" },
         horzLines: { color: "rgba(255,255,255,0.05)" },
       },
-      rightPriceScale: { borderColor: "rgba(255,255,255,0.06)", scaleMargins: { top: 0.25, bottom: 0.25 } },
+      rightPriceScale: { borderColor: "rgba(255,255,255,0.06)", scaleMargins: { top: 0.12, bottom: 0.22 } },
       timeScale: {
         borderColor: "rgba(255,255,255,0.06)",
         barSpacing: isMobile ? 3.5 : 5,
@@ -647,6 +677,23 @@ export function LwcCandlestickChart({
 
     chartRef.current = chart;
     candleSeriesRef.current = candlesSeries;
+
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceScaleId: "",
+      priceFormat: { type: "volume" },
+      lastValueVisible: false,
+      priceLineVisible: false,
+    });
+    chart.priceScale("").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+    volumeSeriesRef.current = volumeSeries;
+
+    const ma7Series = chart.addSeries(LineSeries, { color: "#F0B90B", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false });
+    const ma25Series = chart.addSeries(LineSeries, { color: "#E040FB", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false });
+    const ma99Series = chart.addSeries(LineSeries, { color: "#00BCD4", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false });
+    ma7SeriesRef.current = ma7Series;
+    ma25SeriesRef.current = ma25Series;
+    ma99SeriesRef.current = ma99Series;
+
     priceLinesRef.current = [];
     syncPriceLines(candlesSeries, orderLevelsRef.current);
 
@@ -679,8 +726,17 @@ export function LwcCandlestickChart({
         setLegend(null);
         return;
       }
-      
-      setLegend({ o: bar.open, h: bar.high, l: bar.low, c: bar.close });
+      const volBar = param.seriesData.get(volumeSeries) as { value?: number } | undefined;
+      const ma7Bar = param.seriesData.get(ma7Series) as { value?: number } | undefined;
+      const ma25Bar = param.seriesData.get(ma25Series) as { value?: number } | undefined;
+      const ma99Bar = param.seriesData.get(ma99Series) as { value?: number } | undefined;
+      setLegend({
+        o: bar.open, h: bar.high, l: bar.low, c: bar.close,
+        v: volBar?.value,
+        ma7: ma7Bar?.value,
+        ma25: ma25Bar?.value,
+        ma99: ma99Bar?.value,
+      });
     };
     chart.subscribeCrosshairMove(onCrosshair);
 
@@ -752,6 +808,10 @@ export function LwcCandlestickChart({
       dragRef.current = null;
       overDrawingRef.current = false;
       candleSeriesRef.current = null;
+      volumeSeriesRef.current = null;
+      ma7SeriesRef.current = null;
+      ma25SeriesRef.current = null;
+      ma99SeriesRef.current = null;
       chartRef.current = null;
       chart.remove();
     };
@@ -782,8 +842,50 @@ export function LwcCandlestickChart({
       lastCandleTime >= previousLastCandleTime;
     if (canUpdateLastCandle) {
       candlesSeries.update(lastCandle);
+      const volumeSeries = volumeSeriesRef.current;
+      if (volumeSeries) {
+        const lastVolCandle = candles[candles.length - 1];
+        if (
+          lastVolCandle &&
+          Number.isFinite(lastVolCandle.time) &&
+          lastVolCandle.time > 0 &&
+          Number.isFinite(lastVolCandle.volume) &&
+          [lastVolCandle.open, lastVolCandle.high, lastVolCandle.low, lastVolCandle.close].every((v) => Number.isFinite(v) && v > 0)
+        ) {
+          volumeSeries.update({
+            time: Math.floor(lastVolCandle.time / 1000) as UTCTimestamp,
+            value: lastVolCandle.volume,
+            color: lastVolCandle.close >= lastVolCandle.open ? "rgba(37,171,66,0.35)" : "rgba(246,70,93,0.35)",
+          });
+        }
+      }
+
+      const ma7Series = ma7SeriesRef.current;
+      const ma25Series = ma25SeriesRef.current;
+      const ma99Series = ma99SeriesRef.current;
+      if (ma7Series) {
+        const pt = calculateSingleSMA(candleData, 7);
+        if (pt) ma7Series.update(pt);
+      }
+      if (ma25Series) {
+        const pt = calculateSingleSMA(candleData, 25);
+        if (pt) ma25Series.update(pt);
+      }
+      if (ma99Series) {
+        const pt = calculateSingleSMA(candleData, 99);
+        if (pt) ma99Series.update(pt);
+      }
     } else {
       candlesSeries.setData(candleData);
+      const volumeSeries = volumeSeriesRef.current;
+      if (volumeSeries) volumeSeries.setData(toVolumeData(candles));
+
+      const ma7Series = ma7SeriesRef.current;
+      const ma25Series = ma25SeriesRef.current;
+      const ma99Series = ma99SeriesRef.current;
+      if (ma7Series) ma7Series.setData(calculateSMA(candleData, 7));
+      if (ma25Series) ma25Series.setData(calculateSMA(candleData, 25));
+      if (ma99Series) ma99Series.setData(calculateSMA(candleData, 99));
     }
     lastCandleRef.current = lastCandle;
     candleDataContextRef.current = key;
@@ -1139,6 +1241,10 @@ export function LwcCandlestickChart({
               <span>H <span className="text-white/80">{formatPrice(legend.h)}</span></span>
               <span>L <span className="text-white/80">{formatPrice(legend.l)}</span></span>
               <span>C <span className="text-white/80">{formatPrice(legend.c)}</span></span>
+              {legend.v !== undefined && <span>V <span className="text-white/80">{legend.v.toLocaleString("en-US")}</span></span>}
+              {legend.ma7 !== undefined && <span style={{ color: "#F0B90B" }}>MA(7) <span className="text-white/80">{formatPrice(legend.ma7)}</span></span>}
+              {legend.ma25 !== undefined && <span style={{ color: "#E040FB" }}>MA(25) <span className="text-white/80">{formatPrice(legend.ma25)}</span></span>}
+              {legend.ma99 !== undefined && <span style={{ color: "#00BCD4" }}>MA(99) <span className="text-white/80">{formatPrice(legend.ma99)}</span></span>}
             </span>
           )}
         </div>

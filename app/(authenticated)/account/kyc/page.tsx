@@ -8,7 +8,12 @@ import { Button, Loader } from "@mantine/core";
 import { MdShield, MdCheckCircle, MdPermIdentity, MdVideocam, MdHourglassEmpty } from "react-icons/md";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { successNotification } from "@/src/lib/notification-handler";
-import SumsubWebSdk from "@sumsub/websdk-react";
+import dynamic from "next/dynamic";
+
+const SumsubWebSdk = dynamic(() => import("@sumsub/websdk-react"), {
+  ssr: false,
+  loading: () => <Loader size="sm" color="blue" />,
+});
 import { useUserStore } from "@/src/stores/user-store";
 import { getKycAccessToken, isKycApproved } from "@/src/lib/normalize-kyc-status";
 import { PageSuspense } from "@/src/components/shared/page-suspense";

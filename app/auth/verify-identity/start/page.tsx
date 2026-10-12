@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/src/services/auth";
-import SumsubWebSdk from "@sumsub/websdk-react";
+import dynamic from "next/dynamic";
+
+const SumsubWebSdk = dynamic(() => import("@sumsub/websdk-react"), {
+  ssr: false,
+});
 import { getKycAccessToken } from "@/src/lib/normalize-kyc-status";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { VerifyIdentityStartPageSkeleton } from "@/src/components/skeletons/auth";

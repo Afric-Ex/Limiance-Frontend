@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { FiArrowUp, FiArrowDown, FiChevronDown, FiMaximize2, FiMinimize2 } from "react-icons/fi";
 import clsx from "clsx";
@@ -77,7 +77,7 @@ function withDepthPct(rows: DepthRow[], maxTotal: number): DepthRow[] {
   return rows.map((r) => ({ ...r, depthPct: Math.min(100, Math.round((r.total / maxTotal) * 100)) }));
 }
 
-function DepthPanel({
+const DepthPanel = memo(function DepthPanel({
   symbol,
   buyOrders,
   sellOrders,
@@ -376,7 +376,7 @@ function DepthPanel({
       </section>
     </div>
   );
-}
+});
 
 // ── Main export ───────────────────────────────────────────────────────────────
 // Lightweight Charts is the only renderer. `priceRange` is kept on the public

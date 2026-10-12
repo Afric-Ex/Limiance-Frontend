@@ -70,6 +70,8 @@ const nextConfig: NextConfig = {
     // your project has type errors. Run `npm run typecheck` to verify types.
     ignoreBuildErrors: true,
   },
+  compress: true,
+  poweredByHeader: false,
   experimental: {
     optimizePackageImports: [
       "react-icons",
@@ -82,6 +84,9 @@ const nextConfig: NextConfig = {
       "date-fns",
       "dayjs",
       "echarts",
+      "echarts-for-react",
+      "@sumsub/websdk-react",
+      "boring-avatars",
     ],
   },
 };

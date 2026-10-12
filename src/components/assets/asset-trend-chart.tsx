@@ -1,7 +1,12 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useMemo } from "react";
-import ReactECharts from "echarts-for-react";
+import dynamic from "next/dynamic";
+
+const ReactECharts = dynamic(() => import("echarts-for-react"), {
+  ssr: false,
+  loading: () => <InlineLoading message="Loading chart..." />,
+});
 import { useQuery } from "@tanstack/react-query";
 import { InlineLoading } from "../shared/inline-loading";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
