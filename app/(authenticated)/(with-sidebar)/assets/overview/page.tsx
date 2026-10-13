@@ -10,7 +10,7 @@ import { AssetsOverviewSkeleton } from "@/src/components/skeletons/assets";
 function OverviewInner() {
   return (
     <main className="flex flex-col gap-6 w-full animate-fade-in max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-4">
-      <WalletCard />
+      <WalletCard title="Total Assets" />
 
       {/* 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-[1150px]:gap-4 items-start w-full">

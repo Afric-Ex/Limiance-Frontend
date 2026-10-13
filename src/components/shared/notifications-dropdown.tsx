@@ -88,7 +88,10 @@ export const NotificationsDropdown = () => {
               key={filter}
               type="button"
               aria-pressed={readFilter === filter}
-              onClick={() => setReadFilter(filter)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setReadFilter(filter);
+              }}
               className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
                 readFilter === filter
                   ? "bg-primary/20 text-primary"
