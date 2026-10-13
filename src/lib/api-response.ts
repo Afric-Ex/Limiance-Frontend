@@ -31,6 +31,31 @@ export function readNumber(source: unknown, key: string): number | null {
 }
 
 /**
+ * Number read that descends a `data` envelope whether the payload is an
+ * object with a named field or the scalar itself. The minimum-withdrawal
+ * endpoint answers `{ data: "0.05", ... }`, so `unwrapObject` stops at the
+ * string and a property read on it would miss the value.
+ */
+export function readEnvelopeNumber(res: unknown, key?: string): number | null {
+  let current: unknown = res;
+  for (let depth = 0; depth < 3; depth += 1) {
+    if (current === null || current === undefined) return null;
+    if (typeof current === "object" && !Array.isArray(current)) {
+      const record = current as PlainObject;
+      if (record.data !== undefined && record.data !== null) {
+        current = record.data;
+        continue;
+      }
+      return readNumber(current, key ?? "value");
+    }
+    if (current === "") return null;
+    const parsed = Number(current);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+/**
  * Pull the item array out of a paginated response *without* discarding the
  * envelope, so sibling fields like `totalRecords` stay reachable.
  *

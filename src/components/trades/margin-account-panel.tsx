@@ -548,19 +548,19 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                 ) : (
                   borrowHistory.map((o: any, i: number) => (
                     <TableTr key={o.id ?? i}>
-                      <TableTd><span className="font-semibold text-white">{o.asset ?? o.coin}</span></TableTd>
-                      <TableTd><span className="text-white/90 tabular-nums">{parseNum(o.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></TableTd>
-                      <TableTd><span className="text-white/70 tabular-nums">{parseNum(o.interest).toLocaleString("en-US", { minimumFractionDigits: 4 })}</span></TableTd>
+                      <TableTd><span className="font-semibold text-white">{o.base ?? o.coin}</span></TableTd>
+                      <TableTd><span className="text-white/90 tabular-nums">{parseNum(o.quantity).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></TableTd>
+                      <TableTd><span className="text-white/70 tabular-nums">{parseNum(o.price).toLocaleString("en-US", { minimumFractionDigits: 4 })}</span></TableTd>
                       <TableTd>
-                        <span className={clsx(
+<span className={clsx(
                           "text-[10px] font-bold px-2 py-0.5 rounded-full capitalize",
-                          String(o.status) === "repaid" || String(o.status) === "completed" ? "bg-success-6/15 text-success-6" :
-                                                                                              "bg-white/10 text-white/50"
+String(o.status) === "repaid" || String(o.status) === "completed" ? "bg-success-6/15 text-success-6" :
+                                                                                          "bg-white/10 text-white/50"
                         )}>{o.status ?? "pending"}</span>
-                      </TableTd>
-                      <TableTd><span className="text-white/50 text-xs tabular-nums">{formatDate(o.createdAt ?? o.time)}</span></TableTd>
-                    </TableTr>
-                  ))
+                       </TableTd>
+                       <TableTd><span className="text-white/50 text-xs tabular-nums">{formatDate(o.createdAt)}</span></TableTd>
+                     </TableTr>
+                   ))
                 )}
               </tbody>
             </Table>

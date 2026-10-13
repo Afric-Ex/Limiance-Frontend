@@ -8,7 +8,7 @@ import { useUserStore } from "../stores/user-store";
 import { errorMessageHandler } from "../lib/error-handler";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "../utils/constants";
-import { readNumber, unwrapObject } from "../lib/api-response";
+import { readNumber, readEnvelopeNumber } from "../lib/api-response";
 
 import { SuccessModal } from "../components/login/verify-email-success";
 import { useRouter } from "next/navigation";
@@ -263,12 +263,11 @@ export const useWithdrawal = () => {
     queryFn: () =>
       asset.minimumWithdrawal({ token: selectedCoin?.symbol, chain: chainId }),
     enabled: !!selectedCoin?.symbol && !!chainId,
-    select: (res: unknown) => unwrapObject(res),
     retry: false,
     throwOnError: false,
   });
 
-  const minimumWithdrawalValue = readNumber(minWithdrawData, "minimum");
+  const minimumWithdrawalValue = readEnvelopeNumber(minWithdrawData, "minimum");
   const minimumWithdrawal = minimumWithdrawalValue ?? 0;
 
   // The rate is a percentage of the amount's USD value:

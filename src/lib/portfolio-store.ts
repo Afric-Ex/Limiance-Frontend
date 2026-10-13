@@ -444,7 +444,7 @@ class PortfolioStore {
       if (!fetcher) return;
       const res = await fetcher();
       const body = res?.data;
-      this.ingest(topic, body?.data !== undefined ? body.data : body);
+      this.ingest(topic, body?.data?.data !== undefined ? body.data.data : body?.data ?? body);
     } catch {
       // Fall through to clearing pending — the caller shows an empty state
       // rather than an eternal spinner.
@@ -489,6 +489,8 @@ export const topicsForNeeds = (needs?: PortfolioNeeds): PortfolioTopic[] => {
     .map((key) => TOPIC_OF_NEED[key]);
   if (needs.balanceAccount) {
     topics.push(ACCOUNT_BALANCE_TOPIC[needs.balanceAccount]);
+  } else {
+    topics.push("balance");
   }
   return topics;
 };

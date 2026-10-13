@@ -25,7 +25,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { InlineLoading } from "@/src/components/shared/inline-loading";
 import { WalletDropdown } from "@/src/components/assets/wallet-dropdown";
 import { assetKeys, asset } from "@/src/services/asset";
-import { readNumber, unwrapObject } from "@/src/lib/api-response";
+import { readNumber, readEnvelopeNumber, unwrapObject } from "@/src/lib/api-response";
 import { useQuery } from "@tanstack/react-query";
 import { truncateCryptoAddress } from "@/src/utils/truncate-address";
 import { useInfiniteList } from "@/src/hooks/use-infinite-list";
@@ -98,7 +98,6 @@ function DepositInner() {
     queryKey: ["minimum-deposit", selectedCoin?.symbol, selectedNetwork?.name],
     queryFn: () => asset.minimumDeposit({ token: selectedCoin?.symbol, chain: selectedNetwork?.name }),
     enabled: !!selectedCoin?.symbol && !!selectedNetwork?.name,
-    select: (res: unknown) => unwrapObject(res),
     retry: false,
     throwOnError: false,
   });
@@ -112,7 +111,7 @@ function DepositInner() {
     throwOnError: false,
   });
 
-  const minimumDeposit = readNumber(minDepositData, "minimum");
+  const minimumDeposit = readEnvelopeNumber(minDepositData, "minimum");
   const depositNetworkFee = readNumber(networkFeeData, "fee");
 
   const limit = 30;
