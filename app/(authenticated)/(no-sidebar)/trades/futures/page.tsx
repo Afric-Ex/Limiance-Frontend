@@ -219,7 +219,7 @@ function FuturesTradesInner() {
   // This is the only surface that opens get_futures_positions.
   const { balances, coins: portfolio, refreshBalances, futuresPositions, isRefreshing } = usePortfolioWs({
     coins: true,
-    balance: true,
+    balanceAccount: "futures",
     futures: true,
   });
   const futuresBalance = balances["futures"];
