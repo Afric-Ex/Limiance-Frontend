@@ -151,14 +151,13 @@ class WebSocketClient {
   }
 
   /**
-   * Keep the connection alive so idle servers don't drop it (backends commonly
-   * terminate sockets that send no frames for ~120s). Also detects dead sockets.
+   * Heartbeat disabled: the backend answers `{ type: "ping" }` with an error
+   * frame, so the client no longer sends heartbeat pings. Connection health is
+   * still tracked via close/error events, reconnect-on-demand, and the idle
+   * teardown when nothing is subscribed.
    */
   private startHeartbeat() {
-    this.stopHeartbeat();
-    this.heartbeatInterval = setInterval(() => {
-      this.send({ type: "ping" });
-    }, 30000);
+    return;
   }
 
   private stopHeartbeat() {
@@ -344,10 +343,30 @@ class WebSocketClient {
     });
   }
 
+  /**
+   * Coalescing flag for the resync below. Several portfolio topics usually
+   * tear down in the same React commit when navigating (each `stopTopic`
+   * triggers one cleanup), and without this each of them would send its own
+   * `unsubscribe_all` + full resubscribe loop — the burst of duplicate
+   * `unsubscribe_all` / `get_portfolio*` frames seen on every route change.
+   */
+  private resyncScheduled = false;
+
+  private scheduleResync() {
+    if (!this.isConnected || this.resyncScheduled) return;
+    this.resyncScheduled = true;
+    const flush = () => {
+      this.resyncScheduled = false;
+      if (!this.isConnected) return;
+      this.send({ type: "unsubscribe_all" });
+      this.resubscribeAll();
+    };
+    if (typeof queueMicrotask !== "undefined") queueMicrotask(flush);
+    else setTimeout(flush, 0);
+  }
+
   private unsubscribeAllAndRestoreActiveSubscriptions() {
-    if (!this.isConnected) return;
-    this.send({ type: "unsuscribe_all" });
-    this.resubscribeAll();
+    this.scheduleResync();
   }
 
   /**

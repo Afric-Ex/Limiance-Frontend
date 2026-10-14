@@ -82,6 +82,46 @@ const ACCOUNT_BALANCE_TOPIC: Record<PortfolioBalanceAccount, PortfolioTopic> = {
   futures: "futuresBalance",
 };
 
+/**
+ * Account tag each balance topic expects on incoming `overall_portfolio_balance`
+ * frames. All five balance variants share one response topic, and the socket
+ * client fans a frame out to every payload registered under that topic — so a
+ * spot snapshot would otherwise also land in the overall-balance handler (and
+ * vice versa), which is exactly the spot-vs-overall flip the wallets cards saw.
+ */
+const EXPECTED_BALANCE_ACCOUNT: Partial<Record<PortfolioTopic, string>> = {
+  balance: "",
+  fundingBalance: "funding",
+  spotBalance: "spot",
+  marginBalance: "margin",
+  futuresBalance: "futures",
+};
+
+/**
+ * Accept both camelCase (`inUsd`) and snake_case (`in_usd`) balance shapes.
+ * Returns the input unchanged when it carries no balance fields at all, so the
+ * caller's existing guards keep working.
+ */
+function normalizeBalancePayload(raw: any): any {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const inUsd = raw.inUsd ?? raw.in_usd;
+  const inBtc = raw.inBtc ?? raw.in_btc;
+  const inNgn = raw.inNgn ?? raw.in_ngn;
+  const pnlPercentage = raw.pnlPercentage ?? raw.pnl_percentage ?? raw.pnlPercent;
+  if (
+    inUsd === undefined &&
+    inBtc === undefined &&
+    inNgn === undefined &&
+    raw.pnl === undefined &&
+    pnlPercentage === undefined &&
+    raw.fundingBalance === undefined &&
+    raw.unifiedTradingBalance === undefined
+  ) {
+    return raw;
+  }
+  return { ...raw, inUsd, inBtc, inNgn, pnl: raw.pnl, pnlPercentage };
+}
+
 /** Request frame sent for each topic, and the topic its reply arrives on. */
 const TOPIC_REQUEST: Record<PortfolioTopic, { topic: string; payload: object }> = {
   portfolio: {
@@ -215,6 +255,23 @@ class PortfolioStore {
     margin: 0,
     futures: 0,
   };
+  /**
+   * Timestamp of the last snapshot delivered over the socket per topic. The
+   * HTTP fallback is gap-filler only: if a fresher socket snapshot lands while
+   * a REST request is in flight, the stale REST response is dropped instead of
+   * overwriting what the socket already displayed.
+   */
+  private lastWsAt: Record<PortfolioTopic, number> = {
+    portfolio: 0,
+    balance: 0,
+    fundingBalance: 0,
+    spotBalance: 0,
+    marginBalance: 0,
+    futuresBalance: 0,
+    allocations: 0,
+    margin: 0,
+    futures: 0,
+  };
   private unsubscribeStatus: (() => void) | null = null;
 
   // ── subscription ──────────────────────────────────────────────────────────
@@ -282,7 +339,22 @@ class PortfolioStore {
 
     const { topic: responseTopic, payload } = TOPIC_REQUEST[topic];
     this.unsubs[topic] = wsClient.subscribe(responseTopic, payload, (raw, full) => {
-      this.ingest(topic, full?.data?.data ?? full?.data ?? raw);
+      // Balance variants share the `overall_portfolio_balance` response topic,
+      // and the socket client fans one frame out to every payload under it.
+      // Drop frames tagged for a different account so a spot snapshot can never
+      // land in the overall-balance slot (or vice versa).
+      const container = (full as any)?.data ?? raw;
+      const inner = (container as any)?.data ?? container;
+      const frameAccount =
+        typeof (container as any)?.account === "string"
+          ? (container as any).account
+          : typeof (raw as any)?.account === "string"
+            ? (raw as any).account
+            : undefined;
+      const expected = EXPECTED_BALANCE_ACCOUNT[topic];
+      if (expected !== undefined && frameAccount !== undefined && frameAccount !== expected) return;
+      this.lastWsAt[topic] = Date.now();
+      this.ingest(topic, normalizeBalancePayload(inner) ?? inner);
     });
 
     if (this.fallbackTimers[topic]) clearTimeout(this.fallbackTimers[topic]);
@@ -439,10 +511,17 @@ class PortfolioStore {
 
     this.httpInFlight.add(topic);
     this.lastHttpAt[topic] = Date.now();
+    const fetchStartedAt = this.lastHttpAt[topic];
     try {
       const fetcher = TOPIC_HTTP[topic];
       if (!fetcher) return;
       const res = await fetcher();
+      if (this.lastWsAt[topic] > fetchStartedAt) {
+        // A fresher snapshot arrived over the socket while this request was in
+        // flight — keep what the socket displayed. HTTP stays a gap-filler,
+        // never the main source.
+        return;
+      }
       const body = res?.data;
       this.ingest(topic, body?.data?.data !== undefined ? body.data.data : body?.data ?? body);
     } catch {
@@ -479,7 +558,15 @@ class PortfolioStore {
 
 export const portfolioStore = new PortfolioStore();
 
-/** Map a caller's declared needs onto the topic list the store ref-counts. */
+/**
+ * Map a caller's declared needs onto the topic list the store ref-counts.
+ *
+ * Only topics the caller explicitly declares are subscribed. In particular the
+ * overall `balance` topic is added solely when `needs.balance` is set — a call
+ * like `{ coins: true }` must not also open the overall-balance stream, or
+ * every holdings table would re-request `account: ""` alongside the page's
+ * real balance topic and the two snapshots would race each other.
+ */
 export const topicsForNeeds = (needs?: PortfolioNeeds): PortfolioTopic[] => {
   if (!needs) {
     return ["portfolio", "balance", "allocations", "margin", "futures"];
@@ -489,8 +576,6 @@ export const topicsForNeeds = (needs?: PortfolioNeeds): PortfolioTopic[] => {
     .map((key) => TOPIC_OF_NEED[key]);
   if (needs.balanceAccount) {
     topics.push(ACCOUNT_BALANCE_TOPIC[needs.balanceAccount]);
-  } else {
-    topics.push("balance");
   }
   return topics;
 };
