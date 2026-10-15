@@ -81,7 +81,6 @@ const nextConfig: NextConfig = {
       "@mantine/dropzone",
       "@mantine/form",
       "@mantine/modals",
-      "date-fns",
       "dayjs",
       "echarts",
       "echarts-for-react",

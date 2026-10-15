@@ -194,6 +194,8 @@ export const EarnTab = () => {
                         <img
                           src={product.image}
                           alt={product.asset}
+                          loading="lazy"
+                          decoding="async"
                           className="w-8 h-8 rounded-full"
                         />
                         <div className="flex flex-col gap-1">
@@ -276,9 +278,11 @@ export const EarnTab = () => {
                   className="flex items-center justify-between p-4 bg-gray-15/10 rounded-xl border border-white/10"
                 >
                   <div className="flex items-center gap-4">
-                    <img
+                      <img
                       src={pos.image}
                       alt={pos.asset}
+                      loading="lazy"
+                      decoding="async"
                       className="w-8 h-8 rounded-full"
                     />
                     <div className="flex flex-col gap-1">

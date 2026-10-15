@@ -66,6 +66,8 @@ export const SpotTable = () => {
                             <img
                               src={getCryptoIcon(item.symbol, item.image ?? item.logo ?? item.icon)}
                               alt={item.name}
+                              loading="lazy"
+                              decoding="async"
                               className="w-8 h-8 rounded-full object-cover shrink-0"
                             />
                           ) : (

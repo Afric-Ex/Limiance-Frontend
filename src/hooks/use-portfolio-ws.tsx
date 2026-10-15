@@ -55,9 +55,12 @@ interface PortfolioWsData {
  *   const { coins, balances } = usePortfolioWs({ coins: true, balance: true });
  */
 export const usePortfolioWs = (needs?: PortfolioNeeds): PortfolioWsData => {
-  // Callers usually pass an inline object literal, so key the effect off the
-  // resolved topic list rather than the object identity.
-  const topics = useMemo(() => topicsForNeeds(needs), [needs]);
+  // Callers usually pass an inline object literal, so key memo + effect off a
+  // serialized form rather than the object identity (a fresh literal every
+  // render would otherwise recompute topics pointlessly).
+  const needsKey = JSON.stringify(needs ?? null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const topics = useMemo(() => topicsForNeeds(needs), [needsKey]);
   const topicKey = topics.join(",");
 
   const state = useSyncExternalStore(
@@ -90,6 +93,8 @@ export const usePortfolioWs = (needs?: PortfolioNeeds): PortfolioWsData => {
     isAllocationsLoading: pending.allocations,
     refreshing: state.refreshing,
     isRefreshing,
-    refreshBalances: portfolioStore.refresh,
+    // Scoped to this caller's topics: a card's refresh button re-requests its
+    // own streams instead of every mounted surface's.
+    refreshBalances: () => portfolioStore.refresh(topics),
   };
 };

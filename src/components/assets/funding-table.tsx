@@ -111,7 +111,7 @@ export const FundingTable = () => {
                       <TableTd className="!pl-6">
                         <span className="flex items-center gap-3">
                           {iconSrc ? (
-                            <img src={iconSrc} alt={item.symbol} width={32} height={32} className="rounded-full shrink-0 object-cover" />
+                            <img src={iconSrc} alt={item.symbol} width={32} height={32} loading="lazy" decoding="async" className="rounded-full shrink-0 object-cover" />
                           ) : (
                             <span className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-white/80 shrink-0">
                               {item.symbol?.[0] ?? "?"}

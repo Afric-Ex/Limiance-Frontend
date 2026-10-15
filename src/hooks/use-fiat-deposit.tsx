@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "@mantine/form";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fiatKeys, fiatService } from "../services/fiat";
 import { tradingKeys, tradingService } from "../services/trading";
 import { TemporaryDepositAccount } from "../types/fiat";
 import { errorMessageHandler } from "../lib/error-handler";
-import { successNotification } from "../lib/notification-handler";
+import { errorNotification, successNotification } from "../lib/notification-handler";
 import { useDepositStore } from "../stores/deposit-store";
 import { useInfiniteList } from "./use-infinite-list";
 import {
@@ -34,7 +34,18 @@ const unwrap = <T,>(res: any): T => {
 const FALLBACK_FIAT_SYMBOLS = ["USDT", "USDC", "BTC", "ETH", "SOL"];
 const FIAT_SYMBOLS_PAGE_SIZE = 50;
 
-export const useFiatCoinSymbols = () => {
+/** Debounce fast-changing input (e.g. search keystrokes) before it drives a query key. */
+export function useDebouncedValue<T>(value: T, delayMs = 350): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
+}
+
+export const useFiatCoinSymbols = (search?: string) => {
+  const trimmedSearch = (search ?? "").trim();
   const {
     items,
     isPending,
@@ -43,10 +54,16 @@ export const useFiatCoinSymbols = () => {
     isError,
     refetch,
     fetchNextPage,
-  } = useInfiniteList({
-    queryKey: tradingKeys.listedTokens(),
+  } = useInfiniteList<{ query?: string }>({
+    // The search term is part of the key so each term gets its own cached
+    // pages — filtering must happen server-side, otherwise a coin sitting on
+    // an unfetched page (e.g. BTC at #11 with limit 10) wrongly reports
+    // "no assets found".
+    queryKey: tradingKeys.listedTokens(trimmedSearch ? { query: trimmedSearch } : undefined),
     limit: FIAT_SYMBOLS_PAGE_SIZE,
-    fetchPage: ({ page, limit }) => tradingService.listedTokens({ page, limit }),
+    filters: trimmedSearch ? { query: trimmedSearch } : {},
+    fetchPage: ({ page, limit, query }) =>
+      tradingService.listedTokens({ page, limit, ...(query ? { query } : {}) }),
     // Rows repeat a symbol once per chain (CNGN arrives four times), and the
     // same symbol can straddle a page boundary, so dedupe on the key.
     getItemId: (token: { symbol?: string }) => token?.symbol,
@@ -75,6 +92,9 @@ export const useFiatCoinSymbols = () => {
 export const useFiatBankDeposit = () => {
   const queryClient = useQueryClient();
   const markPendingDeposit = useDepositStore((state) => state.markPending);
+  // Search runs server-side (debounced) so coins on unfetched pages are found.
+  const [assetSearch, setAssetSearch] = useState("");
+  const debouncedAssetSearch = useDebouncedValue(assetSearch);
   const {
     coinSymbols,
     coinImages,
@@ -84,7 +104,7 @@ export const useFiatBankDeposit = () => {
     isCoinsError,
     loadMoreCoins,
     retryCoins,
-  } = useFiatCoinSymbols();
+  } = useFiatCoinSymbols(debouncedAssetSearch);
   const form = useForm({
     initialValues: { symbol: "USDT", bankCode: "", amount: "" },
   });
@@ -105,7 +125,11 @@ export const useFiatBankDeposit = () => {
   const quoteAmount = normalizeFiatQuoteAmount(form.values.amount);
   const quoteSymbol = form.values.symbol.trim().toLowerCase();
   const quoteCurrency = "ngn";
-  const { data: quote, isLoading: rateLoading } = useQuery({
+  const {
+    data: quote,
+    isLoading: rateLoading,
+    isError: quoteQueryFailed,
+  } = useQuery({
     queryKey: fiatKeys.quoteFor({
       depositAmount: quoteAmount,
       symbol: quoteSymbol,
@@ -121,6 +145,36 @@ export const useFiatBankDeposit = () => {
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
+
+  // A quote counts as failed when the request itself errors (non-2xx HTTP) or
+  // when a 200 envelope reports failure: `success: false`, a non-200
+  // `statusCode` (e.g. 409), or an `error` message. Either way there is no
+  // usable rate, so the virtual-account CTA must stay disabled.
+  const quoteBody: any = quote;
+  const quoteFailed =
+    quoteQueryFailed ||
+    (quoteBody != null &&
+      (quoteBody.success === false ||
+        (quoteBody.statusCode !== undefined &&
+          quoteBody.statusCode !== "" &&
+          Number(quoteBody.statusCode) !== 200) ||
+        (typeof quoteBody.error === "string" && quoteBody.error !== "")));
+
+  // Surface the failure once per coin/amount — the raw backend message
+  // ("failed to create deposit account") means nothing to users, so tell them
+  // to pick another coin instead.
+  const quoteToastKey = `${quoteAmount}:${quoteSymbol}:${quoteCurrency}`;
+  const toastedQuoteFailures = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!quoteFailed) return;
+    if (toastedQuoteFailures.current.has(quoteToastKey)) return;
+    toastedQuoteFailures.current.add(quoteToastKey);
+    const coinLabel = (quoteSymbol || "").toUpperCase() || "this coin";
+    errorNotification(
+      `Quote unavailable for ${coinLabel} — please select another coin and try again.`
+    );
+  }, [quoteFailed, quoteToastKey, quoteSymbol]);
+
   const rate = Number(quote?.rate) || 0;
   const quotedReceivedAmount = getFiatQuoteReceivedAmount(
     quote?.symbolAmountToReceive ?? quote?.symbolAmountToReceived
@@ -169,9 +223,12 @@ export const useFiatBankDeposit = () => {
     isCoinsError,
     loadMoreCoins,
     retryCoins,
+    assetSearch,
+    setAssetSearch,
     rate,
     quotedReceivedAmount,
     rateLoading,
+    quoteFailed,
     form,
     account,
     expirySeconds,
@@ -185,6 +242,9 @@ export const useFiatBankDeposit = () => {
 export const useFiatCardDeposit = () => {
   const queryClient = useQueryClient();
   const markPendingDeposit = useDepositStore((state) => state.markPending);
+  // Search runs server-side (debounced) so coins on unfetched pages are found.
+  const [assetSearch, setAssetSearch] = useState("");
+  const debouncedAssetSearch = useDebouncedValue(assetSearch);
   const {
     coinSymbols,
     coinImages,
@@ -194,7 +254,7 @@ export const useFiatCardDeposit = () => {
     isCoinsError,
     loadMoreCoins,
     retryCoins,
-  } = useFiatCoinSymbols();
+  } = useFiatCoinSymbols(debouncedAssetSearch);
   const form = useForm({
     initialValues: {
       symbol: "USDT",
@@ -300,6 +360,8 @@ export const useFiatCardDeposit = () => {
     isCoinsError,
     loadMoreCoins,
     retryCoins,
+    assetSearch,
+    setAssetSearch,
     paying,
     pay,
     pendingReference,

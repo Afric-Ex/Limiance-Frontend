@@ -8,7 +8,7 @@ import { Search } from "../icons/search";
 import { icons } from "./icons";
 import { Info } from "./info";
 import Image from "next/image";
-import { useDisclosure } from "@mantine/hooks";
+import { useDebouncedValue, useDisclosure } from "@mantine/hooks";
 import { SelectedNetwork } from "@/src/hooks/use-deposit";
 import { InlineLoading } from "../shared/inline-loading";
 import { assetKeys, asset } from "@/src/services/asset";
@@ -26,10 +26,14 @@ export const NetworksDropdown = ({
 
   const [chainQuery, setChainQuery] = useState("");
 
+  // Debounced so each keystroke doesn't fire its own request; the query
+  // already runs server-side via `q`.
+  const [debouncedChainQuery] = useDebouncedValue(chainQuery.trim(), 350);
+
   const { data: supportedChains, isLoading: supportedChainsLoading } = useQuery(
     {
-      queryKey: assetKeys.supportedChainsKey(chainQuery),
-      queryFn: () => asset.fetchSupportedChains({ q: chainQuery }),
+      queryKey: assetKeys.supportedChainsKey(debouncedChainQuery),
+      queryFn: () => asset.fetchSupportedChains({ q: debouncedChainQuery }),
       select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
     }
   );

@@ -428,7 +428,7 @@ function MarketsPageInner() {
                       <td className="py-3">
                         <div className="flex items-center gap-3">
                           {token.image ? (
-                            <img src={token.image} alt={token.symbol} className="w-6 h-6 rounded-full object-cover shrink-0" />
+                            <img src={token.image} alt={token.symbol} loading="lazy" decoding="async" className="w-6 h-6 rounded-full object-cover shrink-0" />
                           ) : (
                             <span className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-white/80 shrink-0">
                               {token.symbol.charAt(0)}
@@ -539,7 +539,7 @@ function MarketsPageInner() {
                 >
                   <div className="flex items-center gap-3">
                     {token.image ? (
-                      <img src={token.image} alt={token.symbol} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                      <img src={token.image} alt={token.symbol} loading="lazy" decoding="async" className="w-9 h-9 rounded-full object-cover shrink-0" />
                     ) : (
                       <span className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-white/80 shrink-0">
                         {token.symbol.charAt(0)}

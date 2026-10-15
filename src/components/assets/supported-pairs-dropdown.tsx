@@ -12,7 +12,7 @@ import { Search } from "../icons/search";
 import { icons } from "./icons";
 import { InlineLoading } from "../shared/inline-loading";
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
-import { useDisclosure } from "@mantine/hooks";
+import { useDebouncedValue, useDisclosure } from "@mantine/hooks";
 import { SelectedCoin } from "@/src/hooks/use-deposit";
 import { assetKeys, asset } from "@/src/services/asset";
 import { useQuery } from "@tanstack/react-query";
@@ -39,9 +39,18 @@ export const SupportedListingsDropdown = ({
   const [opened, { toggle, close }] = useDisclosure(false);
   const [tokenQuery, setTokenQuery] = useState("");
 
+  // Search runs server-side (debounced) so a coin sitting beyond the fetched
+  // page still matches — filtering only loaded rows would wrongly report
+  // "no assets found". Empty queries reuse the unfiltered cache key.
+  const [debouncedTokenQuery] = useDebouncedValue(tokenQuery.trim(), 350);
+
   const { data: allTokens, isLoading: supportedTokensLoading } = useQuery({
-    queryKey: assetKeys.supportedTokensKey("all"),
-    queryFn: () => asset.fetchSupportedTokens({ limit: 1000 }),
+    queryKey: assetKeys.supportedTokensKey(debouncedTokenQuery || "all"),
+    queryFn: () =>
+      asset.fetchSupportedTokens({
+        limit: 1000,
+        ...(debouncedTokenQuery ? { q: debouncedTokenQuery } : {}),
+      }),
     select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
     staleTime: Infinity,
   });

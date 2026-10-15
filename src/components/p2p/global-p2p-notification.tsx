@@ -10,11 +10,13 @@ export function GlobalP2PNotification() {
 
   const user = useUserStore((state) => state.user);
 
-  // Poll for all matched orders every 5 seconds globally
+  // Poll for new incoming orders in the background. The detail/list screens
+  // poll faster while watched; this is only the toast backstop, so 10s is plenty.
   const { data } = useQuery({
     queryKey: p2pKey.allMatchedOrders(undefined),
     queryFn: () => p2p.getAllMatchedOrders(),
-    refetchInterval: 5000,
+    enabled: !!user,
+    refetchInterval: 10_000,
     staleTime: 0,
   });
 
