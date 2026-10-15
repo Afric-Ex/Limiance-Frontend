@@ -40,19 +40,38 @@ export const NotificationsDropdown = () => {
     return true;
   });
 
+  const queryClient = useQueryClient();
+
+  const isOkResponse = (res: any) =>
+    res?.success !== false &&
+    (res?.statusCode === undefined || res?.statusCode === 200) &&
+    (res?.status === undefined || res?.status === 200);
+
+  const refetchHistory = () =>
+    void queryClient.invalidateQueries({ queryKey: notificationKeys.list });
+
   const handleMarkAllRead = () => {
     markAllAsRead();
-    // Best-effort server sync — never block the UI on it
-    notificationService.markAllRead().catch(() => {});
+    // Best-effort server sync — never block the UI on it. On a 200, refetch
+    // the history immediately so nothing flips back to unread.
+    notificationService
+      .markAllRead()
+      .then((res: any) => {
+        if (isOkResponse(res)) refetchHistory();
+      })
+      .catch(() => {});
   };
 
   const handleClear = () => {
     clearAll();
     // No delete-all endpoint; mark all as read server-side so refetches come back read
-    notificationService.markAllRead().catch(() => {});
+    notificationService
+      .markAllRead()
+      .then((res: any) => {
+        if (isOkResponse(res)) refetchHistory();
+      })
+      .catch(() => {});
   };
-
-  const queryClient = useQueryClient();
 
   const handleNotificationClick = (notif: AppNotification) => {
     if (!notif.read) {
@@ -62,13 +81,7 @@ export const NotificationsDropdown = () => {
       notificationService
         .markRead(notif.id)
         .then((res: any) => {
-          const ok =
-            res?.success !== false &&
-            (res?.statusCode === undefined || res?.statusCode === 200) &&
-            (res?.status === undefined || res?.status === 200);
-          if (ok) {
-            void queryClient.invalidateQueries({ queryKey: notificationKeys.list });
-          }
+          if (isOkResponse(res)) refetchHistory();
         })
         .catch(() => {});
     }
