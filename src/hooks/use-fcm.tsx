@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { getToken, onMessage } from "firebase/messaging";
-import { messaging } from "@/src/lib/firebase";
 import { notificationService } from "@/src/services/notification";
 import toast from "react-hot-toast";
 import { redactDiagnostic } from "@/src/lib/pii-policy";
@@ -40,16 +38,23 @@ export function useFCM() {
           return;
         }
 
-        // 2. Get the Firebase messaging instance
+        // 2. Load the Firebase SDK on demand (kept out of the main
+        // bundle — only fetched when push setup actually proceeds this far)
+        const [{ getToken, onMessage }, { messaging }] = await Promise.all([
+          import("firebase/messaging"),
+          import("@/src/lib/firebase"),
+        ]);
+
+        // 3. Get the Firebase messaging instance
         const fcmMessaging = await messaging();
         if (!fcmMessaging) return;
 
-        // 3. Register the service worker explicitly so Firebase can find it
+        // 4. Register the service worker explicitly so Firebase can find it
         const registration = await navigator.serviceWorker.register(
           "/firebase-messaging-sw.js"
         );
 
-        // 4. Generate the FCM token
+        // 5. Generate the FCM token
         const token = await getToken(fcmMessaging, {
           vapidKey: VAPID_KEY,
           serviceWorkerRegistration: registration,
@@ -58,7 +63,7 @@ export function useFCM() {
         if (token && !tokenSentRef.current) {
           tokenSentRef.current = true;
 
-          // 5. Send token to backend (only once per session)
+          // 6. Send token to backend (only once per session)
           try {
             await notificationService.saveFcmToken({ token, device: "web" });
             sessionStorage.setItem(STORAGE_KEY, "true");
@@ -69,7 +74,7 @@ export function useFCM() {
           }
         }
 
-        // 6. Handle foreground messages
+        // 7. Handle foreground messages
         const unsubscribe = onMessage(fcmMessaging, (payload) => {
           const title = payload.notification?.title ?? "Limiance";
           const body = payload.notification?.body ?? "";

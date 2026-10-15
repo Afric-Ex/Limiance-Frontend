@@ -2,6 +2,7 @@
 
 import { Modal, TextInput } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
+import { useDebouncedValue } from "@mantine/hooks";
 import { useMemo, useState } from "react";
 import { IoSearchOutline } from "react-icons/io5";
 import { MdArrowBack } from "react-icons/md";
@@ -34,16 +35,30 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
   const [networkSearch, setNetworkSearch] = useState("");
   const [pendingCoin, setPendingCoin] = useState<TokenEntry | null>(null);
 
+  // Search runs server-side (debounced) so a coin sitting beyond the fetched
+  // page still matches — filtering only loaded rows would wrongly report
+  // "no coins found". Empty queries reuse the unfiltered cache keys.
+  const [debouncedCoinSearch] = useDebouncedValue(coinSearch.trim(), 350);
+  const [debouncedNetworkSearch] = useDebouncedValue(networkSearch.trim(), 350);
+
   const { data: allTokens, isLoading: tokensLoading } = useQuery({
-    queryKey: assetKeys.supportedTokensKey("all"),
-    queryFn: () => asset.fetchSupportedTokens({ limit: 1000 }),
+    queryKey: assetKeys.supportedTokensKey(debouncedCoinSearch || "all"),
+    queryFn: () =>
+      asset.fetchSupportedTokens({
+        limit: 1000,
+        ...(debouncedCoinSearch ? { q: debouncedCoinSearch } : {}),
+      }),
     select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
     staleTime: Infinity,
   });
 
   const { data: allChains, isLoading: chainsLoading } = useQuery({
-    queryKey: assetKeys.supportedChainsKey(""),
-    queryFn: () => asset.fetchSupportedChains({ limit: 100 }),
+    queryKey: assetKeys.supportedChainsKey(debouncedNetworkSearch),
+    queryFn: () =>
+      asset.fetchSupportedChains({
+        limit: 100,
+        ...(debouncedNetworkSearch ? { q: debouncedNetworkSearch } : {}),
+      }),
     select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
     staleTime: Infinity,
   });

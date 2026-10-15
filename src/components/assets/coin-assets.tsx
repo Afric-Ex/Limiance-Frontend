@@ -30,7 +30,7 @@ export const CoinAssets = () => {
           <TableTr key={`${item.symbol ?? item.name}-${index}`}>
             <TableTd>
               <span className="flex items-center gap-2">
-                <img src={item.image} alt={item.name} width={26} height={26} />
+                <img src={item.image} alt={item.name} width={26} height={26} loading="lazy" decoding="async" />
                 <span className="flex flex-col gap-2px">
                   <span className="text-base uppercase font-bold">
                     {item.symbol}

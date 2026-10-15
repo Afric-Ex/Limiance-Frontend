@@ -303,6 +303,8 @@ function EarnInner() {
                             <img
                               src={prod.image}
                               alt={prod.asset}
+                              loading="lazy"
+                              decoding="async"
                               className="w-9 h-9 rounded-full shrink-0"
                             />
                             <div className="flex flex-col">
@@ -409,10 +411,12 @@ function EarnInner() {
                   <div className="flex items-center justify-between relative z-10">
                     <div className="flex items-center gap-3">
                       <img
-                        src={pos.image}
-                        alt={pos.asset}
-                        className="w-10 h-10 rounded-full shrink-0"
-                      />
+                      src={pos.image}
+                      alt={pos.asset}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-10 h-10 rounded-full shrink-0"
+                    />
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-white">
                           {pos.asset} Earn

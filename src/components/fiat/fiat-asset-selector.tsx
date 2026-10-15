@@ -22,6 +22,11 @@ interface FiatAssetSelectorProps {
   placeholder?: string;
   name?: string;
   id?: string;
+  /** Controlled search text. When `onSearchChange` is provided the parent owns
+   *  the query (and is expected to run it server-side); otherwise the selector
+   *  keeps local state and only filters the already-loaded rows. */
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
 /** Start the next page before the user hits the exact bottom, so the list keeps
@@ -51,9 +56,13 @@ export const FiatAssetSelector = ({
   placeholder = "Select an asset",
   name,
   id,
+  searchQuery,
+  onSearchChange,
 }: FiatAssetSelectorProps) => {
   const [opened, { close, toggle }] = useDisclosure(false);
-  const [query, setQuery] = useState("");
+  const [internalQuery, setInternalQuery] = useState("");
+  const query = onSearchChange ? (searchQuery ?? "") : internalQuery;
+  const setQuery = onSearchChange ?? setInternalQuery;
 
   const filteredAssets = useMemo(() => {
     const search = query.trim().toUpperCase();
@@ -176,6 +185,12 @@ export const FiatAssetSelector = ({
               </span>
             </button>
           ))}
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-6" aria-live="polite" aria-busy>
+              <Loader size="xs" color="gray" />
+            </div>
+          ) : null}
 
           {!filteredAssets.length && !isLoading && !isLoadingMore ? (
             <span className="px-3 py-4 text-center text-xs text-white/30">No assets found</span>

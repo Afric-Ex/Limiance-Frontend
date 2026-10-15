@@ -31,7 +31,7 @@ import { modals } from "@mantine/modals";
 import { ConvertAsset } from "@/src/components/transactions/convert-asset";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import clsx from "clsx";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { WalletCard } from "@/src/components/assets/wallet-card";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
@@ -122,13 +122,15 @@ function DashboardInner() {
 
   const feed = useMarketFeed("BTC/USDT");
 
-  const marketTokens = (feed.markets || []).map((m: any) => ({
+  // Memoized: the market feed ticks frequently — rebuilding these lists on
+  // every unrelated parent render would redo all mapping/filtering each time.
+  const marketTokens = useMemo(() => (feed.markets || []).map((m: any) => ({
     pair: m.symbol || m.pair || `${m.base}/${m.quote}`,
     symbol: m.base || m.symbol?.split("-")[0] || "",
     price: Number(m.last_price ?? m.lastPrice ?? m.price ?? 0),
     changePercent24h: Number(m.percent_change ?? m.priceChangePercent ?? m.changePercent24h ?? 0),
     volume24h: Number(m.volume ?? m.volume24h ?? m.quoteVolume ?? 0),
-  }));
+  })), [feed.markets]);
 
   const { data: movers } = useQuery({
     queryKey: tradingKeys.gainersLosers,
@@ -138,58 +140,62 @@ function DashboardInner() {
   });
 
   // Normalize REST movers into the same shape as WS marketTokens
-  const moversArray = movers ? [...(movers.gainers || []), ...(movers.losers || [])] : [];
-  const moverTokens = moversArray.map((m: any) => {
-    const rawPair = m.pair ?? m.symbol ?? `${m.base ?? ""}/USDT`;
-    const base = m.base ?? rawPair.replace("-", "/").split("/")[0] ?? "";
-    return {
-      pair: rawPair,
-      symbol: base,
-      price: Number(m.price ?? m.latest_price ?? m.last_price ?? m.lastPrice ?? 0),
-      changePercent24h: Number(m.changePercent24h ?? m.percent_change ?? m.priceChangePercent ?? 0),
-      volume24h: Number(m.volume24h ?? m.volume ?? m.quoteVolume ?? 0),
-      image: getCryptoIcon(base, m.image ?? m.logo ?? m.icon),
-    };
-  });
+  const moverTokens = useMemo(() => {
+    const moversArray = movers ? [...(movers.gainers || []), ...(movers.losers || [])] : [];
+    return moversArray.map((m: any) => {
+      const rawPair = m.pair ?? m.symbol ?? `${m.base ?? ""}/USDT`;
+      const base = m.base ?? rawPair.replace("-", "/").split("/")[0] ?? "";
+      return {
+        pair: rawPair,
+        symbol: base,
+        price: Number(m.price ?? m.latest_price ?? m.last_price ?? m.lastPrice ?? 0),
+        changePercent24h: Number(m.changePercent24h ?? m.percent_change ?? m.priceChangePercent ?? 0),
+        volume24h: Number(m.volume24h ?? m.volume ?? m.quoteVolume ?? 0),
+        image: getCryptoIcon(base, m.image ?? m.logo ?? m.icon),
+      };
+    });
+  }, [movers]);
 
   // Combine WS market feed (subscribed pairs) and REST movers for a complete market list
-  const allTokensMap = new Map();
-  moverTokens.forEach((t: any) => allTokensMap.set(t.symbol, t));
-  marketTokens.forEach((t: any) => {
-    const rawPair = t.pair ?? t.symbol ?? "";
-    const base = t.base ?? rawPair.replace("-", "/").split("/")[0] ?? "";
-    const sym = base || t.symbol;
-    allTokensMap.set(sym, { 
-      ...allTokensMap.get(sym), 
-      ...t, 
-      symbol: sym, 
-      pair: rawPair,
-      image: getCryptoIcon(sym, t.image ?? t.logo ?? t.icon) || allTokensMap.get(sym)?.image
+  const displayTokens = useMemo(() => {
+    const allTokensMap = new Map();
+    moverTokens.forEach((t: any) => allTokensMap.set(t.symbol, t));
+    marketTokens.forEach((t: any) => {
+      const rawPair = t.pair ?? t.symbol ?? "";
+      const base = t.base ?? rawPair.replace("-", "/").split("/")[0] ?? "";
+      const sym = base || t.symbol;
+      allTokensMap.set(sym, {
+        ...allTokensMap.get(sym),
+        ...t,
+        symbol: sym,
+        pair: rawPair,
+        image: getCryptoIcon(sym, t.image ?? t.logo ?? t.icon) || allTokensMap.get(sym)?.image
+      });
     });
-  });
 
-  // Hydrate images from portfolio if missing
-  if (wsPortfolio && wsPortfolio.length > 0) {
-    wsPortfolio.forEach((p: any) => {
-      const sym = (p.symbol || "").toUpperCase();
-      if (sym && p.image && allTokensMap.has(sym)) {
-        allTokensMap.get(sym).image = p.image;
-      }
+    // Hydrate images from portfolio if missing
+    if (wsPortfolio && wsPortfolio.length > 0) {
+      wsPortfolio.forEach((p: any) => {
+        const sym = (p.symbol || "").toUpperCase();
+        if (sym && p.image && allTokensMap.has(sym)) {
+          allTokensMap.get(sym).image = p.image;
+        }
+      });
+    }
+
+    return Array.from(allTokensMap.values()).filter((t: any) => {
+      // Filter out garbage pairs the backend might send
+      const validQuotes = ["USDT", "USDC", "BTC", "ETH"];
+      const [base, quote] = (t.pair || "").replace("-", "/").split("/");
+      if (!quote) return false;
+      if (!validQuotes.includes(quote)) return false;
+      if ((base === "USDT" && quote === "USDC") || (base === "USDC" && quote === "USDT")) return true;
+      if (validQuotes.includes(base) && quote !== "USDT") return false;
+      return true;
     });
-  }
-  
-  const displayTokens = Array.from(allTokensMap.values()).filter((t: any) => {
-    // Filter out garbage pairs the backend might send
-    const validQuotes = ["USDT", "USDC", "BTC", "ETH"];
-    const [base, quote] = (t.pair || "").replace("-", "/").split("/");
-    if (!quote) return false;
-    if (!validQuotes.includes(quote)) return false;
-    if ((base === "USDT" && quote === "USDC") || (base === "USDC" && quote === "USDT")) return true;
-    if (validQuotes.includes(base) && quote !== "USDT") return false;
-    return true;
-  });
+  }, [marketTokens, moverTokens, wsPortfolio]);
 
-  const getRepresentativeHoldingTokens = () => {
+  const getRepresentativeHoldingTokens = useCallback(() => {
     const portfolio = wsPortfolio;
     if (!portfolio || portfolio.length === 0) return [];
 
@@ -237,9 +243,9 @@ function DashboardInner() {
         };
       })
       .sort((a: any, b: any) => b.usdValue - a.usdValue); // Sort by USD value
-  };
+  }, [wsPortfolio, displayTokens]);
 
-  const getFilteredTokens = () => {
+  const filteredTokens = useMemo(() => {
     if (activeMarketTab === "Top Gainers") {
       return [...displayTokens]
         .filter((t: any) => t.changePercent24h !== 0)
@@ -264,7 +270,7 @@ function DashboardInner() {
     return [...displayTokens]
       .sort((a: any, b: any) => (b.volume24h * b.price) - (a.volume24h * a.price))
       .slice(0, 10);
-  };
+  }, [activeMarketTab, displayTokens, getRepresentativeHoldingTokens]);
 
   const openConvertModal = (symbol: string) => {
     modals.open({
@@ -460,7 +466,7 @@ function DashboardInner() {
                         <Skeleton variant="table-row" count={5} columns={5} className="py-2" />
                       </TableTd>
                     </TableTr>
-                  ) : getFilteredTokens().length === 0 ? (
+                  ) : filteredTokens.length === 0 ? (
                     <TableTr>
                       <TableTd colSpan={5}>
                         <div className="py-8 flex flex-col items-center justify-center gap-2">
@@ -468,12 +474,12 @@ function DashboardInner() {
                         </div>
                       </TableTd>
                     </TableTr>
-                  ) : getFilteredTokens().slice(0, 10).map((token: any) => (
+                  ) : filteredTokens.map((token: any) => (
                     <TableTr key={token.pair} className="row-hover border-b border-transparent transition-colors">
                       <TableTd className="py-1.5 pl-4 max-[768px]:pl-2 max-[768px]:py-4">
                         <span className="flex items-center gap-2.5 max-[768px]:gap-2.5">
                           {token.image ? (
-                            <img src={token.image} alt={token.symbol} className="w-6 h-6 max-[768px]:w-9 max-[768px]:h-9 rounded-full object-cover shrink-0" />
+                            <img src={token.image} alt={token.symbol} loading="lazy" decoding="async" className="w-6 h-6 max-[768px]:w-9 max-[768px]:h-9 rounded-full object-cover shrink-0" />
                           ) : (
                             <span className="w-6 h-6 max-[768px]:w-9 max-[768px]:h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] max-[768px]:text-sm font-bold text-white/80 shrink-0">
                               {token.symbol.charAt(0)}

@@ -2,7 +2,10 @@
 
 import React, { useState } from "react";
 import { Button, Drawer } from "@mantine/core";
-import { formatDistanceToNow } from "date-fns";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+
+dayjs.extend(relativeTime);
 import { MdVerified } from "react-icons/md";
 import { FaThumbsDown, FaThumbsUp } from "react-icons/fa";
 import toast from "react-hot-toast";
@@ -220,9 +223,7 @@ export const AdvertiserProfilePanel = ({
                       <span>{item.reviewerName}</span>
                       <span>•</span>
                       <span>
-                        {formatDistanceToNow(new Date(item.createdAt), {
-                          addSuffix: true,
-                        })}
+                        {dayjs(item.createdAt).fromNow()}
                       </span>
                     </div>
                     <div className="text-white/90">

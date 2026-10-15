@@ -204,7 +204,7 @@ function LimianceEarnInner() {
                         <td className="py-4 pl-6">
                           <div className="flex items-center gap-3">
                             <div className="relative">
-                              <img src={prod.image} alt={prod.asset} className="w-9 h-9 rounded-full" />
+                              <img src={prod.image} alt={prod.asset} loading="lazy" decoding="async" className="w-9 h-9 rounded-full" />
                             </div>
                             <div className="flex flex-col">
                               <span className="text-sm font-bold text-white">{prod.asset}</span>
@@ -290,7 +290,7 @@ function LimianceEarnInner() {
                   {/* Header */}
                   <div className="flex items-center justify-between relative z-10">
                     <div className="flex items-center gap-3">
-                      <img src={pos.image} alt={pos.asset} className="w-10 h-10 rounded-full" />
+                      <img src={pos.image} alt={pos.asset} loading="lazy" decoding="async" className="w-10 h-10 rounded-full" />
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-white">{pos.asset} Earn</span>
                         <span className={clsx(

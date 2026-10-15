@@ -55,6 +55,8 @@ export const MarginFunds = () => {
                           <img
                             src={item.image}
                             alt={item.symbol}
+                            loading="lazy"
+                            decoding="async"
                             className="w-8 h-8 rounded-full shrink-0"
                           />
                         ) : (

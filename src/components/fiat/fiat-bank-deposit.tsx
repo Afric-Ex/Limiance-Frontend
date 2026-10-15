@@ -31,6 +31,8 @@ export const FiatBankDeposit = () => {
     isCoinsError,
     loadMoreCoins,
     retryCoins,
+    assetSearch,
+    setAssetSearch,
     form,
     account,
     expirySeconds,
@@ -41,6 +43,7 @@ export const FiatBankDeposit = () => {
     rate,
     quotedReceivedAmount,
     rateLoading,
+    quoteFailed,
   } = useFiatBankDeposit();
 
   const selectedBank = banks?.find((b) => b.code === form.values.bankCode);
@@ -195,6 +198,8 @@ export const FiatBankDeposit = () => {
             placeholder="Select an asset"
             name="fiat-receive-asset"
             id="fiat-receive-asset"
+            searchQuery={assetSearch}
+            onSearchChange={setAssetSearch}
           />
         </div>
       </div>
@@ -256,7 +261,7 @@ export const FiatBankDeposit = () => {
       <Button
         onClick={() => createAccount()}
         loading={creatingAccount}
-        disabled={!canRequest}
+        disabled={!canRequest || quoteFailed}
         className="!h-[56px] !rounded-xl !bg-primary hover:!bg-primary/90 !text-white !font-bold !transition-all active:!scale-[0.98] disabled:!opacity-40"
       >
         Get Virtual Account

@@ -272,6 +272,18 @@ class PortfolioStore {
     margin: 0,
     futures: 0,
   };
+  private refreshTimers: Partial<Record<PortfolioTopic, ReturnType<typeof setTimeout>>> = {};
+  private refreshSeq: Record<PortfolioTopic, number> = {
+    portfolio: 0,
+    balance: 0,
+    fundingBalance: 0,
+    spotBalance: 0,
+    marginBalance: 0,
+    futuresBalance: 0,
+    allocations: 0,
+    margin: 0,
+    futures: 0,
+  };
   private unsubscribeStatus: (() => void) | null = null;
 
   // ── subscription ──────────────────────────────────────────────────────────
@@ -339,6 +351,10 @@ class PortfolioStore {
 
     const { topic: responseTopic, payload } = TOPIC_REQUEST[topic];
     this.unsubs[topic] = wsClient.subscribe(responseTopic, payload, (raw, full) => {
+      // Any frame ends a refresh wait — even one dropped below as irrelevant
+      // or invalid. Otherwise a filtered-out snapshot leaves the spinner
+      // rotating forever.
+      this.setRefreshing(topic, false);
       // Balance variants share the `overall_portfolio_balance` response topic,
       // and the socket client fans one frame out to every payload under it.
       // Drop frames tagged for a different account so a spot snapshot can never
@@ -504,8 +520,10 @@ class PortfolioStore {
     if (this.refCounts[topic] === 0) return;
     if (this.httpInFlight.has(topic)) return;
     if (Date.now() - this.lastHttpAt[topic] < HTTP_THROTTLE_MS) {
-      // Throttled: still let the caller stop showing a skeleton.
+      // Throttled: no request is servicing this refresh, so nothing else will
+      // clear its spinner — drop it here along with the skeleton.
       if (!this.hasDataFor(topic)) this.setPending(topic, false);
+      this.setRefreshing(topic, false);
       return;
     }
 
@@ -539,20 +557,41 @@ class PortfolioStore {
 
   // ── explicit refresh ──────────────────────────────────────────────────────
 
-  /** Re-request only the topics that currently have a consumer. */
-  refresh = (): void => {
-    const wanted = ALL_PORTFOLIO_TOPICS.filter((t) => this.refCounts[t] > 0);
+  /**
+   * Re-request topics that currently have a consumer. Pass `only` to refresh
+   * just one screen's topics (e.g. a card's refresh button) instead of
+   * re-requesting every mounted surface's streams. An empty/omitted list keeps
+   * the legacy refresh-everything behaviour for refresh-only callers.
+   */
+  refresh = (only?: PortfolioTopic[]): void => {
+    const wanted = ALL_PORTFOLIO_TOPICS.filter(
+      (t) => this.refCounts[t] > 0 && (!only || only.length === 0 || only.includes(t))
+    );
     if (wanted.length === 0) return;
 
     // Flip on the refresh indicator for every requested topic; it is cleared
     // as each topic's fresh snapshot arrives (or its REST fallback settles).
-    wanted.forEach((topic) => this.setRefreshing(topic, true));
+    wanted.forEach((topic) => {
+      this.setRefreshing(topic, true);
+      // Safety net: a refresh must never spin forever. Cleared early by any
+      // arriving frame or HTTP settlement; otherwise dropped after 15s. The
+      // sequence guard keeps an old timer from killing a newer refresh.
+      const seq = (this.refreshSeq[topic] += 1);
+      if (this.refreshTimers[topic]) clearTimeout(this.refreshTimers[topic]);
+      this.refreshTimers[topic] = setTimeout(() => {
+        this.refreshTimers[topic] = undefined;
+        if (this.refreshSeq[topic] === seq) this.setRefreshing(topic, false);
+      }, 15_000);
+    });
 
-    if (wsClient.getIsConnected()) {
-      wanted.forEach((topic) => wsClient.send(TOPIC_REQUEST[topic].payload));
-    } else {
-      wanted.forEach((topic) => void this.fetchOverHttp(topic));
-    }
+    // Prefer the socket; fall back to REST per topic when the socket can't
+    // take the frame (e.g. still connecting). `send` reports that failure —
+    // previously it was ignored and the spinner waited on a reply that could
+    // never come.
+    wanted.forEach((topic) => {
+      const sent = wsClient.getIsConnected() ? wsClient.send(TOPIC_REQUEST[topic].payload) : false;
+      if (!sent) void this.fetchOverHttp(topic);
+    });
   };
 }
 

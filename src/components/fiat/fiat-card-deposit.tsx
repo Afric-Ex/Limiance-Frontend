@@ -167,6 +167,8 @@ export const FiatCardDeposit = () => {
     isCoinsError,
     loadMoreCoins,
     retryCoins,
+    assetSearch,
+    setAssetSearch,
   } = useFiatCardDeposit();
 
   const expiryValid =
@@ -215,6 +217,8 @@ export const FiatCardDeposit = () => {
               placeholder="Select an asset"
               name="card-receive-asset"
               id="card-receive-asset"
+              searchQuery={assetSearch}
+              onSearchChange={setAssetSearch}
             />
           </div>
           <div className="flex flex-col gap-2">
