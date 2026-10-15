@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { IoSearchOutline, IoChevronBackOutline, IoChevronForwardOutline } from "react-icons/io5";
+import { IoSearchOutline, IoChevronBackOutline, IoChevronForwardOutline, IoRocketOutline } from "react-icons/io5";
 import { MdStar, MdStarBorder } from "react-icons/md";
 import { getCryptoIcon } from "@/src/utils/crypto-icons";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
@@ -93,6 +93,33 @@ function Sparkline({ pair, values }: { pair: string; values: number[] }) {
   );
 }
 
+// Creative placeholder for market sections that aren't live yet.
+function ComingSoonEmpty({ tab }: { tab: string }) {
+  const headline =
+    tab === "derivatives"
+      ? "Derivatives trading is almost here"
+      : tab === "tradfi"
+        ? "TradFi markets are almost here"
+        : "Fresh listings are almost here";
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-4 text-center">
+      <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary">
+        <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+          ✦
+        </span>
+        <IoRocketOutline size={26} />
+      </span>
+      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
+        Coming soon
+      </span>
+      <p className="text-sm font-semibold text-white/85">{headline}</p>
+      <p className="text-xs text-white/40 max-w-[280px] leading-relaxed">
+        We&apos;re putting the finishing touches on this section — check back shortly.
+      </p>
+    </div>
+  );
+}
+
 function getPageNumbers(current: number, total: number) {
   const pages: (number | string)[] = [];
   if (total <= 7) {
@@ -114,7 +141,7 @@ function MarketsPageInner() {
   const [search, setSearch] = useState("");
   const feed = useMarketFeed("BTC/USDT");
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [mainTab, setMainTab] = useState<"favorites" | "spot" | "derivatives" | "tradfi" | "newly-listed">("spot");
+  const [mainTab, setMainTab] = useState<"favorites" | "spot" | "margin" | "futures" | "derivatives" | "tradfi" | "newly-listed">("spot");
   const [spotQuoteTab, setSpotQuoteTab] = useState<string>("All");
   
   // Pagination State
@@ -203,6 +230,10 @@ function MarketsPageInner() {
       } else {
         list = spotTokens.filter(t => t.pair.endsWith(`/${spotQuoteTab}`));
       }
+    } else if (mainTab === "margin" || mainTab === "futures") {
+      // Margin / Futures tabs list the same pairs as Spot; only the trade
+      // destination differs (see goTrade below).
+      list = spotTokens;
     } else {
       list = spotTokens.filter(t => matchesCategory(mainTab, t.category));
     }
@@ -223,6 +254,14 @@ function MarketsPageInner() {
   }, [activeRows, currentPage]);
 
   const isLoading = feed.marketsLoading;
+
+  // Row clicks land on the trade screen matching the active tab: Spot rows go
+  // to spot trade, Margin rows to margin trade, Futures rows to futures trade.
+  // Every other tab keeps the previous spot destination.
+  const goTrade = (pair: string) => {
+    const route = mainTab === "margin" ? "margin" : mainTab === "futures" ? "futures" : "spot";
+    router.push(`/trades/${route}?pair=${pair}`);
+  };
 
   return (
     <main className="flex flex-col gap-6 w-full animate-fade-in pb-8 page-enter">
@@ -274,6 +313,8 @@ function MarketsPageInner() {
             {[
               { id: "favorites", name: "Favorites", icon: true },
               { id: "spot", name: "Spot" },
+              { id: "margin", name: "Margin" },
+              { id: "futures", name: "Futures" },
               { id: "derivatives", name: "Derivatives" },
               { id: "tradfi", name: "TradFi" },
               { id: "newly-listed", name: "Newly Listed" }
@@ -350,14 +391,14 @@ function MarketsPageInner() {
               ) : paginatedRows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-16 text-center text-white/35">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <IoSearchOutline size={32} className="text-white/10" />
-                      <span className="text-sm">
-                        {mainTab === "derivatives" || mainTab === "tradfi" || mainTab === "newly-listed"
-                          ? "No pair Found"
-                          : "No assets found matching parameters."}
-                      </span>
-                    </div>
+                    {mainTab === "derivatives" || mainTab === "tradfi" || mainTab === "newly-listed" ? (
+                      <ComingSoonEmpty tab={mainTab} />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <IoSearchOutline size={32} className="text-white/10" />
+                        <span className="text-sm">No assets found matching parameters.</span>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -371,7 +412,7 @@ function MarketsPageInner() {
                   return (
                     <tr
                       key={token.pair}
-                      onClick={() => router.push(`/trades/spot?pair=${token.pair}`)}
+                      onClick={() => goTrade(token.pair)}
                       className="hover:bg-white/[0.02] cursor-pointer transition-colors"
                     >
                       {/* Favorite */}
@@ -450,13 +491,13 @@ function MarketsPageInner() {
                       <td className="py-3 text-right pr-4">
                         <div className="flex items-center justify-end gap-3" onClick={(e) => e.stopPropagation()}>
                           <button
-                            onClick={() => router.push(`/trades/spot?pair=${token.pair}`)}
+                            onClick={() => goTrade(token.pair)}
                             className="text-primary hover:underline text-xs font-semibold transition-all"
                           >
                             Details
                           </button>
                           <button
-                            onClick={() => router.push(`/trades/spot?pair=${token.pair}`)}
+                            onClick={() => goTrade(token.pair)}
                             className="bg-primary hover:bg-primary/90 active:scale-95 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition-all"
                           >
                             Trade
@@ -479,9 +520,11 @@ function MarketsPageInner() {
             </div>
           ) : paginatedRows.length === 0 ? (
             <div className="py-12 text-center text-white/35 text-sm">
-              {mainTab === "derivatives" || mainTab === "tradfi" || mainTab === "newly-listed"
-                ? "No pair Found"
-                : "No assets matching parameters."}
+              {mainTab === "derivatives" || mainTab === "tradfi" || mainTab === "newly-listed" ? (
+                <ComingSoonEmpty tab={mainTab} />
+              ) : (
+                "No assets matching parameters."
+              )}
             </div>
           ) : (
             paginatedRows.map((token) => {
@@ -491,7 +534,7 @@ function MarketsPageInner() {
               return (
                 <button
                   key={token.pair}
-                  onClick={() => router.push(`/trades/spot?pair=${token.pair}`)}
+                  onClick={() => goTrade(token.pair)}
                   className="flex items-center justify-between w-full py-4 text-left active:bg-white/[0.02]"
                 >
                   <div className="flex items-center gap-3">

@@ -11,8 +11,9 @@ import relativeTime from "dayjs/plugin/relativeTime";
 dayjs.extend(relativeTime);
 
 import { useNotificationStore, AppNotification } from "@/src/stores/notification-store";
-import { notificationService } from "@/src/services/notification";
+import { notificationKeys, notificationService } from "@/src/services/notification";
 import { useNotifications } from "@/src/hooks/use-notifications";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const useNotificationCount = () => {
   const unreadCount = useNotificationStore((state) => state.unreadCount);
@@ -51,10 +52,25 @@ export const NotificationsDropdown = () => {
     notificationService.markAllRead().catch(() => {});
   };
 
+  const queryClient = useQueryClient();
+
   const handleNotificationClick = (notif: AppNotification) => {
     if (!notif.read) {
       markAsRead(notif.id);
-      notificationService.markRead(notif.id).catch(() => {});
+      // Only trust the server result: on a 200, refetch the history so the
+      // item (and the unread badge) reflects the persisted read state.
+      notificationService
+        .markRead(notif.id)
+        .then((res: any) => {
+          const ok =
+            res?.success !== false &&
+            (res?.statusCode === undefined || res?.statusCode === 200) &&
+            (res?.status === undefined || res?.status === 200);
+          if (ok) {
+            void queryClient.invalidateQueries({ queryKey: notificationKeys.list });
+          }
+        })
+        .catch(() => {});
     }
     // The detail modal lives outside the popover (mounted in <Header>), so the
     // popover unmounting on close doesn't kill it.
