@@ -21,7 +21,7 @@ export const notificationService = {
 
   /** Mark all notifications as read */
   markAllRead: async (): Promise<ApiResponse<any>> => {
-    const response = await api.patch("notifications/read-all");
+    const response = await api.patch("notifications/read_all");
     return response.data;
   },
 

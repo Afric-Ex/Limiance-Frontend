@@ -11,8 +11,9 @@ import relativeTime from "dayjs/plugin/relativeTime";
 dayjs.extend(relativeTime);
 
 import { useNotificationStore, AppNotification } from "@/src/stores/notification-store";
-import { notificationService } from "@/src/services/notification";
+import { notificationKeys, notificationService } from "@/src/services/notification";
 import { useNotifications } from "@/src/hooks/use-notifications";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const useNotificationCount = () => {
   const unreadCount = useNotificationStore((state) => state.unreadCount);
@@ -39,22 +40,50 @@ export const NotificationsDropdown = () => {
     return true;
   });
 
+  const queryClient = useQueryClient();
+
+  const isOkResponse = (res: any) =>
+    res?.success !== false &&
+    (res?.statusCode === undefined || res?.statusCode === 200) &&
+    (res?.status === undefined || res?.status === 200);
+
+  const refetchHistory = () =>
+    void queryClient.invalidateQueries({ queryKey: notificationKeys.list });
+
   const handleMarkAllRead = () => {
     markAllAsRead();
-    // Best-effort server sync — never block the UI on it
-    notificationService.markAllRead().catch(() => {});
+    // Best-effort server sync — never block the UI on it. On a 200, refetch
+    // the history immediately so nothing flips back to unread.
+    notificationService
+      .markAllRead()
+      .then((res: any) => {
+        if (isOkResponse(res)) refetchHistory();
+      })
+      .catch(() => {});
   };
 
   const handleClear = () => {
     clearAll();
     // No delete-all endpoint; mark all as read server-side so refetches come back read
-    notificationService.markAllRead().catch(() => {});
+    notificationService
+      .markAllRead()
+      .then((res: any) => {
+        if (isOkResponse(res)) refetchHistory();
+      })
+      .catch(() => {});
   };
 
   const handleNotificationClick = (notif: AppNotification) => {
     if (!notif.read) {
       markAsRead(notif.id);
-      notificationService.markRead(notif.id).catch(() => {});
+      // Only trust the server result: on a 200, refetch the history so the
+      // item (and the unread badge) reflects the persisted read state.
+      notificationService
+        .markRead(notif.id)
+        .then((res: any) => {
+          if (isOkResponse(res)) refetchHistory();
+        })
+        .catch(() => {});
     }
     // The detail modal lives outside the popover (mounted in <Header>), so the
     // popover unmounting on close doesn't kill it.

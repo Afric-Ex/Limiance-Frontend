@@ -6,16 +6,67 @@ import { notificationKeys, notificationService } from "@/src/services/notificati
 import { useNotificationStore, AppNotification } from "@/src/stores/notification-store";
 import { useUserStore } from "@/src/stores/user-store";
 
+/** Some notifications (e.g. `SWAP` records) carry `body` as a structured
+ *  object instead of text — `String()` on those renders as `[object Object]`.
+ *  Render conversion payloads as `0.2 LIM → 981.52 BTC`, and fall back to a
+ *  short scalar summary for anything else. */
+const toDisplayString = (value: unknown): string => {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value !== "object") return String(value);
+  const b = value as Record<string, any>;
+  const fromAmount = b.FromAmount ?? b.fromAmount ?? b.Amount ?? b.amount;
+  const fromAsset = b.FromAsset ?? b.fromAsset ?? b.Asset ?? b.asset;
+  const toAmount = b.ToAmount ?? b.toAmount;
+  const toAsset = b.ToAsset ?? b.toAsset;
+  if (
+    fromAmount != null &&
+    fromAmount !== "" &&
+    fromAsset &&
+    toAmount != null &&
+    toAmount !== "" &&
+    toAsset
+  ) {
+    return `${fromAmount} ${fromAsset} → ${toAmount} ${toAsset}`;
+  }
+  const parts: string[] = [];
+  for (const key of ["Status", "status", "Type", "type", "Fee", "fee", "Hash", "hash"]) {
+    const v = b[key];
+    if (v != null && v !== "" && typeof v !== "object") parts.push(`${key}: ${v}`);
+    if (parts.length >= 3) break;
+  }
+  if (parts.length) return parts.join(" • ");
+  try {
+    return JSON.stringify(b);
+  } catch {
+    return "";
+  }
+};
+
+/** Swap-type records arrive with an empty title — derive one from `type`. */
+const titleFromType = (type: unknown): string | undefined => {
+  if (typeof type !== "string" || !type.trim()) return undefined;
+  return type
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
 const toAppNotification = (raw: any): AppNotification => {
   const rawCreatedAt = raw.createdAt ?? raw.created_at ?? raw.timestamp;
   const createdAt = rawCreatedAt
     ? new Date(rawCreatedAt).getTime()
     : Date.now();
 
+  const title =
+    raw.title || raw.heading
+      ? String(raw.title ?? raw.heading)
+      : (titleFromType(raw.type ?? raw.kind) ?? "Notification");
+
   return {
-    id: String(raw.id ?? raw._id ?? `${raw.title ?? "notification"}-${createdAt}`),
-    title: String(raw.title ?? raw.heading ?? "Notification"),
-    body: String(raw.body ?? raw.message ?? ""),
+    id: String(raw.id ?? raw._id ?? `${title}-${createdAt}`),
+    title,
+    body: toDisplayString(raw.body ?? raw.message ?? ""),
     read: Boolean(raw.read ?? raw.isRead ?? raw.is_read),
     type: raw.type ?? raw.kind,
     link: raw.link ?? raw.url,
