@@ -234,8 +234,8 @@ function FuturesTradesInner() {
   });
 
   const { data: futuresOrderHistory, isLoading: _futuresOrderHistoryLoading } = useQuery({
-    queryKey: tradingKeys.orderHistory("futures", selectedPair),
-    queryFn: () => tradingService.marketOrderHistory("futures", { pair: selectedPair }),
+    queryKey: tradingKeys.orderHistory("futures"),
+    queryFn: () => tradingService.marketOrderHistory("futures"),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
@@ -247,8 +247,8 @@ function FuturesTradesInner() {
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "futures");
 
   const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
-    queryKey: tradingKeys.tradeHistory("futures", selectedPair),
-    queryFn: () => tradingService.tradeHistory("futures", selectedPair),
+    queryKey: tradingKeys.tradeHistory("futures"),
+    queryFn: () => tradingService.tradeHistory("futures"),
     select: (res: unknown) => readList<Record<string, unknown>>(res),
     retry: false,
     throwOnError: false,

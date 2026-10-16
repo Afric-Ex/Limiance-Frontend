@@ -101,8 +101,8 @@ function SpotTrades() {
   });
 
   const { data: orderHistory, isLoading: orderHistoryLoading } = useQuery({
-    queryKey: tradingKeys.orderHistory("spot", selectedPair),
-    queryFn: () => tradingService.marketOrderHistory("spot", { pair: selectedPair }),
+    queryKey: tradingKeys.orderHistory("spot"),
+    queryFn: () => tradingService.marketOrderHistory("spot"),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
@@ -114,8 +114,8 @@ function SpotTrades() {
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "spot");
 
   const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
-    queryKey: tradingKeys.tradeHistory("spot", selectedPair),
-    queryFn: () => tradingService.tradeHistory("spot", selectedPair),
+    queryKey: tradingKeys.tradeHistory("spot"),
+    queryFn: () => tradingService.tradeHistory("spot"),
     select: (res: unknown) => readList<Record<string, unknown>>(res),
     retry: false,
     throwOnError: false,
