@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { Search } from "../icons/search";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { cancelMarginOrderWs } from "@/src/lib/order-ws";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 
@@ -32,10 +33,11 @@ export const MarginOpenOrders = () => {
 
   const { mutate: cancelOrder } = useMutation({
     mutationFn: (orderId: string): Promise<any> =>
-      tradingService.closeMarginOrder(orderId),
+      cancelMarginOrderWs(orderId),
     onSuccess: () => {
       successNotification("Order cancelled");
       queryClient.invalidateQueries({ queryKey: tradingKeys.marginOpenOrders });
+      queryClient.invalidateQueries({ queryKey: ["order-history"] });
     },
     onError: (e: any) => errorMessageHandler(e),
   });

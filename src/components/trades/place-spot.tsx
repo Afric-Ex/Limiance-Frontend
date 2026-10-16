@@ -8,8 +8,8 @@ import { icons } from "../assets/icons";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { tradingService, tradingKeys } from "@/src/services/trading";
-import { placeSpotOrderWs } from "@/src/lib/order-ws";
+import { tradingKeys } from "@/src/services/trading";
+import { placeSpotOrderWs, placeMarginOrderWs, placeMarginOcoOrderWs } from "@/src/lib/order-ws";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -231,14 +231,14 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     }
 
     if (activeTab === "market") {
-      return tradingService.placeMarginMarketOrder({ ...payload, type: "market", price: marketPrice ?? undefined });
+      return placeMarginOrderWs({ ...payload, type: "market", price: marketPrice ?? undefined });
     }
     if (activeTab === "stop") {
-      return tradingService.placeMarginStopOrder({ ...payload, type: payload.type as "buy_stop" | "sell_stop", stopPrice: payload.stopPrice });
+      return placeMarginOrderWs({ ...payload, type: payload.type as "buy_stop" | "sell_stop", stopPrice: payload.stopPrice });
     }
     if (activeTab === "oco") {
-      return tradingService.placeMarginOCOOrder({
-        symbol: `${base}${quote}`.toUpperCase(),
+      return placeMarginOcoOrderWs({
+        symbol: `${base}/${quote}`.toUpperCase(),
         order_side: side.toUpperCase(),
         tp_trigger_price: String(payload.price), // simplified map for OCO payload
         sl_trigger_price: String(side === "buy" ? buyOcoStop : sellOcoStop),
@@ -247,7 +247,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         sl_limit_price: String(side === "buy" ? buyOcoLimit : sellOcoLimit),
       });
     }
-    return tradingService.placeMarginLimitOrder({ ...payload, type: payload.type as "buy_limit" | "sell_limit" });
+    return placeMarginOrderWs({ ...payload, type: payload.type as "buy_limit" | "sell_limit" });
   };
 
   const refreshTradingBalances = () => {
