@@ -56,10 +56,10 @@ export default function WhitelistedWalletsPage() {
   const chainsQuery = useQuery({
     queryKey: assetKeys.supportedChainsKey(""),
     queryFn: async () => {
-      const response = await asset.fetchSupportedChains({ limit: 100 });
+      const response: any = await asset.fetchSupportedChains({ limit: 100 });
       const error = getResponseError(response);
       if (error) throw new Error(error);
-      return response.data;
+      return Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : [];
     },
   });
 
