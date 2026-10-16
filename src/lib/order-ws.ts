@@ -15,7 +15,7 @@ const CONNECT_TIMEOUT_MS = 4_000;
 
 /** Order/position-shaped ack/push frames; order-book streams are excluded. */
 const ORDER_RESPONSE_RE =
-  /(place|cancel|close)_(spot|futures)_(order|position)|(spot|futures)_(order|position)_\w+|order_(placed|created|cancelled|canceled|update|rejected|failed|error)|position_(closed|updated|rejected|failed|error)/i;
+  /(place|cancel|close)_(spot|futures|margin)_(order|position|oco)|(spot|futures|margin)_(order|position|oco)_\w+|order_(placed|created|cancelled|canceled|update|rejected|failed|error)|position_(closed|updated|rejected|failed|error)/i;
 
 /** Bare error topics a rejected request may come back on. */
 const GLOBAL_ERROR_TYPES = new Set(["error", "order_error", "request_error"]);
@@ -193,4 +193,61 @@ export function placeFuturesOrderWs(data: {
 /** close_futures_position frame: { type: "close_futures_position", data: { positionId } } */
 export function closeFuturesPositionWs(positionId: string): Promise<any> {
   return sendOrderFrame({ type: "close_futures_position", data: { positionId } });
+}
+
+/**
+ * place_margin_order frame, mirroring the margin REST payloads (limit / market / stop):
+ * { type: "place_margin_order", data: { symbol: "BTC/USDT", side: "BUY", type: "limit",
+ *   price: 67000, quantity: 0.01, leverage: 10 } }
+ */
+export function placeMarginOrderWs(data: {
+  side: "buy" | "sell";
+  base: string;
+  quote: string;
+  type: "buy_limit" | "sell_limit" | "market" | "buy_stop" | "sell_stop";
+  quantity: number;
+  leverage: number;
+  price?: number;
+  stopPrice?: number;
+}): Promise<any> {
+  const kind =
+    data.type === "market" ? "market" : data.type.endsWith("_limit") ? "limit" : "stop";
+  const payload: Record<string, unknown> = {
+    symbol: `${data.base}/${data.quote}`.toUpperCase(),
+    side: data.side.toUpperCase(),
+    type: kind,
+    quantity: Number(data.quantity),
+    leverage: data.leverage,
+  };
+  if (kind === "limit") payload.price = Number(data.price);
+  if (kind === "market" && Number(data.price) > 0) payload.price = Number(data.price);
+  if (kind === "stop") payload.stopPrice = Number(data.stopPrice);
+  return sendOrderFrame({ type: "place_margin_order", data: payload });
+}
+
+/** place_margin_oco frame, mirroring tradingService.placeMarginOCOOrder's body. */
+export function placeMarginOcoOrderWs(data: {
+  symbol: string;
+  order_side: string;
+  tp_trigger_price: string;
+  sl_trigger_price: string;
+  quantity: string;
+  tp_limit_price: string;
+  sl_limit_price: string;
+}): Promise<any> {
+  return sendOrderFrame({
+    type: "place_margin_oco",
+    data: { ...data, symbol: data.symbol.toUpperCase() },
+  });
+}
+
+/** cancel_margin_order frame: { type: "cancel_margin_order", data: { orderId, symbol? } } */
+export function cancelMarginOrderWs(orderId: string, symbol?: string): Promise<any> {
+  return sendOrderFrame({
+    type: "cancel_margin_order",
+    data: {
+      orderId,
+      ...(symbol ? { symbol: symbol.toUpperCase() } : {}),
+    },
+  });
 }

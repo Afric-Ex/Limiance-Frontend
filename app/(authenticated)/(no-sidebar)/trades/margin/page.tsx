@@ -4,6 +4,7 @@ import { Search } from "@/src/components/icons/search";
 import { PlaceSpot, type TpslPreview } from "@/src/components/trades/place-spot";
 import { TradeRecordsList } from "@/src/components/trades/trade-records-list";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { cancelMarginOrderWs } from "@/src/lib/order-ws";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { useOrderBook } from "@/src/hooks/use-order-book";
 import { useRecentTrades } from "@/src/hooks/use-recent-trades";
@@ -141,12 +142,12 @@ function MarginTrades() {
   });
 
   const { mutate: closeOrder, isPending: closeOrderPending } = useMutation({
-    mutationFn: (orderId: string) =>
-      tradingService.closeMarginOrder(orderId, selectedPair),
+    mutationFn: (orderId: string) => cancelMarginOrderWs(orderId, selectedPair),
     onSuccess: () => {
       successNotification("Order cancelled");
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders(selectedPair) });
+      queryClient.invalidateQueries({ queryKey: ["order-history"] });
     },
     onError: (e) => errorMessageHandler(e),
   });
