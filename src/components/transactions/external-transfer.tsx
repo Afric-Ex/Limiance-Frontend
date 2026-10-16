@@ -15,7 +15,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { IoChevronDown } from "react-icons/io5";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
-export const ExternalTransfer = () => {
+export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) => {
   const { coins: portfolio, refreshBalances } = usePortfolioWs({ coins: true });
   const [activeStep, setActiveStep] = useState<"request" | "transfer">("request");
   const [selectedCoin, setSelectedCoin] = useState<SelectedCoin>({
@@ -86,7 +86,7 @@ export const ExternalTransfer = () => {
       // WebSocket auto-refreshes balances
       refreshBalances();
       successNotification("Transfer successful");
-      modals.closeAll();
+      if (!embedded) modals.closeAll();
     },
     onError: (e) => errorMessageHandler(e),
   });
@@ -155,12 +155,14 @@ export const ExternalTransfer = () => {
             Request a one-time release code, then review and confirm the transfer
           </p>
         </div>
-        <button
-          onClick={() => modals.closeAll()}
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1] transition-all active:scale-95 text-white/60 hover:text-white"
-        >
-          <MdOutlineClose size={16} />
-        </button>
+        {!embedded && (
+          <button
+            onClick={() => modals.closeAll()}
+            className="w-8 h-8 rounded-full flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1] transition-all active:scale-95 text-white/60 hover:text-white"
+          >
+            <MdOutlineClose size={16} />
+          </button>
+        )}
       </div>
 
       {/* Step switcher */}

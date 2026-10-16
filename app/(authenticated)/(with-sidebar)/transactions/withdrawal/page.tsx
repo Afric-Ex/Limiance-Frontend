@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Copy } from "@/src/components/shared/copy";
 import {
   Accordion,
@@ -22,11 +23,11 @@ import {
   TableTr,
   Skeleton as MantineSkeleton,
   Select,
+  TextInput,
   Tooltip,
 } from "@mantine/core";
 import { MdKeyboardArrowRight, MdOutlineHelp, MdOutlineSendToMobile } from "react-icons/md";
 import { TokenNetworkModal } from "@/src/components/transactions/token-network-modal";
-import { WhitelistedAddressModal } from "@/src/components/assets/whitelisted-address-modal";
 import { MethodSelectModal } from "@/src/components/shared/method-select-modal";
 import { Send } from "@/src/components/icons/send";
 import { Transfer } from "@/src/components/icons/transfer";
@@ -165,10 +166,10 @@ function WithdrawalInner() {
   });
 
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
-  const [whitelistModalOpened, { open: openWhitelistModal, close: closeWhitelistModal }] = useDisclosure(false);
   // Withdrawal method picked right after coin + network, before the address step.
-  const [withdrawMethod, setWithdrawMethod] = useState<"onchain" | "internal" | null>(null);
+  const [withdrawMethod, setWithdrawMethod] = useState<"onchain" | null>(null);
   const [methodModalOpened, { open: openMethodModal, close: closeMethodModal }] = useDisclosure(false);
+  const router = useRouter();
   const selectedWhitelistChain =
     selectedNetwork?.blockchain || selectedNetwork?.symbol || "";
 
@@ -233,21 +234,24 @@ function WithdrawalInner() {
           : "Pending activation",
       };
     });
-  const activeAddresses = addressesForNetwork.filter(({ pending }) => !pending);
-
   const selectedWhitelistedEntry = addressesForNetwork.find(
     ({ address }) =>
       form.values.address &&
       address.toLowerCase() === form.values.address.toLowerCase()
   );
 
+  const pendingEntry = addressesForNetwork.find(
+    ({ address, pending }) =>
+      pending &&
+      form.values.address &&
+      address.toLowerCase() === form.values.address.toLowerCase()
+  );
+
   const addressError =
     form.values.address && selectedNetwork?.symbol
-      ? activeAddresses.some(
-          ({ address }) => address.toLowerCase() === form.values.address.toLowerCase()
-        )
-        ? validateWhitelistAddress(form.values.address, selectedNetwork.symbol)
-        : "Select an active whitelisted address"
+      ? pendingEntry
+        ? "This address is still within its activation window"
+        : validateWhitelistAddress(form.values.address, selectedNetwork.symbol)
       : null;
 
   const amountError =
@@ -291,23 +295,13 @@ function WithdrawalInner() {
           {
             icon: <Transfer />,
             title: "Internal Transfer",
-            description: "withdrawal via Bybit UID/email/mobile - 0 fee",
-            badge: "Soon",
+            description: "Send to a Limiance user ID — no network fee",
             onSelect: () => {
-              setWithdrawMethod("internal");
               closeMethodModal();
+              router.push("/transactions/internal-transfer");
             },
           },
         ]}
-      />
-
-      <WhitelistedAddressModal
-        opened={whitelistModalOpened}
-        onClose={closeWhitelistModal}
-        chain={selectedWhitelistChain}
-        networkSymbol={selectedNetwork?.symbol ?? ""}
-        onAdded={(address) => form.setFieldValue("address", address)}
-        existingAddresses={whitelistedAddresses}
       />
 
       {/* Main Grid */}
@@ -378,54 +372,36 @@ function WithdrawalInner() {
               <Button fullWidth onClick={openMethodModal}>
                 Choose withdrawal method
               </Button>
-            ) : withdrawMethod === "internal" ? (
-              <div className="flex flex-col gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 items-center text-center">
-                <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-white/[0.08] text-white/50">
-                  Coming soon
-                </span>
-                <p className="text-sm font-bold text-white">Internal Transfer</p>
-                <p className="text-xs text-white/40 leading-relaxed">
-                  Send via Bybit UID, email or mobile with 0 fee — coming soon.
-                </p>
-                <Button variant="subtle" onClick={() => setWithdrawMethod("onchain")}>
-                  Use on-chain instead
-                </Button>
-              </div>
-            ) : whitelistLoading ? (
-              <div className="flex justify-center py-3"><InlineLoading /></div>
-            ) : whitelistError ? (
-              <Button variant="subtle" color="red" onClick={() => void refetchWhitelist()}>
-                Unable to load whitelisted accounts. Retry
-              </Button>
-            ) : addressesForNetwork.length === 0 ? (
-              <Button fullWidth onClick={openWhitelistModal}>
-                Add whitelisted account
-              </Button>
             ) : (
               <>
             {/* Address */}
             <div className="flex flex-col gap-2.5">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Recipient Address</label>
-                {addressesForNetwork.length > 0 ? (
-                  <Link
-                    href="/account/whitelisted-wallets"
-                    className="flex items-center gap-0.5 text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
-                  >
-                    Manage whitelisted account
-                    <MdKeyboardArrowRight size={14} />
-                  </Link>
-                ) : (
+                <Link
+                  href="/account/whitelisted-wallets"
+                  className="flex items-center gap-0.5 text-xs font-semibold text-primary hover:text-primary/70 transition-colors whitespace-nowrap"
+                >
+                  Manage whitelisted accounts
+                  <MdKeyboardArrowRight size={14} />
+                </Link>
+              </div>
+
+              {whitelistLoading ? (
+                <div className="flex justify-center py-3"><InlineLoading /></div>
+              ) : whitelistError ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                  <span className="text-xs text-white/50">Whitelisted accounts could not be loaded.</span>
                   <button
                     type="button"
-                    onClick={openWhitelistModal}
+                    onClick={() => void refetchWhitelist()}
                     className="text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
                   >
-                    + Add address
+                    Retry
                   </button>
-                )}
-              </div>
-              <Select
+                </div>
+              ) : addressesForNetwork.length > 0 ? (
+                <Select
                 classNames={{ input: inputClass, dropdown: "!bg-[#181a20] !border-white/[0.08] !rounded-xl" }}
                 placeholder="Select a whitelisted address"
                 data={addressesForNetwork.map(({ address, name, pending }) => ({
@@ -433,9 +409,8 @@ function WithdrawalInner() {
                   label: name || truncateWhitelistAddress(address),
                   disabled: pending,
                 }))}
-                value={form.values.address || null}
+                value={selectedWhitelistedEntry ? form.values.address : null}
                 onChange={(value) => form.setFieldValue("address", value ?? "")}
-                error={addressError}
                 renderOption={({ option }) => {
                   const entry = addressesForNetwork.find(({ address }) => address === option.value);
                   return (
@@ -462,6 +437,14 @@ function WithdrawalInner() {
                     </div>
                   );
                 }}
+                />
+              ) : null}
+
+              <TextInput
+                placeholder={addressesForNetwork.length > 0 ? "Or paste a recipient address" : "Paste recipient address"}
+                classNames={{ input: inputClass }}
+                {...form.getInputProps("address")}
+                error={addressError}
               />
               {selectedWhitelistedEntry ? (
                 <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
