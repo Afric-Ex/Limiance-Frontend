@@ -27,7 +27,8 @@ import { WalletDropdown } from "@/src/components/assets/wallet-dropdown";
 import { assetKeys, asset } from "@/src/services/asset";
 import { readNumber, readEnvelopeNumber, unwrapObject } from "@/src/lib/api-response";
 import { useQuery } from "@tanstack/react-query";
-import { truncateCryptoAddress } from "@/src/utils/truncate-address";
+import { truncateCryptoAddress, isZeroAddress } from "@/src/utils/truncate-address";
+import { fmtDate } from "@/src/components/orders/orders-shared";
 import { useInfiniteList } from "@/src/hooks/use-infinite-list";
 import { InfiniteScrollTrigger } from "@/src/components/shared/infinite-scroll-trigger";
 
@@ -413,7 +414,7 @@ function DepositInner() {
 
                 {history?.map((item: any) => (
                   <TableTr key={item.id}>
-                    <TableTd className="pl-6 !text-white/40">{item.completedAt}</TableTd>
+                    <TableTd className="pl-6 !text-white/40">{fmtDate(item.completedAt || item.createdAt)}</TableTd>
                     <TableTd>
                       <span className="flex items-center gap-2">
                         {(() => {
@@ -433,10 +434,14 @@ function DepositInner() {
                     </TableTd>
                     <TableTd className="!text-white !font-bold">{item.amount}</TableTd>
                     <TableTd>
-                      <span className="flex items-center gap-2">
-                        <span className="font-mono text-xs">{truncateCryptoAddress(item.hash)}</span>
-                        <Copy color="var(--primary)" text={item.hash} />
-                      </span>
+                      {item.hash && !isZeroAddress(item.hash) ? (
+                        <span className="flex items-center gap-2">
+                          <span className="font-mono text-xs">{truncateCryptoAddress(item.hash)}</span>
+                          <Copy color="var(--primary)" text={item.hash} />
+                        </span>
+                      ) : (
+                        <span className="text-white/30">—</span>
+                      )}
                     </TableTd>
                     <TableTd className="uppercase font-bold">{item.chain}</TableTd>
                     <TableTd>

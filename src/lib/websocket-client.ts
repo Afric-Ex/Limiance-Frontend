@@ -79,6 +79,10 @@ class WebSocketClient {
    *  topic, so this is what lets us reach handlers across every distinct payload. */
   private topicIndex = new Map<string, Set<string>>();
   private statusHandlers = new Set<WsStatusHandler>();
+  /** Every parsed frame, regardless of subscription. Request/response flows
+   *  (e.g. order placement over WS) use this because the reply topic is not
+   *  known upfront and must not require a fake subscription. */
+  private globalHandlers = new Set<WsMessageHandler>();
   private intentionalClose = false;
   private idleCloseTimeout: NodeJS.Timeout | null = null;
   /** Set on auth-rejection close codes to prevent futile reconnect loops. */
@@ -147,6 +151,17 @@ class WebSocketClient {
     handler(this.isConnected);
     return () => {
       this.statusHandlers.delete(handler);
+    };
+  }
+
+  /**
+   * Observe every parsed inbound frame, independent of topic subscriptions.
+   * Used by request/response flows whose reply type is not known upfront.
+   */
+  public onAnyMessage(handler: WsMessageHandler): () => void {
+    this.globalHandlers.add(handler);
+    return () => {
+      this.globalHandlers.delete(handler);
     };
   }
 
@@ -241,6 +256,17 @@ class WebSocketClient {
           const msg = JSON.parse(event.data);
           const type = msg.type;
           if (!type) return;
+
+          this.globalHandlers.forEach((handler) => {
+            try {
+              handler(msg.data, msg);
+            } catch (handlerErr) {
+              console.error(
+                "[WebSocketClient] Global handler error",
+                redactDiagnostic({ error: handlerErr })
+              );
+            }
+          });
 
           // Dispatch by topic only — the server never echoes the payload back.
           // Fan out to every distinct payload registered under this topic; each

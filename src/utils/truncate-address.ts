@@ -15,3 +15,8 @@ export function truncateCryptoAddress(
 
   return `${start}${separator}${end}`;
 }
+
+/** All-zero EVM address — the backend's placeholder for "no address yet". */
+export function isZeroAddress(address: string | null | undefined): boolean {
+  return !!address && /^0x0{40}$/i.test(address.trim());
+}

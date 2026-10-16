@@ -13,6 +13,18 @@ export const parseDate = (value: unknown): Date | null => {
   const str = String(value).trim();
   const direct = new Date(str);
   if (!Number.isNaN(direct.getTime())) return direct;
+  // Handles Go-style backend format like "2026-10-15 13:39:35.123262 +0000 UTC"
+  // (Safari rejects it in `new Date`, so parse the parts manually).
+  const go = str.match(
+    /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?\s*([+-])(\d{2}):?(\d{2})/
+  );
+  if (go) {
+    const [, year, month, day, hour, minute, second, frac, sign, offHour, offMinute] = go;
+    const ms = Number((frac ?? "0").slice(0, 3).padEnd(3, "0"));
+    const utc = Date.UTC(+year, +month - 1, +day, +hour, +minute, +second, ms);
+    const offset = (sign === "-" ? -1 : 1) * (Number(offHour) * 60 + Number(offMinute)) * 60000;
+    return new Date(utc - offset);
+  }
   // Handles backend format like "Monday 21 September 2026 12:29:06PM"
   const m = str.match(/^[A-Za-z]+,?\s+(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
   if (!m) return null;
@@ -40,6 +52,9 @@ export const fmtNum = (value: unknown, fallback = "—", maxDigits = 8) => {
 };
 
 export const fmtDate = (value: unknown, fallback = "—") => {
+  // Go zero-time ("0001-01-01 ...") means "not set" — treat it as empty.
+  const str = String(value ?? "").trim();
+  if (!str || str.startsWith("0001-01-01")) return fallback;
   const d = parseDate(value);
   return !d
     ? fallback

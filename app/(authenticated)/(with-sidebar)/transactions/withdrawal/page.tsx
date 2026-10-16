@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Copy } from "@/src/components/shared/copy";
 import {
   Accordion,
@@ -21,13 +22,14 @@ import {
   TableTr,
   Skeleton as MantineSkeleton,
   Select,
-  TextInput,
   Tooltip,
 } from "@mantine/core";
 import { MdKeyboardArrowRight, MdOutlineHelp, MdOutlineSendToMobile } from "react-icons/md";
-import { FiXCircle } from "react-icons/fi";
 import { TokenNetworkModal } from "@/src/components/transactions/token-network-modal";
 import { WhitelistedAddressModal } from "@/src/components/assets/whitelisted-address-modal";
+import { MethodSelectModal } from "@/src/components/shared/method-select-modal";
+import { Send } from "@/src/components/icons/send";
+import { Transfer } from "@/src/components/icons/transfer";
 import { useWithdrawal } from "@/src/hooks/use-withdrawal";
 import { useDisclosure } from "@mantine/hooks";
 import { InlineLoading } from "@/src/components/shared/inline-loading";
@@ -35,7 +37,7 @@ import { WalletDropdown } from "@/src/components/assets/wallet-dropdown";
 import { assetKeys, asset } from "@/src/services/asset";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { useQuery } from "@tanstack/react-query";
-import { truncateCryptoAddress } from "@/src/utils/truncate-address";
+import { truncateCryptoAddress, isZeroAddress } from "@/src/utils/truncate-address";
 import { useInfiniteList } from "@/src/hooks/use-infinite-list";
 import { InfiniteScrollTrigger } from "@/src/components/shared/infinite-scroll-trigger";
 import { IoMdInformationCircleOutline } from "react-icons/io";
@@ -46,6 +48,7 @@ import {
   truncateWhitelistAddress,
   validateWhitelistAddress,
 } from "@/src/lib/whitelist";
+import { fmtDate } from "@/src/components/orders/orders-shared";
 
 const faqs = [
   {
@@ -163,6 +166,9 @@ function WithdrawalInner() {
 
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [whitelistModalOpened, { open: openWhitelistModal, close: closeWhitelistModal }] = useDisclosure(false);
+  // Withdrawal method picked right after coin + network, before the address step.
+  const [withdrawMethod, setWithdrawMethod] = useState<"onchain" | "internal" | null>(null);
+  const [methodModalOpened, { open: openMethodModal, close: closeMethodModal }] = useDisclosure(false);
   const selectedWhitelistChain =
     selectedNetwork?.blockchain || selectedNetwork?.symbol || "";
 
@@ -199,15 +205,45 @@ function WithdrawalInner() {
   ]
     .filter(Boolean)
     .map((chain) => String(chain).toLowerCase());
-  const addressesForNetwork = whitelistedAddresses.filter(
-    ({ chain, isActive }) =>
-      isActive === true &&
-      (!chain || selectedChainNames.includes(chain.toLowerCase()))
+
+  // Whitelisted addresses sit in a cooling period after being added: the
+  // backend sends isActive: false with a future activatesAt. Show those too
+  // (disabled, with their activation time) — hiding them made a second SOL
+  // address look like it was missing.
+  const now = Date.now();
+  const addressesForNetwork = whitelistedAddresses
+    .filter(
+      ({ chain }) => !chain || selectedChainNames.includes(chain.toLowerCase())
+    )
+    .map((entry) => {
+      const activationTime = entry.activatesAt ? Date.parse(entry.activatesAt) : NaN;
+      const pending =
+        entry.isActive === false &&
+        (!Number.isFinite(activationTime) || activationTime > now);
+      return {
+        ...entry,
+        pending,
+        pendingLabel: Number.isFinite(activationTime)
+          ? `Activates ${new Date(activationTime).toLocaleString(undefined, {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}`
+          : "Pending activation",
+      };
+    });
+  const activeAddresses = addressesForNetwork.filter(({ pending }) => !pending);
+
+  const selectedWhitelistedEntry = addressesForNetwork.find(
+    ({ address }) =>
+      form.values.address &&
+      address.toLowerCase() === form.values.address.toLowerCase()
   );
 
   const addressError =
     form.values.address && selectedNetwork?.symbol
-      ? addressesForNetwork.some(
+      ? activeAddresses.some(
           ({ address }) => address.toLowerCase() === form.values.address.toLowerCase()
         )
         ? validateWhitelistAddress(form.values.address, selectedNetwork.symbol)
@@ -231,7 +267,38 @@ function WithdrawalInner() {
         onSelect={(coin, network) => {
           setSelectedCoin(coin);
           setSelectedNetwork(network);
+          // Ask for the withdrawal method before the address step.
+          setWithdrawMethod(null);
+          openMethodModal();
         }}
+      />
+
+      <MethodSelectModal
+        opened={methodModalOpened}
+        onClose={closeMethodModal}
+        title="Withdraw"
+        subtitle="Choose how you want to withdraw"
+        options={[
+          {
+            icon: <Send />,
+            title: "On-Chain",
+            description: "Withdrawal to an on-chain address",
+            onSelect: () => {
+              setWithdrawMethod("onchain");
+              closeMethodModal();
+            },
+          },
+          {
+            icon: <Transfer />,
+            title: "Internal Transfer",
+            description: "withdrawal via Bybit UID/email/mobile - 0 fee",
+            badge: "Soon",
+            onSelect: () => {
+              setWithdrawMethod("internal");
+              closeMethodModal();
+            },
+          },
+        ]}
       />
 
       <WhitelistedAddressModal
@@ -307,6 +374,23 @@ function WithdrawalInner() {
 
             {!selectedWhitelistChain ? (
               <p className="text-sm text-white/40">Select a chain above</p>
+            ) : withdrawMethod == null ? (
+              <Button fullWidth onClick={openMethodModal}>
+                Choose withdrawal method
+              </Button>
+            ) : withdrawMethod === "internal" ? (
+              <div className="flex flex-col gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 items-center text-center">
+                <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-white/[0.08] text-white/50">
+                  Coming soon
+                </span>
+                <p className="text-sm font-bold text-white">Internal Transfer</p>
+                <p className="text-xs text-white/40 leading-relaxed">
+                  Send via Bybit UID, email or mobile with 0 fee — coming soon.
+                </p>
+                <Button variant="subtle" onClick={() => setWithdrawMethod("onchain")}>
+                  Use on-chain instead
+                </Button>
+              </div>
             ) : whitelistLoading ? (
               <div className="flex justify-center py-3"><InlineLoading /></div>
             ) : whitelistError ? (
@@ -320,25 +404,81 @@ function WithdrawalInner() {
             ) : (
               <>
             {/* Address */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Recipient Address</label>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Recipient Address</label>
+                {addressesForNetwork.length > 0 ? (
+                  <Link
+                    href="/account/whitelisted-wallets"
+                    className="flex items-center gap-0.5 text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
+                  >
+                    Manage whitelisted account
+                    <MdKeyboardArrowRight size={14} />
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={openWhitelistModal}
+                    className="text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
+                  >
+                    + Add address
+                  </button>
+                )}
+              </div>
               <Select
-                classNames={{ input: inputClass, dropdown: "!bg-[#181a20] !border-white/[0.08]" }}
+                classNames={{ input: inputClass, dropdown: "!bg-[#181a20] !border-white/[0.08] !rounded-xl" }}
                 placeholder="Select a whitelisted address"
-                data={addressesForNetwork.map(({ address, name }) => ({
+                data={addressesForNetwork.map(({ address, name, pending }) => ({
                   value: address,
-                  label: name ? `${name} (${address})` : address,
+                  label: name || truncateWhitelistAddress(address),
+                  disabled: pending,
                 }))}
                 value={form.values.address || null}
                 onChange={(value) => form.setFieldValue("address", value ?? "")}
                 error={addressError}
-                renderOption={({ option }) => (
-                  <span className="block w-full break-all font-mono text-xs leading-5 text-white/80">
-                    {truncateWhitelistAddress(option.value)}
-                  </span>
-                )}
+                renderOption={({ option }) => {
+                  const entry = addressesForNetwork.find(({ address }) => address === option.value);
+                  return (
+                    <div className="flex items-center justify-between gap-3 w-full">
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        {entry?.name ? (
+                          <span className="text-xs font-semibold text-white/80 truncate">{entry.name}</span>
+                        ) : null}
+                        <span className="block w-full break-all font-mono text-xs leading-5 text-white/60">
+                          {truncateWhitelistAddress(option.value)}
+                        </span>
+                      </div>
+                      {entry ? (
+                        <span
+                          className={
+                            entry.pending
+                              ? "shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning-1/10 text-warning-1 border border-warning-1/20"
+                              : "shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success-6/10 text-success-6 border border-success-6/20"
+                          }
+                        >
+                          {entry.pending ? entry.pendingLabel : "Active"}
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                }}
               />
+              {selectedWhitelistedEntry ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-xs font-semibold text-white/80">
+                      {selectedWhitelistedEntry.name || "Whitelisted address"}
+                    </span>
+                    <span className="break-all font-mono text-xs text-white/50">
+                      {truncateWhitelistAddress(selectedWhitelistedEntry.address)}
+                    </span>
+                  </div>
+                  <Copy text={selectedWhitelistedEntry.address} />
+                </div>
+              ) : null}
             </div>
+
+            <div className="h-px w-full bg-white/[0.06]" />
 
             {/* Amount */}
             <div className="flex flex-col gap-2">
@@ -596,7 +736,7 @@ function WithdrawalInner() {
 
                 {history?.map((item: any) => (
                   <TableTr key={item.id}>
-                    <TableTd className="pl-6 !text-white/40">{item.completedAt}</TableTd>
+                    <TableTd className="pl-6 !text-white/40">{fmtDate(item.completedAt || item.createdAt)}</TableTd>
                     <TableTd>
                       <span className="flex items-center gap-2">
                         {(() => {
@@ -616,10 +756,14 @@ function WithdrawalInner() {
                     </TableTd>
                     <TableTd className="!text-white !font-bold">{item.amount}</TableTd>
                     <TableTd>
-                      <span className="flex items-center gap-2">
-                        <span className="font-mono text-xs">{truncateCryptoAddress(item.hash)}</span>
-                        <Copy color="var(--primary)" text={item.hash} />
-                      </span>
+                      {item.hash && !isZeroAddress(item.hash) ? (
+                        <span className="flex items-center gap-2">
+                          <span className="font-mono text-xs">{truncateCryptoAddress(item.hash)}</span>
+                          <Copy color="var(--primary)" text={item.hash} />
+                        </span>
+                      ) : (
+                        <span className="text-white/30">—</span>
+                      )}
                     </TableTd>
                     <TableTd className="uppercase font-bold">{item.chain}</TableTd>
                     <TableTd>

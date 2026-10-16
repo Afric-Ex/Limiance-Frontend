@@ -120,8 +120,8 @@ function MarginTrades() {
   });
 
   const { data: orderHistory, isLoading: orderHistoryLoading } = useQuery({
-    queryKey: tradingKeys.orderHistory("margin", selectedPair),
-    queryFn: () => tradingService.marketOrderHistory("margin", { pair: selectedPair }),
+    queryKey: tradingKeys.orderHistory("margin"),
+    queryFn: () => tradingService.marketOrderHistory("margin"),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
@@ -133,8 +133,8 @@ function MarginTrades() {
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "margin");
 
   const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
-    queryKey: tradingKeys.tradeHistory("margin", selectedPair),
-    queryFn: () => tradingService.tradeHistory("margin", selectedPair),
+    queryKey: tradingKeys.tradeHistory("margin"),
+    queryFn: () => tradingService.tradeHistory("margin"),
     select: (res: unknown) => readList<Record<string, unknown>>(res),
     retry: false,
     throwOnError: false,

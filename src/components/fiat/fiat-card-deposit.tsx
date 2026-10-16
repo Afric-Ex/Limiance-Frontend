@@ -16,6 +16,22 @@ const cardInputClass = {
   section: "!text-white/40 hover:!text-white",
 } as const;
 
+/**
+ * TEMPORARY test cards for fiat QA (Monnify sandbox). Shown only outside
+ * production builds (or when NEXT_PUBLIC_TEST_CARDS=true), so this can never
+ * leak into the production UI. Delete this block when testing is done.
+ * Format from QA: card number, MM/YYYY expiry, PIN, CVV.
+ */
+const TEST_CARDS = [
+  { label: "No OTP", number: "4111111111111111", month: "10", year: "25", pin: "1234", cvv: "123" },
+  { label: "OTP", number: "5060995994247093", month: "12", year: "25", pin: "1234", cvv: "123" },
+  { label: "3DS", number: "4000000000000002", month: "12", year: "25", pin: "1234", cvv: "123" },
+  { label: "Fail", number: "4111111111111110", month: "10", year: "25", pin: "1234", cvv: "123" },
+] as const;
+
+const SHOW_TEST_CARDS =
+  process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_TEST_CARDS === "true";
+
 function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -169,7 +185,13 @@ export const FiatCardDeposit = () => {
     retryCoins,
     assetSearch,
     setAssetSearch,
+    rate,
+    quotedReceivedAmount,
+    rateLoading,
+    quoteFailed,
   } = useFiatCardDeposit();
+
+  const amountValid = Number(form.values.amount) > 0;
 
   const expiryValid =
     /^(0[1-9]|1[0-2])$/.test(form.values.cardExpiryMonth) &&
@@ -179,7 +201,7 @@ export const FiatCardDeposit = () => {
     form.values.cardNumber.replace(/\s/g, "").length === 16 &&
     expiryValid &&
     form.values.cardCvv.length === 3 &&
-    Number(form.values.amount) > 0;
+    amountValid;
 
   const cardPayload = {
     cardNumber: form.values.cardNumber.replace(/\s/g, ""),
@@ -234,6 +256,35 @@ export const FiatCardDeposit = () => {
             />
           </div>
         </div>
+
+        {/* TEMPORARY test-card picker (dev only, see TEST_CARDS above) */}
+        {SHOW_TEST_CARDS ? (
+          <div className="flex flex-col gap-2 rounded-xl border border-dashed border-warning-1/30 bg-warning-1/[0.04] p-3">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-warning-1/80">
+              Test cards — tap to fill (dev only)
+            </span>
+            <div className="grid grid-cols-2 min-[420px]:grid-cols-4 gap-2">
+              {TEST_CARDS.map((card) => (
+                <button
+                  key={card.label}
+                  type="button"
+                  title={`${card.number} · ${card.month}/${card.year} · PIN ${card.pin} · CVV ${card.cvv}`}
+                  onClick={() => {
+                    form.setFieldValue("cardNumber", card.number);
+                    form.setFieldValue("cardExpiryMonth", card.month);
+                    form.setFieldValue("cardExpiryYear", card.year);
+                    form.setFieldValue("cardPin", card.pin);
+                    form.setFieldValue("cardCvv", card.cvv);
+                  }}
+                  className="flex flex-col items-start gap-0.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-left transition-colors hover:border-primary/60 hover:bg-primary/[0.08] active:scale-[0.98]"
+                >
+                  <span className="text-[11px] font-bold text-white">{card.label}</span>
+                  <span className="font-mono text-[10px] text-white/50">•••• {card.number.slice(-4)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {/* Card Number */}
         <div className="flex flex-col gap-2">
@@ -299,10 +350,38 @@ export const FiatCardDeposit = () => {
           />
         </div>
 
+        {/* summary strip */}
+        <div className="grid grid-cols-3 max-[630px]:flex max-[630px]:flex-col gap-3">
+          <div className="flex flex-col gap-1 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+            <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">You pay</span>
+            <span className="text-sm font-bold text-white tabular-nums">
+              {amountValid ? `₦${Number(form.values.amount).toLocaleString()}` : "—"}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+            <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Rate</span>
+            <span className="text-sm font-bold text-white tabular-nums">
+              {rate > 0 ? `₦${Number(rate).toLocaleString()}` : rateLoading ? "…" : "—"}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
+            <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">You receive</span>
+            <span className="text-sm font-bold text-primary tabular-nums">
+              {!amountValid
+                ? "—"
+                : rateLoading
+                  ? "≈ …"
+                  : quotedReceivedAmount
+                    ? `${quotedReceivedAmount} ${form.values.symbol}`
+                    : "—"}
+            </span>
+          </div>
+        </div>
+
         <Button
           onClick={() => pay()}
           loading={paying}
-          disabled={!cardValid}
+          disabled={!cardValid || quoteFailed}
           className="!h-[56px] !rounded-xl !bg-primary hover:!bg-primary/90 !text-white !font-bold !transition-all active:!scale-[0.98] disabled:!opacity-40"
         >
           Pay {form.values.amount ? `₦${Number(form.values.amount).toLocaleString()}` : ""}

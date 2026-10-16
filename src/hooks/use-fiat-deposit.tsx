@@ -271,6 +271,59 @@ export const useFiatCardDeposit = () => {
   const [pendingTokenId, setPendingTokenId] = useState("");
   const [authMode, setAuthMode] = useState<"otp" | "3ds" | null>(null);
 
+  // Same NGN→crypto quote as the bank flow so the card form can show the
+  // exchange rate and the estimated amount received before charging.
+  const quoteAmount = normalizeFiatQuoteAmount(form.values.amount);
+  const quoteSymbol = form.values.symbol.trim().toLowerCase();
+  const quoteCurrency = "ngn";
+  const {
+    data: quote,
+    isLoading: rateLoading,
+    isError: quoteQueryFailed,
+  } = useQuery({
+    queryKey: fiatKeys.quoteFor({
+      depositAmount: quoteAmount,
+      symbol: quoteSymbol,
+      currency: quoteCurrency,
+    }),
+    queryFn: () =>
+      fiatService.getQuote({
+        depositAmount: quoteAmount,
+        symbol: quoteSymbol,
+        currency: quoteCurrency,
+      }),
+    enabled: Number(quoteAmount) > 0 && !!quoteSymbol,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
+  const quoteBody: any = quote;
+  const quoteFailed =
+    quoteQueryFailed ||
+    (quoteBody != null &&
+      (quoteBody.success === false ||
+        (quoteBody.statusCode !== undefined &&
+          quoteBody.statusCode !== "" &&
+          Number(quoteBody.statusCode) !== 200) ||
+        (typeof quoteBody.error === "string" && quoteBody.error !== "")));
+
+  const quoteToastKey = `${quoteAmount}:${quoteSymbol}:${quoteCurrency}`;
+  const toastedQuoteFailures = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!quoteFailed) return;
+    if (toastedQuoteFailures.current.has(quoteToastKey)) return;
+    toastedQuoteFailures.current.add(quoteToastKey);
+    const coinLabel = (quoteSymbol || "").toUpperCase() || "this coin";
+    errorNotification(
+      `Quote unavailable for ${coinLabel} — please select another coin and try again.`
+    );
+  }, [quoteFailed, quoteToastKey, quoteSymbol]);
+
+  const rate = Number(quote?.rate) || 0;
+  const quotedReceivedAmount = getFiatQuoteReceivedAmount(
+    quote?.symbolAmountToReceive ?? quote?.symbolAmountToReceived
+  );
+
   const finishCardAuth = (message?: string) => {
     successNotification(message || "Card payment successful — your assets will be credited shortly.");
     setAuthMode(null);
@@ -362,6 +415,10 @@ export const useFiatCardDeposit = () => {
     retryCoins,
     assetSearch,
     setAssetSearch,
+    rate,
+    quotedReceivedAmount,
+    rateLoading,
+    quoteFailed,
     paying,
     pay,
     pendingReference,

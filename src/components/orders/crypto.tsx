@@ -14,6 +14,7 @@ import {
   tableClassNames,
   ChipToggle,
 } from "./orders-shared";
+import { truncateCryptoAddress, isZeroAddress } from "@/src/utils/truncate-address";
 
 export const Crypto = () => {
   const [type, setType] = useState<"Deposit" | "Withdrawal">("Deposit");
@@ -67,10 +68,26 @@ export const Crypto = () => {
               <TableTr key={tx.id ?? idx}>
                 <TableTd className="pl-5 text-white/50">{fmtDateTime(tx.createdAt)}</TableTd>
                 <TableTd className="capitalize">{tx.type ?? type}</TableTd>
-                <TableTd>{tx.wallet ?? "—"}</TableTd>
+                <TableTd>
+                  {(() => {
+                    const wallet = String(tx.wallet ?? "").trim();
+                    if (!wallet || isZeroAddress(wallet)) return "—";
+                    return <span title={wallet}>{truncateCryptoAddress(wallet)}</span>;
+                  })()}
+                </TableTd>
                 <TableTd className="!text-white !font-bold">{tx.coin ?? tx.asset ?? "—"}</TableTd>
                 <TableTd className="tabular-nums !text-white">{fmtNum(tx.amount)}</TableTd>
-                <TableTd className="font-mono text-xs !text-white/60">{tx.destination ?? tx.address ?? "—"}</TableTd>
+                <TableTd className="font-mono text-xs !text-white/60">
+                  {(() => {
+                    const destination = String(tx.destination ?? tx.address ?? "").trim();
+                    // The all-zero address is the backend's "not set" placeholder —
+                    // printing 42 zeroes wraps the row and means nothing to users.
+                    if (!destination || isZeroAddress(destination)) return "—";
+                    return (
+                      <span title={destination}>{truncateCryptoAddress(destination)}</span>
+                    );
+                  })()}
+                </TableTd>
                 <TableTd><StatusPill status={tx.status} fallback="Completed" /></TableTd>
               </TableTr>
             ))}

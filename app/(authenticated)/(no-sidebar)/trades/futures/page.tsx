@@ -14,6 +14,7 @@ import { errorMessageHandler } from '@/src/lib/error-handler';
 import { successNotification } from '@/src/lib/notification-handler';
 import { useUserStore } from '@/src/stores/user-store';
 import { tradingService, tradingKeys } from '@/src/services/trading';
+import { placeFuturesOrderWs, closeFuturesPositionWs } from '@/src/lib/order-ws';
 import { DEFAULT_MODAL_SETTINGS } from '@/src/utils/constants';
 import {
   Checkbox,
@@ -232,9 +233,9 @@ function FuturesTradesInner() {
     throwOnError: false,
   });
 
-  const { data: futuresOrderHistory, isLoading: futuresOrderHistoryLoading } = useQuery({
-    queryKey: tradingKeys.orderHistory("futures", selectedPair),
-    queryFn: () => tradingService.marketOrderHistory("futures", { pair: selectedPair }),
+  const { data: futuresOrderHistory, isLoading: _futuresOrderHistoryLoading } = useQuery({
+    queryKey: tradingKeys.orderHistory("futures"),
+    queryFn: () => tradingService.marketOrderHistory("futures"),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
@@ -246,15 +247,15 @@ function FuturesTradesInner() {
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "futures");
 
   const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
-    queryKey: tradingKeys.tradeHistory("futures", selectedPair),
-    queryFn: () => tradingService.tradeHistory("futures", selectedPair),
+    queryKey: tradingKeys.tradeHistory("futures"),
+    queryFn: () => tradingService.tradeHistory("futures"),
     select: (res: unknown) => readList<Record<string, unknown>>(res),
     retry: false,
     throwOnError: false,
   });
 
   const { mutate: closePosition } = useMutation({
-    mutationFn: (positionId: string) => tradingService.closeFuturesPosition({ positionId }),
+    mutationFn: (positionId: string) => closeFuturesPositionWs(positionId),
     onSuccess: () => {
       successNotification('Position closed successfully');
       refreshBalances(); // re-requests WS portfolio + positions
@@ -649,7 +650,7 @@ function FuturesTradesInner() {
         ...(tpslEnabled && Number(stopLoss) ? { stopLoss: Number(stopLoss) } : {}),
       };
 
-      return tradingService.placeFuturesOrder(payload);
+      return placeFuturesOrderWs(payload);
     },
     onSuccess: (_, side) => {
       setPlacedFill({

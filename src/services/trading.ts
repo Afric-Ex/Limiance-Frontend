@@ -52,10 +52,8 @@ export const tradingService = {
     return response.data;
   },
 
-  tradeHistory: async (market: TradingMarket, pair?: string) => {
-    const response = await api.get("trade-history", {
-      params: { market, ...(pair ? { pair } : {}) },
-    });
+  tradeHistory: async (market: TradingMarket) => {
+    const response = await api.get("trading/history", { params: { market } });
     return response.data;
   },
 
@@ -246,8 +244,8 @@ export const tradingService = {
     return tradingService.marketOrderHistory("margin");
   },
 
-  marginTradeHistory: async (params?: { pair?: string }) => {
-    return tradingService.tradeHistory("margin", params?.pair);
+  marginTradeHistory: async () => {
+    return tradingService.tradeHistory("margin");
   },
 
   fetchMarginOpenOrders: async (params?: { pair?: string }) => {
@@ -336,8 +334,8 @@ export const tradingService = {
     return { ...response.data, data: filterOrdersByPair(response.data.data, params?.pair) };
   },
 
-  futuresTradeHistory: async (params?: { pair?: string }) => {
-    return tradingService.tradeHistory("futures", params?.pair);
+  futuresTradeHistory: async () => {
+    return tradingService.tradeHistory("futures");
   },
 
   closeFuturesPosition: async (data: { positionId: string }) => {
@@ -391,8 +389,8 @@ export const tradingService = {
     return tradingService.marketOrderHistory("spot", params);
   },
 
-  spotTradeHistory: async (params?: { pair?: string }) => {
-    return tradingService.tradeHistory("spot", params?.pair);
+  spotTradeHistory: async () => {
+    return tradingService.tradeHistory("spot");
   },
 
   fetchSpotOrderById: async (id: string) => {
