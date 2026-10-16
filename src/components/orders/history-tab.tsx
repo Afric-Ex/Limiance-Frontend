@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { Search } from "../icons/search";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { cancelSpotOrderWs } from "@/src/lib/order-ws";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import {
@@ -32,10 +33,11 @@ export const OpenTab = () => {
   });
 
   const { mutate: cancelOrder } = useMutation({
-    mutationFn: (orderId: string): Promise<any> => tradingService.cancelSpotOrder(orderId),
+    mutationFn: (orderId: string): Promise<any> => cancelSpotOrderWs(orderId),
     onSuccess: () => {
       successNotification("Order cancelled");
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
+      queryClient.invalidateQueries({ queryKey: ["order-history"] });
     },
     onError: (e: any) => errorMessageHandler(e),
   });

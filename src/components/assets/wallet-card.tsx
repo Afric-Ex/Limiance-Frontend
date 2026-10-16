@@ -6,7 +6,11 @@ import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import React from "react";
 import { Convert } from "../icons/convert";
 import { Transfer } from "../icons/transfer";
+import { Pocket } from "../icons/pocket";
 import { Withdraw } from "../icons/withdraw";
+import { FiatOtc } from "../icons/fiat-otc";
+import { P2pTrading } from "../icons/p2p-trading";
+import { MethodSheet, SUCCESS_METHOD_STYLES } from "../shared/method-select-modal";
 import { useAssets } from "@/src/hooks/use-assets";
 import { useRouter } from "next/navigation";
 import { ConvertAsset } from "../transactions/convert-asset";
@@ -73,12 +77,61 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
 
   const balance = { inUsd: totalUsd, inBtc: totalBtc };
 
+  // The dashboard card (no title) swaps "Ext. Transfer" for "Earn" — every
+  // other page keeps the full transfer set.
+  const isDashboard = title == null;
+
+  const openWithdrawalMethodModal = () => {
+    const go = (href: string) => {
+      modals.closeAll();
+      push(href);
+    };
+    modals.open({
+      children: (
+        <MethodSheet
+          title="Select withdrawal method"
+          subtitle="Choose how you want to withdraw"
+          onClose={modals.closeAll}
+          options={[
+            {
+              icon: <Withdraw />,
+              title: "Crypto withdrawal",
+              description: "On-chain withdrawal | Bybit UID/email/mobile number",
+              onSelect: () => go("/transactions/withdrawal"),
+            },
+            {
+              icon: <FiatOtc />,
+              title: "Sell for NGN",
+              description: "Receive cash instantly in your bank account or e-wallet",
+              ...SUCCESS_METHOD_STYLES,
+              onSelect: () => go("/transactions/fiat-withdraw"),
+            },
+            {
+              icon: <P2pTrading />,
+              title: "P2P Trading",
+              description: "Sell directly to users | Competitive prices | Local payments",
+              ...SUCCESS_METHOD_STYLES,
+              onSelect: () => go("/trades/p2p"),
+            },
+          ]}
+        />
+      ),
+      ...DEFAULT_MODAL_SETTINGS,
+    });
+  };
+
   const buttons = [
     {
       icon: Withdraw,
       text: "Withdraw",
       isPrimary: false,
-      action: () => push("/transactions/withdrawal"),
+      action: () => {
+        if (isDashboard) {
+          openWithdrawalMethodModal();
+        } else {
+          push("/transactions/withdrawal");
+        }
+      },
     },
     {
       icon: Transfer,
@@ -92,12 +145,23 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
         }
       },
     },
-    {
-      icon: Transfer,
-      text: "Ext. Transfer",
-      isPrimary: false,
-      action: handleOpenExternalTransferModal,
-    },
+    ...(isDashboard
+      ? [
+          {
+            icon: Pocket,
+            text: "Earn",
+            isPrimary: false,
+            action: () => push("/assets/earn"),
+          },
+        ]
+      : [
+          {
+            icon: Transfer,
+            text: "Ext. Transfer",
+            isPrimary: false,
+            action: handleOpenExternalTransferModal,
+          },
+        ]),
     {
       icon: Convert,
       text: "Convert",

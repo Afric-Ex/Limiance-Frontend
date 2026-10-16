@@ -4,6 +4,7 @@ import { Search } from "@/src/components/icons/search";
 import { PlaceSpot, type TpslPreview } from "@/src/components/trades/place-spot";
 import { TradeRecordsList } from "@/src/components/trades/trade-records-list";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { cancelSpotOrderWs } from "@/src/lib/order-ws";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { useOrderBook } from "@/src/hooks/use-order-book";
 import { useRecentTrades } from "@/src/hooks/use-recent-trades";
@@ -122,11 +123,12 @@ function SpotTrades() {
 
   const { mutate: closeOrder, isPending: closeOrderPending } = useMutation({
     mutationFn: (orderId: string) =>
-      tradingService.closeSpotOrder(orderId, selectedPair),
+      cancelSpotOrderWs(orderId),
     onSuccess: () => {
       successNotification("Order cancelled");
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders(selectedPair) });
+      queryClient.invalidateQueries({ queryKey: ["order-history"] });
       refreshBalances();
     },
     onError: (e) => errorMessageHandler(e),

@@ -11,6 +11,7 @@ import { Copy } from "../shared/copy";
 import { InlineLoading } from "../shared/inline-loading";
 import { truncateCryptoAddress } from "@/src/utils/truncate-address";
 import { formatTransactionAmount, formatTransactionAsset } from "@/src/utils/transaction";
+import { fmtDate } from "../orders/orders-shared";
 
 export enum TransactionViews {
   RECENT = "recent",
@@ -75,7 +76,7 @@ export const Transactions = () => {
                 <TableTd>
                   <span className="flex flex-col gap-1">
                     <span className="text-xs font-medium text-gray-14">
-                      {item.completedAt}
+                      {fmtDate(item.completedAt || item.createdAt)}
                     </span>
                     {/* <span className="text-primary text-10px font-bold">
                                   18:16:23

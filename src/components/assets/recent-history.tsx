@@ -6,6 +6,7 @@ import { assetKeys, asset } from "@/src/services/asset";
 import Link from "next/link";
 import { Skeleton } from "../shared/skeleton";
 import { formatTransactionAmount, formatTransactionAsset } from "@/src/utils/transaction";
+import { fmtDate } from "../orders/orders-shared";
 
 /**
  * RecentHistory — Right column component for Assets Overview.
@@ -59,7 +60,7 @@ export const RecentHistory = () => {
                     {item.type}
                   </span>
                   <span className="text-[10px] text-white/40">
-                    {item.completedAt}
+                    {fmtDate(item.completedAt || item.createdAt)}
                   </span>
                 </div>
                 <div className="flex flex-col items-end gap-0.5 min-w-0">
