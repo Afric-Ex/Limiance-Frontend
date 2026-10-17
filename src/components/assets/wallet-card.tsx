@@ -21,7 +21,15 @@ import { Skeleton } from "../shared/skeleton";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import type { PortfolioBalanceAccount } from "@/src/lib/portfolio-store";
 
-export const WalletCard = ({ title, children }: { title?: string; children?: React.ReactNode }) => {
+export const WalletCard = ({
+  title,
+  children,
+  variant = "account",
+}: {
+  title?: string;
+  children?: React.ReactNode;
+  variant?: "account" | "dashboard";
+}) => {
   const { push } = useRouter();
   const {
     handleOpenInternalTransferModal,
@@ -37,7 +45,7 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
 
   // Account pages request their own balance alongside portfolio holdings;
   // the overview requests the overall balance.
-  const { balances, isLoading: balanceLoading, refreshBalances, isRefreshing } = usePortfolioWs(
+  const { balances, refreshBalances, isRefreshing } = usePortfolioWs(
     singleAccount
       ? { coins: true, balanceAccount: singleAccount }
       : { balance: true }
@@ -77,9 +85,10 @@ export const WalletCard = ({ title, children }: { title?: string; children?: Rea
 
   const balance = { inUsd: totalUsd, inBtc: totalBtc };
 
-  // The dashboard card (no title) swaps "Ext. Transfer" for "Earn" — every
-  // other page keeps the full transfer set.
-  const isDashboard = title == null;
+  // Dashboard-style cards (the dashboard itself, plus spot/futures/overview)
+  // open the withdrawal method modal and swap "Ext. Transfer" for "Earn";
+  // other account pages keep the full transfer set.
+  const isDashboard = variant === "dashboard" || title == null;
 
   const openWithdrawalMethodModal = () => {
     const go = (href: string) => {
