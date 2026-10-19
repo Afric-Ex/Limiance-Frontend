@@ -96,30 +96,77 @@ export function BuyCryptoSkeleton() {
   );
 }
 
-export function LimianceEarnSkeleton() {
+export function EarnLimSkeleton() {
   return (
     <SkeletonShell>
-      <SkeletonHeader titleWidth={200} subtitle />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <SkeletonCard titleWidth={120}>
-          <Skeleton variant="text" width={80} height={32} />
-          <Skeleton variant="text" width={100} height={14} />
-          <Skeleton variant="rect" width="100%" height={40} className="!rounded-xl mt-2" />
-        </SkeletonCard>
-        <SkeletonCard titleWidth={120}>
-          <Skeleton variant="text" width={80} height={32} />
-          <Skeleton variant="text" width={100} height={14} />
-          <Skeleton variant="rect" width="100%" height={40} className="!rounded-xl mt-2" />
-        </SkeletonCard>
-        <SkeletonCard titleWidth={120}>
-          <Skeleton variant="text" width={80} height={32} />
-          <Skeleton variant="text" width={100} height={14} />
-          <Skeleton variant="rect" width="100%" height={40} className="!rounded-xl mt-2" />
+      <SkeletonHeader titleWidth={180} subtitle action={false} />
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+        <div className="xl:col-span-3 flex flex-col gap-6">
+          <SkeletonCard titleWidth={120} actionWidth={80}>
+            <div className="flex flex-col gap-4">
+              <Skeleton variant="text" width={200} height={38} />
+              <div className="grid grid-cols-3 gap-4">
+                <Skeleton variant="text" width={80} height={18} />
+                <Skeleton variant="text" width={80} height={18} />
+                <Skeleton variant="text" width={80} height={18} />
+              </div>
+              <div className="flex gap-3">
+                <Skeleton variant="rect" width="100%" height={40} className="!rounded-xl" />
+                <Skeleton variant="rect" width="100%" height={40} className="!rounded-xl" />
+              </div>
+            </div>
+          </SkeletonCard>
+          <SkeletonCard titleWidth={140}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Skeleton variant="rect" width="100%" height={110} className="!rounded-xl" />
+              <Skeleton variant="rect" width="100%" height={110} className="!rounded-xl" />
+            </div>
+          </SkeletonCard>
+        </div>
+        <div className="xl:col-span-2 flex flex-col gap-6">
+          <SkeletonCard titleWidth={110}>
+            <div className="flex flex-col gap-3">
+              <Skeleton variant="rect" width="100%" height={80} className="!rounded-xl" />
+              <Skeleton variant="rect" width="100%" height={80} className="!rounded-xl" />
+              <Skeleton variant="rect" width="100%" height={80} className="!rounded-xl" />
+            </div>
+          </SkeletonCard>
+          <SkeletonCard titleWidth={110}>
+            <SkeletonTable rows={4} cols={2} />
+          </SkeletonCard>
+          <SkeletonCard titleWidth={150}>
+            <div className="grid grid-cols-3 gap-4">
+              <Skeleton variant="rect" width="100%" height={130} className="!rounded-xl" />
+              <Skeleton variant="rect" width="100%" height={130} className="!rounded-xl" />
+              <Skeleton variant="rect" width="100%" height={130} className="!rounded-xl" />
+            </div>
+          </SkeletonCard>
+        </div>
+      </div>
+    </SkeletonShell>
+  );
+}
+
+export function BuyLimSkeleton() {
+  return (
+    <SkeletonShell>
+      <Skeleton variant="text" width={100} height={16} />
+      <div className="mx-auto w-full max-w-[480px] flex flex-col gap-6">
+        <SkeletonCard header={false}>
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-3">
+              <Skeleton variant="circle" size={44} />
+              <div className="flex flex-col gap-1.5">
+                <Skeleton variant="text" width={140} height={16} />
+                <Skeleton variant="text" width={90} height={12} />
+              </div>
+            </div>
+            <Skeleton variant="rect" width="100%" height={80} className="!rounded-xl" />
+            <Skeleton variant="rect" width="100%" height={52} className="!rounded-xl" />
+            <Skeleton variant="rect" width="100%" height={52} className="!rounded-xl" />
+          </div>
         </SkeletonCard>
       </div>
-      <SkeletonCard titleWidth={160}>
-        <SkeletonTable rows={6} cols={4} />
-      </SkeletonCard>
     </SkeletonShell>
   );
 }

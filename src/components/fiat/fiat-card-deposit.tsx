@@ -162,7 +162,12 @@ function ThreeDsAuthModal({
   );
 }
 
-export const FiatCardDeposit = () => {
+export const FiatCardDeposit = ({
+  defaultSymbol,
+}: {
+  /** Pre-selected receive asset, e.g. from a ?asset=LIM deep link. */
+  defaultSymbol?: string;
+} = {}) => {
   const {
     form,
     paying,
@@ -189,7 +194,7 @@ export const FiatCardDeposit = () => {
     quotedReceivedAmount,
     rateLoading,
     quoteFailed,
-  } = useFiatCardDeposit();
+  } = useFiatCardDeposit(defaultSymbol);
 
   const amountValid = Number(form.values.amount) > 0;
 

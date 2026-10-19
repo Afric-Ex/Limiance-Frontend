@@ -1,5 +1,5 @@
-import { AssetsEarnSkeleton } from "@/src/components/skeletons/assets";
+import { EarnLimSkeleton } from "@/src/components/skeletons/with-sidebar";
 
 export default function Loading() {
-  return <AssetsEarnSkeleton />;
+  return <EarnLimSkeleton />;
 }
