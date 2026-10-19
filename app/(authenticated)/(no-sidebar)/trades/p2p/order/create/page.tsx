@@ -227,8 +227,6 @@ function PreOrderScreenContent() {
                     input: `bg-black/40 border-${validationError ? "red-500" : "white/10"} text-white text-lg h-14 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all`
                   }}
                   hideControls
-                  min={minQty}
-                  max={maxQty}
                 />
                 {validationError && (
                   <p className="text-red-400 text-xs mt-1.5">{validationError}</p>

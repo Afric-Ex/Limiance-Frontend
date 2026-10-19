@@ -1,11 +1,95 @@
 "use client";
 
-import React from "react";
-import { useP2PStore } from "@/src/stores/p2p-store";
+import React, { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Select, NumberInput } from "@mantine/core";
+import { useP2PStore } from "@/src/stores/p2p-store";
+import { asset, assetKeys } from "@/src/services/asset";
+import { tradingKeys, tradingService } from "@/src/services/trading";
+import { getBanksForFiat } from "@/src/lib/banks";
+
+// Shown only while the backend lists load (or if those requests fail).
+const FALLBACK_ASSETS = ["USDT", "BTC", "ETH"];
+const FALLBACK_FIATS = ["USD", "EUR", "NGN", "GBP"];
+
+const selectClassNames = {
+  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-11 rounded-xl focus:border-buy focus:ring-1 focus:ring-buy/30 transition-all font-semibold",
+  dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
+  option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors",
+};
 
 export const FilterBar = () => {
   const { adFilters, setAdFilters } = useP2PStore();
+
+  // Listed tokens for the asset picker — the backend's own supported-token list.
+  // `listed_tokens` answers one row per token per chain, so collapse to one
+  // entry per symbol (same aggregation the ads/deposit pickers use).
+  const { data: listedTokens } = useQuery({
+    queryKey: assetKeys.supportedTokensKey("all"),
+    queryFn: () => asset.fetchSupportedTokens({ limit: 1000 }),
+    select: (res: any) => (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []),
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  const assetOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const options: { value: string; label: string }[] = [];
+    for (const token of listedTokens ?? []) {
+      const symbol = String(token?.symbol ?? "").trim().toUpperCase();
+      if (!symbol || seen.has(symbol)) continue;
+      seen.add(symbol);
+      options.push({ value: symbol, label: symbol });
+    }
+    return options.length
+      ? options
+      : FALLBACK_ASSETS.map((symbol) => ({ value: symbol, label: symbol }));
+  }, [listedTokens]);
+
+  // Listed fiat currencies for the fiat picker — the fallback set only covers
+  // the window before this resolves (or a failed request).
+  const { data: listedCurrencies } = useQuery({
+    queryKey: tradingKeys.listedCurrencies,
+    queryFn: () => tradingService.listedCurrencies({ limit: 200 }),
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  const fiatOptions = useMemo(() => {
+    const body: any = (listedCurrencies as any)?.data ?? listedCurrencies;
+    const rows: any[] = Array.isArray(body) ? body : [];
+    const seen = new Set<string>();
+    const options: { value: string; label: string }[] = [];
+    for (const row of rows) {
+      const code = String(
+        typeof row === "string" ? row : row?.symbol ?? row?.code ?? row?.currency ?? row?.name ?? ""
+      ).trim().toUpperCase();
+      if (!code || seen.has(code)) continue;
+      seen.add(code);
+      options.push({ value: code, label: code });
+    }
+    return options.length
+      ? options
+      : FALLBACK_FIATS.map((code) => ({ value: code, label: code }));
+  }, [listedCurrencies]);
+
+  // Payment methods are fiat-specific — same list advertisers pick from when
+  // posting ads, so the filter values always match real ad payment methods.
+  const paymentMethodOptions = useMemo(
+    () => ["All", ...getBanksForFiat(adFilters.fiat)],
+    [adFilters.fiat]
+  );
+
+  const handleFiatChange = (val: string | null) => {
+    const nextFiat = val || "USD";
+    const keepMethod =
+      adFilters.paymentMethod === "All" ||
+      getBanksForFiat(nextFiat).includes(adFilters.paymentMethod);
+    setAdFilters({
+      fiat: nextFiat,
+      ...(keepMethod ? {} : { paymentMethod: "All" }),
+    });
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-4 max-[1150px]:gap-3 bg-[#181a20] border border-white/[0.06] p-6 max-[1150px]:p-4 rounded-2xl max-[1150px]:rounded-xl mb-6 max-[1150px]:mb-4">
@@ -46,25 +130,19 @@ export const FilterBar = () => {
         <Select
           value={adFilters.asset}
           onChange={(val) => setAdFilters({ asset: val || "USDT" })}
-          data={["USDT", "BTC", "ETH"]}
-          classNames={{
-            input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-11 rounded-xl focus:border-buy focus:ring-1 focus:ring-buy/30 transition-all font-semibold",
-            dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-            option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors"
-          }}
+          data={assetOptions}
+          searchable
+          classNames={selectClassNames}
         />
       </div>
 
       <div className="w-[120px] max-[1150px]:w-[calc(50%-6px)]">
         <Select
           value={adFilters.fiat}
-          onChange={(val) => setAdFilters({ fiat: val || "USD" })}
-          data={["USD", "EUR", "GBP", "NGN"]}
-          classNames={{
-            input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-11 rounded-xl focus:border-buy focus:ring-1 focus:ring-buy/30 transition-all font-semibold",
-            dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-            option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors"
-          }}
+          onChange={handleFiatChange}
+          data={fiatOptions}
+          searchable
+          classNames={selectClassNames}
         />
       </div>
 
@@ -72,13 +150,10 @@ export const FilterBar = () => {
         <Select
           value={adFilters.paymentMethod}
           onChange={(val) => setAdFilters({ paymentMethod: val || "All" })}
-          data={["All", "Bank Transfer", "PayPal", "WeChat", "Alipay"]}
+          data={paymentMethodOptions}
+          searchable
           placeholder="Payment Method"
-          classNames={{
-            input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-11 rounded-xl focus:border-buy focus:ring-1 focus:ring-buy/30 transition-all font-medium",
-            dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-            option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors"
-          }}
+          classNames={{ ...selectClassNames, input: selectClassNames.input.replace("font-semibold", "font-medium") }}
         />
       </div>
     </div>

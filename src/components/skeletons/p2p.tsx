@@ -141,9 +141,11 @@ export function P2POrdersSkeleton() {
         <Skeleton variant="rect" width={80} height={36} className="!rounded-full" />
         <Skeleton variant="rect" width={80} height={36} className="!rounded-full" />
       </div>
-      <SkeletonCard header={false}>
-        <SkeletonTable rows={8} cols={5} />
-      </SkeletonCard>
+      <div className="flex flex-col gap-3">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} variant="rect" width="100%" height={122} className="!rounded-2xl" />
+        ))}
+      </div>
     </SkeletonShell>
   );
 }
