@@ -36,6 +36,7 @@ export const tradingKeys = {
   fiatOrderHistory: ["fiat-order-history"],
   paymentHistory: ["payment-history"],
   listedTokens: (params?: { query?: string; page?: number; limit?: number; isTradable?: boolean }) => ["listed-tokens", params],
+  listedCurrencies: ["listed-currencies"],
 } as const;
 
 export const tradingService = {
