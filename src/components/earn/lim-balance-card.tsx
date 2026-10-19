@@ -131,15 +131,12 @@ export function LimBalanceCard() {
             </span>
           </div>
           {usdtValue != null && (
-            <p className="text-xs text-[var(--color-text-secondary)]">
-              ≈ ${formatAmount(usdtValue, 6)} USDT
+            <div className="flex flex-col gap-0.5 text-xs text-[var(--color-text-secondary)]">
+              <span>≈ ${formatAmount(usdtValue, 6)} USDT</span>
               {btcValue != null && (
-                <span className="text-white/40">
-                  {" "}
-                  · {formatAmount(btcValue, 9)} BTC
-                </span>
+                <span>≈ {formatAmount(btcValue, 9)} BTC</span>
               )}
-            </p>
+            </div>
           )}
         </div>
 
@@ -185,7 +182,7 @@ export function LimBalanceCard() {
           </Button>
         </Link>
         <Button
-          variant="ghost"
+          variant="outline"
           size="compact"
           className="!h-12 !px-6 w-full"
           onClick={openConvert}
