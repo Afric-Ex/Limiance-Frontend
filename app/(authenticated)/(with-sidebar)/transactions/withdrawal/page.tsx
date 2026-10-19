@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Copy } from "@/src/components/shared/copy";
 import {
@@ -22,13 +21,14 @@ import {
   TableThead,
   TableTr,
   Skeleton as MantineSkeleton,
-  Select,
   TextInput,
   Tooltip,
 } from "@mantine/core";
 import { MdKeyboardArrowRight, MdOutlineHelp, MdOutlineSendToMobile } from "react-icons/md";
+import { FaAddressBook } from "react-icons/fa6";
 import { TokenNetworkModal } from "@/src/components/transactions/token-network-modal";
 import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
+import { WhitelistedAddressPickerModal } from "@/src/components/transactions/whitelisted-address-picker-modal";
 import { MethodSelectModal } from "@/src/components/shared/method-select-modal";
 import { Send } from "@/src/components/icons/send";
 import { Transfer } from "@/src/components/icons/transfer";
@@ -171,6 +171,7 @@ function WithdrawalInner() {
   // Withdrawal method picked right after coin + network, before the address step.
   const [withdrawMethod, setWithdrawMethod] = useState<"onchain" | null>(null);
   const [methodModalOpened, { open: openMethodModal, close: closeMethodModal }] = useDisclosure(false);
+  const [whitelistModalOpened, { open: openWhitelistModal, close: closeWhitelistModal }] = useDisclosure(false);
   const router = useRouter();
   const selectedWhitelistChain =
     selectedNetwork?.blockchain || selectedNetwork?.symbol || "";
@@ -302,13 +303,27 @@ function WithdrawalInner() {
           {
             icon: <Transfer />,
             title: "Internal Transfer",
-            description: "Send to a Limiance user ID — no network fee",
+            description: "Send to a Limiance user ID or email — no network fee",
             onSelect: () => {
               closeMethodModal();
               router.push("/transactions/internal-transfer");
             },
           },
         ]}
+      />
+
+      <WhitelistedAddressPickerModal
+        opened={whitelistModalOpened}
+        onClose={closeWhitelistModal}
+        entries={addressesForNetwork}
+        loading={whitelistLoading}
+        isError={whitelistError}
+        onRetry={() => void refetchWhitelist()}
+        selectedAddress={form.values.address}
+        onSelect={(address) => {
+          form.setFieldValue("address", address);
+          closeWhitelistModal();
+        }}
       />
 
       {/* Main Grid */}
@@ -383,73 +398,28 @@ function WithdrawalInner() {
               <>
             {/* Address */}
             <div className="flex flex-col gap-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Recipient Address</label>
-                <Link
-                  href="/account/whitelisted-wallets"
-                  className="flex items-center gap-0.5 text-xs font-semibold text-primary hover:text-primary/70 transition-colors whitespace-nowrap"
-                >
-                  Manage whitelisted accounts
-                  <MdKeyboardArrowRight size={14} />
-                </Link>
-              </div>
-
-              {whitelistLoading ? (
-                <div className="flex justify-center py-3"><InlineLoading /></div>
-              ) : whitelistError ? (
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-                  <span className="text-xs text-white/50">Whitelisted accounts could not be loaded.</span>
-                  <button
-                    type="button"
-                    onClick={() => void refetchWhitelist()}
-                    className="text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : addressesForNetwork.length > 0 ? (
-                <Select
-                classNames={{ input: inputClass, dropdown: "!bg-[#181a20] !border-white/[0.08] !rounded-xl" }}
-                placeholder="Select a whitelisted address"
-                data={addressesForNetwork.map(({ address, name, pending }) => ({
-                  value: address,
-                  label: name || truncateWhitelistAddress(address),
-                  disabled: pending,
-                }))}
-                value={selectedWhitelistedEntry ? form.values.address : null}
-                onChange={(value) => form.setFieldValue("address", value ?? "")}
-                renderOption={({ option }) => {
-                  const entry = addressesForNetwork.find(({ address }) => address === option.value);
-                  return (
-                    <div className="flex items-center justify-between gap-3 w-full">
-                      <div className="flex flex-col gap-0.5 min-w-0">
-                        {entry?.name ? (
-                          <span className="text-xs font-semibold text-white/80 truncate">{entry.name}</span>
-                        ) : null}
-                        <span className="block w-full break-all font-mono text-xs leading-5 text-white/60">
-                          {truncateWhitelistAddress(option.value)}
-                        </span>
-                      </div>
-                      {entry ? (
-                        <span
-                          className={
-                            entry.pending
-                              ? "shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning-1/10 text-warning-1 border border-warning-1/20"
-                              : "shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success-6/10 text-success-6 border border-success-6/20"
-                          }
-                        >
-                          {entry.pending ? entry.pendingLabel : "Active"}
-                        </span>
-                      ) : null}
-                    </div>
-                  );
-                }}
-                />
-              ) : null}
+              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Recipient Address</label>
 
               <TextInput
-                placeholder={addressesForNetwork.length > 0 ? "Or paste a recipient address" : "Paste recipient address"}
-                classNames={{ input: inputClass }}
+                placeholder="Paste recipient address"
+                classNames={{ input: inputClass, section: "!w-fit !right-3" }}
+                rightSection={
+                  <Tooltip
+                    label="Choose from whitelisted addresses"
+                    withArrow
+                    color="#181a20"
+                    classNames={{ tooltip: "!text-xs !font-medium !border !border-white/[0.08]" }}
+                  >
+                    <button
+                      type="button"
+                      onClick={openWhitelistModal}
+                      aria-label="Choose from whitelisted addresses"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/[0.04] hover:bg-primary/15 text-white/50 hover:text-primary transition-colors"
+                    >
+                      <FaAddressBook size={15} />
+                    </button>
+                  </Tooltip>
+                }
                 {...form.getInputProps("address")}
                 error={addressError}
               />

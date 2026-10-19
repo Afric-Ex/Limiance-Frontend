@@ -44,6 +44,13 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
     balanceOptions.find((item) => item.value === toBalance)?.label ?? toBalance;
   const assetSymbol = selectedCoin.symbol.split(":")[0];
 
+  const trimmedRecipient = toUserId.trim();
+  const recipientLooksLikeEmail = trimmedRecipient.includes("@");
+  const recipientError =
+    recipientLooksLikeEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedRecipient)
+      ? "Enter a valid email address"
+      : null;
+
   const walletBalanceKey = fromBalance === "spot_balance" ? "spotBalance" : "fundingBalance";
   const coinEntry = portfolio?.find(
     (p: any) =>
@@ -75,7 +82,7 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
   const { mutate: transfer, isPending: transferring } = useMutation({
     mutationFn: () =>
       asset.externalTransfer({
-        toUserId,
+        toUserId: trimmedRecipient,
         symbol: assetSymbol,
         fromBalance,
         toBalance,
@@ -278,19 +285,20 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
         />
       </div>
 
-      {/* Recipient User ID */}
+      {/* Recipient User ID or Email */}
       <div className={sectionClass}>
         <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-          Recipient User ID
+          Recipient User ID or Email
         </label>
         <TextInput
-          placeholder="Recipient user ID"
+          placeholder="User ID or email address"
           value={toUserId}
           onChange={(e) => setToUserId(e.target.value)}
           classNames={{ input: inputClass }}
+          error={recipientError}
         />
         <p className="text-xs text-white/30">
-          Use the recipient&apos;s Limiance user ID. Email is not accepted here.
+          Enter the recipient&apos;s Limiance user ID or their account email address.
         </p>
       </div>
 
@@ -414,7 +422,8 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
           !selectedCoin.symbol ||
           !amount ||
           +amount <= 0 ||
-          !toUserId ||
+          !trimmedRecipient ||
+          !!recipientError ||
           !releaseCode ||
           transferring
         }
