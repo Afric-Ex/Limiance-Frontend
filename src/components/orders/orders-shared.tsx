@@ -85,6 +85,7 @@ type StatusTone = "green" | "red" | "amber" | "blue" | "neutral" | "muted";
 
 const STATUS_TONES: Record<string, StatusTone> = {
   filled: "green",
+  fulfilled: "green",
   completed: "green",
   success: "green",
   released: "green",
@@ -92,6 +93,7 @@ const STATUS_TONES: Record<string, StatusTone> = {
   processing: "blue",
   open: "blue",
   pending: "amber",
+  disputed: "amber",
   cancelled: "red",
   canceled: "red",
   expired: "red",

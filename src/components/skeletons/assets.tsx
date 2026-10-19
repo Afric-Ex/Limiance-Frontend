@@ -103,6 +103,28 @@ export function AssetsEarnSkeleton() {
   );
 }
 
+export function AssetsHistorySkeleton() {
+  return (
+    <SkeletonShell>
+      <SkeletonHeader titleWidth={170} subtitle action={false} />
+      <div className="flex gap-2">
+        {[110, 80, 90, 90, 60, 110].map((width, i) => (
+          <Skeleton
+            key={i}
+            variant="rect"
+            width={width}
+            height={36}
+            className="!rounded-full"
+          />
+        ))}
+      </div>
+      <SkeletonCard header={false}>
+        <SkeletonTable rows={8} cols={5} />
+      </SkeletonCard>
+    </SkeletonShell>
+  );
+}
+
 export function AssetsFundingSkeleton() {
   return (
     <SkeletonShell>

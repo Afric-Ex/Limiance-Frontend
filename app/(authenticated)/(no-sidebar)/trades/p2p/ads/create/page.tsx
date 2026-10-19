@@ -13,6 +13,7 @@ import { CreateOrder } from "@/src/types/p2p";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { asset, assetKeys } from "@/src/services/asset";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { fiatKeys, fiatService } from "@/src/services/fiat";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 import { IoChevronBack } from "react-icons/io5";
 import { getBanksForFiat } from "@/src/lib/banks";
@@ -197,14 +198,24 @@ function CreateAdPageInner() {
     totalAmount !== "" &&
     Number(totalAmount) > fundingBalance;
 
-  // Market price in the selected fiat from the server conversion quote
-  // (`trading/conversion_rate`) — the same quote service the convert and
-  // buy-LIM flows price against. No locally invented rates.
-  const { data: conversionQuote } = useQuery({
-    queryKey: ["p2p-ad-market-price", selectedAsset, fiat],
+  // Market price in the selected fiat from the fiat-deposit quote
+  // (`wallet/fiat/quote`) — the same quote call the deposit flows price
+  // against. No locally invented rates.
+  const quoteSymbol = selectedAsset.trim().toLowerCase();
+  const quoteCurrency = fiat.trim().toLowerCase();
+  const { data: fiatQuote } = useQuery({
+    queryKey: fiatKeys.quoteFor({
+      depositAmount: "1",
+      symbol: quoteSymbol,
+      currency: quoteCurrency,
+    }),
     queryFn: () =>
-      tradingService.conversionRate({ fromAsset: selectedAsset, toAsset: fiat, quantity: "1" }),
-    enabled: !!selectedAsset && !!fiat,
+      fiatService.getQuote({
+        depositAmount: "1",
+        symbol: quoteSymbol,
+        currency: quoteCurrency,
+      }),
+    enabled: !!quoteSymbol && !!quoteCurrency,
     staleTime: 30_000,
     refetchInterval: 60_000,
     retry: false,
@@ -212,10 +223,8 @@ function CreateAdPageInner() {
   });
 
   const marketPriceInFiat = useMemo(() => {
-    const payload: any = conversionQuote;
+    const payload: any = fiatQuote;
     if (!payload) return null;
-    // A 200 response can still carry a failure envelope — treat it as no quote.
-    if (payload?.error || payload?.data?.error) return null;
 
     let body: any = payload;
     for (let depth = 0; depth < 3; depth += 1) {
@@ -224,18 +233,22 @@ function CreateAdPageInner() {
       body = body.data;
     }
 
-    const rateBlock = body?.rate ?? body?.Rate ?? body;
+    // A 200 response can still carry a failure envelope — treat it as no quote.
+    if (body?.success === false || body?.error) return null;
+
     const toPrice = (value: unknown) => {
       const parsed = parseFloat(String(value ?? "").replace(/,/g, ""));
       return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
     };
 
-    return (
-      toPrice(rateBlock?.baseInQuote ?? rateBlock?.base_in_quote) ??
-      (fiat === "USD" ? toPrice(rateBlock?.baseInQuoteUSD ?? rateBlock?.base_in_quote_usd) : null) ??
-      (fiat === "NGN" ? toPrice(rateBlock?.baseInQuoteNGN ?? rateBlock?.base_in_quote_ngn) : null)
-    );
-  }, [conversionQuote, fiat]);
+    const rate = toPrice(body?.rate ?? body?.Rate ?? body?.buyRate);
+    if (rate !== null) return rate;
+
+    // Fallback for responses that only carry the receive amount for the
+    // 1-unit fiat probe: symbol per fiat → fiat per symbol.
+    const received = toPrice(body?.symbolAmountToReceive ?? body?.symbolAmountToReceived);
+    return received !== null ? toPrice(1 / received) : null;
+  }, [fiatQuote]);
 
   const handleSubmit = () => {
     if (!price || !totalAmount || !minOrder || !maxOrder || selectedMethodIds.length === 0 || !agreed) return;

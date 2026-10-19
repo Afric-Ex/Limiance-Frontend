@@ -99,50 +99,68 @@ export function BuyCryptoSkeleton() {
 export function EarnLimSkeleton() {
   return (
     <SkeletonShell>
-      <SkeletonHeader titleWidth={180} subtitle action={false} />
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-        <div className="xl:col-span-3 flex flex-col gap-6">
-          <SkeletonCard titleWidth={120} actionWidth={80}>
-            <div className="flex flex-col gap-4">
-              <Skeleton variant="text" width={200} height={38} />
-              <div className="grid grid-cols-3 gap-4">
-                <Skeleton variant="text" width={80} height={18} />
-                <Skeleton variant="text" width={80} height={18} />
-                <Skeleton variant="text" width={80} height={18} />
-              </div>
-              <div className="flex gap-3">
-                <Skeleton variant="rect" width="100%" height={40} className="!rounded-xl" />
-                <Skeleton variant="rect" width="100%" height={40} className="!rounded-xl" />
-              </div>
+      <SkeletonHeader titleWidth={160} subtitle action={false} />
+
+      {/* LIM balance: headline + allocation bar + buy/convert actions */}
+      <SkeletonCard header={false}>
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center gap-3">
+            <Skeleton variant="circle" size={44} />
+            <div className="flex flex-col gap-1.5">
+              <Skeleton variant="text" width={90} height={12} />
+              <Skeleton variant="text" width={140} height={14} />
             </div>
-          </SkeletonCard>
-          <SkeletonCard titleWidth={140}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Skeleton variant="rect" width="100%" height={110} className="!rounded-xl" />
-              <Skeleton variant="rect" width="100%" height={110} className="!rounded-xl" />
-            </div>
-          </SkeletonCard>
+          </div>
+          <Skeleton variant="text" width={200} height={38} />
+          <Skeleton variant="rect" width="100%" height={8} className="!rounded-full" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Skeleton variant="rect" width="100%" height={56} className="!rounded-xl" />
+            <Skeleton variant="rect" width="100%" height={56} className="!rounded-xl" />
+          </div>
         </div>
-        <div className="xl:col-span-2 flex flex-col gap-6">
-          <SkeletonCard titleWidth={110}>
-            <div className="flex flex-col gap-3">
-              <Skeleton variant="rect" width="100%" height={80} className="!rounded-xl" />
-              <Skeleton variant="rect" width="100%" height={80} className="!rounded-xl" />
-              <Skeleton variant="rect" width="100%" height={80} className="!rounded-xl" />
-            </div>
-          </SkeletonCard>
-          <SkeletonCard titleWidth={110}>
-            <SkeletonTable rows={4} cols={2} />
-          </SkeletonCard>
-          <SkeletonCard titleWidth={150}>
-            <div className="grid grid-cols-3 gap-4">
-              <Skeleton variant="rect" width="100%" height={130} className="!rounded-xl" />
-              <Skeleton variant="rect" width="100%" height={130} className="!rounded-xl" />
-              <Skeleton variant="rect" width="100%" height={130} className="!rounded-xl" />
-            </div>
-          </SkeletonCard>
+      </SkeletonCard>
+
+      {/* Token utilities */}
+      <SkeletonCard titleWidth={140}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[0, 1, 2].map((key) => (
+            <Skeleton key={key} variant="rect" width="100%" height={130} className="!rounded-xl" />
+          ))}
         </div>
-      </div>
+      </SkeletonCard>
+
+      {/* Ways to earn teasers */}
+      <SkeletonCard titleWidth={120}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[0, 1, 2].map((key) => (
+            <Skeleton key={key} variant="rect" width="100%" height={160} className="!rounded-xl" />
+          ))}
+        </div>
+      </SkeletonCard>
+
+      {/* Earn products: tabs + preview card */}
+      <SkeletonCard titleWidth={140}>
+        <div className="flex flex-col gap-5">
+          <div className="flex gap-6 overflow-hidden border-b border-white/[0.06] pb-3">
+            {[90, 70, 80, 96, 110, 84, 92].map((width, i) => (
+              <Skeleton key={i} variant="text" width={width} height={14} />
+            ))}
+          </div>
+          <Skeleton variant="rect" width="100%" height={210} className="!rounded-xl" />
+        </div>
+      </SkeletonCard>
+
+      {/* My rewards */}
+      <SkeletonCard titleWidth={110}>
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-3 gap-4">
+            <Skeleton variant="text" width={80} height={18} />
+            <Skeleton variant="text" width={80} height={18} />
+            <Skeleton variant="text" width={80} height={18} />
+          </div>
+          <SkeletonTable rows={3} cols={2} />
+        </div>
+      </SkeletonCard>
     </SkeletonShell>
   );
 }

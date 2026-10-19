@@ -11,7 +11,7 @@ function InternalTransferInner() {
       <div className="flex items-center gap-3">
         <h1 className="text-xl font-bold text-white tracking-tight">Internal Transfer</h1>
         <span className="text-xs font-medium text-white/40">
-          Send crypto to another Limiance user by their user ID — no network fee
+          Send crypto to another Limiance user by their user ID or email — no network fee
         </span>
       </div>
 

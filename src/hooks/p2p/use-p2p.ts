@@ -229,7 +229,6 @@ export const useAllMatchedOrders = (params?: any) => {
   return useQuery({
     queryKey: p2pKey.allMatchedOrders(params),
     queryFn: () => p2p.getAllMatchedOrders(params),
-    refetchInterval: 5000, // Auto-poll every 5s so incoming matched orders show up instantly
   });
 };
 

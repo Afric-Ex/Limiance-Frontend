@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
-import { Table, TableTh, TableTr, TableTd } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { useAllMatchedOrders } from "@/src/hooks/p2p/use-p2p";
 import { SegmentedControl } from "@/src/components/ui/segmented-control";
@@ -23,20 +22,17 @@ const STATUS_STYLES: Record<string, string> = {
   DISPUTED: "text-[#FBA42A] bg-[#FBA42A]/10 border-[#FBA42A]/20",
 };
 
-const tableClassNames = {
-  th: "!py-3 !px-3 first:!pl-5 !text-[11px] !font-medium !uppercase !tracking-wider !text-white/40 !border-b !border-white/[0.06] !bg-transparent !whitespace-nowrap",
-  tr: "!border-b !border-white/[0.06] last:!border-0 hover:!bg-white/[0.02] !transition-colors !cursor-pointer",
-  td: "!py-4 !px-3 first:!pl-5 !text-sm !whitespace-nowrap",
-};
+const fieldLabel =
+  "text-[10px] font-medium uppercase tracking-wider text-white/40";
 
 function OrderHistoryPageInner() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"PROCESSING" | "ALL">("PROCESSING");
   const [filterType, setFilterType] = useState<string>("ALL");
 
-  const { data, isLoading, refetch, isRefetching } = useAllMatchedOrders({
-    ...(filterType !== "ALL" ? { type: filterType } : {}),
-  });
+  const { data, isLoading, refetch, isRefetching } = useAllMatchedOrders(
+    filterType !== "ALL" ? { type: filterType } : undefined
+  );
 
   const allOrders: any[] = (data as any)?.data?.data ?? [];
 
@@ -113,106 +109,101 @@ function OrderHistoryPageInner() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] overflow-hidden">
-          {isLoading ? (
-            <div className="flex flex-col gap-4 p-6">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-14 w-full" />
-              ))}
+        {/* Orders */}
+        {isLoading ? (
+          <div className="flex flex-col gap-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-[122px] w-full !rounded-2xl" />
+            ))}
+          </div>
+        ) : displayOrders.length === 0 ? (
+          <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] flex flex-col items-center justify-center py-20">
+            <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-2xl mb-4">
+              📭
             </div>
-          ) : displayOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-2xl mb-4">
-                📭
-              </div>
-              <div className="text-white/70 font-semibold">No orders found</div>
-              <p className="text-white/40 text-sm mt-1 max-w-sm text-center">
-                {activeTab === "PROCESSING"
-                  ? "No active orders right now"
-                  : "You haven't made any P2P trades yet"}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table classNames={tableClassNames}>
-                <thead>
-                  <TableTr>
-                    <TableTh>Order / Time</TableTh>
-                    <TableTh>Type / Asset</TableTh>
-                    <TableTh>Counterparty</TableTh>
-                    <TableTh>Amount</TableTh>
-                    <TableTh>Total</TableTh>
-                    <TableTh className="!text-right">Status</TableTh>
-                  </TableTr>
-                </thead>
-                <tbody>
-                  {displayOrders.map((order: any) => {
-                    const asset = order.asset ?? order.order?.asset ?? "?";
-                    const fiat = (order.fiatCurrency ?? order.fiat ?? order.order?.fiat ?? "").toUpperCase();
-                    const qty = parseFloat(String(order.quantity ?? 0));
-                    const fiatAmt = parseFloat(String(order.fiatAmount ?? order.amount ?? 0));
-                    const orderType = order.type ?? order.order?.type ?? "?";
-                    const status = (order.status ?? "PENDING").toUpperCase();
-                    const statusStyle = STATUS_STYLES[status] ?? "text-white/50 bg-white/5 border-white/10";
-                    const sellerName = order.sellerName || [order.seller?.firstName, order.seller?.lastName].filter(Boolean).join(" ") || "—";
-                    const buyerName = order.buyerName || [order.buyer?.firstName, order.buyer?.lastName].filter(Boolean).join(" ") || "—";
-                    const counterparty = orderType?.toUpperCase() === "BUY" ? buyerName : sellerName;
-                    const isBuy = orderType?.toUpperCase() === "BUY";
-                    const coinIcon = getCryptoIcon(String(asset ?? ""));
+            <div className="text-white/70 font-semibold">No orders found</div>
+            <p className="text-white/40 text-sm mt-1 max-w-sm text-center">
+              {activeTab === "PROCESSING"
+                ? "No active orders right now"
+                : "You haven't made any P2P trades yet"}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {displayOrders.map((order: any) => {
+              const asset = order.asset ?? order.order?.asset ?? "?";
+              const fiat = (order.fiatCurrency ?? order.fiat ?? order.order?.fiat ?? "").toUpperCase();
+              const qty = parseFloat(String(order.quantity ?? 0));
+              const fiatAmt = parseFloat(String(order.fiatAmount ?? order.amount ?? 0));
+              const orderType = order.type ?? order.order?.type ?? "?";
+              const status = (order.status ?? "PENDING").toUpperCase();
+              const statusStyle = STATUS_STYLES[status] ?? "text-white/50 bg-white/5 border-white/10";
+              const sellerName = order.sellerName || [order.seller?.firstName, order.seller?.lastName].filter(Boolean).join(" ") || "—";
+              const buyerName = order.buyerName || [order.buyer?.firstName, order.buyer?.lastName].filter(Boolean).join(" ") || "—";
+              const counterparty = orderType?.toUpperCase() === "BUY" ? buyerName : sellerName;
+              const isBuy = orderType?.toUpperCase() === "BUY";
+              const coinIcon = getCryptoIcon(String(asset ?? ""));
+              const orderRef = String(order.orderId ?? order.id ?? "—");
 
-                    return (
-                      <TableTr key={order.id} onClick={() => router.push(`/trades/p2p/order/${order.id}`)}>
-                        <TableTd>
-                          <div className="font-mono text-xs text-white/70">
-                            {String(order.id).slice(0, 12)}…
-                          </div>
-                          <div className="text-xs text-white/40">{formatDate(order.createdAt)}</div>
-                        </TableTd>
-                        <TableTd>
-                          <div className="flex items-center gap-2">
-                            {coinIcon ? (
-                              <img src={coinIcon} alt={asset} width={22} height={22} className="shrink-0" />
-                            ) : (
-                              <span className="w-[22px] h-[22px] shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
-                                {String(asset).charAt(0).toUpperCase()}
-                              </span>
-                            )}
-                            <div>
-                              <div className={`text-sm font-bold ${isBuy ? "text-[#25AB42]" : "text-[#F6465D]"}`}>
-                                {String(orderType).toUpperCase()} {String(asset).toUpperCase()}
-                              </div>
-                            </div>
-                          </div>
-                        </TableTd>
-                        <TableTd>
-                          <span className="text-white/70">{counterparty}</span>
-                        </TableTd>
-                        <TableTd>
-                          <span className="text-white font-semibold tabular-nums">
-                            {qty.toLocaleString(undefined, { maximumFractionDigits: 6 })} {String(asset).toUpperCase()}
-                          </span>
-                        </TableTd>
-                        <TableTd>
-                          <span className="text-white/80 tabular-nums">
-                            {fiatAmt > 0
-                              ? `${fiatAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${fiat}`
-                              : `— ${fiat}`}
-                          </span>
-                        </TableTd>
-                        <TableTd className="!text-right">
-                          <span className={`inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full border uppercase ${statusStyle}`}>
-                            {status.charAt(0) + status.slice(1).toLowerCase()}
-                          </span>
-                        </TableTd>
-                      </TableTr>
-                    );
-                  })}
-                </tbody>
-              </Table>
-            </div>
-          )}
-        </div>
+              return (
+                <button
+                  key={order.id}
+                  type="button"
+                  onClick={() => router.push(`/trades/p2p/order/${order.id}`)}
+                  className="w-full text-left rounded-2xl border border-white/[0.06] bg-[#181a20] p-4 transition-colors hover:border-white/[0.12] hover:bg-white/[0.02]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {coinIcon ? (
+                        <img src={coinIcon} alt={asset} width={22} height={22} className="shrink-0" />
+                      ) : (
+                        <span className="w-[22px] h-[22px] shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
+                          {String(asset).charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <div className={`text-sm font-bold ${isBuy ? "text-[#25AB42]" : "text-[#F6465D]"}`}>
+                          {String(orderType).toUpperCase()} {String(asset).toUpperCase()}
+                        </div>
+                        <div className="mt-0.5 truncate font-mono text-[11px] text-white/40" title={orderRef}>
+                          Order {orderRef}
+                        </div>
+                      </div>
+                    </div>
+                    <span className={`inline-flex shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full border uppercase ${statusStyle}`}>
+                      {status.charAt(0) + status.slice(1).toLowerCase()}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-white/[0.06] pt-3 sm:grid-cols-4">
+                    <div className="min-w-0">
+                      <div className={fieldLabel}>Counterparty</div>
+                      <div className="mt-0.5 truncate text-sm text-white/80">{counterparty}</div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className={fieldLabel}>Amount</div>
+                      <div className="mt-0.5 text-sm font-semibold text-white tabular-nums">
+                        {qty.toLocaleString(undefined, { maximumFractionDigits: 6 })} {String(asset).toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className={fieldLabel}>Total</div>
+                      <div className="mt-0.5 text-sm text-white/80 tabular-nums">
+                        {fiatAmt > 0
+                          ? `${fiatAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${fiat}`
+                          : `— ${fiat}`}
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className={fieldLabel}>Date</div>
+                      <div className="mt-0.5 text-sm text-white/60">{formatDate(order.createdAt)}</div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </P2PLayout>
   );

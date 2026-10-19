@@ -141,7 +141,7 @@ export const asset = {
   transactionHistory: async (params?: {
     page?: number;
     limit?: number;
-    transaction_type?: "deposit" | "withdrawal";
+    transaction_type?: "deposit" | "withdrawal" | "internal" | "p2p";
   }) => {
     try {
       const response = await api.get<DepositHistory>(
