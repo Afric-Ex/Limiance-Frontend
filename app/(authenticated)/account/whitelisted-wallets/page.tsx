@@ -26,6 +26,15 @@ import {
   type WhitelistedAddress,
 } from "@/src/lib/whitelist";
 
+function toChainList(value: unknown): any[] {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") {
+    const entries = (value as { data?: unknown }).data;
+    if (Array.isArray(entries)) return entries;
+  }
+  return [];
+}
+
 function getResponseError(response: unknown): string | null {
   if (!response || typeof response !== "object") return null;
   const result = response as { error?: unknown; success?: unknown; message?: unknown };
@@ -54,13 +63,14 @@ export default function WhitelistedWalletsPage() {
   const queryClient = useQueryClient();
 
   const chainsQuery = useQuery({
-    queryKey: assetKeys.supportedChainsKey(""),
+    queryKey: assetKeys.supportedChainsKey("whitelisted-wallets-page"),
     queryFn: async () => {
       const response: any = await asset.fetchSupportedChains({ limit: 100 });
       const error = getResponseError(response);
       if (error) throw new Error(error);
-      return Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : [];
+      return toChainList(response);
     },
+    select: (response) => toChainList(response),
   });
 
   const networks = useMemo(() => {
