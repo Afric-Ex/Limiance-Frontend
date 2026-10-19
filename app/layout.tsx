@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import "@mantine/core/styles.css";
 import "@mantine/dropzone/styles.css";
 import "@mantine/dates/styles.css";
@@ -13,11 +12,6 @@ import QueryProvider from "@/src/providers/query-provider";
 import { Toaster } from "react-hot-toast";
 import Providers from "@/src/components/providers";
 import { NotificationsProvider } from "@/src/components/shared/notifications-provider";
-
-const inter = Inter({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Limiance Exchange — Trade Crypto with Confidence",
@@ -39,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased overflow-x-hidden`}>
+      <body className="antialiased overflow-x-hidden">
         <Toaster />
         <MantineProvider theme={theme} forceColorScheme="dark">
           <Providers>
