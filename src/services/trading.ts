@@ -35,6 +35,12 @@ export const tradingKeys = {
   convertHistory: ["convert-history"],
   fiatOrderHistory: ["fiat-order-history"],
   paymentHistory: ["payment-history"],
+  /** Filters-only key for the infinite-scroll list; `page` is owned by react-query. */
+  paymentHistoryList: (filters: Record<string, unknown> = {}) => [
+    "payment-history",
+    "list",
+    filters,
+  ],
   listedTokens: (params?: { query?: string; page?: number; limit?: number; isTradable?: boolean }) => ["listed-tokens", params],
   listedCurrencies: ["listed-currencies"],
 } as const;
@@ -470,8 +476,13 @@ export const tradingService = {
     return response.data;
   },
 
-  paymentHistory: async () => {
-    const response = await api.get("trading/payment/history");
+  paymentHistory: async (params?: {
+    page?: number;
+    limit?: number;
+    start_date?: string;
+    end_date?: string;
+  }) => {
+    const response = await api.get("trading/payment/history", { params });
     return response.data;
   },
 };

@@ -41,7 +41,7 @@ export const RecentHistory = () => {
           </h4>
         </div>
         <Link
-          href="/transactions/deposit"
+          href="/assets/history"
           className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
         >
           All →
