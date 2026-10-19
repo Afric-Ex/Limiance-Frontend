@@ -15,9 +15,11 @@ import {
   ChipToggle,
 } from "./orders-shared";
 import { truncateCryptoAddress, isZeroAddress } from "@/src/utils/truncate-address";
+import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 
 export const Crypto = () => {
   const [type, setType] = useState<"Deposit" | "Withdrawal">("Deposit");
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
 
   const { data: history, isLoading } = useQuery({
     queryKey: assetKeys.transactionHistory({ transaction_type: type.toLowerCase() }),
@@ -29,6 +31,10 @@ export const Crypto = () => {
 
   return (
     <div className="flex flex-col gap-6">
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+      />
       <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
         <ChipToggle value={type} options={["Deposit", "Withdrawal"]} onChange={(v) => setType(v as "Deposit" | "Withdrawal")} />
         <div className="flex items-center gap-4">
@@ -65,7 +71,11 @@ export const Crypto = () => {
           </TableThead>
           <TableTbody>
             {allHistory.map((tx: any, idx: number) => (
-              <TableTr key={tx.id ?? idx}>
+              <TableTr
+                key={tx.id ?? idx}
+                onClick={() => setSelectedTransaction(tx)}
+                className="cursor-pointer"
+              >
                 <TableTd className="pl-5 text-white/50">{fmtDateTime(tx.createdAt)}</TableTd>
                 <TableTd className="capitalize">{tx.type ?? type}</TableTd>
                 <TableTd>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Copy } from "@/src/components/shared/copy";
 import {
   Accordion,
@@ -20,6 +21,7 @@ import {
 } from "@mantine/core";
 import { MdKeyboardArrowRight, MdOutlineHelp, MdOutlineQrCode } from "react-icons/md";
 import { TokenNetworkModal } from "@/src/components/transactions/token-network-modal";
+import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 import { useDeposit } from "@/src/hooks/use-deposit";
 import { useDisclosure } from "@mantine/hooks";
 import { InlineLoading } from "@/src/components/shared/inline-loading";
@@ -94,6 +96,7 @@ function DepositInner() {
   } = useDeposit();
 
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
 
   const { data: minDepositData } = useQuery({
     queryKey: ["minimum-deposit", selectedCoin?.symbol, selectedNetwork?.name],
@@ -143,6 +146,11 @@ function DepositInner() {
           setSelectedCoin(coin);
           setSelectedNetwork(network);
         }}
+      />
+
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
       />
 
       {/* Page header */}
@@ -413,7 +421,11 @@ function DepositInner() {
                   ))}
 
                 {history?.map((item: any) => (
-                  <TableTr key={item.id}>
+                  <TableTr
+                    key={item.id}
+                    onClick={() => setSelectedTransaction(item)}
+                    className="cursor-pointer"
+                  >
                     <TableTd className="pl-6 !text-white/40">{fmtDate(item.completedAt || item.createdAt)}</TableTd>
                     <TableTd>
                       <span className="flex items-center gap-2">
@@ -435,7 +447,10 @@ function DepositInner() {
                     <TableTd className="!text-white !font-bold">{item.amount}</TableTd>
                     <TableTd>
                       {item.hash && !isZeroAddress(item.hash) ? (
-                        <span className="flex items-center gap-2">
+                        <span
+                          className="flex items-center gap-2"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <span className="font-mono text-xs">{truncateCryptoAddress(item.hash)}</span>
                           <Copy color="var(--primary)" text={item.hash} />
                         </span>
@@ -445,7 +460,10 @@ function DepositInner() {
                     </TableTd>
                     <TableTd className="uppercase font-bold">{item.chain}</TableTd>
                     <TableTd>
-                      <span className="flex items-center gap-2">
+                      <span
+                        className="flex items-center gap-2"
+                        onClick={(event) => event.stopPropagation()}
+                      >
                         <span className="font-mono text-xs">{truncateCryptoAddress(item.id)}</span>
                         <Copy color="var(--primary)" text={item.id} />
                       </span>

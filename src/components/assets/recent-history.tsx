@@ -1,12 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { assetKeys, asset } from "@/src/services/asset";
 import Link from "next/link";
 import { Skeleton } from "../shared/skeleton";
 import { formatTransactionAmount, formatTransactionAsset } from "@/src/utils/transaction";
 import { fmtDate } from "../orders/orders-shared";
+import { TransactionDetailsModal } from "../transactions/transaction-details-modal";
 
 /**
  * RecentHistory — Right column component for Assets Overview.
@@ -14,6 +15,7 @@ import { fmtDate } from "../orders/orders-shared";
  * Matches Bybit's "Recent Deposit & Withdrawal History" section.
  */
 export const RecentHistory = () => {
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const { data: history, isLoading: historyLoading } = useQuery({
     queryKey: assetKeys.transactionHistory({
       page: 1,
@@ -26,6 +28,10 @@ export const RecentHistory = () => {
 
   return (
     <div className="animate-fade-up stagger-4 flex flex-col gap-4">
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -53,7 +59,8 @@ export const RecentHistory = () => {
             {history.slice(0, 5).map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between px-4 py-3 row-hover"
+                onClick={() => setSelectedTransaction(item)}
+                className="flex items-center justify-between px-4 py-3 row-hover cursor-pointer"
               >
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs font-medium capitalize">

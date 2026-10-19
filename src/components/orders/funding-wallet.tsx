@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { asset } from "@/src/services/asset";
+import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 import {
   fmtDateTime,
   fmtNum,
@@ -13,6 +15,7 @@ import {
 } from "./orders-shared";
 
 export const FundingWallet = () => {
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const { data: records, isLoading } = useQuery({
     queryKey: ["all-transaction-history"],
     queryFn: () => asset.allTransactionHistory(),
@@ -26,6 +29,10 @@ export const FundingWallet = () => {
 
   return (
     <div className="flex flex-col gap-6">
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+      />
       <div className="flex flex-wrap items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
         <Select
           label="Time"
@@ -65,7 +72,11 @@ export const FundingWallet = () => {
             {allRecords.map((rec: any, idx: number) => {
               const amount = Number(rec.amount ?? rec.quantity ?? 0);
               return (
-                <TableTr key={rec.id ?? idx}>
+                <TableTr
+                  key={rec.id ?? idx}
+                  onClick={() => setSelectedTransaction(rec)}
+                  className="cursor-pointer"
+                >
                   <TableTd className="pl-5 !text-white !font-bold">{rec.coin ?? rec.asset ?? "—"}</TableTd>
                   <TableTd className="text-white/50">{fmtDateTime(rec.createdAt)}</TableTd>
                   <TableTd className="capitalize">{rec.type ?? rec.transactionType ?? "—"}</TableTd>

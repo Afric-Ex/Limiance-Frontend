@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Accordion,
@@ -29,6 +29,7 @@ import { DepositSkeleton } from "@/src/components/skeletons/orders";
 import { useInfiniteList } from "@/src/hooks/use-infinite-list";
 import { InfiniteScrollTrigger } from "@/src/components/shared/infinite-scroll-trigger";
 import { fiatKeys, fiatService } from "@/src/services/fiat";
+import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 import { useSearchParams } from "next/navigation";
 
 const faqs = [
@@ -74,9 +75,16 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 function FiatDepositInner() {
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const limit = 30;
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get("tab") === "card" ? "card" : "bank";
+  // Deep link from other pages (e.g. Earn LIM → card with ?asset=LIM). Only a
+  // plain ticker is accepted so junk in the URL can never reach the quote call.
+  const rawAsset = searchParams.get("asset") ?? "";
+  const requestedAsset = /^[a-z0-9]{2,12}$/i.test(rawAsset.trim())
+    ? rawAsset.trim().toUpperCase()
+    : undefined;
 
   const {
     items: history,
@@ -95,6 +103,11 @@ function FiatDepositInner() {
 
   return (
     <div className="flex flex-col gap-10 max-[1150px]:px-2 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-6">
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+      />
+
       {/* Page header */}
       <div className="flex max-[410px]:flex-col items-center gap-3">
         <h1 className="text-xl max-[1150px]:text-lg font-bold text-white tracking-tight">Fiat Deposit</h1>
@@ -115,7 +128,7 @@ function FiatDepositInner() {
               <FiatBankDeposit />
             </TabsPanel>
             <TabsPanel value="card" pt="lg">
-              <FiatCardDeposit />
+              <FiatCardDeposit defaultSymbol={requestedAsset} />
             </TabsPanel>
           </Tabs>
 
@@ -207,7 +220,11 @@ function FiatDepositInner() {
                   ))}
 
                 {history?.map((item: any) => (
-                  <TableTr key={item.id}>
+                  <TableTr
+                    key={item.id}
+                    onClick={() => setSelectedTransaction(item)}
+                    className="cursor-pointer"
+                  >
                     <TableTd className="pl-6 !text-white/40">
                       {new Date(item.createdAt).toLocaleString()}
                     </TableTd>

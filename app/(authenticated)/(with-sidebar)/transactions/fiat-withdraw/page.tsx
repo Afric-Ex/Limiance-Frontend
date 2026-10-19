@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Accordion,
@@ -29,6 +29,7 @@ import { WithdrawalSkeleton } from "@/src/components/skeletons/orders";
 import { useInfiniteList } from "@/src/hooks/use-infinite-list";
 import { InfiniteScrollTrigger } from "@/src/components/shared/infinite-scroll-trigger";
 import { fiatKeys, fiatService } from "@/src/services/fiat";
+import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 
 const faqs = [
   {
@@ -78,6 +79,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 function FiatWithdrawInner() {
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const {
     banks,
     banksLoading,
@@ -118,6 +120,10 @@ function FiatWithdrawInner() {
 
   return (
     <div className="flex flex-col gap-10 relative max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-6">
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+      />
       <LoadingOverlay visible={withdrawalPending} />
 
       {/* Page header */}
@@ -358,7 +364,11 @@ function FiatWithdrawInner() {
                   ))}
 
                 {history?.map((item: any) => (
-                  <TableTr key={item.id}>
+                  <TableTr
+                    key={item.id}
+                    onClick={() => setSelectedTransaction(item)}
+                    className="cursor-pointer"
+                  >
                     <TableTd className="pl-6 !text-white/40">
                       {new Date(item.createdAt).toLocaleString()}
                     </TableTd>
