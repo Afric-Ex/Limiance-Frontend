@@ -15,12 +15,12 @@ function OverviewInner() {
       {/* 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-[1150px]:gap-4 items-start w-full">
         {/* Left Column: My Assets */}
-        <div className="w-full">
+        <div className="w-full min-w-0">
           <MyWallet />
         </div>
 
         {/* Right Column: Asset Trend + Recent History */}
-        <div className="w-full flex flex-col gap-8 max-[1150px]:gap-4 animate-fade-up stagger-2">
+        <div className="w-full min-w-0 flex flex-col gap-8 max-[1150px]:gap-4 animate-fade-up stagger-2">
           <AssetTrendChart />
           <RecentHistory />
         </div>

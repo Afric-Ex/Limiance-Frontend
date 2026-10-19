@@ -71,7 +71,7 @@ export const MyWallet = () => {
   ];
 
   return (
-    <div className="flex flex-col gap-4 animate-fade-up stagger-1 max-[1150px]:gap-3">
+    <div className="flex min-w-0 w-full flex-col gap-4 animate-fade-up stagger-1 max-[1150px]:gap-3">
       <div className="flex items-center justify-between mb-2 max-[1150px]:mb-0">
         <h3 className="text-xl font-bold max-[1150px]:text-lg">My Assets</h3>
         <div className="flex items-center gap-3">
@@ -95,18 +95,18 @@ export const MyWallet = () => {
 
       <div className="rounded-xl border border-white/[0.06] bg-[#181a20] flex flex-col divide-y divide-white/[0.04]">
         {/* ROW 1: Funding */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 max-[1150px]:p-4 gap-4 max-[1150px]:gap-3 row-hover transition-colors">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between p-5 max-[1150px]:p-4 gap-4 max-[1150px]:gap-3 row-hover transition-colors">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
               <MdAccountBalanceWallet size={17} className="text-primary" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex min-w-0 flex-col">
               <span className="text-base font-semibold max-[1150px]:text-sm">Funding</span>
               <span className="text-xs text-white/50 max-[1150px]:text-[10px]">Deposits / Withdrawals / P2P</span>
             </div>
           </div>
 
-          <div className="flex flex-col sm:items-end gap-1">
+          <div className="flex min-w-0 flex-col sm:items-end gap-1">
             {isFundingLoading ? (
               <Skeleton variant="text" width="100px" height="20px" />
             ) : (
@@ -127,7 +127,7 @@ export const MyWallet = () => {
             )}
           </div>
 
-          <div className="flex items-center sm:justify-end gap-2 mt-2 sm:mt-0 max-[1150px]:grid max-[1150px]:grid-cols-4 max-[1150px]:mt-2">
+          <div className="flex max-w-full flex-wrap items-center gap-2 sm:justify-end mt-2 sm:mt-0 max-[1150px]:grid max-[1150px]:w-full max-[1150px]:grid-cols-4 max-[1150px]:mt-2">
             {actions.map((action) => (
               <button
                 key={action.text}
@@ -143,12 +143,12 @@ export const MyWallet = () => {
         </div>
 
         {/* ROW 2: Unified Trading */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 max-[1150px]:p-4 gap-4 max-[1150px]:gap-3 row-hover transition-colors">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between p-5 max-[1150px]:p-4 gap-4 max-[1150px]:gap-3 row-hover transition-colors">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-[#F0B90B]/20 flex items-center justify-center flex-shrink-0">
               <MdCandlestickChart size={17} className="text-[#F0B90B]" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex min-w-0 flex-col">
               <span className="whitespace-nowrap text-base font-semibold max-[1150px]:text-sm">Unified Trading</span>
               <span className="text-xs text-white/50 w-full max-w-[200px] leading-tight max-[1150px]:text-[10px]">
                 Spot, Futures, Margin
@@ -156,7 +156,7 @@ export const MyWallet = () => {
             </div>
           </div>
 
-          <div className="flex flex-col sm:items-end gap-1">
+          <div className="flex min-w-0 flex-col sm:items-end gap-1">
             {isTradingLoading ? (
               <Skeleton variant="text" width="100px" height="20px" />
             ) : (
@@ -177,11 +177,11 @@ export const MyWallet = () => {
             )}
           </div>
 
-          <div className="flex items-center sm:justify-end gap-2 mt-2 sm:mt-0 max-[1150px]:grid max-[1150px]:grid-cols-4 max-[1150px]:mt-2">
+          <div className="flex max-w-full flex-wrap items-center gap-2 sm:justify-end mt-2 sm:mt-0 max-[1150px]:grid max-[1150px]:w-full max-[1150px]:grid-cols-4 max-[1150px]:mt-2">
             <button
               onClick={() => push("/markets")}
               aria-label="Trade"
-              className="text-xs font-semibold px-4 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors max-[1150px]:rounded-lg max-[1150px]:h-full max-[1150px]:col-span-1"
+              className="whitespace-nowrap text-xs font-semibold px-4 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors max-[1150px]:rounded-lg max-[1150px]:h-full max-[1150px]:col-span-1"
             >
               Trade
             </button>
