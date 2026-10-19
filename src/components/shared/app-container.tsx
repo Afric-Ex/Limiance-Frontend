@@ -10,7 +10,6 @@ const bgImagePages: string[] = [];
 const NO_FOOTER_ROUTES = [
   "/dashboard",
   "/assets",
-  "/earn",
   "/orders",
   "/account",
   "/settings",

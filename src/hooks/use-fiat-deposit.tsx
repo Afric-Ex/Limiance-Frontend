@@ -239,7 +239,7 @@ export const useFiatBankDeposit = () => {
   };
 };
 
-export const useFiatCardDeposit = () => {
+export const useFiatCardDeposit = (defaultSymbol?: string) => {
   const queryClient = useQueryClient();
   const markPendingDeposit = useDepositStore((state) => state.markPending);
   // Search runs server-side (debounced) so coins on unfetched pages are found.
@@ -257,7 +257,11 @@ export const useFiatCardDeposit = () => {
   } = useFiatCoinSymbols(debouncedAssetSearch);
   const form = useForm({
     initialValues: {
-      symbol: "USDT",
+      // `defaultSymbol` comes from the ?asset= deep link (e.g. the Earn LIM
+      // page sends card deposits straight to LIM). The quote query is the
+      // gatekeeper: if the backend doesn't support the coin, the quote fails
+      // and the existing "select another coin" path takes over.
+      symbol: defaultSymbol?.trim().toUpperCase() || "USDT",
       amount: "",
       cardNumber: "",
       cardExpiryMonth: "",

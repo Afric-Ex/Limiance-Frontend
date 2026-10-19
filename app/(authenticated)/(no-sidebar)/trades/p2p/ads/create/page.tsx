@@ -1,16 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
 import { PaymentMethodManager } from "@/src/components/p2p/payment-method-manager";
 import { PaymentMethodBadge } from "@/src/components/p2p/payment-method-badge";
 import { Button, Select, NumberInput, Textarea, Checkbox, Tooltip, MultiSelect } from "@mantine/core";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useCreateAd, useAdvertiserInfo, usePaymentMethods } from "@/src/hooks/p2p/use-p2p";
 import { CreateOrder } from "@/src/types/p2p";
-import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { asset, assetKeys } from "@/src/services/asset";
+import { tradingKeys, tradingService } from "@/src/services/trading";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 import { IoChevronBack } from "react-icons/io5";
 import { getBanksForFiat } from "@/src/lib/banks";
@@ -19,12 +21,9 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2PCreateAdSkeleton } from "@/src/components/skeletons/p2p";
 import clsx from "clsx";
 
-const FIAT_RATES: Record<string, number> = {
-  USD: 1,
-  EUR: 0.92,
-  NGN: 1500,
-  GBP: 0.78,
-};
+// Shown only while the backend lists load (or if those requests fail).
+const FALLBACK_ASSETS = ["USDT", "BTC", "ETH"];
+const FALLBACK_FIATS = ["USD", "EUR", "NGN", "GBP"];
 
 // ─── Shared piece styles (matches withdrawal / account flows) ─────────────────
 
@@ -74,7 +73,6 @@ const dropdownClass = "!bg-[#1c1e27] !border !border-white/[0.1] !shadow-2xl !ro
 const optionClass =
   "hover:!bg-white/10 data-[combobox-selected]:!bg-primary/20 data-[combobox-selected]:!text-primary !rounded-lg !mx-1 !my-0.5 !transition-colors";
 const pillBuy = "!bg-buy !text-white !font-semibold !rounded-md";
-const pillSell = "!bg-sell !text-white !font-semibold !rounded-md";
 
 function CreateAdPageInner() {
   const router = useRouter();
@@ -118,11 +116,64 @@ function CreateAdPageInner() {
     return m?.data?.bankName || m?.method || id;
   };
 
-  // Live market price from WebSocket — backend streams crypto/USDT pairs
-  // For USDT itself, price is always 1. For others (BTC, ETH), we get the live USDT price.
-  const wsPair = selectedAsset === "USDT" ? "BTC/USDT" : `${selectedAsset}/USDT`;
-  const feed = useMarketFeed(wsPair);
-  const currentMarketPrice = selectedAsset === "USDT" ? 1 : feed.price;
+  // Listed tokens for the asset picker — the backend's own supported-token list.
+  // `listed_tokens` answers one row per token per chain, so collapse to one
+  // entry per symbol (same aggregation the deposit/withdraw token pickers use).
+  const { data: listedTokens } = useQuery({
+    queryKey: assetKeys.supportedTokensKey("all"),
+    queryFn: () => asset.fetchSupportedTokens({ limit: 1000 }),
+    select: (res: any) => (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []),
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  const assetOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const options: { value: string; label: string }[] = [];
+    for (const token of listedTokens ?? []) {
+      const symbol = String(token?.symbol ?? "").trim().toUpperCase();
+      if (!symbol || seen.has(symbol)) continue;
+      seen.add(symbol);
+      options.push({ value: symbol, label: symbol });
+    }
+    return options.length
+      ? options
+      : FALLBACK_ASSETS.map((symbol) => ({ value: symbol, label: symbol }));
+  }, [listedTokens]);
+
+  const selectedTokenLogo = useMemo(() => {
+    const token = (listedTokens ?? []).find(
+      (t: any) => String(t?.symbol ?? "").trim().toUpperCase() === selectedAsset
+    );
+    return token?.image || token?.logo || token?.icon || undefined;
+  }, [listedTokens, selectedAsset]);
+
+  // Listed fiat currencies for the fiat picker — the fallback set only covers
+  // the window before this resolves (or a failed request).
+  const { data: listedCurrencies } = useQuery({
+    queryKey: tradingKeys.listedCurrencies,
+    queryFn: () => tradingService.listedCurrencies({ limit: 200 }),
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  const fiatOptions = useMemo(() => {
+    const body: any = (listedCurrencies as any)?.data ?? listedCurrencies;
+    const rows: any[] = Array.isArray(body) ? body : [];
+    const seen = new Set<string>();
+    const options: { value: string; label: string }[] = [];
+    for (const row of rows) {
+      const code = String(
+        typeof row === "string" ? row : row?.symbol ?? row?.code ?? row?.currency ?? row?.name ?? ""
+      ).trim().toUpperCase();
+      if (!code || seen.has(code)) continue;
+      seen.add(code);
+      options.push({ value: code, label: code });
+    }
+    return options.length
+      ? options
+      : FALLBACK_FIATS.map((code) => ({ value: code, label: code }));
+  }, [listedCurrencies]);
 
   // Real balance from funding account via WebSocket portfolio channel
   const { coins: portfolioCoins } = usePortfolioWs({ coins: true });
@@ -146,8 +197,45 @@ function CreateAdPageInner() {
     totalAmount !== "" &&
     Number(totalAmount) > fundingBalance;
 
-  const marketPriceInFiat =
-    currentMarketPrice !== null ? currentMarketPrice * (FIAT_RATES[fiat] || 1) : null;
+  // Market price in the selected fiat from the server conversion quote
+  // (`trading/conversion_rate`) — the same quote service the convert and
+  // buy-LIM flows price against. No locally invented rates.
+  const { data: conversionQuote } = useQuery({
+    queryKey: ["p2p-ad-market-price", selectedAsset, fiat],
+    queryFn: () =>
+      tradingService.conversionRate({ fromAsset: selectedAsset, toAsset: fiat, quantity: "1" }),
+    enabled: !!selectedAsset && !!fiat,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    retry: false,
+    throwOnError: false,
+  });
+
+  const marketPriceInFiat = useMemo(() => {
+    const payload: any = conversionQuote;
+    if (!payload) return null;
+    // A 200 response can still carry a failure envelope — treat it as no quote.
+    if (payload?.error || payload?.data?.error) return null;
+
+    let body: any = payload;
+    for (let depth = 0; depth < 3; depth += 1) {
+      if (!body || typeof body !== "object" || Array.isArray(body)) break;
+      if (!body.data || typeof body.data !== "object" || Array.isArray(body.data)) break;
+      body = body.data;
+    }
+
+    const rateBlock = body?.rate ?? body?.Rate ?? body;
+    const toPrice = (value: unknown) => {
+      const parsed = parseFloat(String(value ?? "").replace(/,/g, ""));
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    };
+
+    return (
+      toPrice(rateBlock?.baseInQuote ?? rateBlock?.base_in_quote) ??
+      (fiat === "USD" ? toPrice(rateBlock?.baseInQuoteUSD ?? rateBlock?.base_in_quote_usd) : null) ??
+      (fiat === "NGN" ? toPrice(rateBlock?.baseInQuoteNGN ?? rateBlock?.base_in_quote_ngn) : null)
+    );
+  }, [conversionQuote, fiat]);
 
   const handleSubmit = () => {
     if (!price || !totalAmount || !minOrder || !maxOrder || selectedMethodIds.length === 0 || !agreed) return;
@@ -156,6 +244,7 @@ function CreateAdPageInner() {
     const payload: CreateOrder = {
       type: adMode === "BUY" ? "Buy" : "Sell",
       asset: selectedAsset,
+      assetLogo: selectedTokenLogo,
       fiat: fiat,
       fixedPrice: String(price),
       paymentDuration: paymentWindow,
@@ -257,14 +346,16 @@ function CreateAdPageInner() {
                 label="Asset"
                 value={selectedAsset}
                 onChange={(v) => setSelectedAsset(v || "USDT")}
-                data={["USDT", "BTC", "ETH"]}
+                data={assetOptions}
+                searchable
                 classNames={{ label: labelClass, input: inputClass, dropdown: dropdownClass, option: optionClass }}
               />
               <Select
                 label="Fiat Currency"
                 value={fiat}
                 onChange={(v) => setFiat(v || "NGN")}
-                data={["USD", "EUR", "NGN", "GBP"]}
+                data={fiatOptions}
+                searchable
                 classNames={{ label: labelClass, input: inputClass, dropdown: dropdownClass, option: optionClass }}
               />
             </div>
@@ -290,7 +381,7 @@ function CreateAdPageInner() {
                 </div>
               ) : (
                 <div className="hidden sm:flex items-center justify-between bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 py-3">
-                  <span className="text-xs font-medium text-white/40">You're buying</span>
+                  <span className="text-xs font-medium text-white/40">You&apos;re buying</span>
                   <span className="text-sm font-bold text-buy">
                     {selectedAsset} in {fiat}
                   </span>

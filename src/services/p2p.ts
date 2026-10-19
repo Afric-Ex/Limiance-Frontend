@@ -134,7 +134,9 @@ export const p2p = {
     const response = await api.post("trading/p2p/create_order", {
       ...data,
       active: true,
-      assetLogo: assetLogoMap[data.asset.toUpperCase()] ?? "",
+      // Prefer the logo the caller resolved from `listed_tokens`; the local
+      // map only covers the handful of majors and returns "" for the rest.
+      assetLogo: data.assetLogo || assetLogoMap[data.asset.toUpperCase()] || "",
       quantity: data.quantity ? +data.quantity : null,
       minQuantity: data.minQuantity ? +data.minQuantity : null,
       maxQuantity: data.maxQuantity ? +data.maxQuantity : null,

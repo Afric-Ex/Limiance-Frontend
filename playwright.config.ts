@@ -7,6 +7,9 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 5_000 },
   fullyParallel: true,
+  // The dev-server-backed suite depends on on-demand route compilation and a
+  // WS→REST fallback, so run it on a single worker for deterministic warm-up.
+  workers: 1,
   reporter: process.env.CI ? "line" : "list",
   use: {
     baseURL,
@@ -20,6 +23,8 @@ export default defineConfig({
         command: "npm run dev",
         url: `${baseURL}/auth/login`,
         reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        // Turbopack cold-compiles `/auth/login` in ~2 minutes on a cold cache;
+        // allow generous headroom so the first run does not time out.
+        timeout: 300_000,
       },
 });

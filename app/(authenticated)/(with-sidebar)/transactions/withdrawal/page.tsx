@@ -28,6 +28,7 @@ import {
 } from "@mantine/core";
 import { MdKeyboardArrowRight, MdOutlineHelp, MdOutlineSendToMobile } from "react-icons/md";
 import { TokenNetworkModal } from "@/src/components/transactions/token-network-modal";
+import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 import { MethodSelectModal } from "@/src/components/shared/method-select-modal";
 import { Send } from "@/src/components/icons/send";
 import { Transfer } from "@/src/components/icons/transfer";
@@ -166,6 +167,7 @@ function WithdrawalInner() {
   });
 
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   // Withdrawal method picked right after coin + network, before the address step.
   const [withdrawMethod, setWithdrawMethod] = useState<"onchain" | null>(null);
   const [methodModalOpened, { open: openMethodModal, close: closeMethodModal }] = useDisclosure(false);
@@ -275,6 +277,11 @@ function WithdrawalInner() {
           setWithdrawMethod(null);
           openMethodModal();
         }}
+      />
+
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
       />
 
       <MethodSelectModal
@@ -718,7 +725,11 @@ function WithdrawalInner() {
                   ))}
 
                 {history?.map((item: any) => (
-                  <TableTr key={item.id}>
+                  <TableTr
+                    key={item.id}
+                    onClick={() => setSelectedTransaction(item)}
+                    className="cursor-pointer"
+                  >
                     <TableTd className="pl-6 !text-white/40">{fmtDate(item.completedAt || item.createdAt)}</TableTd>
                     <TableTd>
                       <span className="flex items-center gap-2">
@@ -740,7 +751,10 @@ function WithdrawalInner() {
                     <TableTd className="!text-white !font-bold">{item.amount}</TableTd>
                     <TableTd>
                       {item.hash && !isZeroAddress(item.hash) ? (
-                        <span className="flex items-center gap-2">
+                        <span
+                          className="flex items-center gap-2"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <span className="font-mono text-xs">{truncateCryptoAddress(item.hash)}</span>
                           <Copy color="var(--primary)" text={item.hash} />
                         </span>
@@ -750,7 +764,10 @@ function WithdrawalInner() {
                     </TableTd>
                     <TableTd className="uppercase font-bold">{item.chain}</TableTd>
                     <TableTd>
-                      <span className="flex items-center gap-2">
+                      <span
+                        className="flex items-center gap-2"
+                        onClick={(event) => event.stopPropagation()}
+                      >
                         <span className="font-mono text-xs">{truncateCryptoAddress(item.id)}</span>
                         <Copy color="var(--primary)" text={item.id} />
                       </span>

@@ -23,7 +23,6 @@ import {
   IoChevronDown,
   IoFlashOutline,
 } from "react-icons/io5";
-import { MdAutoGraph } from "react-icons/md";
 import { IoIosGift } from "react-icons/io";
 import { BusinessCard } from "../icons/business-card";
 import { Send } from "../icons/send";
@@ -74,7 +73,6 @@ const mainNavLinks: NavItem[] = [
   { name: "Futures", link: "/trades/futures", icon: IoFlashOutline, badge: "PRO" },
   { name: "Margin", link: "/trades/margin", icon: RiBarChartFill },
   { name: "P2P Trading", link: "/trades/p2p", icon: RiExchangeFundsLine },
-  { name: "Earn", link: "/earn", icon: MdAutoGraph },
   { name: "Rewards Hub", link: "/rewards-hub", icon: IoIosGift },
   {
     name: "Account",
@@ -365,7 +363,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
           <SectionLabel label="Finance" />
           <div className="flex flex-col gap-0.5">
-            {mainNavLinks.slice(7, 9).map((item) => (
+            {mainNavLinks.slice(7, 8).map((item) => (
               <NavLink
                 key={item.name}
                 item={item}
@@ -377,7 +375,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
           <SectionLabel label="Profile" />
           <div className="flex flex-col gap-0.5">
-            {mainNavLinks.slice(9).map((item) =>
+            {mainNavLinks.slice(8).map((item) =>
               item.children ? (
                 <NavDropdown
                   key={item.name}
