@@ -24,6 +24,8 @@ export interface LimWalletState {
   locked: number;
   /** Portfolio-reported logo for LIM, when present. */
   portfolioLogo?: string;
+  /** Portfolio-reported LIM price (USD) — fallback for the spot-price quote. */
+  priceUsd?: number;
   /** Backend token-list logo, resolved lazily; falls back to undefined. */
   tokenListLogo?: string;
   logo?: string;
@@ -66,11 +68,16 @@ export function useLimWallet(): LimWalletState {
   const inTrading =
     toNumber(limCoin?.marginBalance) + toNumber(limCoin?.futuresBalance);
 
+  const currencyPrice = toNumber(
+    limCoin?.currencyPrice ?? limCoin?.usdPrice ?? limCoin?.price
+  );
+
   return {
     hasEntry: !!limCoin,
     available,
     inTrading,
     locked: toNumber(limCoin?.lockedBalance),
+    priceUsd: currencyPrice > 0 ? currencyPrice : undefined,
     portfolioLogo: limCoin?.image || limCoin?.logo || limCoin?.icon || undefined,
     tokenListLogo,
     logo: limCoin?.image || limCoin?.logo || limCoin?.icon || tokenListLogo || undefined,

@@ -18,7 +18,9 @@ import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
  * balance-cloak applies automatically. The available / in-trading / locked
  * split is integrated into the card as a labelled stat row under the
  * allocation bar, and the headline number carries a live USDT / BTC valuation
- * sourced from the same Markets data the trading screens use.
+ * — primary source is the Markets spot-price API (LIMUSDT + BTCUSDT), with
+ * the portfolio's own LIM price and the 24h movers feed as fallbacks, all
+ * refreshed every 30 seconds.
  */
 
 const SEGMENTS = [
@@ -26,6 +28,42 @@ const SEGMENTS = [
   { key: "inTrading", label: "In trading", tone: "bg-warning" },
   { key: "locked", label: "Locked", tone: "bg-white/25" },
 ] as const;
+
+/** Spot-price payloads quote the USD price under one of these fields. */
+const USD_PRICE_FIELDS = [
+  "priceUSD",
+  "priceUsd",
+  "price_usd",
+  "usdPrice",
+  "usd_price",
+  "baseInQuoteUSD",
+  "base_in_quote_usd",
+  "latest_price",
+  "last_price",
+  "lastPrice",
+  "price",
+  "baseInQuote",
+] as const;
+
+function priceFromRecord(record: Record<string, unknown>): number | null {
+  for (const field of USD_PRICE_FIELDS) {
+    const value = Number(record?.[field]);
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  return null;
+}
+
+/** USD price from a spot-price payload, descending nested `data` envelopes. */
+function extractUsdPrice(payload: unknown): number | null {
+  let body: unknown = payload;
+  for (let depth = 0; depth < 3; depth += 1) {
+    if (!body || typeof body !== "object") return null;
+    const found = priceFromRecord(body as Record<string, unknown>);
+    if (found != null) return found;
+    body = (body as Record<string, unknown>).data;
+  }
+  return null;
+}
 
 /** Flatten the movers payload (array or gainers/losers envelope) into a list. */
 function extractMovers(payload: unknown): Record<string, unknown>[] {
@@ -60,10 +98,28 @@ function usdtPriceOf(
 }
 
 export function LimBalanceCard() {
-  const { available, inTrading, locked, logo, isLoading } = useLimWallet();
+  const { available, inTrading, locked, logo, isLoading, priceUsd } =
+    useLimWallet();
 
-  // Live valuation, on the same 24h-movers feed the markets screens read.
-  // Polled every 30s so the conversion tracks the market without a socket.
+  // Live Markets quotes for the two pairs the valuation needs, polled every
+  // 30 seconds so the conversion tracks the market without a socket.
+  const { data: limSpotPayload } = useQuery({
+    queryKey: tradingKeys.spotPrice("LIMUSDT"),
+    queryFn: () => tradingService.spotPrice("LIMUSDT"),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    retry: false,
+  });
+
+  const { data: btcSpotPayload } = useQuery({
+    queryKey: tradingKeys.spotPrice("BTCUSDT"),
+    queryFn: () => tradingService.spotPrice("BTCUSDT"),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    retry: false,
+  });
+
+  // 24h movers is only a fallback for when the spot quotes are unavailable.
   const { data: moversPayload } = useQuery({
     queryKey: tradingKeys.gainersLosers,
     queryFn: () => tradingService.gainersLosers(100),
@@ -72,15 +128,21 @@ export function LimBalanceCard() {
     retry: false,
   });
 
+  const movers = extractMovers(moversPayload);
+  const limUsd =
+    extractUsdPrice(limSpotPayload) ??
+    usdtPriceOf(movers, "LIM") ??
+    priceUsd ??
+    null;
+  const btcUsd = extractUsdPrice(btcSpotPayload) ?? usdtPriceOf(movers, "BTC");
+  const usdtValue =
+    limUsd != null && available > 0 ? available * limUsd : null;
+  const btcValue =
+    usdtValue != null && btcUsd != null ? usdtValue / btcUsd : null;
+
   const total = available + inTrading + locked;
   const shareOf = (value: number) =>
     total > 0 ? Math.round((value / total) * 100) : 0;
-
-  const movers = extractMovers(moversPayload);
-  const limUsdt = usdtPriceOf(movers, "LIM");
-  const btcUsdt = usdtPriceOf(movers, "BTC");
-  const usdtValue = limUsdt != null && available > 0 ? available * limUsdt : null;
-  const btcValue = usdtValue != null && btcUsdt != null ? usdtValue / btcUsdt : null;
 
   const balances = { available, inTrading, locked };
   const visibleSegments = SEGMENTS.filter(
@@ -131,12 +193,15 @@ export function LimBalanceCard() {
             </span>
           </div>
           {usdtValue != null && (
-            <div className="flex flex-col gap-0.5 text-xs text-[var(--color-text-secondary)]">
-              <span>≈ ${formatAmount(usdtValue, 6)} USDT</span>
+            <p className="text-xs text-white/60">
+              ≈ ${formatAmount(usdtValue, 6)} USDT
               {btcValue != null && (
-                <span>≈ {formatAmount(btcValue, 9)} BTC</span>
+                <>
+                  <span className="mx-1.5 text-white/25">|</span>
+                  ≈ {formatAmount(btcValue, 9)} BTC
+                </>
               )}
-            </div>
+            </p>
           )}
         </div>
 

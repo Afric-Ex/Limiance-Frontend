@@ -28,6 +28,7 @@ export const tradingKeys = {
   spotRecentTrades: (symbol?: string) => ["spot-recent-trades", symbol],
   klineData: (symbol: string, interval: string, market?: string) => ["kline", symbol, interval, market],
   gainersLosers: ["gainers-losers"],
+  spotPrice: (symbol: string) => ["spot-price", symbol],
   marginOrderHistory: ["margin-order-history"],
   marginOpenOrders: ["margin-open-orders"],
   marginBorrowHistory: ["margin-borrow-history"],
@@ -434,6 +435,12 @@ export const tradingService = {
 
   gainersLosers: async (limit = 100) => {
     const response = await api.get(`trading/24_hours_movers`, { params: { limit } });
+    return response.data;
+  },
+
+  /** Latest spot price in USD/NGN for one market, e.g. `LIMUSDT`. */
+  spotPrice: async (symbol: string) => {
+    const response = await api.get("trading/spot/price", { params: { symbol } });
     return response.data;
   },
 
