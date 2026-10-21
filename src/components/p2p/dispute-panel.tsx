@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Drawer, Radio, Textarea, Button, FileInput, Checkbox, Loader } from "@mantine/core";
 import { MdUploadFile } from "react-icons/md";
 import { useUpdateMatchedOrder } from "@/src/hooks/p2p/use-p2p";
+import { P2PMatchStatus } from "@/src/lib/status-constants";
 
 interface DisputePanelProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ export const DisputePanel = ({ isOpen, onClose, orderMatchId, onSuccess }: Dispu
     updateStatus(
       {
         orderMatchId,
-        status: "DISPUTED",
+        status: P2PMatchStatus.DISPUTED,
         reason,
         description,
       },

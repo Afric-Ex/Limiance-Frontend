@@ -29,18 +29,7 @@ function PreOrderScreenContent() {
     enabled: !!adId,
   });
 
-  // Fetch user's saved payment methods
-  const { data: pmData, isLoading: pmLoading } = usePaymentMethods();
-
-  const { mutate: matchOrder, isPending: isCreating } = useMatchOrder();
-
   const ad = (adData?.data as any)?.data;
-  const paymentMethods: any[] = pmData?.data?.data ?? [];
-
-  const advertiserName = ad
-    ? [ad.advertiser?.firstName, ad.advertiser?.lastName].filter(Boolean).join(" ")
-    : "";
-
   // The user's action is opposite to the ad type:
   // If the ad is SELL → user is BUYING. If ad is BUY → user is SELLING.
   // Normalise the ad type first — endpoints return inconsistent casing
@@ -48,6 +37,24 @@ function PreOrderScreenContent() {
   // `=== "Sell"` flipped the mode and showed a bogus funding balance.
   const adType = String(ad?.type ?? "").toUpperCase();
   const userAction = adType === "SELL" ? "Buy" : "Sell";
+  const isBuying = userAction === "Buy";
+
+  // Saved payment methods belong to the seller. When buying, the seller's
+  // payment method comes from the ad itself; only a seller needs their own.
+  const { data: pmData, isLoading: pmLoading } = usePaymentMethods({
+    enabled: !!ad && !isBuying,
+  });
+
+  const { mutate: matchOrder, isPending: isCreating } = useMatchOrder();
+
+  const paymentMethods: any[] = pmData?.data?.data ?? [];
+  const sellerPaymentMethods: any[] = Array.isArray(ad?.paymentMethod)
+    ? ad.paymentMethod
+    : [];
+
+  const advertiserName = ad
+    ? [ad.advertiser?.firstName, ad.advertiser?.lastName].filter(Boolean).join(" ")
+    : "";
 
   const price = parseFloat(String(ad?.price ?? 0));
   const minQty = parseFloat(String(ad?.minQuantity ?? 0));
@@ -57,6 +64,14 @@ function PreOrderScreenContent() {
 
   const cryptoAmount = userAction === "Buy" ? numAmount / price : numAmount;
   const fiatAmount = userAction === "Buy" ? numAmount : numAmount * price;
+
+  const effectivePaymentId = isBuying
+    ? sellerPaymentMethods.some((pm) => pm.id === selectedPaymentId)
+      ? selectedPaymentId
+      : sellerPaymentMethods[0]?.id ?? null
+    : paymentMethods.some((pm) => pm.id === selectedPaymentId)
+      ? selectedPaymentId
+      : null;
 
   // Fetch portfolio (WebSocket channel) to get the per-asset funding balance (supports fractional amounts)
   const { coins: portfolio, isLoading: balanceLoading } = usePortfolioWs({ coins: true });
@@ -78,12 +93,12 @@ function PreOrderScreenContent() {
     else if (userAction === "Sell" && cryptoAmount > fundingBalance) validationError = `Insufficient funding balance (Available: ${fundingBalance} ${ad?.asset?.toUpperCase()})`;
   }
 
-  const canProceed = numAmount > 0 && !validationError && !!selectedPaymentId;
+  const canProceed = numAmount > 0 && !validationError && !!effectivePaymentId;
 
   const handleConfirm = () => {
-    if (!adId || !selectedPaymentId) return;
+    if (!adId || !effectivePaymentId) return;
     matchOrder(
-      { orderId: adId, paymentMethodId: selectedPaymentId, quantity: cryptoAmount },
+      { orderId: adId, paymentMethodId: effectivePaymentId, quantity: cryptoAmount },
       {
         onSuccess: (res: any) => {
           const matchId = res?.data?.orderMatchId || res?.data?.data?.id || res?.data?.id || res?.id || res?.data?.data?._id || res?.data?._id;
@@ -258,11 +273,61 @@ function PreOrderScreenContent() {
 
               {/* Payment Method Select */}
               <div>
-                <label className="text-white/60 text-sm mb-2 block font-medium">Pay with (your saved methods)</label>
-                {pmLoading ? (
+                <label className="text-white/60 text-sm mb-2 block font-medium">
+                  {isBuying
+                    ? "Pay to (seller's payment method)"
+                    : "Receive payment via (your saved methods)"}
+                </label>
+                {isBuying ? (
+                  sellerPaymentMethods.length === 0 ? (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm">
+                      This ad has no payment method available. Please choose another ad.
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {sellerPaymentMethods.map((pm) => (
+                        <label
+                          key={pm.id}
+                          className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all ${
+                            effectivePaymentId === pm.id
+                              ? "border-blue-500/50 bg-blue-500/5 shadow-[0_0_15px_rgba(59,130,246,0.1)]"
+                              : "border-white/10 bg-white/5 hover:bg-white/10"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="paymentMethod"
+                            value={pm.id}
+                            checked={effectivePaymentId === pm.id}
+                            onChange={() => setSelectedPaymentId(pm.id)}
+                            className="accent-blue-500 w-4 h-4"
+                          />
+                          <div>
+                            <div className="text-white text-sm font-medium">
+                              {pm.data?.bankName ?? pm.method}
+                            </div>
+                            {pm.data?.accountName && (
+                              <div className="text-white/60 text-xs">
+                                {pm.data.accountName}
+                              </div>
+                            )}
+                            {pm.data?.accountNumber && (
+                              <div className="text-white/40 text-xs">
+                                Acct: {pm.data.accountNumber}
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                      <p className="text-white/40 text-xs">
+                        Send the exact amount to this account after the order is confirmed.
+                      </p>
+                    </div>
+                  )
+                ) : pmLoading ? (
                   <div className="text-white/40 text-sm">Loading payment methods...</div>
                 ) : paymentMethods.length === 0 ? (
-                  <div 
+                  <div
                     onClick={() => router.push("/account/payment-methods")}
                     className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-blue-400 text-sm flex items-center gap-3 cursor-pointer hover:bg-blue-500/20 transition-colors"
                   >
@@ -272,12 +337,12 @@ function PreOrderScreenContent() {
                 ) : (
                   <div className="flex flex-col gap-3">
                     {paymentMethods.map((pm) => (
-                      <label key={pm.id} className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all ${selectedPaymentId === pm.id ? "border-blue-500/50 bg-blue-500/5 shadow-[0_0_15px_rgba(59,130,246,0.1)]" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
+                      <label key={pm.id} className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all ${effectivePaymentId === pm.id ? "border-blue-500/50 bg-blue-500/5 shadow-[0_0_15px_rgba(59,130,246,0.1)]" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
                         <input
                           type="radio"
                           name="paymentMethod"
                           value={pm.id}
-                          checked={selectedPaymentId === pm.id}
+                          checked={effectivePaymentId === pm.id}
                           onChange={() => setSelectedPaymentId(pm.id)}
                           className="accent-blue-500 w-4 h-4"
                         />

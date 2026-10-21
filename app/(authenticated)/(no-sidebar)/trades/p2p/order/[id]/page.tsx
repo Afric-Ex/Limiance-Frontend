@@ -17,6 +17,7 @@ import { useUserStore } from "@/src/stores/user-store";
 import { hasReviewForOrder, saveP2PReview } from "@/src/lib/p2p-user-actions";
 import { TotpGateModal } from "@/src/components/transactions/totp-gate-modal";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
+import { P2PMatchStatus } from "@/src/lib/status-constants";
 
 import { BuyerPendingPanel } from "@/src/components/p2p/buyer-pending-panel";
 import { BuyerPaidPanel } from "@/src/components/p2p/buyer-paid-panel";
@@ -112,12 +113,25 @@ function OrderRoomPageInner() {
   // e.g. "2026-06-10 11:34:54.503001 +0000 UTC" → valid JS Date
   const parseBackendDate = (dateStr: string): Date | null => {
     if (!dateStr || dateStr.startsWith("0001")) return null;
-    try {
-      // Replace space between date/time with T, remove trailing " UTC"
-      const cleaned = dateStr.replace(" UTC", "").replace(" ", "T");
-      const d = new Date(cleaned);
-      return isNaN(d.getTime()) ? null : d;
-    } catch { return null; }
+    const match = dateStr
+      .trim()
+      .match(
+        /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:\s*([+-]\d{2}):?(\d{2}))?/
+      );
+    if (match) {
+      const [, year, month, day, hour, minute, second, fraction, offsetHour, offsetMinute] = match;
+      const millis = fraction ? Number(fraction.padEnd(3, "0").slice(0, 3)) : 0;
+      const offset = offsetHour
+        ? (offsetHour.startsWith("-") ? -1 : 1) *
+          (Math.abs(Number(offsetHour)) * 60 + Number(offsetMinute ?? 0))
+        : 0;
+      return new Date(
+        Date.UTC(+year, +month - 1, +day, +hour, +minute, +second, millis) -
+          offset * 60000
+      );
+    }
+    const parsed = new Date(dateStr);
+    return isNaN(parsed.getTime()) ? null : parsed;
   };
 
   // Use expiryTime from backend directly — avoids server clock skew issues
@@ -126,9 +140,12 @@ function OrderRoomPageInner() {
     ? deadlineDate.toISOString()
     : new Date(Date.now() + 900000).toISOString();
 
+  const updatedAtDate = parseBackendDate(order?.updatedAt || order?.createdAt || "");
+  const updatedAtStr = (updatedAtDate ?? new Date()).toISOString();
+
   const handleConfirmPayment = () => {
     updateStatus(
-      { orderMatchId: orderId, status: "FULFILLED" },
+      { orderMatchId: orderId, status: P2PMatchStatus.FULFILLED },
       {
         onSuccess: () => {
           setPaymentModalOpen(false);
@@ -143,7 +160,7 @@ function OrderRoomPageInner() {
     // Reason is passed from modal but intentionally omitted from API payload
     // because the backend UpdateOrderMatch struct does not support it.
     updateStatus(
-      { orderMatchId: orderId, status: "CANCELLED" },
+      { orderMatchId: orderId, status: P2PMatchStatus.CANCELLED },
       {
         onSuccess: () => {
           setCancelModalOpen(false);
@@ -378,7 +395,7 @@ function OrderRoomPageInner() {
                     { label: isBuyer ? "You Pay" : "You Receive", value: <span className="font-bold text-buy text-base drop-shadow-[0_0_8px_rgba(14,203,129,0.4)]">{fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-buy/60 text-sm">{fiat}</span></span> },
                     { label: "Price", value: `${price.toLocaleString()} ${fiat}/${asset}` },
                     { label: "Counterparty", value: <span className="text-white/90 font-medium">{counterpartyName || "—"}</span> },
-                    { label: "Order Time", value: <span className="text-white/70">{order.createdAt ? new Date(order.createdAt).toLocaleString() : "—"}</span> },
+                    { label: "Order Time", value: <span className="text-white/70">{parseBackendDate(order.createdAt ?? "")?.toLocaleString() ?? "—"}</span> },
                   ].map((item, idx) => (
                     <div key={idx} className="flex flex-col gap-1">
                       <div className="text-white/40 text-xs">{item.label}</div>
@@ -407,7 +424,7 @@ function OrderRoomPageInner() {
                   counterpartyName={counterpartyName}
                   quantity={quantity}
                   asset={asset}
-                  updatedAt={order.updatedAt || order.createdAt}
+                  updatedAt={updatedAtStr}
                   onDisputeOpen={() => setDisputeOpen(true)}
                 />
               )}
@@ -428,7 +445,7 @@ function OrderRoomPageInner() {
                   fiatAmount={fiatAmount}
                   fiat={fiat}
                   paymentMethod={paymentMethod}
-                  updatedAt={order.updatedAt || order.createdAt}
+                  updatedAt={updatedAtStr}
                   setReleaseModalOpen={setReleaseModalOpen}
                   onDisputeOpen={() => setDisputeOpen(true)}
                 />

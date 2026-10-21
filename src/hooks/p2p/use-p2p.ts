@@ -14,7 +14,7 @@ function getErrorMessage(error: any, fallback: string): string {
 }
 
 export const useOrderListings = (params: any) => {
-  useP2PAdsFeed(params);
+  useP2PAdsFeed();
   return useQuery({
     queryKey: p2pKey.fetchOrderListing(params),
     queryFn: () => p2p.fetchOrderListing(params),
@@ -220,10 +220,11 @@ export const useAddReview = () => {
   });
 };
 
-export const usePaymentMethods = () => {
+export const usePaymentMethods = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: p2pKey.paymentMethods(),
     queryFn: p2p.fetchPaymentMethod,
+    enabled: options?.enabled ?? true,
   });
 };
 

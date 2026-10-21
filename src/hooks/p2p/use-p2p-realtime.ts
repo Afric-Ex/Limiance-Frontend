@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { p2pKey } from "@/src/services/p2p";
 import {
@@ -45,18 +45,11 @@ function patchMatchedOrder(
   });
 }
 
-export function useP2PAdsFeed(params: any) {
+export function useP2PAdsFeed() {
   const queryClient = useQueryClient();
-  const paramsKey = JSON.stringify(params ?? {});
+  const connected = useWsConnected();
 
   useEffect(() => {
-    let parsedParams: Record<string, unknown> = {};
-    try {
-      parsedParams = paramsKey ? JSON.parse(paramsKey) : {};
-    } catch {
-      parsedParams = {};
-    }
-
     let timer: ReturnType<typeof setTimeout> | null = null;
     const invalidate = () => {
       if (timer) return;
@@ -68,20 +61,21 @@ export function useP2PAdsFeed(params: any) {
       }, 750);
     };
 
-    let hasSubscribed = false;
-    const unsubscribe = subscribeP2POrdersFeed(parsedParams as any, {
-      onSubscribed: () => {
-        if (hasSubscribed) invalidate();
-        hasSubscribed = true;
-      },
-      onUpdated: invalidate,
-    });
+    const unsubscribe = subscribeP2POrdersFeed({ onUpdated: invalidate });
 
     return () => {
       if (timer) clearTimeout(timer);
       unsubscribe();
     };
-  }, [paramsKey, queryClient]);
+  }, [queryClient]);
+
+  const wasConnectedRef = useRef(connected);
+  useEffect(() => {
+    if (connected && !wasConnectedRef.current) {
+      queryClient.invalidateQueries({ queryKey: p2pKey.orderListingRoot });
+    }
+    wasConnectedRef.current = connected;
+  }, [connected, queryClient]);
 }
 
 export function useP2PMatchRoom(orderMatchId: string) {

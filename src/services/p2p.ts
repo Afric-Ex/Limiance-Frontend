@@ -18,7 +18,7 @@ import {
 
 export const p2pKey = {
   orderListing: () => ["order-listing"],
-  orderListingRoot: ["order-listing"],
+  orderListingRoot: ["all-orders"],
   pendingOrders: ["pending-orders"],
   paymentMethods: () => ["payment-method"],
   becomeAdvertiser: () => ["become-advertiser"],
@@ -137,13 +137,14 @@ const withWsFallback = async <T>(
 
 const withRestFallback = async <T>(
   wsCall: () => Promise<T>,
-  restCall: () => Promise<T>
+  restCall: () => Promise<T>,
+  options?: { fallbackOnAnyError?: boolean }
 ): Promise<T> => {
   if (typeof window !== "undefined") {
     try {
       return await wsCall();
     } catch (error) {
-      if (!shouldFallbackToRest(error)) throw error;
+      if (!options?.fallbackOnAnyError && !shouldFallbackToRest(error)) throw error;
     }
   }
   return restCall();
@@ -181,15 +182,16 @@ export const p2p = {
     page?: number;
     limit?: number;
   }): Promise<ApiResponse<P2POrderListings>> => {
-    return withWsFallback(
-      async () => api.get(`trading/p2p/all_orders`, { params }),
+    return withRestFallback(
       async () => {
         const { getP2POrdersWs, normalizeWsP2POrdersResponse } = await loadP2PWs();
         const payload = await getP2POrdersWs(params as P2PAdsQueryParams);
         return {
           data: normalizeWsP2POrdersResponse(payload),
         } as unknown as ApiResponse<P2POrderListings>;
-      }
+      },
+      () => api.get(`trading/p2p/all_orders`, { params }),
+      { fallbackOnAnyError: true }
     );
   },
 

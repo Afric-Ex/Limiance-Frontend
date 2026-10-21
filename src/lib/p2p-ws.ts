@@ -660,14 +660,10 @@ export function updateP2PMatchStatusWs(
   status: string
 ): Promise<any> {
   const normalized = String(status).toUpperCase();
-  const wsStatus =
-    normalized === "FULFILLED" || normalized === "PARTIALLY_COMPLETED"
-      ? "PAID"
-      : normalized;
 
   return requestP2P({
     frameType: "p2p_update_match_status",
-    data: { order_match_id: orderMatchId, status: wsStatus },
+    data: { order_match_id: orderMatchId, status: normalized },
     responseType: ["p2p_match_status_updated", "p2p_match_status_changed"],
     match: (payload) => {
       const id = readMatchId(payload);
@@ -745,46 +741,15 @@ export function getUserP2PMatchesWs(params?: {
 }
 
 export interface P2POrdersFeedHandlers {
-  onSubscribed?: (payload: any) => void;
-  onSnapshot?: (payload: any) => void;
   onUpdated?: (payload: any) => void;
 }
 
 export function subscribeP2POrdersFeed(
-  params: P2PAdsQueryParams | undefined,
   handlers: P2POrdersFeedHandlers
 ): () => void {
-  const unsubscribeAck = wsClient.subscribe(
-    "p2p_orders_subscribed",
-    null,
-    (payload) => {
-      handlers.onSubscribed?.(payload);
-    }
-  );
-  const unsubscribeSnapshot = wsClient.subscribe(
-    "p2p_orders_data",
-    { type: "subscribe_p2p_orders", data: buildAdsQuery(params) },
-    (payload) => {
-      handlers.onSnapshot?.(payload);
-    }
-  );
-  const unsubscribeUpdated = wsClient.subscribe(
-    "p2p_orders_updated",
-    null,
-    (payload) => {
-      handlers.onUpdated?.(payload);
-    }
-  );
-
-  return () => {
-    wsClient.send({
-      type: "unsubscribe",
-      data: { topic: "p2p_orders" },
-    });
-    unsubscribeAck();
-    unsubscribeSnapshot();
-    unsubscribeUpdated();
-  };
+  return wsClient.subscribe("p2p_orders_updated", null, (payload) => {
+    handlers.onUpdated?.(payload);
+  });
 }
 
 export interface P2PMatchStatusEvent {
