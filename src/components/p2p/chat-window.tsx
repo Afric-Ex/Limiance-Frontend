@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ChatMessage } from "./chat-message";
 import { ChatInput } from "./chat-input";
 import { TypingIndicator } from "./typing-indicator";
-import { ActionIcon, Badge, Tooltip, Loader } from "@mantine/core";
+import { ActionIcon, Badge, Button, Tooltip, Loader } from "@mantine/core";
 import { MdWarning } from "react-icons/md";
 import { useFetchChats, useSendChatMessage } from "@/src/hooks/p2p/use-p2p";
 import { useChatWs, useTypingIndicator } from "@/src/hooks/use-chat-ws";
@@ -57,18 +57,21 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
     onTyping,
   });
 
-  // WebSocket pushes are the live source. Poll only as a fallback while the
-  // socket is down, and reconcile once on reconnect to pick up missed messages.
-  const { data: chatsData, isLoading } = useFetchChats(chatId, {
-    refetchInterval: connected ? false : 30_000,
-  });
+  // Chat history is fetched over the socket (get_chat_messages) and kept live
+  // by new_chat_message pushes. Refetch only once when the socket reconnects.
+  const {
+    data: chatsData,
+    isLoading,
+    isError,
+    refetch,
+  } = useFetchChats(chatId);
   const wasConnectedRef = useRef(connected);
   useEffect(() => {
     if (connected && !wasConnectedRef.current) {
-      queryClient.invalidateQueries({ queryKey: p2pKey.chatMessages(chatId) });
+      refetch();
     }
     wasConnectedRef.current = connected;
-  }, [connected, chatId, queryClient]);
+  }, [connected, refetch]);
   const { mutate: sendMessage, isPending: isSending } = useSendChatMessage();
 
   const messages: P2PChatMessage[] = useMemo(
@@ -130,13 +133,20 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
           <div className="bg-white/10 px-4 py-1.5 rounded-full text-xs text-white/70 text-center">
             {connected
               ? "Live chat connected. Messages update in real time."
-              : "Reconnecting — messages keep refreshing in the background."}
+              : "Reconnecting to live chat…"}
           </div>
         </div>
 
         {isLoading && messages.length === 0 ? (
           <div className="flex justify-center items-center h-full">
             <Loader color="yellow" size="sm" />
+          </div>
+        ) : isError && messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center flex-1 text-white/40 text-sm gap-3">
+            <span>Could not load chat messages.</span>
+            <Button size="xs" variant="light" color="gray" onClick={() => refetch()}>
+              Retry
+            </Button>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center flex-1 text-white/30 text-sm">

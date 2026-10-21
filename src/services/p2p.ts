@@ -93,18 +93,25 @@ const normalizeChatMessages = (raw: any): P2PChatMessage[] => {
           : Array.isArray(raw?.data?.data)
             ? raw.data.data
             : [];
+  const chatId = String(raw?.chatId ?? raw?.chat_id ?? "");
 
-  return list.map((message: any, index: number) => ({
-    id: String(
-      message.id ??
-        message._id ??
-        message.messageId ??
-        `p2p-${index}-${message.senderId ?? message.sender_id ?? "msg"}-${message.createdAt ?? message.created_at ?? ""}`
-    ),
-    content: String(message.content ?? message.message ?? ""),
-    senderId: String(message.senderId ?? message.sender_id ?? ""),
-    createdAt: String(message.createdAt ?? message.created_at ?? ""),
-  }));
+  return list.map((message: any) => {
+    const senderId = String(message.senderId ?? message.sender_id ?? "");
+    const content = String(message.content ?? message.message ?? "");
+    const createdAt = String(message.createdAt ?? message.created_at ?? "");
+
+    return {
+      id: String(
+        message.id ??
+          message._id ??
+          message.messageId ??
+          `${chatId}:${senderId}:${createdAt}:${content}`
+      ),
+      content,
+      senderId,
+      createdAt,
+    };
+  });
 };
 
 const loadP2PWs = () => import("../lib/p2p-ws");
@@ -340,36 +347,18 @@ export const p2p = {
     chatId: string,
     params?: { page?: number; limit?: number }
   ): Promise<{ data: P2PChatMessage[] }> => {
-    // Primary: get_chat_messages over the trading socket (§8.3–8.4).
-    if (typeof window !== "undefined") {
-      try {
-        const { getChatMessagesWs } = await import("../lib/chat-ws");
-        const payload = await getChatMessagesWs(chatId, params);
-        return { data: normalizeChatMessages(payload) };
-      } catch {
-        // Fall back to REST below.
-      }
-    }
-
-    const response = await api.get(`trading/p2p/chats/messages/${chatId}`, { params });
-    return { data: normalizeChatMessages(response.data) };
+    // P2P order chat is WebSocket-only (§8.3–8.4): get_chat_messages is sent on
+    // the trading socket and answered with chat_messages.
+    const { getChatMessagesWs } = await import("../lib/chat-ws");
+    const payload = await getChatMessagesWs(chatId, params);
+    return { data: normalizeChatMessages(payload) };
   },
 
   sendMessage: async (data: { chatId: string; content: string }): Promise<any> => {
-    // Primary: chat_message over the trading socket (§8.1).
-    if (typeof window !== "undefined") {
-      try {
-        const { sendChatMessageWs } = await import("../lib/chat-ws");
-        return await sendChatMessageWs(data.chatId, data.content);
-      } catch {
-        // Fall back to REST below.
-      }
-    }
-
-    const response = await api.post(`trading/p2p/chats/send/${data.chatId}`, {
-      content: data.content,
-    });
-    return response;
+    // P2P order chat is WebSocket-only (§8.1): chat_message is answered with
+    // the new_chat_message delivery frame.
+    const { sendChatMessageWs } = await import("../lib/chat-ws");
+    return sendChatMessageWs(data.chatId, data.content);
   },
 
   fetchChats: async (params?: { page?: number; limit?: number }): Promise<any> => {
