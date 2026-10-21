@@ -1,9 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { p2p, p2pKey } from "../../services/p2p";
+import type { EditP2POrderInput } from "../../lib/p2p-ws";
 import { AddP2PReviewPayload, CreateOrder, CreatePaymentMethod, P2PMatchOrder, P2PReleaseOrder } from "../../types/p2p";
 import toast from "react-hot-toast";
+import { useP2PAdsFeed } from "./use-p2p-realtime";
+
+function getErrorMessage(error: any, fallback: string): string {
+  const data = error?.response?.data;
+  const message = data?.message ?? data?.error ?? error?.message;
+  if (Array.isArray(message)) return message[0] || fallback;
+  if (typeof message === "string" && message.trim()) return message;
+  return fallback;
+}
 
 export const useOrderListings = (params: any) => {
+  useP2PAdsFeed(params);
   return useQuery({
     queryKey: p2pKey.fetchOrderListing(params),
     queryFn: () => p2p.fetchOrderListing(params),
@@ -42,18 +53,22 @@ export const useBecomeAdvertiser = () => {
 export const useCreateAd = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateOrder) => p2p.createOrder(data),
+    mutationFn: (data: CreateOrder) => {
+      const cached: any = queryClient.getQueryData(p2pKey.paymentMethods());
+      const methods: any[] = cached?.data?.data ?? [];
+      if (methods.length === 0) return p2p.createOrder(data);
+      const names = data.paymentMethod.map((id) => {
+        const method = methods.find((entry: any) => entry.id === id);
+        return method?.data?.bankName || method?.method || id;
+      });
+      return p2p.createOrder(data, names);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: p2pKey.userOrders() });
+      queryClient.invalidateQueries({ queryKey: p2pKey.userOrdersRoot });
       toast.success("Ad created successfully");
     },
     onError: (error: any) => {
-      const message = error?.response?.data?.message;
-      if (Array.isArray(message)) {
-        toast.error(message[0] || "Validation failed");
-      } else {
-        toast.error(message || "Failed to create ad");
-      }
+      toast.error(getErrorMessage(error, "Failed to create ad"));
     },
   });
 };
@@ -62,21 +77,47 @@ export const useMatchOrder = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: P2PMatchOrder) => p2p.matchOrder(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: p2pKey.allMatchedOrders() });
+    onSuccess: (res: any) => {
+      const payload = res?.data;
+      const matchId =
+        payload?.orderMatchId ??
+        payload?.data?.id ??
+        payload?.id ??
+        payload?.data?.data?.id ??
+        payload?._id ??
+        payload?.data?._id;
+      const match =
+        payload?.orderMatch ??
+        payload?.order_match ??
+        (payload?.data?.asset ? payload.data : undefined) ??
+        (payload?.data?.data?.asset ? payload.data.data : undefined);
+      if (matchId && match) {
+        queryClient.setQueryData(p2pKey.matchedOrder(matchId), {
+          data: {
+            statusCode: 200,
+            success: true,
+            message: "",
+            data: match,
+          },
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: p2pKey.allMatchedOrdersRoot });
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || "Failed to create order");
+      toast.error(getErrorMessage(error, "Failed to create order"));
     },
   });
 };
 
-export const useGetMatchedOrder = (id: string) => {
+export const useGetMatchedOrder = (
+  id: string,
+  options?: { refetchInterval?: number | false }
+) => {
   return useQuery({
     queryKey: p2pKey.matchedOrder(id),
     queryFn: () => p2p.getMatchedOrder(id),
     enabled: !!id,
-    refetchInterval: 5000, // Refetch every 5s to keep status fresh
+    refetchInterval: options?.refetchInterval ?? 5000,
   });
 };
 
@@ -97,13 +138,14 @@ export const useUpdateMatchedOrder = () => {
 
       return response;
     },
-    onSuccess: (response: any, variables) => {
+    onSuccess: (_response: any, variables) => {
       queryClient.invalidateQueries({ queryKey: p2pKey.matchedOrder(variables.orderMatchId) });
+      queryClient.invalidateQueries({ queryKey: p2pKey.allMatchedOrdersRoot });
       toast.success(getP2PUpdateSuccessMessage(variables.status));
     },
     onError: (error: any, variables) => {
       const data = error?.response?.data;
-      const backendError = data?.error || data?.message || "";
+      const backendError = data?.error || data?.message || error?.message || "";
       toast.error(mapP2PError(backendError, error?.response?.status ?? data?.statusCode, variables?.status));
     },
   });
@@ -139,11 +181,12 @@ function getP2PUpdateSuccessMessage(status: string): string {
 }
 
 
-export const useGetReleaseCode = (id: string) => {
-  return useQuery({
-    queryKey: p2pKey.releaseCode(id),
-    queryFn: () => p2p.getReleaseCode(id),
-    enabled: false, // Only fetch on explicit refetch/call
+export const useRequestReleaseCode = () => {
+  return useMutation({
+    mutationFn: (id: string) => p2p.getReleaseCode(id),
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error, "Failed to send verification code"));
+    },
   });
 };
 
@@ -153,10 +196,11 @@ export const useReleaseOrder = () => {
     mutationFn: (data: P2PReleaseOrder) => p2p.releaseOrder(data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: p2pKey.matchedOrder(variables.id) });
+      queryClient.invalidateQueries({ queryKey: p2pKey.allMatchedOrdersRoot });
       toast.success("Crypto released successfully");
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || "Failed to release crypto");
+      toast.error(getErrorMessage(error, "Failed to release crypto"));
     },
   });
 };
@@ -167,11 +211,11 @@ export const useAddReview = () => {
     mutationFn: (data: AddP2PReviewPayload) => p2p.addReview(data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: p2pKey.matchedOrder(variables.orderMatchId) });
-      queryClient.invalidateQueries({ queryKey: p2pKey.allMatchedOrders() });
+      queryClient.invalidateQueries({ queryKey: p2pKey.allMatchedOrdersRoot });
       toast.success("Feedback submitted");
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || "Failed to submit feedback");
+      toast.error(getErrorMessage(error, "Failed to submit feedback"));
     },
   });
 };
@@ -202,11 +246,11 @@ export const useDeactivateSingleOrder = () => {
   return useMutation({
     mutationFn: (id: string) => p2p.deactivateSingleOrder(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: p2pKey.userOrders() });
+      queryClient.invalidateQueries({ queryKey: p2pKey.userOrdersRoot });
       toast.success("Ad status updated");
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || "Failed to update ad status");
+      toast.error(getErrorMessage(error, "Failed to update ad status"));
     },
   });
 };
@@ -216,11 +260,46 @@ export const useReactivateSingleOrder = () => {
   return useMutation({
     mutationFn: (id: string) => p2p.reactivateSingleOrder(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: p2pKey.userOrders() });
+      queryClient.invalidateQueries({ queryKey: p2pKey.userOrdersRoot });
       toast.success("Ad status updated");
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || "Failed to update ad status");
+      toast.error(getErrorMessage(error, "Failed to update ad status"));
+    },
+  });
+};
+
+export const useBulkToggleAds = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (action: "deactivate" | "reactivate") =>
+      p2p.toggleAllOrders(action),
+    onSuccess: (_response, action) => {
+      queryClient.invalidateQueries({ queryKey: p2pKey.userOrdersRoot });
+      toast.success(
+        action === "deactivate"
+          ? "All ads paused successfully"
+          : "All ads resumed successfully"
+      );
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error, "Failed to update ads"));
+    },
+  });
+};
+
+export const useEditAd = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: EditP2POrderInput }) =>
+      p2p.editOrder(id, data),
+    onSuccess: (_response, variables) => {
+      queryClient.invalidateQueries({ queryKey: p2pKey.userOrdersRoot });
+      queryClient.invalidateQueries({ queryKey: p2pKey.orderById(variables.id) });
+      toast.success("Ad updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error, "Failed to update ad"));
     },
   });
 };

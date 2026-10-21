@@ -8,7 +8,8 @@ import { OrderCancelledOverlay } from "@/src/components/p2p/order-cancelled-over
 import { ChatWindow } from "@/src/components/p2p/chat-window";
 import { Loader, Button, Modal } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { useGetMatchedOrder, useUpdateMatchedOrder, useGetReleaseCode, useReleaseOrder, useAddReview } from "@/src/hooks/p2p/use-p2p";
+import { useGetMatchedOrder, useUpdateMatchedOrder, useRequestReleaseCode, useReleaseOrder, useAddReview } from "@/src/hooks/p2p/use-p2p";
+import { useP2PMatchRoom } from "@/src/hooks/p2p/use-p2p-realtime";
 import { useQuery } from "@tanstack/react-query";
 import { p2p, p2pKey } from "@/src/services/p2p";
 import toast from "react-hot-toast";
@@ -47,11 +48,14 @@ function OrderRoomPageInner() {
   
   const user = useUserStore((state) => state.user);
 
-  const { data: orderData, isLoading, refetch } = useGetMatchedOrder(orderId);
+  const { connected: matchConnected } = useP2PMatchRoom(orderId);
+  const { data: orderData, isLoading, refetch } = useGetMatchedOrder(orderId, {
+    refetchInterval: matchConnected ? 15_000 : 5_000,
+  });
   const { mutate: updateStatus, isPending: isUpdating } = useUpdateMatchedOrder();
   const { mutate: releaseOrder, isPending: isReleasing } = useReleaseOrder();
   const { mutate: addReview, isPending: isSubmittingFeedback } = useAddReview();
-  const { refetch: requestCode, isFetching: isRequestingCode } = useGetReleaseCode(orderId);
+  const { mutate: requestReleaseCode, isPending: isRequestingCode } = useRequestReleaseCode();
 
   const order: any = (orderData as any)?.data?.data;
 
@@ -77,9 +81,12 @@ function OrderRoomPageInner() {
   const isMatcher = Boolean(order?.matcherId && user?.id && order.matcherId === user.id);
   const isAdvertiser = !isMatcher && Boolean(order?.matcherId && user?.id);
 
-  const isBuyer = isAdvertiser
-    ? adType === "BUY"
-    : adType === "SELL";
+  const isBuyer =
+    order?.buyerId && user?.id
+      ? order.buyerId === user.id
+      : isAdvertiser
+        ? adType === "BUY"
+        : adType === "SELL";
   const isSeller = !isBuyer;
 
   // Backend uses PARTIALLY_COMPLETED to mean "buyer confirmed payment" (= PAID state)
@@ -148,6 +155,15 @@ function OrderRoomPageInner() {
   };
 
   const handleRequestOtp = () => {
+    const request = () => {
+      requestReleaseCode(orderId, {
+        onSuccess: () => {
+          setOtpRequested(true);
+          toast.success("Verification code sent to your email/phone");
+        },
+      });
+    };
+
     // If 2FA is enabled, gate behind TOTP first, then send email OTP
     if (user?.twoFaEnabled) {
       modals.open({
@@ -156,10 +172,7 @@ function OrderRoomPageInner() {
             onComplete={(code) => {
               totpCodeRef.current = code;
               modals.closeAll();
-              requestCode().then(() => {
-                setOtpRequested(true);
-                toast.success("Verification code sent to your email/phone");
-              });
+              request();
             }}
           />
         ),
@@ -167,10 +180,7 @@ function OrderRoomPageInner() {
       });
     } else {
       totpCodeRef.current = undefined;
-      requestCode().then(() => {
-        setOtpRequested(true);
-        toast.success("Verification code sent to your email/phone");
-      });
+      request();
     }
   };
 

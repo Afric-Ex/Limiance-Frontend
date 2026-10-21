@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
 import { Button } from "@mantine/core";
 import { useRouter } from "next/navigation";
-import { useUserAds, useDeactivateSingleOrder, useReactivateSingleOrder } from "@/src/hooks/p2p/use-p2p";
+import { useUserAds, useDeactivateSingleOrder, useReactivateSingleOrder, useBulkToggleAds } from "@/src/hooks/p2p/use-p2p";
 import { UserAds } from "@/src/types/p2p";
 import { SegmentedControl } from "@/src/components/ui/segmented-control";
 import { Skeleton } from "@/src/components/shared/skeleton";
@@ -25,6 +25,11 @@ function MyAdsPageInner() {
   const { data, isLoading, refetch } = useUserAds({});
   const { mutate: deactivate, isPending: deactivating } = useDeactivateSingleOrder();
   const { mutate: reactivate, isPending: reactivating } = useReactivateSingleOrder();
+  const {
+    mutate: bulkToggle,
+    isPending: isBulkToggling,
+    variables: bulkAction,
+  } = useBulkToggleAds();
 
   const ads: UserAds["data"] = data?.data?.data ?? [];
 
@@ -74,12 +79,36 @@ function MyAdsPageInner() {
             </div>
           </div>
 
-          <Button
-            className="!h-10 !px-4 !rounded-xl !font-semibold !bg-primary hover:!bg-primary/90 !text-white !transition-all shrink-0"
-            onClick={() => router.push("/trades/p2p/ads/create")}
-          >
-            + Post New Ad
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              className="!h-10 !rounded-xl !border-white/15 !text-white/80 hover:!bg-white/10"
+              loading={isBulkToggling && bulkAction === "deactivate"}
+              disabled={activeCount === 0 || isBulkToggling}
+              leftSection={<MdPauseCircle size={14} />}
+              onClick={() => bulkToggle("deactivate")}
+            >
+              Pause All
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="!h-10 !rounded-xl !border-white/15 !text-white/80 hover:!bg-white/10"
+              loading={isBulkToggling && bulkAction === "reactivate"}
+              disabled={inactiveCount === 0 || isBulkToggling}
+              leftSection={<MdPlayCircle size={14} />}
+              onClick={() => bulkToggle("reactivate")}
+            >
+              Resume All
+            </Button>
+            <Button
+              className="!h-10 !px-4 !rounded-xl !font-semibold !bg-primary hover:!bg-primary/90 !text-white !transition-all shrink-0"
+              onClick={() => router.push("/trades/p2p/ads/create")}
+            >
+              + Post New Ad
+            </Button>
+          </div>
         </div>
 
         {/* Tabs */}

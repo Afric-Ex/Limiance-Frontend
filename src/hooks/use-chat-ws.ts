@@ -1,22 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { wsClient } from "@/src/lib/websocket-client";
 import {
   sendTypingWs,
   subscribeChatEvents,
   type ChatTypingEvent,
   type ChatWsMessage,
 } from "@/src/lib/chat-ws";
-
-/** Live connection state of the shared trading socket. */
-export function useWsConnected(): boolean {
-  const [connected, setConnected] = useState(false);
-
-  useEffect(() => wsClient.onStatusChange(setConnected), []);
-
-  return connected;
-}
+import { useWsConnected } from "@/src/hooks/use-ws-connection";
 
 /**
  * Subscribe to §8 chat pushes for one conversation and report whether the
