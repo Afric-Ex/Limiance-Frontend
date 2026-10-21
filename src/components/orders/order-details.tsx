@@ -43,7 +43,6 @@ export const OrderDetails = () => {
           <Select
             label="Time"
             data={["All", "Last 7 Days", "Last 30 Days"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[140px]"
           />

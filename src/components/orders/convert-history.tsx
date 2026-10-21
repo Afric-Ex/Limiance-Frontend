@@ -31,21 +31,18 @@ export const ConvertTable = () => {
           <Select
             label="Coin"
             data={["All", "BTC", "USDT"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[120px]"
           />
           <Select
             label="Time"
             data={["Last 7 Days", "Last 30 Days"]}
-            defaultValue="Last 7 Days"
             classNames={selectStyles}
             className="w-[140px]"
           />
           <Select
             label="Wallet"
             data={["All", "Spot", "Funding"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[140px]"
           />

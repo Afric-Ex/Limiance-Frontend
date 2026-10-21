@@ -38,7 +38,6 @@ export const Liquidation = () => {
           <Select
             label="Trading Pair"
             data={["All"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[140px]"
           />

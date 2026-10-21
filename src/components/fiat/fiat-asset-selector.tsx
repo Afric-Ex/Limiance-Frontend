@@ -6,7 +6,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { IoChevronDownOutline } from "react-icons/io5";
 import { Search } from "../icons/search";
 import { uniqueFiatAssetSymbols } from "@/src/lib/fiat-assets";
-import { getCryptoIcon } from "@/src/utils/crypto-icons";
+import { useTokenIconMap } from "@/src/hooks/use-token-icons";
 
 interface FiatAssetSelectorProps {
   value: string;
@@ -64,6 +64,8 @@ export const FiatAssetSelector = ({
   const query = onSearchChange ? (searchQuery ?? "") : internalQuery;
   const setQuery = onSearchChange ?? setInternalQuery;
 
+  const tokenIcons = useTokenIconMap();
+
   const filteredAssets = useMemo(() => {
     const search = query.trim().toUpperCase();
     const uniqueAssets = uniqueFiatAssetSymbols(assets);
@@ -72,7 +74,7 @@ export const FiatAssetSelector = ({
       : uniqueAssets;
   }, [assets, query]);
   const getAssetImage = (symbol: string) =>
-    assetImages[symbol.toUpperCase()] || getCryptoIcon(symbol);
+    assetImages[symbol.toUpperCase()] || tokenIcons[symbol.toUpperCase().trim()];
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     if (!hasMore || isLoadingMore || !onLoadMore) return;

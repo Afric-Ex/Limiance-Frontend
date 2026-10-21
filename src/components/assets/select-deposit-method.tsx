@@ -7,7 +7,7 @@ import { LuWallet, LuBanknote } from "react-icons/lu";
 import { IoSparklesOutline } from "react-icons/io5";
 import { MdOutlineClose } from "react-icons/md";
 
-export const SelectDepositMethod = () => {
+export const SelectDepositMethod = ({ defaultSymbol }: { defaultSymbol?: string }) => {
   const actions = [
     {
       category: "Deposit Fiat",

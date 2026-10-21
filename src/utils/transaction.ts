@@ -10,45 +10,6 @@ import { truncateCryptoAddress } from "./truncate-address";
 const ADDRESS_LIKE = /^0x[a-fA-F0-9]{6,}$/;
 const ZERO_ADDRESS = /^0x0{6,}$/;
 
-// Network names → native-coin ticker. Zero-address deposits are the native coin
-// of whatever chain the deposit landed on.
-const CHAIN_TICKERS: Record<string, string> = {
-  bitcoin: "BTC",
-  btc: "BTC",
-  bsc: "BNB",
-  "bnb smart chain": "BNB",
-  bnbsmartchain: "BNB",
-  ethereum: "ETH",
-  eth: "ETH",
-  evm: "ETH",
-  base: "ETH",
-  arb: "ETH",
-  arbitrum: "ETH",
-  op: "ETH",
-  optimistic: "ETH",
-  pol: "ETH",
-  polygon: "ETH",
-  tron: "TRX",
-  trx: "TRX",
-  solana: "SOL",
-  sol: "SOL",
-  apt: "APT",
-  aptos: "APT",
-  ton: "TON",
-  dot: "DOT",
-  polkadot: "DOT",
-  avax: "AVAX",
-  avalanche: "AVAX",
-  xrp: "XRP",
-  ada: "ADA",
-  cardano: "ADA",
-  near: "NEAR",
-  kava: "KAVA",
-  doge: "DOGE",
-  tezos: "XTZ",
-  xtz: "XTZ",
-};
-
 export function formatTransactionAmount(value: unknown): string {
   if (value === null || value === undefined || value === "") return "";
   const n = Number(value);
@@ -70,8 +31,7 @@ export function formatTransactionAsset(
   // the chain's own token. Falls back to a truncated address when the chain is
   // not one we recognise, so it can still never overflow the row.
   if (ZERO_ADDRESS.test(a)) {
-    const key = (chain ?? "").trim().toLowerCase().replace(/\s+/g, "");
-    return CHAIN_TICKERS[key] ?? truncateCryptoAddress(a);
+    return truncateCryptoAddress(a);
   }
 
   return truncateCryptoAddress(a);

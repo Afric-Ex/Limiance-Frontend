@@ -69,7 +69,7 @@ export const CapitalFlow = () => {
                 <TableTd className="!text-white !font-bold">{coin(r)}</TableTd>
                 <TableTd className="!text-white tabular-nums">{fmtNum(amount(r))}</TableTd>
                 <TableTd className="capitalize">{typeName(r)}</TableTd>
-                <TableTd><StatusPill status={r.status} fallback="Completed" /></TableTd>
+                <TableTd><StatusPill status={r.status} /></TableTd>
               </TableTr>
             ))}
           </TableTbody>

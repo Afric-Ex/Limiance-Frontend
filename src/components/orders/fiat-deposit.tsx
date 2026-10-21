@@ -37,14 +37,12 @@ export const FiatDeposit = () => {
           <Select
             label="Coin"
             data={["All"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[120px]"
           />
           <Select
             label="Time"
             data={["All", "Last 7 Days", "Last 30 Days"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[130px]"
           />

@@ -42,14 +42,12 @@ export const MarginOrderHistory = () => {
           <Select
             label="Order"
             data={["Limit / Market"]}
-            defaultValue="Limit / Market"
             classNames={selectStyles}
             className="w-[150px]"
           />
           <Select
             label="Trade Side"
             data={["All", "Buy", "Sell"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[140px]"
           />

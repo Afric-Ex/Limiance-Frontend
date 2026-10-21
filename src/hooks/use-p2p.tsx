@@ -28,7 +28,7 @@ export const useP2P = () => {
       daysSinceAccountCreation: "",
       completedOrders: "",
       allCompletedOrders: "",
-      selectedCountry: "Nigeria",
+      selectedCountry: "",
       remark: "",
       paymentMethod: [] as string[],
       floatingPrice: true,
@@ -40,8 +40,6 @@ export const useP2P = () => {
 
   const { data: tokensRaw, isLoading: isLoadingTokens } = useQuery({
     queryKey: tradingKeys.listedTokens(),
-    // Wrapped, not passed by reference: react-query calls the queryFn with its
-    // context object, which would be forwarded to the endpoint as params.
     queryFn: () => tradingService.listedTokens(),
     staleTime: Infinity,
     retry: false,
@@ -54,8 +52,7 @@ export const useP2P = () => {
         .map((t: any) => ({ symbol: t.symbol || t.name || String(t), name: t.name, logo: t.logo }))
         .filter((t: any) => !!t.symbol);
     }
-    const coins = ["USDT", "BTC", "ETH", "NGN", "USD"];
-    return coins.map((c: string) => ({ symbol: c }));
+    return [];
   })();
 
   const selectedAsset = postAdsForm.values.asset;

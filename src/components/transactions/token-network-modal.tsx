@@ -8,7 +8,7 @@ import { IoSearchOutline } from "react-icons/io5";
 import { MdArrowBack } from "react-icons/md";
 import { asset, assetKeys } from "@/src/services/asset";
 import { SelectedCoin, SelectedNetwork } from "@/src/hooks/use-deposit";
-import { getCryptoIcon } from "@/src/utils/crypto-icons";
+import { useTokenIconMap } from "@/src/hooks/use-token-icons";
 import { InlineLoading } from "../shared/inline-loading";
 
 interface Props {
@@ -34,6 +34,13 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
   const [coinSearch, setCoinSearch] = useState("");
   const [networkSearch, setNetworkSearch] = useState("");
   const [pendingCoin, setPendingCoin] = useState<TokenEntry | null>(null);
+
+  const tokenIcons = useTokenIconMap();
+
+  const getIconUrl = (symbol?: string, fallback?: string) => {
+    if (!symbol) return fallback;
+    return tokenIcons[symbol.toUpperCase().trim()] || fallback;
+  };
 
   // Search runs server-side (debounced) so a coin sitting beyond the fetched
   // page still matches — filtering only loaded rows would wrongly report
@@ -184,7 +191,7 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
         name: chain.name,
         symbol: chain.symbol,
         blockchain: chain.blockchain,
-        image: getCryptoIcon(chain.symbol, chain.image),
+        image: getIconUrl(chain.symbol, chain.image),
       }
     );
     handleClose();
@@ -300,7 +307,7 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
                   {(() => {
                     // listed_networks leaves `image` empty for some chains, so fall
                     // back to the known-icons map before giving up on an avatar.
-                    const iconSrc = getCryptoIcon(chain.symbol, chain.image);
+                    const iconSrc = getIconUrl(chain.symbol, chain.image);
                     return iconSrc ? (
                       <img src={iconSrc} alt={chain.symbol} width={36} height={36} className="rounded-full shrink-0" />
                     ) : (

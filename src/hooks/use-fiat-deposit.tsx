@@ -27,11 +27,6 @@ const unwrap = <T,>(res: any): T => {
   return cur as T;
 };
 
-// Coins the deposit/card pickers offer. `trading/listed_tokens` is the backend's
-// own supported-token list and answers one row per token per chain, so it's paged
-// in and collapsed to one symbol per token here. Falls back to a small curated
-// set while the first page is loading, or if the request fails.
-const FALLBACK_FIAT_SYMBOLS = ["USDT", "USDC", "BTC", "ETH", "SOL"];
 const FIAT_SYMBOLS_PAGE_SIZE = 50;
 
 /** Debounce fast-changing input (e.g. search keystrokes) before it drives a query key. */
@@ -73,7 +68,7 @@ export const useFiatCoinSymbols = (search?: string) => {
     const symbols = items
       .map((token: any) => String(token?.symbol ?? "").trim().toUpperCase())
       .filter(Boolean);
-    return symbols.length ? symbols : FALLBACK_FIAT_SYMBOLS;
+    return symbols;
   }, [items]);
   const coinImages = useMemo(() => fiatAssetImageMap(items), [items]);
 

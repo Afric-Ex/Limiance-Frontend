@@ -37,28 +37,24 @@ export const FiatBuySell = () => {
           <Select
             label="Coin"
             data={["All"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[120px]"
           />
           <Select
             label="Category"
             data={["All", "Buy", "Sell"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[130px]"
           />
           <Select
             label="Time"
             data={["All", "Last 7 Days", "Last 30 Days"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[130px]"
           />
           <Select
             label="Currency"
             data={["USD", "NGN", "EUR", "GBP"]}
-            defaultValue="USD"
             classNames={selectStyles}
             className="w-[110px]"
           />
