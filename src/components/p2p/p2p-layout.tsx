@@ -15,13 +15,22 @@ const p2pNavLinks = [
   // Profile will be dynamically injected if the user is an advertiser
 ];
 
+const FINAL_ORDER_STATUSES = new Set([
+  "COMPLETED",
+  "RELEASED",
+  "CANCELLED",
+  "CANCELED",
+  "EXPIRED",
+]);
+
 export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   useP2PGlobalEvents();
   const { data } = useAllMatchedOrders();
   const allOrders = (data as any)?.data?.data ?? [];
-  const processingCount = allOrders.filter((o: any) =>
-    !["COMPLETED", "CANCELLED", "RELEASED"].includes(o.status?.toUpperCase())
+  const processingCount = allOrders.filter(
+    (o: any) =>
+      !FINAL_ORDER_STATUSES.has(String(o.status ?? "").toUpperCase())
   ).length;
 
   const { data: advertiserData } = useAdvertiserInfo();

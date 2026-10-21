@@ -45,13 +45,12 @@ function OrderRoomPageInner() {
 
   const [feedbackSkipped, setFeedbackSkipped] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [cancelledNoticeDismissed, setCancelledNoticeDismissed] = useState(false);
   
   const user = useUserStore((state) => state.user);
 
-  const { connected: matchConnected } = useP2PMatchRoom(orderId);
-  const { data: orderData, isLoading, refetch } = useGetMatchedOrder(orderId, {
-    refetchInterval: matchConnected ? 15_000 : 5_000,
-  });
+  useP2PMatchRoom(orderId);
+  const { data: orderData, isLoading, refetch } = useGetMatchedOrder(orderId);
   const { mutate: updateStatus, isPending: isUpdating } = useUpdateMatchedOrder();
   const { mutate: releaseOrder, isPending: isReleasing } = useReleaseOrder();
   const { mutate: addReview, isPending: isSubmittingFeedback } = useAddReview();
@@ -301,12 +300,13 @@ function OrderRoomPageInner() {
           />
         )}
 
-        {normalizedStatus === "CANCELLED" && (
+        {normalizedStatus === "CANCELLED" && !cancelledNoticeDismissed && (
           <OrderCancelledOverlay
             orderId={orderId}
             cryptoAmount={quantity}
             asset={asset}
             isBuyer={isBuyer}
+            onClose={() => setCancelledNoticeDismissed(true)}
           />
         )}
 

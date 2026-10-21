@@ -25,26 +25,75 @@ const STATUS_STYLES: Record<string, string> = {
 const fieldLabel =
   "text-[10px] font-medium uppercase tracking-wider text-white/40";
 
+type OrderTab = "PROCESSING" | "EXPIRED" | "CANCELLED" | "ALL";
+
+const FINAL_STATUSES = new Set([
+  "COMPLETED",
+  "RELEASED",
+  "CANCELLED",
+  "CANCELED",
+  "EXPIRED",
+]);
+
+const getOrderStatus = (order: any) =>
+  String(order?.status ?? "").toUpperCase();
+
+const isProcessingOrder = (order: any) =>
+  !FINAL_STATUSES.has(getOrderStatus(order));
+
+const isExpiredOrder = (order: any) => getOrderStatus(order) === "EXPIRED";
+
+const isCancelledOrder = (order: any) =>
+  ["CANCELLED", "CANCELED"].includes(getOrderStatus(order));
+
+const EMPTY_STATE: Record<OrderTab, { title: string; body: string }> = {
+  PROCESSING: {
+    title: "No orders in progress",
+    body: "Orders awaiting payment, release, or resolution will appear here.",
+  },
+  EXPIRED: {
+    title: "No expired orders",
+    body: "Orders that passed their payment window will appear here.",
+  },
+  CANCELLED: {
+    title: "No cancelled orders",
+    body: "Orders cancelled by you or your counterparty will appear here.",
+  },
+  ALL: {
+    title: "No orders yet",
+    body: "You haven't made any P2P trades yet",
+  },
+};
+
 function OrderHistoryPageInner() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"PROCESSING" | "ALL">("PROCESSING");
+  const [activeTab, setActiveTab] = useState<OrderTab>("PROCESSING");
   const [filterType, setFilterType] = useState<string>("ALL");
 
   const { data, isLoading, refetch, isRefetching } = useAllMatchedOrders(
     filterType !== "ALL" ? { type: filterType } : undefined
   );
 
-  const allOrders: any[] = (data as any)?.data?.data ?? [];
-
-  const isTerminal = (o: any) =>
-    ["COMPLETED", "CANCELLED", "RELEASED"].includes(o.status?.toUpperCase());
+  const fetchedOrders: any[] = (data as any)?.data?.data ?? [];
+  const allOrders =
+    filterType === "ALL"
+      ? fetchedOrders
+      : fetchedOrders.filter(
+          (o) =>
+            String(o.type ?? o.order?.type ?? "").toLowerCase() ===
+            filterType.toLowerCase()
+        );
 
   const displayOrders = allOrders.filter((o) => {
-    if (activeTab === "PROCESSING" && isTerminal(o)) return false;
+    if (activeTab === "PROCESSING") return isProcessingOrder(o);
+    if (activeTab === "EXPIRED") return isExpiredOrder(o);
+    if (activeTab === "CANCELLED") return isCancelledOrder(o);
     return true;
   });
 
-  const processingCount = allOrders.filter((o) => !isTerminal(o)).length;
+  const processingCount = allOrders.filter(isProcessingOrder).length;
+  const expiredCount = allOrders.filter(isExpiredOrder).length;
+  const cancelledCount = allOrders.filter(isCancelledOrder).length;
 
   const formatDate = (iso: string) => {
     if (!iso) return "—";
@@ -83,21 +132,35 @@ function OrderHistoryPageInner() {
 
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
-          <SegmentedControl
-            value={activeTab}
-            onChange={(v) => setActiveTab(v as "PROCESSING" | "ALL")}
-            options={[
-              { value: "PROCESSING", label: `Processing (${processingCount})` },
-              { value: "ALL", label: `All Orders (${allOrders.length})` },
-            ]}
-          />
+          <div className="w-full sm:w-auto max-w-full scroll-x-hidden">
+            <SegmentedControl
+              value={activeTab}
+              onChange={(v) => setActiveTab(v as OrderTab)}
+              className="w-max whitespace-nowrap"
+              options={[
+                { value: "PROCESSING", label: `Processing (${processingCount})` },
+                { value: "EXPIRED", label: `Expired (${expiredCount})` },
+                { value: "CANCELLED", label: `Cancelled (${cancelledCount})` },
+                {
+                  value: "ALL",
+                  label: (
+                    <>
+                      <span className="sm:hidden">All</span>
+                      <span className="hidden sm:inline">All Orders</span> (
+                      {allOrders.length})
+                    </>
+                  ),
+                },
+              ]}
+            />
+          </div>
 
-          <div className="flex gap-2 p-1 bg-white/[0.04] border border-white/[0.06] rounded-xl">
+          <div className="flex gap-2 p-1 bg-white/[0.04] border border-white/[0.06] rounded-xl max-w-full scroll-x-hidden">
             {["ALL", "Buy", "Sell"].map((t) => (
               <button
                 key={t}
                 onClick={() => setFilterType(t)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`shrink-0 whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   filterType === t
                     ? "bg-primary text-white"
                     : "text-white/50 hover:text-white/80"
@@ -121,11 +184,11 @@ function OrderHistoryPageInner() {
             <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-2xl mb-4">
               📭
             </div>
-            <div className="text-white/70 font-semibold">No orders found</div>
+            <div className="text-white/70 font-semibold">
+              {EMPTY_STATE[activeTab].title}
+            </div>
             <p className="text-white/40 text-sm mt-1 max-w-sm text-center">
-              {activeTab === "PROCESSING"
-                ? "No active orders right now"
-                : "You haven't made any P2P trades yet"}
+              {EMPTY_STATE[activeTab].body}
             </p>
           </div>
         ) : (

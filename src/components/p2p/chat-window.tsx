@@ -57,11 +57,18 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
     onTyping,
   });
 
-  // WebSocket pushes are primary; polling is only a reconciliation fallback
-  // (fast while the socket is down, slow while it is live).
+  // WebSocket pushes are the live source. Poll only as a fallback while the
+  // socket is down, and reconcile once on reconnect to pick up missed messages.
   const { data: chatsData, isLoading } = useFetchChats(chatId, {
-    refetchInterval: connected ? 30_000 : 5_000,
+    refetchInterval: connected ? false : 30_000,
   });
+  const wasConnectedRef = useRef(connected);
+  useEffect(() => {
+    if (connected && !wasConnectedRef.current) {
+      queryClient.invalidateQueries({ queryKey: p2pKey.chatMessages(chatId) });
+    }
+    wasConnectedRef.current = connected;
+  }, [connected, chatId, queryClient]);
   const { mutate: sendMessage, isPending: isSending } = useSendChatMessage();
 
   const messages: P2PChatMessage[] = useMemo(

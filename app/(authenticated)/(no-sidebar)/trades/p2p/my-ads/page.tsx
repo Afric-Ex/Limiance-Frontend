@@ -22,7 +22,7 @@ function MyAdsPageInner() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<AdStatus>("ALL");
 
-  const { data, isLoading, refetch } = useUserAds({});
+  const { data, isLoading, refetch } = useUserAds({ page: 1, limit: 20 });
   const { mutate: deactivate, isPending: deactivating } = useDeactivateSingleOrder();
   const { mutate: reactivate, isPending: reactivating } = useReactivateSingleOrder();
   const {
