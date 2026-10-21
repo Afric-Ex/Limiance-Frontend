@@ -7,7 +7,7 @@ import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { ConvertAsset } from "../transactions/convert-asset";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
-import { getCryptoIcon } from "@/src/utils/crypto-icons";
+import { useTokenIconMap } from "@/src/hooks/use-token-icons";
 
 import { useRouter } from "next/navigation";
 
@@ -16,6 +16,12 @@ export const FuturesTable = () => {
   const router = useRouter();
 
   const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs({ coins: true });
+  const tokenIcons = useTokenIconMap();
+
+  const getIconUrl = (symbol?: string, fallback?: string) => {
+    if (!symbol) return fallback;
+    return tokenIcons[symbol.toUpperCase().trim()] || fallback;
+  };
 
   return (
     <div className="flex flex-col gap-4 animate-fade-up">
@@ -31,7 +37,7 @@ export const FuturesTable = () => {
               className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${hideSmallBalances ? "translate-x-4" : "translate-x-0.5"}`}
             />
           </div>
-          <span className="text-xs font-medium text-white/50">Hide Asset &lt;$1</span>
+          <span className="text-xs font-medium text-white/50">Hide Asset {"<$1"}</span>
         </label>
       </div>
 
@@ -78,13 +84,15 @@ export const FuturesTable = () => {
 
                     if (hideSmallBalances && valueUsd < 1) return null;
 
+                    const iconUrl = getIconUrl(item.symbol, item.image ?? item.logo ?? item.icon);
+
                     return (
                       <TableTr key={`${item.symbol ?? item.name}-${index}`}>
                         <TableTd className="!pl-6">
                           <span className="flex items-center gap-3">
-                            {getCryptoIcon(item.symbol, item.image ?? item.logo ?? item.icon) ? (
+                            {iconUrl ? (
                               <img
-                                src={getCryptoIcon(item.symbol, item.image ?? item.logo ?? item.icon)}
+                                src={iconUrl}
                                 alt={item.name}
                                 loading="lazy"
                                 decoding="async"
@@ -99,42 +107,44 @@ export const FuturesTable = () => {
                               <span className="text-sm font-bold text-white/90 uppercase">
                                 {item.symbol}
                               </span>
-                              <span className="text-[10px] text-white/40">{item.name}</span>
+                              <span className="text-xs text-white/40">{item.name}</span>
                             </span>
                           </span>
                         </TableTd>
                         <TableTd>
-                          <span className="text-sm font-bold text-white">
-                            {balNum.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-sm font-medium text-white">
+                              {balNum.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                            </span>
+                            <span className="text-xs text-white/40">
+                              ${valueUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
                           </span>
                         </TableTd>
                         <TableTd>
-                          <span className="text-sm text-white/60">
-                            ${priceNum.toLocaleString("en-US", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 6,
-                            })}
+                          <span className="text-sm font-medium text-white">
+                            ${priceNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
                           </span>
                         </TableTd>
                         <TableTd className="!pr-6 !text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => router.push(`/trades/futures`)}
-                              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-[#181a20] transition-all active:scale-95"
+                          <div className="flex items-center justify-end gap-4">
+                            <span
+                              onClick={() => router.push(`/trades/futures/${item.symbol}USDT`)}
+                              className="text-sm font-semibold text-primary hover:text-primary/80 cursor-pointer transition-colors"
                             >
                               Trade
-                            </button>
-                            <button
+                            </span>
+                            <span
                               onClick={() =>
                                 modals.open({
                                   children: <ConvertAsset defaultFromAsset={item.symbol} />,
                                   ...DEFAULT_MODAL_SETTINGS,
                                 })
                               }
-                              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/5 text-white hover:bg-white/10 transition-all active:scale-95"
+                              className="text-sm font-semibold text-blue-500 hover:text-blue-400 cursor-pointer transition-colors"
                             >
                               Convert
-                            </button>
+                            </span>
                           </div>
                         </TableTd>
                       </TableTr>

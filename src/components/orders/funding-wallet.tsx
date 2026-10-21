@@ -37,21 +37,18 @@ export const FundingWallet = () => {
         <Select
           label="Time"
           data={["All", "Last 7 Days", "Last 30 Days", "Last 3 Months"]}
-          defaultValue="All"
           classNames={selectStyles}
           className="w-[160px]"
         />
         <Select
           label="Coin"
           data={["All", "USDT", "BTC", "ETH"]}
-          defaultValue="All"
           classNames={selectStyles}
           className="w-[140px]"
         />
         <Select
           label="Transaction Type"
           data={["All", "Deposit", "Withdrawal", "P2P Buy", "P2P Sell"]}
-          defaultValue="All"
           classNames={selectStyles}
           className="w-[170px]"
         />
@@ -83,7 +80,7 @@ export const FundingWallet = () => {
                   <TableTd className={`tabular-nums font-semibold ${changeTone(amount)}`}>
                     {amount > 0 ? `+${fmtNum(amount)}` : fmtNum(amount)}
                   </TableTd>
-                  <TableTd><StatusPill status={rec.status} fallback="Completed" /></TableTd>
+                  <TableTd><StatusPill status={rec.status} /></TableTd>
                 </TableTr>
               );
             })}

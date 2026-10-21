@@ -13,9 +13,10 @@ import { useUserStore } from "../stores/user-store";
  * page. Callers that need holdings ask for them themselves via `usePortfolioWs`.
  */
 export const useAssets = () => {
-  const handleOpenDepositModal = () => {
+  const handleOpenDepositModal = (symbolOrEvent?: string | React.MouseEvent) => {
+    const symbol = typeof symbolOrEvent === "string" ? symbolOrEvent : undefined;
     modals.open({
-      children: <SelectDepositMethod />,
+      children: <SelectDepositMethod defaultSymbol={symbol} />,
       ...DEFAULT_MODAL_SETTINGS,
     });
   };

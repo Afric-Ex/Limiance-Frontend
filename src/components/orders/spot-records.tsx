@@ -35,21 +35,18 @@ export const SpotRecords = () => {
         <Select
           label="Time"
           data={["Last 7 Days", "Last 30 Days"]}
-          defaultValue="Last 7 Days"
           classNames={selectStyles}
           className="w-[140px]"
         />
         <Select
           label="Coin"
           data={["All", "BTC", "ETH"]}
-          defaultValue="All"
           classNames={selectStyles}
           className="w-[120px]"
         />
         <Select
           label="Side"
           data={["All", "Buy", "Sell"]}
-          defaultValue="All"
           classNames={selectStyles}
           className="w-[140px]"
         />

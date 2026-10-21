@@ -75,7 +75,6 @@ export const OrderHistory = () => {
           <Select
             label="Base Asset"
             data={["All", "BTC", "ETH", "USDT"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[120px]"
           />
@@ -83,7 +82,6 @@ export const OrderHistory = () => {
           <Select
             label="Quote Asset"
             data={["All", "USDT", "USDC", "NGN"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[120px]"
           />
@@ -92,7 +90,6 @@ export const OrderHistory = () => {
         <Select
           label="Trade Side"
           data={["All", "Buy", "Sell"]}
-          defaultValue="All"
           classNames={selectStyles}
           className="w-[140px]"
         />
@@ -100,7 +97,6 @@ export const OrderHistory = () => {
         <Select
           label="Sort By"
           data={["Order Time", "Amount", "Price"]}
-          defaultValue="Order Time"
           classNames={selectStyles}
           className="w-[160px]"
         />

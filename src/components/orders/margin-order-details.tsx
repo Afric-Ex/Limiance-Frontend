@@ -45,7 +45,6 @@ export const MarginOrderDetails = () => {
           <Select
             label="Order"
             data={["Limit / Market"]}
-            defaultValue="Limit / Market"
             classNames={selectStyles}
             className="w-[150px]"
           />

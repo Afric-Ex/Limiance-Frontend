@@ -50,7 +50,6 @@ export const DebtHistory = () => {
           <Select
             label="Coin"
             data={["All"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[120px]"
           />
@@ -93,7 +92,7 @@ export const DebtHistory = () => {
                   <TableTd className="tabular-nums">{fmtNum(principal)}</TableTd>
                   <TableTd className="tabular-nums">{fmtNum(int)}</TableTd>
                   <TableTd className="!text-white tabular-nums">{fmtNum(principal + int)}</TableTd>
-                  <TableTd><StatusPill status={category(r)} fallback={category(r)} /></TableTd>
+                  <TableTd><StatusPill status={category(r)} /></TableTd>
                 </TableTr>
               );
             })}

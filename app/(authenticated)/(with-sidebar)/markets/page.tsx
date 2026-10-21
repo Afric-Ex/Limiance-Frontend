@@ -200,7 +200,7 @@ function MarketsPageInner() {
       category: String(m.category ?? ""),
       leverage: String(m.max_leverage ?? m.leverage ?? ""),
       sparkline: Array.isArray(m.sparkline) ? m.sparkline.map((v: any) => Number(v)).filter(Number.isFinite) : [],
-      image: getCryptoIcon(base, m.image ?? m.logo ?? m.icon),
+      image: getCryptoIcon(base) ?? m.image ?? m.logo ?? m.icon,
     };
   };
 

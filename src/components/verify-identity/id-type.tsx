@@ -1,10 +1,11 @@
-import { Popover, PopoverTarget, PopoverDropdown } from "@mantine/core";
-import React from "react";
+"use client";
+
+import { Popover, PopoverTarget, PopoverDropdown, Select, Skeleton } from "@mantine/core";
+import React, { useState } from "react";
 import { MdKeyboardArrowRight, MdKeyboardArrowDown } from "react-icons/md";
 import { Secure } from "../icons/secure";
 import classes from "../../styles/verify-identity.module.css";
-import Image from "next/image";
-import Uk from "@/public/united kingdom.png";
+import { useCountryOptions } from "@/src/hooks/use-countries";
 
 const iDTypes = [
   { name: "Driver's License", isOptional: true },
@@ -13,6 +14,15 @@ const iDTypes = [
 ];
 
 export const IdType = ({ nextStep }: { nextStep: () => void }) => {
+  const { options: countries, isLoading, isError } = useCountryOptions();
+  const [selectedCountry, setSelectedCountry] = useState<string>("");
+
+  const handleCountryChange = (value: string) => {
+    setSelectedCountry(value);
+  };
+
+  const selectedCountryData = countries.find(c => c.value === selectedCountry);
+
   return (
     <div className="flex max-w-524px mx-auto flex-col gap-8">
       <div className="flex flex-col gap-7">
@@ -26,10 +36,29 @@ export const IdType = ({ nextStep }: { nextStep: () => void }) => {
               <MdKeyboardArrowRight />
             </span>
           </div>
-          <div className="h-55px flex items-center gap-2 rounded-xl border border-gray-9 py-10px px-5">
-            <Image src={Uk} alt="Uk" width={35} height={35} />
-            <span className="text-sm">United Kingdom</span>
-          </div>
+          {isLoading ? (
+            <Skeleton height={55} width="100%" />
+          ) : isError ? (
+            <div className="h-55px flex items-center gap-2 rounded-xl border border-gray-9 py-10px px-5 text-white/50">
+              Failed to load countries
+            </div>
+          ) : (
+            <Select
+              value={selectedCountry}
+              onChange={handleCountryChange}
+              data={countries}
+              searchable
+              placeholder="Select country"
+              classNames={{
+                input: "h-55px flex items-center gap-2 rounded-xl border border-gray-9 py-10px px-5 bg-transparent",
+                dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
+                option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors",
+              }}
+              rightSection={selectedCountryData?.flagUrl ? (
+                <img src={selectedCountryData.flagUrl} alt="" width={24} height={24} className="rounded" />
+              ) : null}
+            />
+          )}
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-xs font-medium text-white/65">ID type</span>
@@ -59,21 +88,6 @@ export const IdType = ({ nextStep }: { nextStep: () => void }) => {
                           </span>
                         )}
                       </span>
-                      {/* <svg
-                                  width="24"
-                                  height="25"
-                                  viewBox="0 0 24 25"
-                                  fill="none"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M6 12.5L10.2426 16.7426L18.727 8.25732"
-                                    stroke="white"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg> */}
                     </div>
                   ))}
                 </div>

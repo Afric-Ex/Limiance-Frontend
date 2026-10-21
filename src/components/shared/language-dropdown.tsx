@@ -1,41 +1,11 @@
 "use client";
 
-import { Tabs, TabsList, TabsPanel, TabsTab, TextInput } from "@mantine/core";
+import { Tabs, TabsList, TabsPanel, TabsTab, TextInput, Skeleton } from "@mantine/core";
 import clsx from "clsx";
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/src/lib/axios";
 import { Search } from "../icons/search";
-
-const fallbackLanguages = [
-  "English",
-  "Español",
-  "英国人的",
-  "Hungarian",
-  "Português (Brasil)",
-  "Filipino",
-  "Slovenčina",
-  "Italiano",
-  "Polski",
-  "Português",
-  "Čeština",
-  "Deutsch",
-];
-
-const currencies = [
-  "USD - $",
-  "SAR - SAR",
-  "PHP - ₱",
-  "BGN-лв",
-  "COP - COL$",
-  "EGP - EGP",
-  "TRY - ₺",
-  "AUD - A$",
-  "IDR - Rp",
-  "Cedis",
-  "MXN - Mex$",
-  "NGR - #",
-];
 
 const getLanguageLabel = (item: any): string =>
   typeof item === "string"
@@ -46,21 +16,36 @@ export const LanguageDropdown = ({ isMobile }: { isMobile?: boolean }) => {
   const defaultLanguage = "English";
   const defaultCurrency = "USD - $";
 
-  const { data: apiLanguages } = useQuery({
+  const { data: apiLanguages, isLoading: languagesLoading } = useQuery({
     queryKey: ["languages"],
     queryFn: async () => {
       const res = await api.get("/languages");
       return res.data?.data ?? res.data ?? [];
     },
-    // The language list changes about never, and this component sits behind a
-    // dropdown the user may never open.
     staleTime: Infinity,
   });
 
-  const languages =
-    Array.isArray(apiLanguages) && apiLanguages.length > 0
-      ? apiLanguages
-      : fallbackLanguages;
+  const { data: apiCurrencies, isLoading: currenciesLoading } = useQuery({
+    queryKey: ["currencies"],
+    queryFn: async () => {
+      const res = await api.get("/currencies");
+      return res.data?.data ?? res.data ?? [];
+    },
+    staleTime: Infinity,
+  });
+
+  const languages = Array.isArray(apiLanguages) ? apiLanguages : [];
+  const currencies = Array.isArray(apiCurrencies) ? apiCurrencies : [];
+  const isLoading = languagesLoading || currenciesLoading;
+
+  if (isLoading) {
+    return (
+      <div className={clsx(!isMobile && "w-[354px] rounded-lg", "bg-gray-17 p-5")}>
+        <Skeleton height={40} width="100%" />
+        <Skeleton height={200} width="100%" />
+      </div>
+    );
+  }
 
   return (
     <div

@@ -93,14 +93,12 @@ export const MarginOpenOrders = () => {
           <Select
             label="Order Type"
             data={["Limit", "Market", "Stop Loss", "Take Profit"]}
-            defaultValue="Limit"
             classNames={selectStyles}
             className="w-[140px]"
           />
           <Select
             label="Base Asset"
             data={["All", "BTC", "ETH"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[120px]"
           />
@@ -108,14 +106,12 @@ export const MarginOpenOrders = () => {
           <Select
             label="Quote Asset"
             data={["All", "USDT", "USDC"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[120px]"
           />
           <Select
             label="Trade Side"
             data={["All", "Buy", "Sell"]}
-            defaultValue="All"
             classNames={selectStyles}
             className="w-[120px]"
           />

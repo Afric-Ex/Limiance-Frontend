@@ -16,7 +16,7 @@ import { MdRefresh, MdSearch } from "react-icons/md";
 import clsx from "clsx";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
-import { getCryptoIcon } from "@/src/utils/crypto-icons";
+import { useTokenIconMap } from "@/src/hooks/use-token-icons";
 
 interface Props {
   pair?: string;
@@ -54,6 +54,13 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
   const cloakEnabled = useBalanceCloakStore((s) => s.enabled);
   const legacyHide = useUserStore((s) => s.hideBalance);
   const hideBalances = cloakEnabled || legacyHide;
+
+  const tokenIcons = useTokenIconMap();
+
+  const getIconUrl = (symbol?: string, fallback?: string) => {
+    if (!symbol) return fallback;
+    return tokenIcons[symbol.toUpperCase().trim()] || fallback;
+  };
 
   const parseNum = (v: any) => {
     if (!v) return 0;
@@ -423,8 +430,8 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                       <TableTr key={a.asset}>
                         <TableTd>
                           <div className="flex items-center gap-2.5">
-                            {getCryptoIcon(a.asset, pCoin?.image) ? (
-                              <img src={getCryptoIcon(a.asset, pCoin?.image)} alt={a.asset} className="w-7 h-7 rounded-full object-cover shrink-0" onError={(e) => { (e.target as any).style.display = "none"; }} />
+                            {getIconUrl(a.asset, pCoin?.image) ? (
+                              <img src={getIconUrl(a.asset, pCoin?.image)} alt={a.asset} className="w-7 h-7 rounded-full object-cover shrink-0" onError={(e) => { (e.target as any).style.display = "none"; }} />
                             ) : (
                               <span className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-white/80 shrink-0">
                                 {a.asset?.charAt(0)}

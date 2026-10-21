@@ -98,7 +98,7 @@ export const Crypto = () => {
                     );
                   })()}
                 </TableTd>
-                <TableTd><StatusPill status={tx.status} fallback="Completed" /></TableTd>
+                <TableTd><StatusPill status={tx.status} /></TableTd>
               </TableTr>
             ))}
           </TableTbody>

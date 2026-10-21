@@ -112,12 +112,10 @@ const TONE_CLASSES: Record<StatusTone, string> = {
 
 export const StatusPill = ({
   status,
-  fallback = "—",
 }: {
   status?: string | null;
-  fallback?: string;
 }) => {
-  if (!status) return <span className="text-white/40">{fallback}</span>;
+  if (!status) return null;
   const key = String(status).toLowerCase();
   const tone = STATUS_TONES[key] ?? "neutral";
   return (

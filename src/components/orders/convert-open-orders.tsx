@@ -30,7 +30,6 @@ export const ConvertOpenOrders = () => {
         <Select
           label="Wallet"
           data={["All", "Spot", "Funding"]}
-          defaultValue="All"
           classNames={selectStyles}
           className="w-[140px]"
         />
@@ -58,7 +57,7 @@ export const ConvertOpenOrders = () => {
                 <TableTd className="!text-[#F6465D]">- {fmtNum(item.fromAmount)} {item.from}</TableTd>
                 <TableTd className="!text-[#25AB42]">+ {fmtNum(item.toAmount)} {item.to}</TableTd>
                 <TableTd className="tabular-nums">{fmtNum(item.rate)}</TableTd>
-                <TableTd><StatusPill status={item.status} fallback="Pending" /></TableTd>
+                <TableTd><StatusPill status={item.status} /></TableTd>
               </TableTr>
             ))}
           </TableTbody>

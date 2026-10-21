@@ -151,7 +151,7 @@ function DashboardInner() {
         price: Number(m.price ?? m.latest_price ?? m.last_price ?? m.lastPrice ?? 0),
         changePercent24h: Number(m.changePercent24h ?? m.percent_change ?? m.priceChangePercent ?? 0),
         volume24h: Number(m.volume24h ?? m.volume ?? m.quoteVolume ?? 0),
-        image: getCryptoIcon(base, m.image ?? m.logo ?? m.icon),
+        image: getCryptoIcon(base) ?? m.image ?? m.logo ?? m.icon,
       };
     });
   }, [movers]);
@@ -169,7 +169,7 @@ function DashboardInner() {
         ...t,
         symbol: sym,
         pair: rawPair,
-        image: getCryptoIcon(sym, t.image ?? t.logo ?? t.icon) || allTokensMap.get(sym)?.image
+        image: getCryptoIcon(sym) || allTokensMap.get(sym)?.image
       });
     });
 
@@ -239,7 +239,7 @@ function DashboardInner() {
           volume24h: marketMatch?.volume24h ?? 0,
           balance: totalBalance,
           usdValue: totalBalance * price,
-          image: getCryptoIcon(sym, marketMatch?.image ?? item.image ?? item.logo),
+          image: getCryptoIcon(sym) ?? marketMatch?.image ?? item.image ?? item.logo,
         };
       })
       .sort((a: any, b: any) => b.usdValue - a.usdValue); // Sort by USD value

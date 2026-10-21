@@ -10,7 +10,7 @@ import { Skeleton } from "../shared/skeleton";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { ConvertAsset } from "../transactions/convert-asset";
-import { getCryptoIcon } from "@/src/utils/crypto-icons";
+import { useTokenIconMap } from "@/src/hooks/use-token-icons";
 
 /** Safely parse a value to a finite number, defaulting to 0. */
 const safeNum = (v: unknown): number => {
@@ -24,6 +24,12 @@ export const FundingTable = () => {
   const { handleOpenDepositModal, handleOpenInternalTransferModal } = useAssets();
 
   const { coins: portfolio, isLoading } = usePortfolioWs({ coins: true });
+  const tokenIcons = useTokenIconMap();
+
+  const getIconUrl = (symbol?: string, fallback?: string) => {
+    if (!symbol) return fallback;
+    return tokenIcons[symbol.toUpperCase().trim()] || fallback;
+  };
 
   const visibleAssets = portfolio?.filter((item: any) => {
     const passesZero = hideZero ? !!+item.fundingBalance : true;
@@ -105,7 +111,7 @@ export const FundingTable = () => {
                   const bal = safeNum(item.fundingBalance);
                   const price = safeNum(item.currencyPrice ?? item.usdPrice ?? item.price);
                   const usdVal = (bal * price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                  const iconSrc = getCryptoIcon(item.symbol, item.image ?? item.logo ?? item.icon);
+                  const iconSrc = getIconUrl(item.symbol, item.image ?? item.logo ?? item.icon);
                   return (
                     <TableTr key={`${item.symbol}-${item.name ?? "asset"}-${index}`}>
                       <TableTd className="!pl-6">
@@ -130,29 +136,33 @@ export const FundingTable = () => {
                         <span className="text-sm font-semibold text-white/80">${usdVal}</span>
                       </TableTd>
                       <TableTd>
-                        <span className="text-sm text-white/60">${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span>
+                        <span className="text-sm font-medium text-white">${price.toFixed(6)}</span>
                       </TableTd>
                       <TableTd className="!pr-6 !text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={handleOpenDepositModal}
-                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all active:scale-95"
+                        <div className="flex items-center justify-end gap-3">
+                          <span
+                            onClick={() => handleOpenDepositModal(item.symbol)}
+                            className="text-sm font-semibold text-primary hover:text-primary/80 cursor-pointer transition-colors"
                           >
                             Deposit
-                          </button>
-                          <button
-                            onClick={() => handleOpenInternalTransferModal()}
-                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/[0.05] text-white/70 hover:bg-white/10 hover:text-white transition-all active:scale-95 flex items-center gap-1"
+                          </span>
+                          <span
+                            onClick={() => handleOpenInternalTransferModal("spot", "funding")}
+                            className="text-sm font-semibold text-blue-500 hover:text-blue-400 cursor-pointer transition-colors"
                           >
-                            <MdSwapHoriz size={13} />
                             Transfer
-                          </button>
-                          <button
-                            onClick={() => modals.open({ children: <ConvertAsset defaultFromAsset={item.symbol} />, ...DEFAULT_MODAL_SETTINGS })}
-                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/[0.05] text-white/70 hover:bg-white/10 hover:text-white transition-all active:scale-95"
+                          </span>
+                          <span
+                            onClick={() =>
+                              modals.open({
+                                children: <ConvertAsset defaultFromAsset={item.symbol} />,
+                                ...DEFAULT_MODAL_SETTINGS,
+                              })
+                            }
+                            className="text-sm font-semibold text-yellow-400 hover:text-yellow-300 cursor-pointer transition-colors"
                           >
                             Convert
-                          </button>
+                          </span>
                         </div>
                       </TableTd>
                     </TableTr>

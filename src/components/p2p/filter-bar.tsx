@@ -2,15 +2,11 @@
 
 import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Select, NumberInput } from "@mantine/core";
+import { Select, NumberInput, Skeleton } from "@mantine/core";
 import { useP2PStore } from "@/src/stores/p2p-store";
 import { asset, assetKeys } from "@/src/services/asset";
 import { tradingKeys, tradingService } from "@/src/services/trading";
-import { getBanksForFiat } from "@/src/lib/banks";
-
-// Shown only while the backend lists load (or if those requests fail).
-const FALLBACK_ASSETS = ["USDT", "BTC", "ETH"];
-const FALLBACK_FIATS = ["USD", "EUR", "NGN", "GBP"];
+import { fiatKeys, fiatService } from "@/src/services/fiat";
 
 const selectClassNames = {
   input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-11 rounded-xl focus:border-buy focus:ring-1 focus:ring-buy/30 transition-all font-semibold",
@@ -24,7 +20,7 @@ export const FilterBar = () => {
   // Listed tokens for the asset picker — the backend's own supported-token list.
   // `listed_tokens` answers one row per token per chain, so collapse to one
   // entry per symbol (same aggregation the ads/deposit pickers use).
-  const { data: listedTokens } = useQuery({
+  const { data: listedTokens, isLoading: tokensLoading } = useQuery({
     queryKey: assetKeys.supportedTokensKey("all"),
     queryFn: () => asset.fetchSupportedTokens({ limit: 1000 }),
     select: (res: any) => (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []),
@@ -41,14 +37,11 @@ export const FilterBar = () => {
       seen.add(symbol);
       options.push({ value: symbol, label: symbol });
     }
-    return options.length
-      ? options
-      : FALLBACK_ASSETS.map((symbol) => ({ value: symbol, label: symbol }));
+    return options;
   }, [listedTokens]);
 
-  // Listed fiat currencies for the fiat picker — the fallback set only covers
-  // the window before this resolves (or a failed request).
-  const { data: listedCurrencies } = useQuery({
+  // Listed fiat currencies for the fiat picker
+  const { data: listedCurrencies, isLoading: currenciesLoading } = useQuery({
     queryKey: tradingKeys.listedCurrencies,
     queryFn: () => tradingService.listedCurrencies({ limit: 200 }),
     staleTime: Infinity,
@@ -68,28 +61,59 @@ export const FilterBar = () => {
       seen.add(code);
       options.push({ value: code, label: code });
     }
-    return options.length
-      ? options
-      : FALLBACK_FIATS.map((code) => ({ value: code, label: code }));
+    return options;
   }, [listedCurrencies]);
 
-  // Payment methods are fiat-specific — same list advertisers pick from when
-  // posting ads, so the filter values always match real ad payment methods.
+  // Banks for the selected fiat
+  const { data: banksData } = useQuery({
+    queryKey: fiatKeys.banks,
+    queryFn: () => fiatService.getBanks(),
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  const banksByFiat: Record<string, string[]> = {};
+  if (banksData?.banks) {
+    for (const bank of banksData.banks) {
+      const currency = (bank as any).currency || (bank as any).fiat;
+      if (!currency) continue;
+      if (!banksByFiat[currency]) banksByFiat[currency] = [];
+      banksByFiat[currency].push(bank.name);
+    }
+  }
+
   const paymentMethodOptions = useMemo(
-    () => ["All", ...getBanksForFiat(adFilters.fiat)],
-    [adFilters.fiat]
+    () => ["All", ...(banksByFiat[adFilters.fiat] || [])],
+    [adFilters.fiat, banksByFiat]
   );
 
   const handleFiatChange = (val: string | null) => {
-    const nextFiat = val || "USD";
+    const nextFiat = val || "";
     const keepMethod =
       adFilters.paymentMethod === "All" ||
-      getBanksForFiat(nextFiat).includes(adFilters.paymentMethod);
+      (banksByFiat[nextFiat] || []).includes(adFilters.paymentMethod);
     setAdFilters({
       fiat: nextFiat,
       ...(keepMethod ? {} : { paymentMethod: "All" }),
     });
   };
+
+  const isLoading = tokensLoading || currenciesLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-wrap items-center gap-4 max-[1150px]:gap-3 bg-[#181a20] border border-white/[0.06] p-6 max-[1150px]:p-4 rounded-2xl max-[1150px]:rounded-xl mb-6 max-[1150px]:mb-4">
+        <div className="flex bg-black/30 rounded-xl p-1.5 border border-white/[0.06] max-[1150px]:w-full">
+          <Skeleton height={40} width={100} />
+          <Skeleton height={40} width={100} />
+        </div>
+        <Skeleton height={48} width={200} />
+        <Skeleton height={48} width={120} />
+        <Skeleton height={48} width={120} />
+        <Skeleton height={48} width={180} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-4 max-[1150px]:gap-3 bg-[#181a20] border border-white/[0.06] p-6 max-[1150px]:p-4 rounded-2xl max-[1150px]:rounded-xl mb-6 max-[1150px]:mb-4">

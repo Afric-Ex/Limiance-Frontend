@@ -8,13 +8,19 @@ import { ConvertAsset } from "../transactions/convert-asset";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
-import { getCryptoIcon } from "@/src/utils/crypto-icons";
+import { useTokenIconMap } from "@/src/hooks/use-token-icons";
 
 export const SpotTable = () => {
   const [hideSmallBalances, setHideSmallBalances] = useState(false);
   const router = useRouter();
 
   const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs({ coins: true });
+  const tokenIcons = useTokenIconMap();
+
+  const getIconUrl = (symbol?: string, fallback?: string) => {
+    if (!symbol) return fallback;
+    return tokenIcons[symbol.toUpperCase().trim()] || fallback;
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,13 +64,15 @@ export const SpotTable = () => {
                   
                   if (hideSmallBalances && valueUsd < 1) return null;
 
+                  const iconUrl = getIconUrl(item.symbol, item.image ?? item.logo ?? item.icon);
+
                   return (
                     <TableTr key={`${item.symbol ?? item.name}-${index}`}>
                       <TableTd>
                         <span className="flex items-center gap-3">
-                          {getCryptoIcon(item.symbol, item.image ?? item.logo ?? item.icon) ? (
+                          {iconUrl ? (
                             <img
-                              src={getCryptoIcon(item.symbol, item.image ?? item.logo ?? item.icon)}
+                              src={iconUrl}
                               alt={item.name}
                               loading="lazy"
                               decoding="async"

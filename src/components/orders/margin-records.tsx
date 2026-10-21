@@ -74,7 +74,7 @@ export const MarginRecords = () => {
                 <TableTd className="text-white/50">{fmtDateTime(rec.createdAt)}</TableTd>
                 <TableTd className="tabular-nums">{fmtNum(rec.price)}</TableTd>
                 <TableTd className="tabular-nums">{fmtNum(rec.quantity ?? rec.amount)}</TableTd>
-                <TableTd><StatusPill status={rec.status} fallback="Closed" /></TableTd>
+                <TableTd><StatusPill status={rec.status} /></TableTd>
               </TableTr>
             ))}
           </TableTbody>
