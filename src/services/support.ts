@@ -35,13 +35,39 @@ export const supportService = {
   /** POST /trading/support/tickets/:id/messages — Reply to a ticket */
   replyTicket: async (
     ticketId: string,
-    data: ReplyTicketPayload
-  ): Promise<ApiResponse<any>> => {
+    data: ReplyTicketPayload,
+    chatId?: string
+  ): Promise<any> => {
+    // Primary: chat_message over the trading socket (§8.1) when the ticket
+    // exposes its conversation id; REST is the fallback.
+    if (typeof window !== "undefined" && chatId) {
+      try {
+        const { sendChatMessageWs } = await import("../lib/chat-ws");
+        return await sendChatMessageWs(chatId, data.body);
+      } catch {
+        // Fall back to REST below.
+      }
+    }
+
     const response = await api.post(
       `trading/support/tickets/${ticketId}/messages`,
       data
     );
     return response;
+  },
+
+  /**
+   * Chat history for a support conversation (§8.3–8.4). Returns `null` when the
+   * socket cannot answer, so the caller keeps using the REST ticket thread.
+   */
+  getChatMessages: async (chatId: string): Promise<any | null> => {
+    if (typeof window === "undefined") return null;
+    try {
+      const { getChatMessagesWs } = await import("../lib/chat-ws");
+      return await getChatMessagesWs(chatId);
+    } catch {
+      return null;
+    }
   },
 };
 
@@ -77,6 +103,7 @@ const normalizeMessages = (list: any[] | undefined): SupportMessage[] | undefine
 
 export const normalizeTicket = (raw: any): SupportTicket => ({
   id: String(raw.id ?? raw._id ?? ""),
+  chatId: raw.chatId ?? raw.chat_id ?? raw.chatID ?? raw.conversationId ?? undefined,
   subject: String(raw.subject ?? raw.title ?? ""),
   category: raw.category ?? raw.category_name ?? undefined,
   status: String(raw.status ?? "open").toLowerCase() as SupportTicket["status"],

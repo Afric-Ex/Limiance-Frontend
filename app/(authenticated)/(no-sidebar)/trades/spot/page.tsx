@@ -102,7 +102,7 @@ function SpotTrades() {
 
   const { data: orderHistory, isLoading: orderHistoryLoading } = useQuery({
     queryKey: tradingKeys.orderHistory("spot"),
-    queryFn: () => tradingService.marketOrderHistory("spot"),
+    queryFn: () => tradingService.spotOrderHistory(),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];

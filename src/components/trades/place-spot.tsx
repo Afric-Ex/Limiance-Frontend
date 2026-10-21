@@ -214,6 +214,18 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     return { side, base, quote, type, price, quantity, leverage, stopPrice: activeTab === "oco" ? (side === "buy" ? +buyOcoStop : +sellOcoStop) : price };
   };
 
+  // TP/SL are attached to the entry order (`takeProfit` / `stopLoss`),
+  // per WEBSOCKET_MESSAGES.md §3.5 / §4.5, rather than placed as separate orders.
+  const buildTpslPayload = (side: "buy" | "sell") => {
+    if (!tpslEnabled) return {};
+    const takeProfit = parseNum(side === "buy" ? buyTp : sellTp);
+    const stopLoss = parseNum(side === "buy" ? buySl : sellSl);
+    return {
+      ...(takeProfit > 0 ? { takeProfit } : {}),
+      ...(stopLoss > 0 ? { stopLoss } : {}),
+    };
+  };
+
   const placeOrder = async (side: "buy" | "sell") => {
     const payload = buildPayload(side);
 
@@ -227,14 +239,25 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         quantity: Number(payload.quantity),
         price: activeTab === "market" ? marketPrice ?? undefined : Number(payload.price),
         stopPrice: Number(payload.stopPrice),
+        ...buildTpslPayload(side),
       });
     }
 
     if (activeTab === "market") {
-      return placeMarginOrderWs({ ...payload, type: "market", price: marketPrice ?? undefined });
+      return placeMarginOrderWs({
+        ...payload,
+        type: "market",
+        price: marketPrice ?? undefined,
+        ...buildTpslPayload(side),
+      });
     }
     if (activeTab === "stop") {
-      return placeMarginOrderWs({ ...payload, type: payload.type as "buy_stop" | "sell_stop", stopPrice: payload.stopPrice });
+      return placeMarginOrderWs({
+        ...payload,
+        type: payload.type as "buy_stop" | "sell_stop",
+        stopPrice: payload.stopPrice,
+        ...buildTpslPayload(side),
+      });
     }
     if (activeTab === "oco") {
       return placeMarginOcoOrderWs({
@@ -247,7 +270,11 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         sl_limit_price: String(side === "buy" ? buyOcoLimit : sellOcoLimit),
       });
     }
-    return placeMarginOrderWs({ ...payload, type: payload.type as "buy_limit" | "sell_limit" });
+    return placeMarginOrderWs({
+      ...payload,
+      type: payload.type as "buy_limit" | "sell_limit",
+      ...buildTpslPayload(side),
+    });
   };
 
   const refreshTradingBalances = () => {

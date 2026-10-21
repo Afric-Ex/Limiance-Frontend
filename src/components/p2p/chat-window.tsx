@@ -1,13 +1,17 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChatMessage } from "./chat-message";
 import { ChatInput } from "./chat-input";
 import { TypingIndicator } from "./typing-indicator";
 import { ActionIcon, Badge, Tooltip, Loader } from "@mantine/core";
 import { MdWarning } from "react-icons/md";
 import { useFetchChats, useSendChatMessage } from "@/src/hooks/p2p/use-p2p";
+import { useChatWs, useTypingIndicator } from "@/src/hooks/use-chat-ws";
+import { p2pKey } from "@/src/services/p2p";
 import { P2PChatMessage } from "@/src/types/p2p";
+import type { ChatWsMessage } from "@/src/lib/chat-ws";
 
 interface ChatWindowProps {
   chatId: string;
@@ -15,28 +19,55 @@ interface ChatWindowProps {
 }
 
 export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
-  const [isTyping] = useState(false); // Mock typing for now until WS is fully integrated
-  
+  const queryClient = useQueryClient();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Poll for messages every 3 seconds to simulate real-time chat
-  const { data: chatsData, isLoading, refetch } = useFetchChats(chatId);
+  const { peerTyping, onTyping, notifyTyping } = useTypingIndicator(
+    chatId,
+    currentUserId
+  );
+
+  const handleIncomingMessage = useCallback(
+    (message: ChatWsMessage) => {
+      queryClient.setQueryData<{ data: P2PChatMessage[] }>(
+        p2pKey.chatMessages(chatId),
+        (current) => {
+          const list = current?.data ?? [];
+          if (list.some((entry) => entry.id === message.id)) return current;
+          return {
+            data: [
+              ...list,
+              {
+                id: message.id,
+                content: message.content,
+                senderId: message.senderId,
+                createdAt: message.createdAt,
+              },
+            ],
+          };
+        }
+      );
+    },
+    [chatId, queryClient]
+  );
+
+  const { connected } = useChatWs(chatId, {
+    onMessage: handleIncomingMessage,
+    onTyping,
+  });
+
+  // WebSocket pushes are primary; polling is only a reconciliation fallback
+  // (fast while the socket is down, slow while it is live).
+  const { data: chatsData, isLoading } = useFetchChats(chatId, {
+    refetchInterval: connected ? 30_000 : 5_000,
+  });
   const { mutate: sendMessage, isPending: isSending } = useSendChatMessage();
 
-  // If we had a websocket connection state
-  const isConnected = true;
-
-  const responseMessages = (chatsData?.data as any)?.data;
-  const messages: P2PChatMessage[] = Array.isArray(responseMessages) ? responseMessages : [];
-
-  // Poll interval
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refetch();
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [refetch]);
+  const messages: P2PChatMessage[] = useMemo(
+    () => chatsData?.data ?? [],
+    [chatsData]
+  );
 
   // Scroll only the chat container to the bottom — NOT the whole page
   const scrollToBottom = (smooth = true) => {
@@ -47,15 +78,16 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping]);
+  }, [messages, peerTyping]);
 
   const handleSendMessage = (content: string) => {
     if (!content.trim()) return;
+    notifyTyping(false);
     sendMessage(
       { chatId, content },
       {
         onSuccess: () => {
-          // Message will appear on next poll, or invalidateQueries handles it
+          // The WS delivery push (or the next fallback poll) adds the message.
           scrollToBottom();
         }
       }
@@ -72,10 +104,10 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
       <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5 backdrop-blur-md relative z-20">
         <div className="flex items-center gap-3">
           <span className="text-white font-bold">Live Chat</span>
-          {isConnected ? (
+          {connected ? (
             <Badge color="green" size="sm" variant="dot">Connected</Badge>
           ) : (
-            <Badge color="gray" size="sm" variant="dot">Connecting...</Badge>
+            <Badge color="gray" size="sm" variant="dot">Reconnecting…</Badge>
           )}
         </div>
         <Tooltip label="Never release crypto before verifying payment in your bank account.">
@@ -89,7 +121,9 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 flex flex-col relative">
         <div className="flex justify-center my-4">
           <div className="bg-white/10 px-4 py-1.5 rounded-full text-xs text-white/70 text-center">
-            Chat connected. Messages are end-to-end encrypted.
+            {connected
+              ? "Live chat connected. Messages update in real time."
+              : "Reconnecting — messages keep refreshing in the background."}
           </div>
         </div>
 
@@ -112,13 +146,14 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
           ))
         )}
         
-        {isTyping && <TypingIndicator />}
+        {peerTyping && <TypingIndicator />}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
       <ChatInput 
         onSendMessage={handleSendMessage}
+        onTypingChange={notifyTyping}
         disabled={isSending}
       />
     </div>

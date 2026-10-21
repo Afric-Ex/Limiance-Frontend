@@ -7,7 +7,7 @@ import {
   CreateOrderResponseDatum,
   CreatePaymentMethod,
   CreatePaymentMethodResponse,
-  P2PChatMessagesResponse,
+  P2PChatMessage,
   P2PMatchOrder,
   P2POrderListings,
   P2PReleaseOrder,
@@ -74,6 +74,33 @@ const getWithRootFallback = async <T = unknown>(path: string): Promise<ApiRespon
     if (![400, 404].includes(error?.response?.status)) throw error;
     return apiRoot.get(path);
   }
+};
+
+/** Accepts the WS `{ messages: [...] }` payload and the REST envelopes. */
+const normalizeChatMessages = (raw: any): P2PChatMessage[] => {
+  const list = Array.isArray(raw)
+    ? raw
+    : Array.isArray(raw?.messages)
+      ? raw.messages
+      : Array.isArray(raw?.data?.messages)
+        ? raw.data.messages
+        : Array.isArray(raw?.data)
+          ? raw.data
+          : Array.isArray(raw?.data?.data)
+            ? raw.data.data
+            : [];
+
+  return list.map((message: any, index: number) => ({
+    id: String(
+      message.id ??
+        message._id ??
+        message.messageId ??
+        `p2p-${index}-${message.senderId ?? message.sender_id ?? "msg"}-${message.createdAt ?? message.created_at ?? ""}`
+    ),
+    content: String(message.content ?? message.message ?? ""),
+    senderId: String(message.senderId ?? message.sender_id ?? ""),
+    createdAt: String(message.createdAt ?? message.created_at ?? ""),
+  }));
 };
 
 export const p2p = {
@@ -177,19 +204,53 @@ export const p2p = {
     return response;
   },
 
-  fetchChatMessages: async (chatId: string): Promise<ApiResponse<P2PChatMessagesResponse>> => {
-    const response = await api.get(`trading/p2p/chats/messages/${chatId}`);
-    return response;
+  fetchChatMessages: async (
+    chatId: string,
+    params?: { page?: number; limit?: number }
+  ): Promise<{ data: P2PChatMessage[] }> => {
+    // Primary: get_chat_messages over the trading socket (§8.3–8.4).
+    if (typeof window !== "undefined") {
+      try {
+        const { getChatMessagesWs } = await import("../lib/chat-ws");
+        const payload = await getChatMessagesWs(chatId, params);
+        return { data: normalizeChatMessages(payload) };
+      } catch {
+        // Fall back to REST below.
+      }
+    }
+
+    const response = await api.get(`trading/p2p/chats/messages/${chatId}`, { params });
+    return { data: normalizeChatMessages(response.data) };
   },
 
-  sendMessage: async (data: { chatId: string; content: string }): Promise<ApiResponse<unknown>> => {
+  sendMessage: async (data: { chatId: string; content: string }): Promise<any> => {
+    // Primary: chat_message over the trading socket (§8.1).
+    if (typeof window !== "undefined") {
+      try {
+        const { sendChatMessageWs } = await import("../lib/chat-ws");
+        return await sendChatMessageWs(data.chatId, data.content);
+      } catch {
+        // Fall back to REST below.
+      }
+    }
+
     const response = await api.post(`trading/p2p/chats/send/${data.chatId}`, {
       content: data.content,
     });
     return response;
   },
 
-  fetchChats: async (params?: { page?: number; limit?: number }): Promise<ApiResponse<unknown>> => {
+  fetchChats: async (params?: { page?: number; limit?: number }): Promise<any> => {
+    // Primary: get_chats over the trading socket (§8.2).
+    if (typeof window !== "undefined") {
+      try {
+        const { getChatsWs } = await import("../lib/chat-ws");
+        return await getChatsWs();
+      } catch {
+        // Fall back to REST below.
+      }
+    }
+
     const response = await api.get(`trading/p2p/chats`, { params });
     return response;
   },

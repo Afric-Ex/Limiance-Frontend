@@ -12,10 +12,31 @@ import { wsClient } from "./websocket-client";
 
 const RESPONSE_TIMEOUT_MS = 15_000;
 const CONNECT_TIMEOUT_MS = 4_000;
+/** History is read-only and has a REST fallback, so settle (and fall back) sooner. */
+const HISTORY_RESPONSE_TIMEOUT_MS = 8_000;
 
-/** Order/position-shaped ack/push frames; order-book streams are excluded. */
+/** Exact ack/reject topics documented in WEBSOCKET_MESSAGES.md §11. */
+const ORDER_RESPONSE_TYPES = new Set([
+  "order_placed",
+  "order_rejected",
+  "order_cancelled",
+  "cancel_rejected",
+  "margin_order_placed",
+  "margin_order_rejected",
+  "margin_order_cancelled",
+  "cancel_margin_rejected",
+  "futures_order_placed",
+  "futures_order_rejected",
+  "position_closed",
+  "close_position_rejected",
+]);
+
+/**
+ * Fallback for unlisted order/position-shaped replies. Anchored so live push
+ * topics such as `user_order_update` can never settle a pending request.
+ */
 const ORDER_RESPONSE_RE =
-  /(place|cancel|close)_(spot|futures|margin)_(order|position|oco)|(spot|futures|margin)_(order|position|oco)_\w+|order_(placed|created|cancelled|canceled|update|rejected|failed|error)|position_(closed|updated|rejected|failed|error)/i;
+  /^(?:place|cancel|close)_(?:spot|futures|margin)_(?:order|position|oco)\b|^(?:spot|futures|margin)_(?:order|position|oco)_\w+$|^(?:order|position)_(?:placed|created|cancelled|canceled|closed|updated|rejected|failed|error)$/i;
 
 /** Bare error topics a rejected request may come back on. */
 const GLOBAL_ERROR_TYPES = new Set(["error", "order_error", "request_error"]);
@@ -59,7 +80,20 @@ function describeFailure(raw: any): string | null {
 
 function looksLikeOrderResponse(type: string): boolean {
   if (!type || /book/i.test(type)) return false;
-  return ORDER_RESPONSE_RE.test(type) || GLOBAL_ERROR_TYPES.has(type);
+  const normalized = type.toLowerCase();
+  return (
+    ORDER_RESPONSE_TYPES.has(normalized) ||
+    ORDER_RESPONSE_RE.test(type) ||
+    GLOBAL_ERROR_TYPES.has(normalized)
+  );
+}
+
+function createRequestId(type: string): string {
+  const random =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  return `${type}-${random}`;
 }
 
 function waitForConnection(timeoutMs = CONNECT_TIMEOUT_MS): Promise<void> {
@@ -85,6 +119,7 @@ function waitForConnection(timeoutMs = CONNECT_TIMEOUT_MS): Promise<void> {
 }
 
 function sendOrderFrame(frame: { type: string; data: Record<string, unknown> }): Promise<any> {
+  const requestId = createRequestId(frame.type);
   return waitForConnection().then(
     () =>
       new Promise<any>((resolve, reject) => {
@@ -101,6 +136,10 @@ function sendOrderFrame(frame: { type: string; data: Record<string, unknown> }):
         const unsubscribe = wsClient.onAnyMessage((data, raw) => {
           const type = String(raw?.type ?? "");
           if (!looksLikeOrderResponse(type)) return;
+          // When the server echoes request_id, ignore replies meant for another
+          // in-flight order. Frames without one still settle (older behaviour).
+          const replyRequestId = raw?.request_id ?? raw?.requestId;
+          if (replyRequestId != null && String(replyRequestId) !== requestId) return;
           const failure = describeFailure(raw);
           settle(() => (failure ? reject(new Error(failure)) : resolve(data ?? raw)));
         });
@@ -111,7 +150,7 @@ function sendOrderFrame(frame: { type: string; data: Record<string, unknown> }):
           );
         }, RESPONSE_TIMEOUT_MS);
 
-        if (!wsClient.send(frame)) {
+        if (!wsClient.send({ ...frame, request_id: requestId })) {
           settle(() => reject(new Error("WebSocket send failed — order was not sent")));
         }
       })
@@ -122,7 +161,10 @@ export type SpotOrderWsType = "limit" | "market" | "stop";
 
 /**
  * place_spot_order frame, e.g. limit:
- * { type: "place_spot_order", data: { symbol: "BTC/USDT", side: "BUY", type: "limit", price: 67000, quantity: 0.01 } }
+ * { type: "place_spot_order", data: { symbol: "BTC/USDT", side: "BUY", type: "limit",
+ *   price: 67000, quantity: 0.01, takeProfit: 69000, stopLoss: 65000 } }
+ *
+ * TP/SL are attached to the entry order as conditional triggers (doc §3.5).
  */
 export function placeSpotOrderWs(input: {
   symbol: string;
@@ -131,6 +173,8 @@ export function placeSpotOrderWs(input: {
   quantity: number;
   price?: number;
   stopPrice?: number;
+  takeProfit?: number;
+  stopLoss?: number;
 }): Promise<any> {
   const payload: Record<string, unknown> = {
     symbol: input.symbol.toUpperCase(),
@@ -145,6 +189,8 @@ export function placeSpotOrderWs(input: {
     payload.price = trigger;
     payload.stopPrice = trigger;
   }
+  if (Number(input.takeProfit) > 0) payload.takeProfit = Number(input.takeProfit);
+  if (Number(input.stopLoss) > 0) payload.stopLoss = Number(input.stopLoss);
   return sendOrderFrame({ type: "place_spot_order", data: payload });
 }
 
@@ -160,6 +206,8 @@ export function cancelSpotOrderWs(orderId: string): Promise<any> {
  *
  * Mirrors tradingService.placeFuturesOrder: side buy/sell → LONG/SHORT,
  * stop_buy/stop_sell normalize to "stop" with the trigger forwarded as `price`.
+ *
+ * TP/SL are attached to the entry order as conditional triggers (doc §5.5).
  */
 export function placeFuturesOrderWs(data: {
   pair: string;
@@ -185,8 +233,8 @@ export function placeFuturesOrderWs(data: {
   };
   if (normalizedType === "limit" && typeof data.price === "number") payload.price = data.price;
   if (normalizedType === "stop" && typeof data.stopPrice === "number") payload.price = data.stopPrice;
-  if (typeof data.takeProfit === "number") payload.takeProfit = data.takeProfit;
-  if (typeof data.stopLoss === "number") payload.stopLoss = data.stopLoss;
+  if (Number(data.takeProfit) > 0) payload.takeProfit = Number(data.takeProfit);
+  if (Number(data.stopLoss) > 0) payload.stopLoss = Number(data.stopLoss);
   return sendOrderFrame({ type: "place_futures_order", data: payload });
 }
 
@@ -198,7 +246,9 @@ export function closeFuturesPositionWs(positionId: string): Promise<any> {
 /**
  * place_margin_order frame, mirroring the margin REST payloads (limit / market / stop):
  * { type: "place_margin_order", data: { symbol: "BTC/USDT", side: "BUY", type: "limit",
- *   price: 67000, quantity: 0.01, leverage: 10 } }
+ *   price: 67000, quantity: 0.01, leverage: 10, takeProfit: 69000, stopLoss: 65000 } }
+ *
+ * TP/SL are attached to the entry order as conditional triggers (doc §4.5).
  */
 export function placeMarginOrderWs(data: {
   side: "buy" | "sell";
@@ -209,6 +259,8 @@ export function placeMarginOrderWs(data: {
   leverage: number;
   price?: number;
   stopPrice?: number;
+  takeProfit?: number;
+  stopLoss?: number;
 }): Promise<any> {
   const kind =
     data.type === "market" ? "market" : data.type.endsWith("_limit") ? "limit" : "stop";
@@ -222,6 +274,8 @@ export function placeMarginOrderWs(data: {
   if (kind === "limit") payload.price = Number(data.price);
   if (kind === "market" && Number(data.price) > 0) payload.price = Number(data.price);
   if (kind === "stop") payload.stopPrice = Number(data.stopPrice);
+  if (Number(data.takeProfit) > 0) payload.takeProfit = Number(data.takeProfit);
+  if (Number(data.stopLoss) > 0) payload.stopLoss = Number(data.stopLoss);
   return sendOrderFrame({ type: "place_margin_order", data: payload });
 }
 
@@ -250,4 +304,116 @@ export function cancelMarginOrderWs(orderId: string, symbol?: string): Promise<a
       ...(symbol ? { symbol: symbol.toUpperCase() } : {}),
     },
   });
+}
+
+// ─── Order history (read-only queries) ──────────────────────────────────────
+
+/** Reply topics documented in WEBSOCKET_MESSAGES.md §3.13–3.15, §4.10–4.11, §5.10 / §11. */
+const SPOT_ORDER_HISTORY_RESPONSE = "spot_order_history";
+const SPOT_ORDER_HISTORY_ERROR = "spot_order_history_error";
+const MARGIN_ORDER_HISTORY_RESPONSE = "margin_order_history";
+const MARGIN_ORDER_HISTORY_ERROR = "margin_order_history_error";
+const FUTURES_ORDER_HISTORY_RESPONSE = "futures_order_history";
+const FUTURES_ORDER_HISTORY_ERROR = "futures_order_history_error";
+
+/** Status filter accepted by spot (§3.14) and margin (§4.11) history queries. */
+export type OrderHistoryStatus = "OPEN" | "FILLED" | "CANCELLED" | "REJECTED";
+
+export interface OrderHistoryWsParams {
+  status?: OrderHistoryStatus;
+  page?: number | string;
+  limit?: number | string;
+}
+
+/**
+ * One-shot history query over the trading WebSocket. An empty `data` object is
+ * the documented default (page 1, limit 50); the docs show page/limit as
+ * strings, so numeric inputs are stringified. Resolves with the reply payload
+ * (`{ success, statusCode, message, data: [...], totalPages, ... }`), which
+ * matches the REST response shape consumers already read.
+ */
+function queryOrderHistory(
+  frameType: string,
+  responseType: string,
+  errorType: string,
+  params?: OrderHistoryWsParams
+): Promise<any> {
+  const data: Record<string, unknown> = {};
+  if (params?.status) data.status = params.status.toUpperCase();
+  if (params?.page !== undefined) data.page = String(params.page);
+  if (params?.limit !== undefined) data.limit = String(params.limit);
+
+  const requestId = createRequestId(frameType);
+
+  return waitForConnection().then(
+    () =>
+      new Promise<any>((resolve, reject) => {
+        let settled = false;
+
+        const settle = (action: () => void) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          unsubscribe();
+          action();
+        };
+
+        const unsubscribe = wsClient.onAnyMessage((payload, raw) => {
+          const type = String(raw?.type ?? "");
+          if (type !== responseType && type !== errorType) return;
+          // When the server echoes request_id, ignore replies meant for another query.
+          const replyRequestId = raw?.request_id ?? raw?.requestId;
+          if (replyRequestId != null && String(replyRequestId) !== requestId) return;
+          const failure = describeFailure(raw);
+          settle(() => (failure ? reject(new Error(failure)) : resolve(payload ?? raw)));
+        });
+
+        const timer = setTimeout(() => {
+          settle(() =>
+            reject(
+              new Error(
+                `No response to ${frameType} within ${HISTORY_RESPONSE_TIMEOUT_MS / 1000}s`
+              )
+            )
+          );
+        }, HISTORY_RESPONSE_TIMEOUT_MS);
+
+        if (!wsClient.send({ type: frameType, request_id: requestId, data })) {
+          settle(() => reject(new Error(`WebSocket send failed — ${frameType} not requested`)));
+        }
+      })
+  );
+}
+
+/** get_spot_order_history frame (doc §3.13–3.15). */
+export function getSpotOrderHistoryWs(params?: OrderHistoryWsParams): Promise<any> {
+  return queryOrderHistory(
+    "get_spot_order_history",
+    SPOT_ORDER_HISTORY_RESPONSE,
+    SPOT_ORDER_HISTORY_ERROR,
+    params
+  );
+}
+
+/** get_margin_order_history frame (doc §4.10–4.11). */
+export function getMarginOrderHistoryWs(params?: OrderHistoryWsParams): Promise<any> {
+  return queryOrderHistory(
+    "get_margin_order_history",
+    MARGIN_ORDER_HISTORY_RESPONSE,
+    MARGIN_ORDER_HISTORY_ERROR,
+    params
+  );
+}
+
+/** get_futures_order_history frame (doc §5.10); page/limit only, no status filter. */
+export function getFuturesOrderHistoryWs(params?: {
+  page?: number | string;
+  limit?: number | string;
+}): Promise<any> {
+  return queryOrderHistory(
+    "get_futures_order_history",
+    FUTURES_ORDER_HISTORY_RESPONSE,
+    FUTURES_ORDER_HISTORY_ERROR,
+    params
+  );
 }

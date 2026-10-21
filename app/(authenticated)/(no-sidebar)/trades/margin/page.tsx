@@ -122,7 +122,7 @@ function MarginTrades() {
 
   const { data: orderHistory, isLoading: orderHistoryLoading } = useQuery({
     queryKey: tradingKeys.orderHistory("margin"),
-    queryFn: () => tradingService.marketOrderHistory("margin"),
+    queryFn: () => tradingService.marginOrderHistory(),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
@@ -142,7 +142,8 @@ function MarginTrades() {
   });
 
   const { mutate: closeOrder, isPending: closeOrderPending } = useMutation({
-    mutationFn: (orderId: string) => cancelMarginOrderWs(orderId, selectedPair),
+    mutationFn: ({ orderId, symbol }: { orderId: string; symbol?: string }) =>
+      cancelMarginOrderWs(orderId, symbol),
     onSuccess: () => {
       successNotification("Order cancelled");
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
@@ -198,7 +199,42 @@ function MarginTrades() {
   };
   const getOrderPair = (order: any) =>
     order?.pair || (order?.base && order?.quote ? `${order.base}/${order.quote}` : "—");
-  const isBuySide = (side: unknown) => String(side ?? "").toUpperCase() === "BUY";
+  // Conditional/OCO rows can use snake_case ids and carry the pair under
+  // symbol/base-quote rather than `pair`; cancellation must forward the id
+  // that `cancel_margin_order` resolves (doc §4.9 checks conditional first).
+  const getOrderId = (order: any): string => {
+    const id = order?.id ?? order?.orderId ?? order?.order_id ?? order?._id;
+    return id != null ? String(id) : "";
+  };
+  const getOrderSymbol = (order: any): string => {
+    const symbol =
+      order?.pair ??
+      order?.symbol ??
+      (order?.base && order?.quote ? `${order.base}/${order.quote}` : "");
+    return String(symbol || selectedPair);
+  };
+  const getOrderLevels = (order: any) => {
+    const takeProfit = Number(
+      order?.takeProfit ??
+        order?.take_profit ??
+        order?.take_profit_price ??
+        order?.tp_trigger_price ??
+        order?.tp_price ??
+        order?.tp
+    );
+    const stopLoss = Number(
+      order?.stopLoss ??
+        order?.stop_loss ??
+        order?.stop_loss_price ??
+        order?.sl_trigger_price ??
+        order?.sl_price ??
+        order?.sl
+    );
+    return {
+      takeProfit: Number.isFinite(takeProfit) && takeProfit > 0 ? takeProfit : null,
+      stopLoss: Number.isFinite(stopLoss) && stopLoss > 0 ? stopLoss : null,
+    };
+  };
   const renderEmptyOrderBook = () => (
     <div className="flex flex-col items-center justify-center gap-1 text-center text-xs text-white/35">
       <span>
@@ -662,38 +698,43 @@ function MarginTrades() {
                     </TableTr>
                   </thead>
                   <tbody>
-                    {openOrders?.map((order: any) => (
-                      <TableTr key={order.id}>
-                        <TableTd><span className="text-xs text-white/70">{new Date(order.createdAt).toLocaleTimeString()}</span></TableTd>
-                        <TableTd><span className="text-xs font-semibold">{order.pair}</span></TableTd>
-                        <TableTd><span className="text-xs text-white/70 capitalize">{order.type}</span></TableTd>
+                    {openOrders?.map((order: any, index: number) => {
+                      const orderId = getOrderId(order);
+                      const levels = getOrderLevels(order);
+                      const side = String(order.side ?? order.order_side ?? "").toUpperCase();
+                      return (
+                      <TableTr key={orderId || `${getOrderPair(order)}-${order.createdAt ?? index}`}>
+                        <TableTd><span className="text-xs text-white/70">{formatOrderDate(order.createdAt, true)}</span></TableTd>
+                        <TableTd><span className="text-xs font-semibold">{getOrderPair(order)}</span></TableTd>
+                        <TableTd><span className="text-xs text-white/70 capitalize">{order.type ?? order.order_type ?? "—"}</span></TableTd>
                         <TableTd>
-                          <span className={`text-xs font-bold ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>
-                            {order.side?.toUpperCase()}
+                          <span className={`text-xs font-bold ${side === "BUY" ? "text-success-5" : "text-error-1"}`}>
+                            {side || "—"}
                           </span>
                         </TableTd>
-                        <TableTd><span className="text-xs text-white/90">{order.price?.toLocaleString()}</span></TableTd>
-                        <TableTd><span className="text-xs text-white/90">{order.amount ?? order.quantity}</span></TableTd>
-                        <TableTd><span className="text-xs text-white/90">{order.total?.toLocaleString()}</span></TableTd>
+                        <TableTd><span className="text-xs text-white/90">{formatOrderNumber(order.price)}</span></TableTd>
+                        <TableTd><span className="text-xs text-white/90">{formatOrderNumber(order.amount ?? order.quantity)}</span></TableTd>
+                        <TableTd><span className="text-xs text-white/90">{formatOrderNumber(order.total)}</span></TableTd>
                         <TableTd>
                           <span className="text-xs text-white/40">
-                            {order.takeProfit ? <span className="text-success-6">{order.takeProfit}</span> : "—"}
+                            {levels.takeProfit ? <span className="text-success-6">{levels.takeProfit.toLocaleString()}</span> : "—"}
                             {" / "}
-                            {order.stopLoss ? <span className="text-error-1">{order.stopLoss}</span> : "—"}
+                            {levels.stopLoss ? <span className="text-error-1">{levels.stopLoss.toLocaleString()}</span> : "—"}
                           </span>
                         </TableTd>
                         <TableTd className="text-right">
                           <button
-                            onClick={() => closeOrder(order.id)}
-                            disabled={closeOrderPending}
-                            className="text-xs font-semibold text-white/40 hover:text-primary transition-colors flex items-center gap-1 ml-auto"
+                            onClick={() => closeOrder({ orderId, symbol: getOrderSymbol(order) })}
+                            disabled={closeOrderPending || !orderId}
+                            className="text-xs font-semibold text-white/40 hover:text-primary transition-colors flex items-center gap-1 ml-auto disabled:opacity-40 disabled:hover:text-white/40"
                           >
                             {closeOrderPending && <Loader size={10} color="white" />}
                             Cancel
                           </button>
                         </TableTd>
                       </TableTr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </Table>
                 {openOrdersLoading ? (
@@ -915,24 +956,31 @@ function MarginTrades() {
              </div>
            ) : (
              <div className="flex flex-col gap-3">
-               {openOrders.map((order: any) => (
-                 <div key={order.id} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2 relative">
+               {openOrders.map((order: any, index: number) => {
+                 const orderId = getOrderId(order);
+                 const levels = getOrderLevels(order);
+                 const side = String(order.side ?? order.order_side ?? "").toUpperCase();
+                 return (
+                 <div key={orderId || index} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2 relative">
                    <div className="flex justify-between items-center">
-                     <span className="text-sm font-bold">{order.pair} <span className={`ml-2 text-xs uppercase ${order.side === "buy" ? "text-success-5" : "text-error-1"}`}>{order.side}</span></span>
+                     <span className="text-sm font-bold">{getOrderPair(order)} <span className={`ml-2 text-xs uppercase ${side === "BUY" ? "text-success-5" : "text-error-1"}`}>{side || "—"}</span></span>
                      <button
-                        onClick={() => closeOrder(order.id)}
-                        disabled={closeOrderPending}
-                        className="text-xs font-semibold text-white/40 hover:text-primary transition-colors flex items-center gap-1"
+                        onClick={() => closeOrder({ orderId, symbol: getOrderSymbol(order) })}
+                        disabled={closeOrderPending || !orderId}
+                        className="text-xs font-semibold text-white/40 hover:text-primary transition-colors flex items-center gap-1 disabled:opacity-40 disabled:hover:text-white/40"
                       >
                         Cancel
                       </button>
                    </div>
                    <div className="grid grid-cols-2 gap-2 text-xs">
-                     <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
-                     <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{order.price?.toLocaleString()}</span></div>
+                     <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{formatOrderNumber(order.amount ?? order.quantity)}</span></div>
+                     <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{formatOrderNumber(order.price)}</span></div>
+                     <div className="flex justify-between"><span className="text-white/40">TP</span><span className="text-success-6">{levels.takeProfit ? levels.takeProfit.toLocaleString() : "—"}</span></div>
+                     <div className="flex justify-between"><span className="text-white/40">SL</span><span className="text-error-1">{levels.stopLoss ? levels.stopLoss.toLocaleString() : "—"}</span></div>
                    </div>
                  </div>
-               ))}
+                 );
+               })}
              </div>
            )}
         </div>
@@ -1169,20 +1217,34 @@ function MarginTrades() {
                     <div className="p-4 text-center text-xs text-white/40">No open orders</div>
                   ) : (
                     <div className="flex flex-col gap-2">
-                      {openOrders.map((order: any, index: number) => (
-                        <div key={order.id ?? index} className="p-3 border-b border-white/[0.06] text-xs">
+                      {openOrders.map((order: any, index: number) => {
+                        const orderId = getOrderId(order);
+                        const levels = getOrderLevels(order);
+                        const side = String(order.side ?? order.order_side ?? "").toUpperCase();
+                        return (
+                        <div key={orderId || index} className="p-3 border-b border-white/[0.06] text-xs">
                           <div className="flex justify-between">
                             <span className="font-semibold">{getOrderPair(order)}</span>
-                            <span className={isBuySide(order.side) ? "text-success-5" : "text-error-1"}>{String(order.side ?? "").toUpperCase()}</span>
+                            <span className={side === "BUY" ? "text-success-5" : "text-error-1"}>{side || "—"}</span>
                           </div>
                           <div className="mt-2 grid grid-cols-2 gap-2 text-white/60">
                             <span>Type: {order.type ?? "—"}</span>
                             <span>Price: {formatOrderNumber(order.price)}</span>
-                            <span>Amount: {order.amount ?? order.quantity ?? "—"}</span>
+                            <span>Amount: {formatOrderNumber(order.amount ?? order.quantity)}</span>
                             <span>Time: {formatOrderDate(order.createdAt)}</span>
+                            <span>TP: {levels.takeProfit ? levels.takeProfit.toLocaleString() : "—"}</span>
+                            <span>SL: {levels.stopLoss ? levels.stopLoss.toLocaleString() : "—"}</span>
                           </div>
+                          <button
+                            onClick={() => closeOrder({ orderId, symbol: getOrderSymbol(order) })}
+                            disabled={closeOrderPending || !orderId}
+                            className="mt-2 text-xs font-semibold text-error-1 hover:text-error-1/80 transition-colors disabled:opacity-40 disabled:hover:text-error-1"
+                          >
+                            Cancel
+                          </button>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </TabsPanel>

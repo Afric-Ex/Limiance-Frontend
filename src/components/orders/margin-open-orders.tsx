@@ -20,6 +20,47 @@ const selectStyles = {
 
 const filters = ["Cross", "Isolated"];
 
+const formatNumber = (value: unknown) => {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue.toLocaleString() : "—";
+};
+
+const getOrderId = (order: any): string => {
+  const id = order?.id ?? order?.orderId ?? order?.order_id ?? order?._id;
+  return id != null ? String(id) : "";
+};
+
+const getOrderSymbol = (order: any): string => {
+  const symbol =
+    order?.pair ??
+    order?.symbol ??
+    (order?.base && order?.quote ? `${order.base}/${order.quote}` : "");
+  return String(symbol || "");
+};
+
+const getOrderLevels = (order: any) => {
+  const takeProfit = Number(
+    order?.takeProfit ??
+      order?.take_profit ??
+      order?.take_profit_price ??
+      order?.tp_trigger_price ??
+      order?.tp_price ??
+      order?.tp
+  );
+  const stopLoss = Number(
+    order?.stopLoss ??
+      order?.stop_loss ??
+      order?.stop_loss_price ??
+      order?.sl_trigger_price ??
+      order?.sl_price ??
+      order?.sl
+  );
+  return {
+    takeProfit: Number.isFinite(takeProfit) && takeProfit > 0 ? takeProfit : null,
+    stopLoss: Number.isFinite(stopLoss) && stopLoss > 0 ? stopLoss : null,
+  };
+};
+
 export const MarginOpenOrders = () => {
   const [filter, setFilter] = useState("Cross");
   const queryClient = useQueryClient();
@@ -32,8 +73,8 @@ export const MarginOpenOrders = () => {
   });
 
   const { mutate: cancelOrder } = useMutation({
-    mutationFn: (orderId: string): Promise<any> =>
-      cancelMarginOrderWs(orderId),
+    mutationFn: ({ orderId, symbol }: { orderId: string; symbol?: string }): Promise<any> =>
+      cancelMarginOrderWs(orderId, symbol),
     onSuccess: () => {
       successNotification("Order cancelled");
       queryClient.invalidateQueries({ queryKey: tradingKeys.marginOpenOrders });
@@ -136,41 +177,55 @@ export const MarginOpenOrders = () => {
                   <TableTh>Amount</TableTh>
                   <TableTh>Filled</TableTh>
                   <TableTh>Total</TableTh>
+                  <TableTh>TP / SL</TableTh>
                   <TableTh>Status</TableTh>
                   <TableTh>Time</TableTh>
                   <TableTh className="pr-6 text-right">Action</TableTh>
                 </TableTr>
               </TableThead>
               <TableTbody>
-                {orders.map((order: any) => (
-                  <TableTr key={order.id}>
-                    <TableTd className="pl-6 !text-white !font-bold">{order.pair}</TableTd>
-                    <TableTd className={order.side === "buy" ? "!text-success-6" : "!text-error-1"}>
-                      {order.side.toUpperCase()}
+                {orders.map((order: any, index: number) => {
+                  const orderId = getOrderId(order);
+                  const levels = getOrderLevels(order);
+                  const side = String(order.side ?? order.order_side ?? "").toUpperCase();
+                  return (
+                  <TableTr key={orderId || index}>
+                    <TableTd className="pl-6 !text-white !font-bold">{order.pair ?? order.symbol ?? `${order.base ?? ""}/${order.quote ?? ""}`}</TableTd>
+                    <TableTd className={side === "BUY" ? "!text-success-6" : "!text-error-1"}>
+                      {side || "—"}
                     </TableTd>
-                    <TableTd>{order.type}</TableTd>
-                    <TableTd>{order.price.toLocaleString()}</TableTd>
-                    <TableTd>{order.amount}</TableTd>
-                    <TableTd>{order.filled}</TableTd>
-                    <TableTd>{order.total.toLocaleString()}</TableTd>
+                    <TableTd>{order.type ?? order.order_type ?? "—"}</TableTd>
+                    <TableTd>{formatNumber(order.price)}</TableTd>
+                    <TableTd>{formatNumber(order.amount ?? order.quantity)}</TableTd>
+                    <TableTd>{formatNumber(order.filled ?? order.filledQuantity)}</TableTd>
+                    <TableTd>{formatNumber(order.total)}</TableTd>
+                    <TableTd>
+                      <span className="text-xs">
+                        {levels.takeProfit ? <span className="text-success-6">{levels.takeProfit.toLocaleString()}</span> : "—"}
+                        {" / "}
+                        {levels.stopLoss ? <span className="text-error-1">{levels.stopLoss.toLocaleString()}</span> : "—"}
+                      </span>
+                    </TableTd>
                     <TableTd>
                       <span className="text-warning-1 bg-warning-1/10 px-2 py-1 flex items-center justify-center w-fit text-xs font-bold rounded-md uppercase tracking-wider">
                         {order.status || "OPEN"}
                       </span>
                     </TableTd>
-                    <TableTd className="text-white/50">{new Date(order.createdAt).toLocaleString(undefined, {
+                    <TableTd className="text-white/50">{order.createdAt ? new Date(order.createdAt).toLocaleString(undefined, {
                       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                    })}</TableTd>
+                    }) : "—"}</TableTd>
                     <TableTd className="pr-6 text-right">
                       <button
-                        className="text-error-1 hover:text-error-1/80 bg-error-1/10 hover:bg-error-1/20 transition-all font-semibold text-xs px-3 py-1.5 rounded-lg active:scale-95"
-                        onClick={() => cancelOrder(order.id)}
+                        className="text-error-1 hover:text-error-1/80 bg-error-1/10 hover:bg-error-1/20 transition-all font-semibold text-xs px-3 py-1.5 rounded-lg active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+                        disabled={!orderId}
+                        onClick={() => cancelOrder({ orderId, symbol: getOrderSymbol(order) })}
                       >
                         Cancel
                       </button>
                     </TableTd>
                   </TableTr>
-                ))}
+                  );
+                })}
               </TableTbody>
             </Table>
           </div>

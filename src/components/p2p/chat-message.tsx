@@ -62,11 +62,6 @@ export const ChatMessage = ({ message, isOwn }: ChatMessageProps) => {
 
             <div className={`text-[10px] mt-1 flex items-center gap-1 ${isOwn ? "justify-end text-white/70" : "justify-start text-white/50"}`}>
               {formatTime(message.createdAt)}
-              {isOwn && (
-                <span className="text-white">
-                  ✓✓
-                </span>
-              )}
             </div>
 
           </div>

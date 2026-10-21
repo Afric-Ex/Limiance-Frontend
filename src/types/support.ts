@@ -1,5 +1,6 @@
 export interface SupportTicket {
   id: string;
+  chatId?: string;
   subject: string;
   category?: string;
   status: "open" | "in_progress" | "pending_user" | "resolved" | "closed";

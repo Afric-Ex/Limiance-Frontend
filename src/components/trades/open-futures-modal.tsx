@@ -11,9 +11,10 @@ import { useUserStore } from "@/src/stores/user-store";
 
 interface OpenFuturesModalProps {
   onConfirm: () => void;
+  onExit: () => void;
 }
 
-export const OpenFuturesModal = ({ onConfirm }: OpenFuturesModalProps) => {
+export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) => {
   const { setUser, user } = useUserStore();
   const [checked, setChecked] = useState(false);
   const [checked2, setChecked2] = useState(false);
@@ -41,10 +42,7 @@ export const OpenFuturesModal = ({ onConfirm }: OpenFuturesModalProps) => {
 
   return (
     <div className="w-[823px] flex flex-col bg-gray-10 border-gray-9/70 rounded-32px p-6">
-      <ModalClose
-        className="self-end cursor-pointer"
-        onClick={() => modals.closeAll()}
-      />
+      <ModalClose className="self-end cursor-pointer" onClick={onExit} />
       <div className="w-full flex flex-col gap-10 max-w-[684px] mx-auto">
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-6">

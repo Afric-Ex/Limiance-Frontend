@@ -39,7 +39,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { MdKeyboardArrowDown, MdMoreVert, MdRefresh } from 'react-icons/md';
 import { MobileTopBar } from '@/src/components/shared/mobile-top-bar';
 import { IoChevronDown, IoChevronUp, IoSwapHorizontal, IoBarChartOutline, IoListOutline } from 'react-icons/io5';
@@ -193,6 +193,7 @@ function FuturesTradesInner() {
   const [flashClass, setFlashClass] = useState('');
   const [prevPrice, setPrevPrice] = useState<number | null>(null);
   const accountModalShownRef = useRef(false);
+  const router = useRouter();
   const priceUserEditedRef = useRef(false); // true when user has manually typed a custom price
   const [chartExpanded, setChartExpanded] = useState(false);
   const [, setOrderBookOpen] = useState(false);
@@ -235,7 +236,7 @@ function FuturesTradesInner() {
 
   const { data: futuresOrderHistory, isLoading: _futuresOrderHistoryLoading } = useQuery({
     queryKey: tradingKeys.orderHistory("futures"),
-    queryFn: () => tradingService.marketOrderHistory("futures"),
+    queryFn: () => tradingService.futuresOrderHistory(),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
@@ -358,11 +359,17 @@ function FuturesTradesInner() {
           onConfirm={() => {
             // Handled by the modal store update
           }}
+          onExit={() => {
+            modals.closeAll();
+            router.push('/dashboard');
+          }}
         />
       ),
+      closeOnClickOutside: false,
+      closeOnEscape: false,
       ...DEFAULT_MODAL_SETTINGS,
     });
-  }, [hasFuturesAccount, user]);
+  }, [hasFuturesAccount, user, router]);
 
   useEffect(() => {
     if (orderType === 'market') {
@@ -646,8 +653,8 @@ function FuturesTradesInner() {
         // Stop-limit: stopPrice = trigger, price = limit execution price
         ...(orderType === 'stop' ? { stopPrice: workingPrice, price: effectiveLimitPrice } : {}),
         marginMode,
-        ...(tpslEnabled && Number(takeProfit) ? { takeProfit: Number(takeProfit) } : {}),
-        ...(tpslEnabled && Number(stopLoss) ? { stopLoss: Number(stopLoss) } : {}),
+        ...(tpslEnabled && Number(takeProfit) > 0 ? { takeProfit: Number(takeProfit) } : {}),
+        ...(tpslEnabled && Number(stopLoss) > 0 ? { stopLoss: Number(stopLoss) } : {}),
       };
 
       return placeFuturesOrderWs(payload);
