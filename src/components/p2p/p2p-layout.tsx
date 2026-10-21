@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { GlobalP2PNotification } from "./global-p2p-notification";
 import { useAllMatchedOrders, useAdvertiserInfo } from "@/src/hooks/p2p/use-p2p";
+import { useP2PGlobalEvents } from "@/src/hooks/p2p/use-p2p-realtime";
 
 const p2pNavLinks = [
   { name: "P2P Trading", link: "/trades/p2p" },
@@ -16,6 +17,7 @@ const p2pNavLinks = [
 
 export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
+  useP2PGlobalEvents();
   const { data } = useAllMatchedOrders();
   const allOrders = (data as any)?.data?.data ?? [];
   const processingCount = allOrders.filter((o: any) =>

@@ -1,17 +1,63 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { p2p, p2pKey } from "@/src/services/p2p";
 import { toast } from "react-hot-toast";
 import { useUserStore } from "@/src/stores/user-store";
+import { wsClient } from "@/src/lib/websocket-client";
+import { readMatchId } from "@/src/lib/p2p-ws";
+
+interface MatchNotice {
+  id: string;
+  asset?: string;
+  quantity?: unknown;
+  amount?: unknown;
+  fiat?: string;
+  orderType?: string;
+}
 
 export function GlobalP2PNotification() {
-  const [knownOrderIds, setKnownOrderIds] = useState<Set<string>>(new Set());
-  const [isInitialized, setIsInitialized] = useState(false);
-
   const user = useUserStore((state) => state.user);
+  const userId = user?.id;
+  const knownIds = useRef<Set<string>>(new Set());
+  const notifiedIds = useRef<Set<string>>(new Set());
+  const initialized = useRef(false);
 
-  // Fetch matched orders once per mount (cache-shared with the P2P layout) —
-  // no background polling; the orders screen owns the explicit refresh button.
+  const notify = useCallback(
+    (notice: MatchNotice) => {
+      if (!userId || !notice.id || notifiedIds.current.has(notice.id)) return;
+      notifiedIds.current.add(notice.id);
+      knownIds.current.add(notice.id);
+
+      const asset = notice.asset ? String(notice.asset).toUpperCase() : "";
+      const quantity = Number(notice.quantity);
+      const amount = Number(notice.amount);
+      const size =
+        asset && Number.isFinite(quantity) && quantity > 0
+          ? ` for ${quantity.toLocaleString(undefined, {
+              maximumFractionDigits: 6,
+            })} ${asset}`
+          : Number.isFinite(amount) && amount > 0
+            ? ` (${amount.toLocaleString()} ${notice.fiat ?? ""})`
+            : "";
+      const orderType = notice.orderType ? ` ${notice.orderType}` : "";
+
+      toast.success(
+        `New${orderType} P2P trade started\n\nA user has started a new trade with you${size}.`,
+        { duration: 10000 }
+      );
+
+      import("@/src/stores/notification-store").then(({ useNotificationStore }) => {
+        useNotificationStore.getState().addNotification({
+          title: `New${orderType} P2P order`,
+          body: `A user has started a new trade with you${size}.`,
+          type: "p2p_order",
+          link: `/trades/p2p/order/${notice.id}`,
+        });
+      });
+    },
+    [userId]
+  );
+
   const { data } = useQuery({
     queryKey: p2pKey.allMatchedOrders(undefined),
     queryFn: () => p2p.getAllMatchedOrders(),
@@ -19,49 +65,53 @@ export function GlobalP2PNotification() {
   });
 
   useEffect(() => {
+    if (!userId) return;
+    return wsClient.subscribe("p2p_new_match", null, (payload) => {
+      const id = readMatchId(payload);
+      if (!id) return;
+      const match = payload?.orderMatch ?? payload?.order_match ?? {};
+      notify({
+        id,
+        asset: match.asset,
+        quantity: match.quantity,
+        amount: match.amount ?? match.fiatAmount,
+        fiat: match.fiat,
+        orderType: match.type,
+      });
+    });
+  }, [userId, notify]);
+
+  useEffect(() => {
     const orders: any[] = (data as any)?.data?.data ?? [];
-    
-    if (!isInitialized) {
-      if (orders.length > 0) {
-        setKnownOrderIds(new Set(orders.map((o) => o.id)));
-      }
+
+    if (!initialized.current) {
       if (data !== undefined) {
-        setIsInitialized(true);
+        orders.forEach((order) => {
+          if (order?.id) knownIds.current.add(String(order.id));
+        });
+        initialized.current = true;
       }
       return;
     }
 
-    const currentOrderIds = new Set(orders.map((o) => o.id));
-    
-    // Check for any new order IDs that we didn't know about before
-    const newOrders = orders.filter((o) => !knownOrderIds.has(o.id));
-    
-    if (newOrders.length > 0) {
-      // Fire notification!
-      newOrders.forEach((o) => {
-        const isMatcher = Boolean(o.matcherId && user?.id && o.matcherId === user.id);
-        const isAdvertiser = !isMatcher && Boolean(o.matcherId && user?.id);
+    orders.forEach((order) => {
+      const id = String(order?.id ?? "");
+      if (!id || knownIds.current.has(id)) return;
+      knownIds.current.add(id);
 
-        if (isAdvertiser) {
-          const orderType = o.type ?? "P2P";
-          toast.success(`You have a new ${orderType} order!\n\nA user has started a new trade with you.`, {
-            duration: 10000,
-          });
+      if (!order?.matcherId || !userId) return;
+      if (order.matcherId === userId) return;
 
-          // Also surface it in the bell/store so it isn't lost once the toast expires
-          import("@/src/stores/notification-store").then(({ useNotificationStore }) => {
-            useNotificationStore.getState().addNotification({
-              title: `New ${orderType} order`,
-              body: `A user has started a new trade with you${o.amount ? ` for ${o.amount}` : ""}.`,
-              type: "p2p_order",
-              link: `/trades/p2p/order/${o.id}`,
-            });
-          });
-        }
+      notify({
+        id,
+        asset: order?.asset,
+        quantity: order?.quantity,
+        amount: order?.amount ?? order?.fiatAmount,
+        fiat: order?.fiat ?? order?.fiatCurrency,
+        orderType: order?.type,
       });
-      setKnownOrderIds(currentOrderIds);
-    }
-  }, [data, isInitialized, knownOrderIds, user?.id]);
+    });
+  }, [data, userId, notify]);
 
   return null;
 }

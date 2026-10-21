@@ -8,7 +8,7 @@ import { Button, Select, NumberInput, Textarea, Radio, Loader } from "@mantine/c
 import { useRouter, useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { p2p, p2pKey } from "@/src/services/p2p";
-import { usePaymentMethods } from "@/src/hooks/p2p/use-p2p";
+import { useEditAd, usePaymentMethods } from "@/src/hooks/p2p/use-p2p";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2PEditAdSkeleton } from "@/src/components/skeletons/p2p";
 
@@ -36,6 +36,12 @@ function EditAdPageInner() {
 
   const { data: pmData } = usePaymentMethods();
   const paymentMethodsList = pmData?.data?.data ?? [];
+  const { mutate: editAd, isPending: isSaving } = useEditAd();
+
+  const methodName = (id: string) => {
+    const methodObj = paymentMethodsList.find((pm: any) => pm.id === id);
+    return methodObj?.data?.bankName || methodObj?.method || id;
+  };
 
   const { data: adData, isLoading } = useQuery({
     queryKey: p2pKey.orderById(adId),
@@ -49,9 +55,14 @@ function EditAdPageInner() {
       const ad = adDataAny.data.data;
       setAdMode(ad.type?.toUpperCase() || "SELL");
       setAsset(ad.asset?.toUpperCase() || "USDT");
-      setFiat(ad.fiat?.toUpperCase() || "USD");
-      setPriceType(ad.priceType || "FIXED");
-      setPrice(ad.price || "");
+      setFiat(ad.fiat?.toUpperCase() || ad.currency?.toUpperCase() || "USD");
+      setPriceType(
+        String(ad.priceType ?? "").toUpperCase() === "FLOATING" ||
+          ad.floatingPrice
+          ? "FLOATING"
+          : "FIXED"
+      );
+      setPrice(ad.price ?? ad.fixedPrice ?? "");
       setTotalAmount(ad.quantity || ad.availableQuantity || "");
       setMinOrder(ad.minQuantity || "");
       setMaxOrder(ad.maxQuantity || "");
@@ -63,6 +74,37 @@ function EditAdPageInner() {
       }
     }
   }, [adData]);
+
+  const handleSave = () => {
+    if (
+      !price ||
+      !totalAmount ||
+      !minOrder ||
+      !maxOrder ||
+      selectedMethods.length === 0
+    ) {
+      return;
+    }
+
+    editAd(
+      {
+        id: adId,
+        data: {
+          price: Number(price),
+          floatingPrice: priceType === "FLOATING",
+          quantity: Number(totalAmount),
+          minQuantity: Number(minOrder),
+          maxQuantity: Number(maxOrder),
+          paymentDuration: paymentWindow,
+          remark: remarks,
+          paymentMethods: selectedMethods.map(methodName),
+        },
+      },
+      {
+        onSuccess: () => router.push("/trades/p2p/my-ads"),
+      }
+    );
+  };
 
   if (isLoading) {
     return (
@@ -183,11 +225,13 @@ function EditAdPageInner() {
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {selectedMethods.map(m => {
-                  const methodObj = paymentMethodsList.find((pm: any) => pm.id === m);
-                  const methodName = methodObj?.data?.bankName || methodObj?.method || m;
-                  return <PaymentMethodBadge key={m} method={methodName} className="px-4 py-2 text-sm" />;
-                })}
+                {selectedMethods.map((m) => (
+                  <PaymentMethodBadge
+                    key={m}
+                    method={methodName(m)}
+                    className="px-4 py-2 text-sm"
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -254,7 +298,8 @@ function EditAdPageInner() {
               size="lg" 
               className="flex-1 bg-buy hover:bg-buy/90 shadow-[0_0_20px_rgba(14,203,129,0.3)] text-white rounded-xl h-14 font-bold"
               disabled={!price || !totalAmount || !minOrder || !maxOrder || selectedMethods.length === 0}
-              onClick={() => router.push("/trades/p2p/my-ads")}
+              loading={isSaving}
+              onClick={handleSave}
             >
               Save Changes
             </Button>
