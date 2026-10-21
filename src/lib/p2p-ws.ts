@@ -17,14 +17,6 @@ export class P2PWsError extends Error {
   }
 }
 
-function createRequestId(type: string): string {
-  const random =
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-  return `${type}-${random}`;
-}
-
 function waitForConnection(timeoutMs = CONNECT_TIMEOUT_MS): Promise<void> {
   if (wsClient.getIsConnected()) return Promise.resolve();
   return new Promise((resolve, reject) => {
@@ -81,7 +73,6 @@ interface P2PRequestOptions {
 }
 
 function requestP2P<T = any>(options: P2PRequestOptions): Promise<T> {
-  const requestId = createRequestId(options.frameType);
   const responseTypes = new Set(
     Array.isArray(options.responseType) ? options.responseType : [options.responseType]
   );
@@ -122,8 +113,6 @@ function requestP2P<T = any>(options: P2PRequestOptions): Promise<T> {
 
           if (!responseTypes.has(type)) return;
 
-          const replyRequestId = raw?.request_id ?? raw?.requestId;
-          if (replyRequestId != null && String(replyRequestId) !== requestId) return;
           if (options.match && !options.match(payload, raw)) return;
 
           const failure = describeFailure(payload);
@@ -146,7 +135,6 @@ function requestP2P<T = any>(options: P2PRequestOptions): Promise<T> {
         if (
           !wsClient.send({
             type: options.frameType,
-            request_id: requestId,
             data: options.data ?? {},
           })
         ) {
@@ -672,14 +660,10 @@ export function updateP2PMatchStatusWs(
   status: string
 ): Promise<any> {
   const normalized = String(status).toUpperCase();
-  const wsStatus =
-    normalized === "FULFILLED" || normalized === "PARTIALLY_COMPLETED"
-      ? "PAID"
-      : normalized;
 
   return requestP2P({
     frameType: "p2p_update_match_status",
-    data: { order_match_id: orderMatchId, status: wsStatus },
+    data: { order_match_id: orderMatchId, status: normalized },
     responseType: ["p2p_match_status_updated", "p2p_match_status_changed"],
     match: (payload) => {
       const id = readMatchId(payload);
@@ -757,46 +741,15 @@ export function getUserP2PMatchesWs(params?: {
 }
 
 export interface P2POrdersFeedHandlers {
-  onSubscribed?: (payload: any) => void;
-  onSnapshot?: (payload: any) => void;
   onUpdated?: (payload: any) => void;
 }
 
 export function subscribeP2POrdersFeed(
-  params: P2PAdsQueryParams | undefined,
   handlers: P2POrdersFeedHandlers
 ): () => void {
-  const unsubscribeAck = wsClient.subscribe(
-    "p2p_orders_subscribed",
-    null,
-    (payload) => {
-      handlers.onSubscribed?.(payload);
-    }
-  );
-  const unsubscribeSnapshot = wsClient.subscribe(
-    "p2p_orders_data",
-    { type: "subscribe_p2p_orders", data: buildAdsQuery(params) },
-    (payload) => {
-      handlers.onSnapshot?.(payload);
-    }
-  );
-  const unsubscribeUpdated = wsClient.subscribe(
-    "p2p_orders_updated",
-    null,
-    (payload) => {
-      handlers.onUpdated?.(payload);
-    }
-  );
-
-  return () => {
-    wsClient.send({
-      type: "unsubscribe",
-      data: { topic: "p2p_orders" },
-    });
-    unsubscribeAck();
-    unsubscribeSnapshot();
-    unsubscribeUpdated();
-  };
+  return wsClient.subscribe("p2p_orders_updated", null, (payload) => {
+    handlers.onUpdated?.(payload);
+  });
 }
 
 export interface P2PMatchStatusEvent {

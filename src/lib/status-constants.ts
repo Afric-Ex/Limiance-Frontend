@@ -24,6 +24,13 @@ export const P2P_ORDER_STATUSES = {
   APPEALING: "APPEALING",
 } as const;
 
+/** Statuses a P2P trade participant can set on a match via p2p_update_match_status. */
+export enum P2PMatchStatus {
+  CANCELLED = "CANCELLED",
+  DISPUTED = "DISPUTED",
+  FULFILLED = "FULFILLED",
+}
+
 export const TRANSACTION_STATUSES = {
   COMPLETED: "completed",
   PENDING: "pending",

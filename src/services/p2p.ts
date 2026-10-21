@@ -18,7 +18,7 @@ import {
 
 export const p2pKey = {
   orderListing: () => ["order-listing"],
-  orderListingRoot: ["order-listing"],
+  orderListingRoot: ["all-orders"],
   pendingOrders: ["pending-orders"],
   paymentMethods: () => ["payment-method"],
   becomeAdvertiser: () => ["become-advertiser"],
@@ -93,18 +93,25 @@ const normalizeChatMessages = (raw: any): P2PChatMessage[] => {
           : Array.isArray(raw?.data?.data)
             ? raw.data.data
             : [];
+  const chatId = String(raw?.chatId ?? raw?.chat_id ?? "");
 
-  return list.map((message: any, index: number) => ({
-    id: String(
-      message.id ??
-        message._id ??
-        message.messageId ??
-        `p2p-${index}-${message.senderId ?? message.sender_id ?? "msg"}-${message.createdAt ?? message.created_at ?? ""}`
-    ),
-    content: String(message.content ?? message.message ?? ""),
-    senderId: String(message.senderId ?? message.sender_id ?? ""),
-    createdAt: String(message.createdAt ?? message.created_at ?? ""),
-  }));
+  return list.map((message: any) => {
+    const senderId = String(message.senderId ?? message.sender_id ?? "");
+    const content = String(message.content ?? message.message ?? "");
+    const createdAt = String(message.createdAt ?? message.created_at ?? "");
+
+    return {
+      id: String(
+        message.id ??
+          message._id ??
+          message.messageId ??
+          `${chatId}:${senderId}:${createdAt}:${content}`
+      ),
+      content,
+      senderId,
+      createdAt,
+    };
+  });
 };
 
 const loadP2PWs = () => import("../lib/p2p-ws");
@@ -130,13 +137,14 @@ const withWsFallback = async <T>(
 
 const withRestFallback = async <T>(
   wsCall: () => Promise<T>,
-  restCall: () => Promise<T>
+  restCall: () => Promise<T>,
+  options?: { fallbackOnAnyError?: boolean }
 ): Promise<T> => {
   if (typeof window !== "undefined") {
     try {
       return await wsCall();
     } catch (error) {
-      if (!shouldFallbackToRest(error)) throw error;
+      if (!options?.fallbackOnAnyError && !shouldFallbackToRest(error)) throw error;
     }
   }
   return restCall();
@@ -174,15 +182,16 @@ export const p2p = {
     page?: number;
     limit?: number;
   }): Promise<ApiResponse<P2POrderListings>> => {
-    return withWsFallback(
-      async () => api.get(`trading/p2p/all_orders`, { params }),
+    return withRestFallback(
       async () => {
         const { getP2POrdersWs, normalizeWsP2POrdersResponse } = await loadP2PWs();
         const payload = await getP2POrdersWs(params as P2PAdsQueryParams);
         return {
           data: normalizeWsP2POrdersResponse(payload),
         } as unknown as ApiResponse<P2POrderListings>;
-      }
+      },
+      () => api.get(`trading/p2p/all_orders`, { params }),
+      { fallbackOnAnyError: true }
     );
   },
 
@@ -340,36 +349,18 @@ export const p2p = {
     chatId: string,
     params?: { page?: number; limit?: number }
   ): Promise<{ data: P2PChatMessage[] }> => {
-    // Primary: get_chat_messages over the trading socket (§8.3–8.4).
-    if (typeof window !== "undefined") {
-      try {
-        const { getChatMessagesWs } = await import("../lib/chat-ws");
-        const payload = await getChatMessagesWs(chatId, params);
-        return { data: normalizeChatMessages(payload) };
-      } catch {
-        // Fall back to REST below.
-      }
-    }
-
-    const response = await api.get(`trading/p2p/chats/messages/${chatId}`, { params });
-    return { data: normalizeChatMessages(response.data) };
+    // P2P order chat is WebSocket-only (§8.3–8.4): get_chat_messages is sent on
+    // the trading socket and answered with chat_messages.
+    const { getChatMessagesWs } = await import("../lib/chat-ws");
+    const payload = await getChatMessagesWs(chatId, params);
+    return { data: normalizeChatMessages(payload) };
   },
 
   sendMessage: async (data: { chatId: string; content: string }): Promise<any> => {
-    // Primary: chat_message over the trading socket (§8.1).
-    if (typeof window !== "undefined") {
-      try {
-        const { sendChatMessageWs } = await import("../lib/chat-ws");
-        return await sendChatMessageWs(data.chatId, data.content);
-      } catch {
-        // Fall back to REST below.
-      }
-    }
-
-    const response = await api.post(`trading/p2p/chats/send/${data.chatId}`, {
-      content: data.content,
-    });
-    return response;
+    // P2P order chat is WebSocket-only (§8.1): chat_message is answered with
+    // the new_chat_message delivery frame.
+    const { sendChatMessageWs } = await import("../lib/chat-ws");
+    return sendChatMessageWs(data.chatId, data.content);
   },
 
   fetchChats: async (params?: { page?: number; limit?: number }): Promise<any> => {

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { p2p, p2pKey } from "../../services/p2p";
 import type { EditP2POrderInput } from "../../lib/p2p-ws";
-import { AddP2PReviewPayload, CreateOrder, CreatePaymentMethod, P2PMatchOrder, P2PReleaseOrder } from "../../types/p2p";
+import { AddP2PReviewPayload, CreateOrder, CreatePaymentMethod, P2PChatMessage, P2PMatchOrder, P2PReleaseOrder } from "../../types/p2p";
 import toast from "react-hot-toast";
 import { useP2PAdsFeed } from "./use-p2p-realtime";
 
@@ -14,7 +14,7 @@ function getErrorMessage(error: any, fallback: string): string {
 }
 
 export const useOrderListings = (params: any) => {
-  useP2PAdsFeed(params);
+  useP2PAdsFeed();
   return useQuery({
     queryKey: p2pKey.fetchOrderListing(params),
     queryFn: () => p2p.fetchOrderListing(params),
@@ -220,10 +220,11 @@ export const useAddReview = () => {
   });
 };
 
-export const usePaymentMethods = () => {
+export const usePaymentMethods = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: p2pKey.paymentMethods(),
     queryFn: p2p.fetchPaymentMethod,
+    enabled: options?.enabled ?? true,
   });
 };
 
@@ -327,11 +328,35 @@ export const useSendChatMessage = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: { chatId: string; content: string }) => p2p.sendMessage(data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: p2pKey.chatMessages(variables.chatId) });
+    onSuccess: (message: any, variables) => {
+      if (!message?.content) return;
+      queryClient.setQueryData<{ data: P2PChatMessage[] }>(
+        p2pKey.chatMessages(variables.chatId),
+        (current) => {
+          const list = current?.data ?? [];
+          const id = String(
+            message.id ??
+              `${variables.chatId}:${message.senderId ?? ""}:${message.createdAt ?? ""}:${message.content}`
+          );
+          if (list.some((entry) => entry.id === id)) return current;
+          return {
+            data: [
+              ...list,
+              {
+                id,
+                content: String(message.content),
+                senderId: String(message.senderId ?? ""),
+                createdAt: String(
+                  message.createdAt ?? new Date().toISOString()
+                ),
+              },
+            ],
+          };
+        }
+      );
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || "Failed to send message");
+      toast.error(error?.message || "Failed to send message");
     },
   });
 };

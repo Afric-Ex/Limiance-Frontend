@@ -14,7 +14,7 @@ import { P2POrdersSkeleton } from "@/src/components/skeletons/p2p";
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "text-[#FBA42A] bg-[#FBA42A]/10 border-[#FBA42A]/20",
   PAID: "text-[#4d77f0] bg-[#4d77f0]/10 border-[#4d77f0]/20",
-  FULFILLED: "text-[#25AB42] bg-[#25AB42]/10 border-[#25AB42]/20",
+  FULFILLED: "text-[#4d77f0] bg-[#4d77f0]/10 border-[#4d77f0]/20",
   RELEASED: "text-[#25AB42] bg-[#25AB42]/10 border-[#25AB42]/20",
   COMPLETED: "text-[#25AB42] bg-[#25AB42]/10 border-[#25AB42]/20",
   CANCELLED: "text-[#F6465D] bg-[#F6465D]/10 border-[#F6465D]/20",

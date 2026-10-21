@@ -5,9 +5,10 @@ import { wsClient } from "./websocket-client";
 /**
  * Live Support & P2P order chat transport (WEBSOCKET_MESSAGES.md §8).
  *
- * Requests are correlated by `request_id` when the server echoes it; the chat
- * events themselves carry `chatId`, which is used as the fallback correlation.
- * Callers fall back to the REST endpoints when these reject.
+ * Frames use the documented `type` + `data` shape. Responses are correlated by
+ * `chatId` (history, typing) or by the echoed message content (delivery), since
+ * the server does not include a request id in chat events. These calls are
+ * WebSocket-only: no REST fallback is attempted.
  */
 
 const CONNECT_TIMEOUT_MS = 4_000;
@@ -26,16 +27,6 @@ export interface ChatTypingEvent {
   chatId: string;
   senderId: string;
   isTyping: boolean;
-}
-
-function fallbackId(): string {
-  return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-    ? crypto.randomUUID()
-    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function createRequestId(type: string): string {
-  return `${type}-${fallbackId()}`;
 }
 
 export function normalizeChatMessage(raw: any): ChatWsMessage | null {
@@ -129,7 +120,6 @@ interface ChatRequestOptions {
 }
 
 function requestChat<T = any>(options: ChatRequestOptions): Promise<T> {
-  const requestId = createRequestId(options.frameType);
   const errorTypes = new Set(options.errorTypes ?? []);
 
   return waitForConnection().then(
@@ -149,8 +139,6 @@ function requestChat<T = any>(options: ChatRequestOptions): Promise<T> {
           const type = String(raw?.type ?? "");
           const isError = errorTypes.has(type);
           if (type !== options.responseType && !isError) return;
-          const replyRequestId = raw?.request_id ?? raw?.requestId;
-          if (replyRequestId != null && String(replyRequestId) !== requestId) return;
           if (!isError && options.match && !options.match(payload, raw)) return;
           const failure = readFailure(raw);
           settle(() =>
@@ -171,7 +159,6 @@ function requestChat<T = any>(options: ChatRequestOptions): Promise<T> {
         if (
           !wsClient.send({
             type: options.frameType,
-            request_id: requestId,
             data: options.data,
           })
         ) {
@@ -193,12 +180,12 @@ export function sendChatMessageWs(
     data: { chat_id: chatId, message },
     responseType: "new_chat_message",
     errorTypes: ["message_delivery_failed"],
-    match: (payload, raw) => {
+    match: (payload) => {
       const delivered = normalizeChatMessage(payload);
       if (!delivered || delivered.chatId !== chatId) return false;
-      // Without a request_id, only settle on the message we just sent.
-      const echoed = raw?.request_id ?? raw?.requestId;
-      return echoed != null || delivered.content === message;
+      // The delivery frame is broadcast to the whole conversation; only settle
+      // on the message this caller just sent.
+      return delivered.content === message;
     },
   }).then((payload) => normalizeChatMessage(payload)!);
 }
