@@ -17,14 +17,6 @@ export class P2PWsError extends Error {
   }
 }
 
-function createRequestId(type: string): string {
-  const random =
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-  return `${type}-${random}`;
-}
-
 function waitForConnection(timeoutMs = CONNECT_TIMEOUT_MS): Promise<void> {
   if (wsClient.getIsConnected()) return Promise.resolve();
   return new Promise((resolve, reject) => {
@@ -81,7 +73,6 @@ interface P2PRequestOptions {
 }
 
 function requestP2P<T = any>(options: P2PRequestOptions): Promise<T> {
-  const requestId = createRequestId(options.frameType);
   const responseTypes = new Set(
     Array.isArray(options.responseType) ? options.responseType : [options.responseType]
   );
@@ -122,8 +113,6 @@ function requestP2P<T = any>(options: P2PRequestOptions): Promise<T> {
 
           if (!responseTypes.has(type)) return;
 
-          const replyRequestId = raw?.request_id ?? raw?.requestId;
-          if (replyRequestId != null && String(replyRequestId) !== requestId) return;
           if (options.match && !options.match(payload, raw)) return;
 
           const failure = describeFailure(payload);
@@ -146,7 +135,6 @@ function requestP2P<T = any>(options: P2PRequestOptions): Promise<T> {
         if (
           !wsClient.send({
             type: options.frameType,
-            request_id: requestId,
             data: options.data ?? {},
           })
         ) {
