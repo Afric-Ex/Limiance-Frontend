@@ -24,6 +24,7 @@ export const userService = {
 
   updateUser: async (data: {
     username: string;
+    email: string;
     phone: string;
     password: string;
     photo: string;
