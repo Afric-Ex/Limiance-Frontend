@@ -117,7 +117,7 @@ export const useGetMatchedOrder = (
     queryKey: p2pKey.matchedOrder(id),
     queryFn: () => p2p.getMatchedOrder(id),
     enabled: !!id,
-    refetchInterval: options?.refetchInterval ?? 5000,
+    refetchInterval: options?.refetchInterval ?? false,
   });
 };
 

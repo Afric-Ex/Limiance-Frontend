@@ -738,11 +738,13 @@ export function getP2PMatchWs(orderMatchId: string): Promise<any> {
 
 export function getUserP2PMatchesWs(params?: {
   status?: string;
+  type?: string;
   page?: number | string;
   limit?: number | string;
 }): Promise<any> {
   const data: Record<string, unknown> = {};
   if (params?.status) data.status = String(params.status).toUpperCase();
+  if (params?.type) data.type = String(params.type).toUpperCase();
   if (params?.page !== undefined) data.page = String(params.page);
   if (params?.limit !== undefined) data.limit = String(params.limit);
 
