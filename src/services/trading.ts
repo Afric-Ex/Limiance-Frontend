@@ -1,4 +1,5 @@
 import { api } from "../lib/axios";
+import type { OrderHistoryStatus } from "../lib/order-ws";
 import { ApiResponse } from "../types/api";
 import { OrderBooksResponse } from "../types/trading";
 
@@ -54,7 +55,7 @@ export const tradingService = {
 
   marketOrderHistory: async (
     market: TradingMarket,
-    params?: { pair?: string; page?: number; limit?: number }
+    params?: { pair?: string; page?: number; limit?: number; status?: string }
   ) => {
     const response = await api.get(`trading/${market}/order_history`, { params });
     return response.data;
@@ -248,8 +249,21 @@ export const tradingService = {
     return response.data;
   },
 
-  marginOrderHistory: async () => {
-    return tradingService.marketOrderHistory("margin");
+  marginOrderHistory: async (params?: {
+    status?: OrderHistoryStatus;
+    page?: number;
+    limit?: number;
+  }) => {
+    // Primary: one-shot WebSocket query (§4.10–4.11); REST is the fallback.
+    if (typeof window !== "undefined") {
+      try {
+        const { getMarginOrderHistoryWs } = await import("../lib/order-ws");
+        return await getMarginOrderHistoryWs(params);
+      } catch {
+        // Fall through to the REST endpoint below.
+      }
+    }
+    return tradingService.marketOrderHistory("margin", params);
   },
 
   marginTradeHistory: async () => {
@@ -336,7 +350,18 @@ export const tradingService = {
     return { ...response.data, data: filterOrdersByPair(response.data.data, params?.pair) };
   },
 
-  futuresOrderHistory: async (params?: { pair?: string }) => {
+  futuresOrderHistory: async (params?: { pair?: string; page?: number; limit?: number }) => {
+    // Primary: one-shot WebSocket query (§5.10); REST is the fallback.
+    if (typeof window !== "undefined") {
+      try {
+        const { getFuturesOrderHistoryWs } = await import("../lib/order-ws");
+        const result = await getFuturesOrderHistoryWs(params);
+        if (!params?.pair || !Array.isArray(result?.data)) return result;
+        return { ...result, data: filterOrdersByPair(result.data, params.pair) };
+      } catch {
+        // Fall through to the REST endpoint below.
+      }
+    }
     const response = await api.get("trading/futures/order_history", { params: params?.pair ? { pair: params.pair } : {} });
     if (!Array.isArray(response.data?.data)) return response.data;
     return { ...response.data, data: filterOrdersByPair(response.data.data, params?.pair) };
@@ -393,7 +418,22 @@ export const tradingService = {
     return response.data;
   },
 
-  spotOrderHistory: async (params?: { page?: number; limit?: number }) => {
+  spotOrderHistory: async (params?: {
+    status?: OrderHistoryStatus;
+    page?: number;
+    limit?: number;
+  }) => {
+    // Primary: one-shot query over the trading WebSocket (WEBSOCKET_MESSAGES.md
+    // §3.13–3.15). Fall back to REST only when the socket is unavailable, the
+    // request times out, or the server replies with an error.
+    if (typeof window !== "undefined") {
+      try {
+        const { getSpotOrderHistoryWs } = await import("../lib/order-ws");
+        return await getSpotOrderHistoryWs(params);
+      } catch {
+        // Fall through to the REST endpoint below.
+      }
+    }
     return tradingService.marketOrderHistory("spot", params);
   },
 

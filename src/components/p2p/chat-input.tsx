@@ -6,16 +6,18 @@ import { MdSend } from "react-icons/md";
 
 interface ChatInputProps {
   onSendMessage: (content: string) => void;
+  onTypingChange?: (isTyping: boolean) => void;
   disabled?: boolean;
 }
 
-export const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
+export const ChatInput = ({ onSendMessage, onTypingChange, disabled }: ChatInputProps) => {
   const [text, setText] = useState("");
 
   const handleSend = () => {
     if (disabled) return;
     if (text.trim()) {
       onSendMessage(text.trim());
+      onTypingChange?.(false);
       setText("");
     }
   };
@@ -37,7 +39,11 @@ export const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
           maxRows={4}
           autosize
           value={text}
-          onChange={(e) => setText(e.currentTarget.value)}
+          onChange={(e) => {
+            const value = e.currentTarget.value;
+            setText(value);
+            onTypingChange?.(value.length > 0);
+          }}
           onKeyDown={handleKeyDown}
           disabled={disabled}
           classNames={{

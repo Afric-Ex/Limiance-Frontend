@@ -24,6 +24,9 @@ import { MdOutlineSupportAgent } from "react-icons/md";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { SupportPageSkeleton } from "@/src/components/skeletons/with-sidebar";
+import { useChatWs, useTypingIndicator } from "@/src/hooks/use-chat-ws";
+import { useUserStore } from "@/src/stores/user-store";
+import type { ChatWsMessage } from "@/src/lib/chat-ws";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -51,6 +54,41 @@ function timeAgo(iso: string) {
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
 }
+
+const toSupportMessages = (
+  payload: any,
+  currentUserId?: string
+): SupportMessage[] => {
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.messages)
+      ? payload.messages
+      : [];
+
+  return list.map((message: any, index: number) => {
+    const rawSender = String(message.sender ?? "").toLowerCase();
+    const senderId = String(message.senderId ?? message.sender_id ?? "");
+    const sender: SupportMessage["sender"] =
+      rawSender === "admin" || rawSender === "user"
+        ? rawSender
+        : currentUserId && senderId === currentUserId
+          ? "user"
+          : "admin";
+
+    return {
+      id: String(
+        message.id ??
+          message._id ??
+          `ws-${index}-${message.createdAt ?? message.created_at ?? ""}`
+      ),
+      sender,
+      message: String(message.message ?? message.content ?? ""),
+      created_at: String(
+        message.createdAt ?? message.created_at ?? new Date().toISOString()
+      ),
+    };
+  });
+};
 
 function StatusBadge({ status }: { status: string }) {
   const st = STATUS_STYLES[status] ?? STATUS_STYLES.open;
@@ -146,21 +184,67 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
   const qc = useQueryClient();
   const [reply, setReply] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const currentUserId = useUserStore((state) => state.user?.id);
+  const chatId = ticket.chatId ?? null;
+
+  const { peerTyping, onTyping, notifyTyping } = useTypingIndicator(
+    chatId,
+    currentUserId
+  );
+
+  const handleIncomingMessage = useCallback(
+    (message: ChatWsMessage) => {
+      qc.setQueryData<SupportTicket>(supportKeys.ticket(ticket.id), (current) => {
+        if (!current) return current;
+        const incoming: SupportMessage = {
+          id: message.id,
+          sender:
+            currentUserId && message.senderId === currentUserId ? "user" : "admin",
+          message: message.content,
+          created_at: message.createdAt,
+        };
+        const threadMessages = current.messages ?? [];
+        if (threadMessages.some((entry) => entry.id === incoming.id)) return current;
+        return { ...current, messages: [...threadMessages, incoming] };
+      });
+    },
+    [currentUserId, qc, ticket.id]
+  );
+
+  const { connected } = useChatWs(chatId, {
+    onMessage: handleIncomingMessage,
+    onTyping,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: supportKeys.ticket(ticket.id),
-    queryFn: () => supportService.getTicket(ticket.id),
-    select: (r) => normalizeTicketDetail(r, ticket),
-    refetchInterval: 15000,
+    queryFn: async () => {
+      // Primary: chat history over the socket. The ticket REST call still
+      // supplies subject/status metadata and is the message fallback.
+      const [restResponse, wsPayload] = await Promise.all([
+        supportService.getTicket(ticket.id),
+        chatId ? supportService.getChatMessages(chatId) : Promise.resolve(null),
+      ]);
+      const normalized = normalizeTicketDetail(restResponse, ticket);
+      if (!normalized.chatId && ticket.chatId) normalized.chatId = ticket.chatId;
+      const wsMessages = toSupportMessages(wsPayload, currentUserId);
+      if (wsMessages.length > 0) normalized.messages = wsMessages;
+      return normalized;
+    },
+    // WS pushes are primary; polling is the fallback for ticket metadata and
+    // for servers that do not stream support conversations.
+    refetchInterval: chatId && connected ? 30000 : 15000,
   });
 
   const thread: SupportTicket = data ?? ticket;
   const messages: SupportMessage[] = thread.messages ?? [];
 
   const { mutate: sendReply, isPending: sending } = useMutation({
-    mutationFn: () => supportService.replyTicket(ticket.id, { body: reply }),
+    mutationFn: () =>
+      supportService.replyTicket(ticket.id, { body: reply }, chatId ?? undefined),
     onSuccess: () => {
       setReply("");
+      notifyTyping(false);
       qc.invalidateQueries({ queryKey: supportKeys.ticket(ticket.id) });
     },
     onError: () => errorNotification("Failed to send reply"),
@@ -256,6 +340,11 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
       {/* Reply input */}
       {open ? (
         <div className="border-t border-line p-3 flex flex-col gap-2 flex-shrink-0 bg-black/20">
+          {peerTyping && (
+            <div className="px-1 text-[11px] text-[var(--color-text-secondary)]">
+              Support is typing…
+            </div>
+          )}
           <div className="flex items-end gap-2">
             <Textarea
               className="flex-1"
@@ -264,11 +353,18 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
               maxRows={4}
               autosize
               value={reply}
-              onChange={(e) => setReply(e.currentTarget.value)}
+              onChange={(e) => {
+                const value = e.currentTarget.value;
+                setReply(value);
+                notifyTyping(value.length > 0);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  if (reply.trim()) sendReply();
+                  if (reply.trim()) {
+                    notifyTyping(false);
+                    sendReply();
+                  }
                 }
               }}
               classNames={{ input: "!bg-surface !border-line !text-[var(--color-text-primary)] placeholder:!text-[var(--color-text-disabled)] focus:!border-primary resize-none" }}
@@ -283,7 +379,10 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
                   : "bg-muted text-[var(--color-text-disabled)]"
               )}
               disabled={sending || !reply.trim()}
-              onClick={() => sendReply()}
+              onClick={() => {
+                notifyTyping(false);
+                sendReply();
+              }}
               aria-label="Send reply"
             >
               <RiSendPlaneFill size={18} />

@@ -232,11 +232,15 @@ export const useAllMatchedOrders = (params?: any) => {
   });
 };
 
-export const useFetchChats = (chatId: string) => {
+export const useFetchChats = (
+  chatId: string,
+  options?: { refetchInterval?: number | false }
+) => {
   return useQuery({
     queryKey: p2pKey.chatMessages(chatId),
     queryFn: () => p2p.fetchChatMessages(chatId),
     enabled: !!chatId,
+    refetchInterval: options?.refetchInterval,
   });
 };
 
