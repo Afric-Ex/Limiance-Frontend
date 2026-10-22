@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Select, NumberInput, Skeleton } from "@mantine/core";
 import { useP2PStore } from "@/src/stores/p2p-store";
@@ -13,6 +13,65 @@ const selectClassNames = {
   dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
   option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors",
 };
+
+type FilterOption = { value: string; label: string; image?: string };
+
+const CURRENCY_ICONS: Record<string, string> = {
+  AED: "/currency/aed.svg",
+  AUD: "/currency/aud.svg",
+  CAD: "/currency/cad.svg",
+  CHF: "/currency/chf.svg",
+  EUR: "/currency/eur.svg",
+  GBP: "/currency/gbp.svg",
+  GHS: "/currency/ghs.svg",
+  INR: "/currency/inr.svg",
+  JPY: "/currency/jpy.svg",
+  NGN: "/currency/ngn.svg",
+  NOK: "/currency/nok.svg",
+  USD: "/currency/usd.svg",
+};
+
+const firstImage = (...values: unknown[]): string | undefined => {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
+};
+
+const OptionIcon = ({ src, label }: { src?: string; label: string }) => {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!src || failed) {
+    return (
+      <span className="w-5 h-5 rounded-full bg-white/10 border border-white/10 text-[9px] font-bold text-white/70 flex items-center justify-center shrink-0">
+        {label.slice(0, 2)}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt=""
+      width={20}
+      height={20}
+      loading="lazy"
+      className="w-5 h-5 rounded-full object-cover shrink-0"
+      onError={() => setFailed(true)}
+    />
+  );
+};
+
+const renderOption = ({ option }: { option: FilterOption }) => (
+  <div className="flex items-center gap-2">
+    <OptionIcon src={option.image} label={option.label} />
+    <span>{option.label}</span>
+  </div>
+);
 
 export const FilterBar = () => {
   const { adFilters, setAdFilters } = useP2PStore();
@@ -29,15 +88,19 @@ export const FilterBar = () => {
   });
 
   const assetOptions = useMemo(() => {
-    const seen = new Set<string>();
-    const options: { value: string; label: string }[] = [];
+    const bySymbol = new Map<string, FilterOption>();
     for (const token of listedTokens ?? []) {
       const symbol = String(token?.symbol ?? "").trim().toUpperCase();
-      if (!symbol || seen.has(symbol)) continue;
-      seen.add(symbol);
-      options.push({ value: symbol, label: symbol });
+      if (!symbol) continue;
+      const image = firstImage(token?.image, token?.logo, token?.icon);
+      const existing = bySymbol.get(symbol);
+      if (!existing) {
+        bySymbol.set(symbol, { value: symbol, label: symbol, image });
+      } else if (!existing.image && image) {
+        existing.image = image;
+      }
     }
-    return options;
+    return [...bySymbol.values()];
   }, [listedTokens]);
 
   // Listed fiat currencies for the fiat picker
@@ -51,17 +114,22 @@ export const FilterBar = () => {
   const fiatOptions = useMemo(() => {
     const body: any = (listedCurrencies as any)?.data ?? listedCurrencies;
     const rows: any[] = Array.isArray(body) ? body : [];
-    const seen = new Set<string>();
-    const options: { value: string; label: string }[] = [];
+    const byCode = new Map<string, FilterOption>();
     for (const row of rows) {
       const code = String(
         typeof row === "string" ? row : row?.symbol ?? row?.code ?? row?.currency ?? row?.name ?? ""
       ).trim().toUpperCase();
-      if (!code || seen.has(code)) continue;
-      seen.add(code);
-      options.push({ value: code, label: code });
+      if (!code) continue;
+      const image =
+        firstImage(row?.logo, row?.image, row?.icon) ?? CURRENCY_ICONS[code];
+      const existing = byCode.get(code);
+      if (!existing) {
+        byCode.set(code, { value: code, label: code, image });
+      } else if (!existing.image && image) {
+        existing.image = image;
+      }
     }
-    return options;
+    return [...byCode.values()];
   }, [listedCurrencies]);
 
   // Banks for the selected fiat
@@ -99,6 +167,9 @@ export const FilterBar = () => {
   };
 
   const isLoading = tokensLoading || currenciesLoading;
+
+  const selectedAsset = assetOptions.find((option) => option.value === adFilters.asset);
+  const selectedFiat = fiatOptions.find((option) => option.value === adFilters.fiat);
 
   if (isLoading) {
     return (
@@ -157,6 +228,14 @@ export const FilterBar = () => {
           data={assetOptions}
           searchable
           classNames={selectClassNames}
+          leftSection={
+            <OptionIcon
+              src={selectedAsset?.image}
+              label={selectedAsset?.label ?? adFilters.asset}
+            />
+          }
+          leftSectionPointerEvents="none"
+          renderOption={renderOption}
         />
       </div>
 
@@ -167,6 +246,14 @@ export const FilterBar = () => {
           data={fiatOptions}
           searchable
           classNames={selectClassNames}
+          leftSection={
+            <OptionIcon
+              src={selectedFiat?.image ?? CURRENCY_ICONS[adFilters.fiat]}
+              label={selectedFiat?.label ?? adFilters.fiat}
+            />
+          }
+          leftSectionPointerEvents="none"
+          renderOption={renderOption}
         />
       </div>
 
