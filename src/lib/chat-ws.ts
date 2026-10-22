@@ -23,6 +23,12 @@ export interface ChatWsMessage {
   createdAt: string;
 }
 
+export interface ChatDeliveredEvent {
+  chatId: string;
+  createdAt: string;
+  deliveredTo: number;
+}
+
 export interface ChatTypingEvent {
   chatId: string;
   senderId: string;
@@ -31,21 +37,23 @@ export interface ChatTypingEvent {
 
 export function normalizeChatMessage(raw: any): ChatWsMessage | null {
   if (!raw || typeof raw !== "object") return null;
-  const chatId = String(raw.chatId ?? raw.chat_id ?? "");
+  
+  // Handle both `new_chat_message` (flat) and `new_message` (nested under `data`)
+  const payload = raw.data ?? raw;
+  
+  const chatId = String(payload.chatId ?? payload.chat_id ?? "");
   if (!chatId) return null;
 
-  const senderId = String(raw.senderId ?? raw.sender_id ?? "");
-  const content = String(raw.content ?? raw.message ?? "");
+  const senderId = String(payload.senderId ?? payload.sender_id ?? "");
+  const content = String(payload.content ?? payload.message ?? "");
   const createdAt = String(
-    raw.createdAt ?? raw.created_at ?? new Date().toISOString()
+    payload.createdAt ?? payload.created_at ?? new Date().toISOString()
   );
-  // The delivery frame has no id, so derive a stable one: the same message
-  // replayed by a refetch must not duplicate in the list.
   const id = String(
-    raw.id ??
-      raw._id ??
-      raw.messageId ??
-      raw.message_id ??
+    payload.id ??
+      payload._id ??
+      payload.messageId ??
+      payload.message_id ??
       `${chatId}:${senderId}:${createdAt}:${content}`
   );
 
@@ -53,9 +61,21 @@ export function normalizeChatMessage(raw: any): ChatWsMessage | null {
     id,
     chatId,
     senderId,
-    senderName: raw.senderName ?? raw.sender_name ?? raw.sender ?? undefined,
+    senderName: payload.senderName ?? payload.sender_name ?? payload.sender ?? undefined,
     content,
     createdAt,
+  };
+}
+
+export function normalizeDeliveredEvent(raw: any): ChatDeliveredEvent | null {
+  if (!raw || typeof raw !== "object") return null;
+  const payload = raw.data ?? raw;
+  const chatId = String(payload.chatId ?? payload.chat_id ?? "");
+  if (!chatId) return null;
+  return {
+    chatId,
+    createdAt: String(payload.createdAt ?? payload.created_at ?? new Date().toISOString()),
+    deliveredTo: Number(payload.deliveredTo ?? payload.delivered_to ?? 0),
   };
 }
 
@@ -230,11 +250,12 @@ export function sendTypingWs(chatId: string, isTyping: boolean): boolean {
 }
 
 /**
- * Subscribe to the server-pushed chat events (`new_chat_message`, `typing`).
+ * Subscribe to the server-pushed chat events (`new_chat_message`, `new_message`, `message_delivered`, `typing`).
  * Registering these topics also keeps the shared socket open on chat screens.
  */
 export function subscribeChatEvents(handlers: {
   onMessage?: (message: ChatWsMessage) => void;
+  onDelivered?: (event: ChatDeliveredEvent) => void;
   onTyping?: (event: ChatTypingEvent) => void;
 }): () => void {
   const unsubscribeMessage = wsClient.subscribe(
@@ -245,6 +266,25 @@ export function subscribeChatEvents(handlers: {
       if (message) handlers.onMessage?.(message);
     }
   );
+  
+  const unsubscribeNewMessage = wsClient.subscribe(
+    "new_message",
+    null,
+    (payload) => {
+      const message = normalizeChatMessage(payload);
+      if (message) handlers.onMessage?.(message);
+    }
+  );
+  
+  const unsubscribeDelivered = wsClient.subscribe(
+    "message_delivered",
+    null,
+    (payload) => {
+      const event = normalizeDeliveredEvent(payload);
+      if (event) handlers.onDelivered?.(event);
+    }
+  );
+
   const unsubscribeTyping = wsClient.subscribe("typing", null, (payload) => {
     const event = normalizeTypingEvent(payload);
     if (event) handlers.onTyping?.(event);
@@ -252,6 +292,8 @@ export function subscribeChatEvents(handlers: {
 
   return () => {
     unsubscribeMessage();
+    unsubscribeNewMessage();
+    unsubscribeDelivered();
     unsubscribeTyping();
   };
 }
