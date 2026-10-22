@@ -2,19 +2,11 @@ import React from "react";
 import { Button } from "@mantine/core";
 
 interface SellerPendingPanelProps {
-  fiatAmount: number;
-  fiat: string;
-  paymentMethod: any;
   setCancelModalOpen: (val: boolean) => void;
-  copyToClipboard: (text: string) => void;
 }
 
 export function SellerPendingPanel({
-  fiatAmount,
-  fiat,
-  paymentMethod,
   setCancelModalOpen,
-  copyToClipboard,
 }: SellerPendingPanelProps) {
   return (
     <>
@@ -29,37 +21,6 @@ export function SellerPendingPanel({
           </p>
         </div>
       </div>
-
-      {paymentMethod && (
-        <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md border border-white/10 rounded-2xl p-6 mt-6">
-          <div className="text-white/60 text-xs font-bold tracking-wider uppercase mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-white/40"></span> Your Payment Details
-          </div>
-          <div className="flex flex-col gap-3 text-sm">
-            <div className="flex justify-between items-center bg-black/20 p-2.5 rounded-lg border border-white/5">
-              <span className="text-white/40 font-medium">Bank</span>
-              <span className="text-white/90 font-medium">{paymentMethod?.data?.bankName ?? paymentMethod?.method ?? "—"}</span>
-            </div>
-            <div className="flex justify-between items-center bg-black/20 p-2.5 rounded-lg border border-white/5">
-              <span className="text-white/40 font-medium">Account Name</span>
-              <span className="text-white/90 font-medium">{paymentMethod?.data?.accountName ?? "—"}</span>
-            </div>
-            <div className="flex justify-between items-center bg-black/20 p-2.5 rounded-lg border border-white/5">
-              <span className="text-white/40 font-medium">Account Number</span>
-              <div className="flex items-center gap-2">
-                <span className="text-white font-mono tracking-wide">{paymentMethod?.data?.accountNumber ?? "—"}</span>
-                {paymentMethod?.data?.accountNumber && (
-                  <button onClick={() => copyToClipboard(paymentMethod.data.accountNumber)} className="text-buy hover:text-emerald-400 text-xs font-semibold uppercase">Copy</button>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-between items-center bg-black/20 p-2.5 rounded-lg border border-white/5">
-              <span className="text-white/40 font-medium">Expected Amount</span>
-              <span className="text-white font-bold text-base drop-shadow-sm">{fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {fiat}</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="flex flex-col gap-4 mt-8">
         <Button 
