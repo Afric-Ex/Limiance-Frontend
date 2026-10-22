@@ -19,6 +19,7 @@ const NO_FOOTER_ROUTES = [
   "/buy-crypto",
   "/rewards-hub",
   "/markets",
+  "/"
 ];
 
 export const AppContainer = ({ children }: { children: ReactNode }) => {
