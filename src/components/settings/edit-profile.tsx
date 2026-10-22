@@ -150,7 +150,18 @@ export const EditProfile = () => {
         <Button
           className="!h-[52px] !rounded-xl !bg-primary hover:!bg-primary/90 hover:!shadow-[0_0_16px_rgba(77,119,240,0.3)] !text-white !font-bold !transition-all active:!scale-[0.98] disabled:!opacity-50"
           disabled={!form.values.username || form.values.username.length < 4}
-          onClick={() => mutate(form.values)}
+          onClick={() =>
+            mutate({
+              username: form.values.username || user?.username || "",
+              email: user?.email || "",
+              phone: form.values.phone || user?.phone || "",
+              password: form.values.password || "",
+              photo: form.values.photo || user?.photo || "",
+              firstName: form.values.firstName || user?.firstName || "",
+              lastName: form.values.lastName || user?.lastName || "",
+              country: form.values.country || user?.country || "",
+            })
+          }
           loading={isPending}
         >
           Save Changes

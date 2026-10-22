@@ -3,10 +3,12 @@ import { AccountSidebar } from "@/src/components/settings/account-sidebar";
 import { AccountMobileTabs } from "@/src/components/settings/account-mobile-tabs";
 import { BackButton } from "@/src/components/shared/back-button";
 import { FCMInitializer } from "@/src/components/shared/fcm-initializer";
+import { UserInitializer } from "@/src/components/shared/user-initializer";
 
 export default function AccountLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col min-h-[calc(100vh-84px)]">
+      <UserInitializer />
       <FCMInitializer />
       <div className="w-full px-4 min-[1150px]:px-8 pt-2">
         <BackButton href="/dashboard" />
