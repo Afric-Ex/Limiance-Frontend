@@ -133,7 +133,7 @@ function readFailure(raw: any): string | null {
 interface ChatRequestOptions {
   frameType: string;
   data: Record<string, unknown>;
-  responseType: string;
+  responseTypes: string[];
   errorTypes?: string[];
   match?: (payload: any, raw: any) => boolean;
   timeoutMs?: number;
@@ -141,6 +141,7 @@ interface ChatRequestOptions {
 
 function requestChat<T = any>(options: ChatRequestOptions): Promise<T> {
   const errorTypes = new Set(options.errorTypes ?? []);
+  const responseTypes = new Set(options.responseTypes);
 
   return waitForConnection().then(
     () =>
@@ -158,7 +159,7 @@ function requestChat<T = any>(options: ChatRequestOptions): Promise<T> {
         const unsubscribe = wsClient.onAnyMessage((payload, raw) => {
           const type = String(raw?.type ?? "");
           const isError = errorTypes.has(type);
-          if (type !== options.responseType && !isError) return;
+          if (!responseTypes.has(type) && !isError) return;
           if (!isError && options.match && !options.match(payload, raw)) return;
           const failure = readFailure(raw);
           settle(() =>
@@ -190,7 +191,13 @@ function requestChat<T = any>(options: ChatRequestOptions): Promise<T> {
   );
 }
 
-/** chat_message (§8.1). Resolves with the delivered `new_chat_message` payload. */
+/**
+ * chat_message (§8.1). Resolves with the delivered message payload.
+ *
+ * The deployed backend emits `new_message` (payload nested under `data`) while
+ * the documented frame is `new_chat_message`; accept both so the send promise
+ * settles on the real acknowledgement instead of timing out.
+ */
 export function sendChatMessageWs(
   chatId: string,
   message: string
@@ -198,7 +205,7 @@ export function sendChatMessageWs(
   return requestChat<ChatWsMessage>({
     frameType: "chat_message",
     data: { chat_id: chatId, message },
-    responseType: "new_chat_message",
+    responseTypes: ["new_chat_message", "new_message"],
     errorTypes: ["message_delivery_failed"],
     match: (payload) => {
       const delivered = normalizeChatMessage(payload);
@@ -215,7 +222,7 @@ export function getChatsWs(): Promise<any> {
   return requestChat({
     frameType: "get_chats",
     data: {},
-    responseType: "user_chats",
+    responseTypes: ["user_chats"],
     timeoutMs: 5_000,
   });
 }
@@ -232,7 +239,7 @@ export function getChatMessagesWs(
   return requestChat({
     frameType: "get_chat_messages",
     data,
-    responseType: "chat_messages",
+    responseTypes: ["chat_messages"],
     timeoutMs: 5_000,
     match: (payload) => {
       const replyChatId = payload?.chatId ?? payload?.chat_id;

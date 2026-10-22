@@ -16,6 +16,7 @@ export const normalizeUser = <T extends RawUser>(user: T): T => {
 
   return {
     ...user,
+    id: user.id ?? user.user_id ?? user.userId ?? user._id,
     firstName: user.firstName ?? user.first_name ?? "",
     lastName: user.lastName ?? user.last_name ?? "",
     isVerified: user.isVerified ?? user.is_verified ?? false,

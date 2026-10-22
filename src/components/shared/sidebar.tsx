@@ -8,6 +8,7 @@ import { useUserStore } from "@/src/stores/user-store";
 import { handleLogout } from "@/src/lib/handle-logout";
 import { UserAvatar } from "@/src/components/shared/user-avatar";
 import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@mantine/core";
 import { userKeys, userService } from "@/src/services/user";
 import { isKycApproved } from "@/src/lib/normalize-kyc-status";
 
@@ -242,6 +243,9 @@ function SectionLabel({ label }: { label: string }) {
 
 export function UserProfileCard() {
   const user = useUserStore((s) => s.user);
+  const userLoading = useUserStore((s) => s.loading);
+  const userHydrated = useUserStore((s) => s.hydrated);
+  const fetchUser = useUserStore((s) => s.fetchUser);
 const { data: kycStatus } = useQuery({
     queryKey: userKeys.kycStatus,
     queryFn: () => userService.getKycStatus(),
@@ -252,8 +256,8 @@ const { data: kycStatus } = useQuery({
   });
 
   const displayName = user
-    ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
-    : "Loading...";
+    ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.username || user.email || "Account"
+    : "";
 
   const normalizedKycStatus = String(kycStatus || user?.kycStatus || "").toLowerCase();
   const isVerified = (user?.isIDverified ?? false) || isKycApproved(normalizedKycStatus);
@@ -281,12 +285,28 @@ const { data: kycStatus } = useQuery({
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-[12.5px] font-semibold text-white/90 truncate leading-tight">
-            {displayName}
-          </p>
-          <p className={clsx("text-[10px] font-medium leading-tight mt-0.5", isVerified ? "text-buy" : "text-warning/80")}>
-            {statusText}
-          </p>
+          {user ? (
+            <>
+              <p className="text-[12.5px] font-semibold text-white/90 truncate leading-tight">
+                {displayName}
+              </p>
+              <p className={clsx("text-[10px] font-medium leading-tight mt-0.5", isVerified ? "text-buy" : "text-warning/80")}>
+                {statusText}
+              </p>
+            </>
+          ) : !userHydrated || userLoading ? (
+            <div className="flex flex-col gap-1.5" aria-label="Loading account">
+              <Skeleton height={10} width="70%" />
+              <Skeleton height={8} width="45%" />
+            </div>
+          ) : (
+            <button
+              onClick={() => void fetchUser()}
+              className="text-left text-[11px] font-medium text-white/60 hover:text-white transition-colors"
+            >
+              Profile unavailable — retry
+            </button>
+          )}
         </div>
 
         <button
