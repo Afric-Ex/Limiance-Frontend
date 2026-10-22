@@ -17,6 +17,9 @@ interface OrderCompletedOverlayProps {
   onSubmitFeedback: (rating: "POSITIVE" | "NEGATIVE", tags: string[], comment: string) => void;
   isSubmittingFeedback?: boolean;
   initialSubmitted?: boolean;
+  /** False when the counterparty is the signed-in user or cannot be resolved. */
+  canReview?: boolean;
+  isSelfReview?: boolean;
 }
 
 export const OrderCompletedOverlay = ({
@@ -32,6 +35,8 @@ export const OrderCompletedOverlay = ({
   onSubmitFeedback,
   isSubmittingFeedback = false,
   initialSubmitted = false,
+  canReview = true,
+  isSelfReview = false,
 }: OrderCompletedOverlayProps) => {
   const [rating, setRating] = useState<"POSITIVE" | "NEGATIVE" | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -116,7 +121,27 @@ export const OrderCompletedOverlay = ({
 
         <div className="w-full h-px bg-white/10" />
 
-        {!submitted ? (
+        {!canReview ? (
+          <div className="bg-white/5 border border-white/10 p-5 rounded-xl text-center">
+            <p className="text-sm font-semibold text-white/80">
+              Reviews aren&apos;t available for this trade.
+            </p>
+            <p className="text-xs text-white/50 mt-1">
+              {isSelfReview
+                ? "You can't review yourself."
+                : "The counterparty for this trade could not be verified."}
+            </p>
+            {onSkipFeedback && (
+              <Button
+                className="mt-4 bg-white/10 hover:bg-white/15 text-white"
+                size="md"
+                onClick={onSkipFeedback}
+              >
+                Done
+              </Button>
+            )}
+          </div>
+        ) : !submitted ? (
           <div className="bg-white/5 border border-white/10 p-5 rounded-xl">
             <h3 className="text-base font-bold text-white text-center mb-4">
               How was your experience with {counterparty}?

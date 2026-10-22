@@ -97,6 +97,7 @@ const normalizeChatMessages = (raw: any): P2PChatMessage[] => {
 
   return list.map((message: any) => {
     const senderId = String(message.senderId ?? message.sender_id ?? "");
+    const senderName = message.senderName ?? message.sender_name;
     const content = String(message.content ?? message.message ?? "");
     const createdAt = String(message.createdAt ?? message.created_at ?? "");
 
@@ -109,6 +110,10 @@ const normalizeChatMessages = (raw: any): P2PChatMessage[] => {
       ),
       content,
       senderId,
+      senderName:
+        typeof senderName === "string" && senderName.trim()
+          ? senderName.trim()
+          : undefined,
       createdAt,
     };
   });

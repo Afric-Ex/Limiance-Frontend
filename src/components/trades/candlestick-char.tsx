@@ -33,6 +33,7 @@ interface Props {
   orderBook?: { buyOrders: OrderBookEntry[]; sellOrders: OrderBookEntry[]; isConnected?: boolean };
   orderLevels?: OrderLevel[];
   priceRange?: { min: number | null; max: number | null };
+  lastPrice?: number | null;
 }
 
 export type { ChartMarket } from "@/src/components/trades/use-candle-feed";
@@ -82,11 +83,13 @@ const DepthPanel = memo(function DepthPanel({
   buyOrders,
   sellOrders,
   isConnected,
+  lastPrice,
 }: {
   symbol: string;
   buyOrders: OrderBookEntry[];
   sellOrders: OrderBookEntry[];
   isConnected: boolean;
+  lastPrice?: number | null;
 }) {
   const [viewMode, setViewMode] = useState<DepthViewMode>("both");
   const [rowLimit, setRowLimit] = useState<number>(15);
@@ -111,22 +114,23 @@ const DepthPanel = memo(function DepthPanel({
   const spread = bestBid !== null && bestAsk !== null ? bestAsk - bestBid : 0;
   const spreadPct = bestAsk !== null && spread > 0 ? (spread / bestAsk) * 100 : 0;
   const midPrice = bestBid !== null && bestAsk !== null ? (bestAsk + bestBid) / 2 : null;
+  // The price shown between the asks and bids is the last traded price; fall
+  // back to the mid only until the first trade for this market arrives.
+  const displayPrice = lastPrice ?? midPrice;
 
   const bookTotal = bidTotal + askTotal;
   const buyPct = bookTotal > 0 ? Math.round((bidTotal / bookTotal) * 100) : 50;
   const sellPct = 100 - buyPct;
 
-  // Tick direction from the mid, which moves with the book even though the
-  // chart panel is not handed a last-trade price.
-  const prevMidRef = useRef<number | null>(null);
+  const prevPriceRef = useRef<number | null>(null);
   const [direction, setDirection] = useState<"up" | "down" | "neutral">("neutral");
   useEffect(() => {
-    if (midPrice === null) return;
-    const prev = prevMidRef.current;
-    prevMidRef.current = midPrice;
-    if (prev === null || prev === midPrice) return;
-    setDirection(midPrice > prev ? "up" : "down");
-  }, [midPrice]);
+    if (displayPrice === null) return;
+    const prev = prevPriceRef.current;
+    prevPriceRef.current = displayPrice;
+    if (prev === null || prev === displayPrice) return;
+    setDirection(displayPrice > prev ? "up" : "down");
+  }, [displayPrice]);
 
   const [base = "BTC", quote = "USDT"] = symbol.split("/");
 
@@ -325,7 +329,7 @@ const DepthPanel = memo(function DepthPanel({
                 direction === "up" ? "text-success-6" : direction === "down" ? "text-error-1" : "text-white"
               )}
             >
-              {fmtPrice(midPrice)}
+              {fmtPrice(displayPrice)}
               {direction === "up" ? <FiArrowUp size={13} /> : direction === "down" ? <FiArrowDown size={13} /> : null}
             </span>
             <span className="text-[10px] text-white/40">
@@ -382,7 +386,7 @@ const DepthPanel = memo(function DepthPanel({
 // Lightweight Charts is the only renderer. `priceRange` is kept on the public
 // props because all three trade pages pass it, but no renderer consumes it now
 // that the canvas engine (which drew the 24h band) is gone.
-export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot", orderBook, orderLevels = [] }: Props) {
+export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot", orderBook, orderLevels = [], lastPrice = null }: Props) {
   const [interval, setIntervalVal] = useState<Interval>("15m");
   const [view, setView] = useState<View>("chart");
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -636,6 +640,7 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
             buyOrders={bids}
             sellOrders={asks}
             isConnected={orderBook?.isConnected ?? false}
+            lastPrice={lastPrice}
           />
         </div>
       )}

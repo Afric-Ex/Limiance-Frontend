@@ -3,6 +3,7 @@
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@mantine/core";
 import type { OrderBookEntry } from "@/src/hooks/use-order-book";
 import type { RecentTrade } from "@/src/hooks/use-recent-trades";
+import { getLatestTradePrice } from "@/src/lib/recent-trades";
 
 interface OrderBookTabsProps {
   buyOrders: OrderBookEntry[];
@@ -119,6 +120,7 @@ export function OrderBookTabs({
   const lowestAsk = sellOrders.length > 0 ? Math.min(...sellOrders.map((order) => order.price)) : null;
   const highestBid = buyOrders.length > 0 ? Math.max(...buyOrders.map((order) => order.price)) : null;
   const spread = lowestAsk !== null && highestBid !== null ? lowestAsk - highestBid : null;
+  const lastTradedPrice = getLatestTradePrice(recentTrades) ?? currentPrice;
 
   return (
     <Tabs
@@ -177,7 +179,7 @@ export function OrderBookTabs({
               </div>
               <div className="flex shrink-0 items-center justify-between border-y border-white/[0.05] px-3 py-2">
                 <span className="font-mono text-sm font-bold tabular-nums text-white">
-                  {currentPrice === null ? "—" : formatNumber(currentPrice, 2)}
+                  {lastTradedPrice === null ? "—" : formatNumber(lastTradedPrice, 2)}
                 </span>
                 <span className="text-[10px] text-white/35">
                   {spread === null ? "Last Price" : `Spread ${formatNumber(spread, 2)}`}

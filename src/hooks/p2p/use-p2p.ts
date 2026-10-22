@@ -346,6 +346,10 @@ export const useSendChatMessage = () => {
                 id,
                 content: String(message.content),
                 senderId: String(message.senderId ?? ""),
+                senderName:
+                  typeof message.senderName === "string" && message.senderName.trim()
+                    ? message.senderName.trim()
+                    : undefined,
                 createdAt: String(
                   message.createdAt ?? new Date().toISOString()
                 ),
