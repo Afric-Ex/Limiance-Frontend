@@ -28,6 +28,7 @@ const kycBadge: Record<string, { label: string; color: string }> = {
 
 function ProfilePageInner() {
   const user = useUserStore((state) => state.user);
+  const userLoading = useUserStore((state) => state.loading);
   const setUser = useUserStore((state) => state.setUser);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -104,18 +105,18 @@ function ProfilePageInner() {
       username: (value) => (value.length > 0 && value.length < 4 ? "Username must be at least 4 characters" : null),
     },
   });
+  const { setValues } = form;
 
   useEffect(() => {
-    if (user) {
-      form.setValues({
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
-        phone: user.phone || "",
-        email: user.email || "",
-        username: user.username || "",
-      });
-    }
-  }, [form, user]);
+    if (!user) return;
+    setValues({
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      phone: user.phone || "",
+      email: user.email || "",
+      username: user.username || "",
+    });
+  }, [setValues, user]);
 
   useEffect(() => {
     if (user && isKycApproved(kycStatus?.status) && !user.isIDverified) {
@@ -192,7 +193,7 @@ function ProfilePageInner() {
     updatePhoto(base64);
   };
 
-  if (!mounted) return <AccountProfileSkeleton />;
+  if (!mounted || (!user && userLoading)) return <AccountProfileSkeleton />;
 
   return (
     <main className="flex flex-col gap-8 max-w-5xl">
