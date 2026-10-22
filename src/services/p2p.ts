@@ -186,8 +186,12 @@ export const p2p = {
       async () => {
         const { getP2POrdersWs, normalizeWsP2POrdersResponse } = await loadP2PWs();
         const payload = await getP2POrdersWs(params as P2PAdsQueryParams);
+        const normalized = normalizeWsP2POrdersResponse(payload);
+        if (!normalized.data || normalized.data.length === 0) {
+          throw new Error("Empty P2P orders response from WebSocket");
+        }
         return {
-          data: normalizeWsP2POrdersResponse(payload),
+          data: normalized,
         } as unknown as ApiResponse<P2POrderListings>;
       },
       () => api.get(`trading/p2p/all_orders`, { params }),
