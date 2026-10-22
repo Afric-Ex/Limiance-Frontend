@@ -137,7 +137,7 @@ export function useInfiniteList<
     isPending: query.isPending,
     isFetchingNextPage: query.isFetchingNextPage,
     hasNextPage: query.hasNextPage,
-    loadedCount: data?.pages.length ?? 0,
+    loadedCount: data?.pages?.length ?? 0,
     isError: query.isError,
     error: query.error,
     refetch: () => {
