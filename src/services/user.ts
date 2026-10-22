@@ -15,11 +15,31 @@ export const userKeys = {
 
 export const userService = {
   getUser: async (): Promise<ApiResponse<any>> => {
-    const response = await api.get("/user_details");
-    if (response?.data?.data) {
-      response.data.data = normalizeUser(response.data.data);
+    const response = await api.get("/user_details", { timeout: 15_000 });
+    const body = response?.data;
+    if (!body || typeof body !== "object") {
+      return { data: null } as ApiResponse<any>;
     }
-    return response.data;
+
+    const payload = Object.prototype.hasOwnProperty.call(body, "data")
+      ? body.data
+      : undefined;
+    const hasUserField =
+      payload &&
+      typeof payload === "object" &&
+      !Array.isArray(payload) &&
+      Object.prototype.hasOwnProperty.call(payload, "user");
+    const rawUser = hasUserField
+      ? payload.user
+      : payload !== undefined
+        ? payload
+        : body?.user ?? body;
+
+    if (!rawUser || typeof rawUser !== "object" || Array.isArray(rawUser)) {
+      return { ...body, data: null };
+    }
+
+    return { ...body, data: normalizeUser(rawUser) };
   },
 
   updateUser: async (data: {

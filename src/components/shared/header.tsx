@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
 import { PopoverWrapper } from "./popover-wrapper";
 import { MarketDropdown } from "./market-dropdown";
 import { useUserStore } from "@/src/stores/user-store";
+import { Skeleton } from "@mantine/core";
 import Link from "next/link";
 import { useAssets } from "@/src/hooks/use-assets";
 import { BuyCryptoDropdown } from "./buy-crypto-dropdown";
@@ -90,6 +91,9 @@ const noMarginBottomInnerPages = ["trades"];
 export default function Header() {
   const pathname = usePathname();
   const user = useUserStore((state) => state.user);
+  const userLoading = useUserStore((state) => state.loading);
+  const userHydrated = useUserStore((state) => state.hydrated);
+  const fetchUser = useUserStore((state) => state.fetchUser);
   const { handleOpenDepositModal } = useAssets();
   const [authHydrated, setAuthHydrated] = useState(false);
   const isPublicRoute = pathname === "/" || pathname.startsWith("/auth");
@@ -153,19 +157,33 @@ export default function Header() {
         ) : null}
       </div>
       <div className="flex max-[1150px]:hidden items-center gap-6">
-        {!authHydrated || (!user && !isPublicRoute) ? null : !user ? (
-          <div className="flex items-center gap-6px">
-            <Link href="/auth/login">
-              <button className="font-medium py-3 px-5 bg-muted rounded-lg">
-                Login
-              </button>
-            </Link>
-            <Link href="/auth/signup">
-              <button className="font-medium py-3 px-4 bg-primary rounded-lg">
-                Sign Up
-              </button>
-            </Link>
-          </div>
+        {!authHydrated ? null : !user ? (
+          isPublicRoute ? (
+            <div className="flex items-center gap-6px">
+              <Link href="/auth/login">
+                <button className="font-medium py-3 px-5 bg-muted rounded-lg">
+                  Login
+                </button>
+              </Link>
+              <Link href="/auth/signup">
+                <button className="font-medium py-3 px-4 bg-primary rounded-lg">
+                  Sign Up
+                </button>
+              </Link>
+            </div>
+          ) : !userHydrated || userLoading ? (
+            <div className="flex items-center gap-3" aria-label="Loading account">
+              <Skeleton height={26} width={26} circle />
+              <Skeleton height={12} width={80} />
+            </div>
+          ) : (
+            <button
+              onClick={() => void fetchUser()}
+              className="text-xs font-medium text-white/60 hover:text-white transition-colors"
+            >
+              Retry account
+            </button>
+          )
         ) : (
           <div className="flex items-center gap-8">
             <CiSearch className={headerActionClasses} size={22} />

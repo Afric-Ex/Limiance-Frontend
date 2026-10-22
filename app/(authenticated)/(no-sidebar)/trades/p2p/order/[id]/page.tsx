@@ -49,6 +49,9 @@ function OrderRoomPageInner() {
   const [cancelledNoticeDismissed, setCancelledNoticeDismissed] = useState(false);
   
   const user = useUserStore((state) => state.user);
+  const userLoading = useUserStore((state) => state.loading);
+  const userHydrated = useUserStore((state) => state.hydrated);
+  const fetchUser = useUserStore((state) => state.fetchUser);
 
   useP2PMatchRoom(orderId);
   const { data: orderData, isLoading, refetch } = useGetMatchedOrder(orderId);
@@ -78,12 +81,15 @@ function OrderRoomPageInner() {
   //   BUY ad:  Advertiser = Buyer (pays fiat),  Matcher = Seller (releases crypto)
   //   SELL ad: Advertiser = Seller (releases crypto), Matcher = Buyer (pays fiat)
   const adType: string = (order?.type ?? "").toUpperCase();
-  const isMatcher = Boolean(order?.matcherId && user?.id && order.matcherId === user.id);
-  const isAdvertiser = !isMatcher && Boolean(order?.matcherId && user?.id);
+  const currentUserId = user?.id != null ? String(user.id) : "";
+  const isMatcher = Boolean(
+    order?.matcherId && currentUserId && String(order.matcherId) === currentUserId
+  );
+  const isAdvertiser = !isMatcher && Boolean(order?.matcherId && currentUserId);
 
   const isBuyer =
-    order?.buyerId && user?.id
-      ? order.buyerId === user.id
+    order?.buyerId && currentUserId
+      ? String(order.buyerId) === currentUserId
       : isAdvertiser
         ? adType === "BUY"
         : adType === "SELL";
@@ -255,12 +261,32 @@ function OrderRoomPageInner() {
     );
   };
 
-  if (isLoading) {
+  if (isLoading || !userHydrated) {
     return (
       <P2PLayout>
         <div className="flex flex-col justify-center items-center h-full min-h-[500px] gap-4">
           <Loader color="yellow" size="lg" />
           <p className="text-white/40 text-sm">Loading order...</p>
+        </div>
+      </P2PLayout>
+    );
+  }
+
+  if (!user?.id) {
+    return (
+      <P2PLayout>
+        <div className="flex flex-col justify-center items-center h-full min-h-[400px] gap-4 text-center">
+          <p className="text-white/60 text-sm">
+            We couldn&apos;t load your account details. Your trade actions and
+            chat need your session identity.
+          </p>
+          <Button
+            className="mt-2"
+            loading={userLoading}
+            onClick={() => void fetchUser()}
+          >
+            Retry
+          </Button>
         </div>
       </P2PLayout>
     );
@@ -479,7 +505,7 @@ function OrderRoomPageInner() {
           {/* RIGHT: Chat */}
           <div className="flex-1 min-w-0 max-[1150px]:min-h-[500px]">
             {order?.chatId ? (
-              <ChatWindow chatId={order.chatId} currentUserId={user?.id ?? ""} />
+              <ChatWindow chatId={order.chatId} currentUserId={currentUserId} />
             ) : (
               <div className="flex justify-center items-center h-full bg-elevated rounded-xl border border-white/5">
                 <span className="text-white/40 text-sm">Chat is not available for this order</span>
