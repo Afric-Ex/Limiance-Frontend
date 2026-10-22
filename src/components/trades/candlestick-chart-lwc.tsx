@@ -305,11 +305,13 @@ export function LwcCandlestickChart({
   interval,
   market = "spot",
   orderLevels = [],
+  onLastPriceChange,
 }: {
   symbol: string;
   interval: string;
   market?: ChartMarket;
   orderLevels?: OrderLevel[];
+  onLastPriceChange?: (price: number | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -585,6 +587,19 @@ export function LwcCandlestickChart({
   const { candles, historyCandles, isLoading, isError, historyFetched, wsPending } = useCandleFeed(symbol, interval, market);
   const n = candles.length;
   const hasChartData = useMemo(() => toCandleData(candles).length > 0, [candles]);
+
+  const lastPriceCallbackRef = useRef(onLastPriceChange);
+  useEffect(() => {
+    lastPriceCallbackRef.current = onLastPriceChange;
+  }, [onLastPriceChange]);
+
+  const latestClose = n > 0 ? candles[n - 1].close : null;
+  useEffect(() => {
+    const price = latestClose;
+    lastPriceCallbackRef.current?.(
+      price !== null && Number.isFinite(price) && price > 0 ? price : null
+    );
+  }, [latestClose]);
 
   const syncPriceLines = useCallback((series: ISeriesApi<"Candlestick">, levels: readonly OrderLevel[]) => {
     for (const line of priceLinesRef.current) series.removePriceLine(line);

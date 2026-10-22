@@ -20,11 +20,11 @@ const MORE_INTERVALS = [
   { value: "6mh", label: "6M" },
   { value: "1y", label: "1Y" },
 ] as const;
-const INTERVALS = [
+const _INTERVALS = [
   ...QUICK_INTERVALS,
   ...MORE_INTERVALS.map(({ value }) => value),
 ] as const;
-type Interval = (typeof INTERVALS)[number];
+type Interval = (typeof _INTERVALS)[number];
 type View = "chart" | "depth";
 
 interface Props {
@@ -34,6 +34,7 @@ interface Props {
   orderLevels?: OrderLevel[];
   priceRange?: { min: number | null; max: number | null };
   lastPrice?: number | null;
+  onLastPriceChange?: (price: number | null) => void;
 }
 
 export type { ChartMarket } from "@/src/components/trades/use-candle-feed";
@@ -386,7 +387,7 @@ const DepthPanel = memo(function DepthPanel({
 // Lightweight Charts is the only renderer. `priceRange` is kept on the public
 // props because all three trade pages pass it, but no renderer consumes it now
 // that the canvas engine (which drew the 24h band) is gone.
-export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot", orderBook, orderLevels = [], lastPrice = null }: Props) {
+export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot", orderBook, orderLevels = [], lastPrice = null, onLastPriceChange }: Props) {
   const [interval, setIntervalVal] = useState<Interval>("15m");
   const [view, setView] = useState<View>("chart");
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -631,6 +632,7 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
             interval={interval}
             market={market}
             orderLevels={orderLevels}
+            onLastPriceChange={onLastPriceChange}
           />
         </div>
       ) : (

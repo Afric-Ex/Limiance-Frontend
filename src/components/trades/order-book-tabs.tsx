@@ -106,13 +106,17 @@ export function OrderBookTabs({
   const totalBuy = buyOrders.reduce((total, order) => total + order.quantity, 0);
   const totalSell = sellOrders.reduce((total, order) => total + order.quantity, 0);
   const total = totalBuy + totalSell;
-  const hasPressureData = total > 0 || buyPercentage != null || sellPercentage != null;
+  const hasPressureData = total > 0;
   const calculatedBuyPercent = total > 0 ? (totalBuy / total) * 100 : 50;
   const buyPercent = Math.max(
     0,
     Math.min(
       100,
-      Math.round(buyPercentage ?? (sellPercentage != null ? 100 - sellPercentage : calculatedBuyPercent))
+      Math.round(
+        total > 0
+          ? calculatedBuyPercent
+          : buyPercentage ?? (sellPercentage != null ? 100 - sellPercentage : calculatedBuyPercent)
+      )
     )
   );
   const sellPercent = 100 - buyPercent;
@@ -120,7 +124,9 @@ export function OrderBookTabs({
   const lowestAsk = sellOrders.length > 0 ? Math.min(...sellOrders.map((order) => order.price)) : null;
   const highestBid = buyOrders.length > 0 ? Math.max(...buyOrders.map((order) => order.price)) : null;
   const spread = lowestAsk !== null && highestBid !== null ? lowestAsk - highestBid : null;
-  const lastTradedPrice = getLatestTradePrice(recentTrades) ?? currentPrice;
+  const latestTradePrice = getLatestTradePrice(recentTrades);
+  const lastTradedPrice =
+    latestTradePrice ?? (currentPrice != null && currentPrice > 0 ? currentPrice : null);
 
   return (
     <Tabs
@@ -143,7 +149,7 @@ export function OrderBookTabs({
           <div className="grid shrink-0 grid-cols-3 px-3 py-1">
             <span className="text-[10px] text-white/40">Price({quote})</span>
             <span className="text-right text-[10px] text-white/40">Qty({base})</span>
-            <span className="text-right text-[10px] text-white/40">Total</span>
+            <span className="text-right text-[10px] text-white/40">Total({base})</span>
           </div>
           {empty ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center text-xs text-white/35">

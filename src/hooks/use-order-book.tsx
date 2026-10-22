@@ -196,14 +196,22 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
         const totalBuyVolume = buyOrders.reduce((sum, entry) => sum + entry.quantity, 0);
         const totalSellVolume = sellOrders.reduce((sum, entry) => sum + entry.quantity, 0);
         const total = totalBuyVolume + totalSellVolume;
-        const buyPercentage = Number(book.buyPercentage ?? book.bidPercentage);
-        const sellPercentage = Number(book.sellPercentage ?? book.askPercentage);
+        const backendBuyPercentage = Number(book.buyPercentage ?? book.bidPercentage);
+        const backendSellPercentage = Number(book.sellPercentage ?? book.askPercentage);
 
         return {
           buyOrders,
           sellOrders,
-          buyPercentage: Number.isFinite(buyPercentage) ? buyPercentage : total > 0 ? (totalBuyVolume / total) * 100 : null,
-          sellPercentage: Number.isFinite(sellPercentage) ? sellPercentage : total > 0 ? (totalSellVolume / total) * 100 : null,
+          buyPercentage: total > 0
+            ? (totalBuyVolume / total) * 100
+            : Number.isFinite(backendBuyPercentage)
+              ? backendBuyPercentage
+              : null,
+          sellPercentage: total > 0
+            ? (totalSellVolume / total) * 100
+            : Number.isFinite(backendSellPercentage)
+              ? backendSellPercentage
+              : null,
           totalBuyVolume: Number.isFinite(Number(book.totalBuyVolume)) ? Number(book.totalBuyVolume) : totalBuyVolume,
           totalSellVolume: Number.isFinite(Number(book.totalSellVolume)) ? Number(book.totalSellVolume) : totalSellVolume,
           isConnected: true,
