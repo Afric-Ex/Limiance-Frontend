@@ -351,7 +351,7 @@ function OrderRoomPageInner() {
 
   return (
     <P2PLayout>
-      <div className="relative min-h-[calc(100vh-100px)] w-full max-w-[1400px] mx-auto py-6 max-[1150px]:py-4 px-4 font-sans max-[1150px]:pb-[90px] page-enter">
+      <div className="relative min-h-[calc(100vh-100px)] w-full max-w-[1400px] mx-auto py-6 max-[1150px]:py-4 px-4 font-sans max-[1150px]:pb-[90px] page-enter overflow-x-clip">
         
         {/* Background */}
         <div className="absolute top-0 left-10 w-[400px] h-[400px] bg-indigo-600/5 rounded-full blur-[120px] opacity-40 pointer-events-none"></div>
@@ -390,18 +390,16 @@ function OrderRoomPageInner() {
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             <button 
               onClick={() => router.push("/trades/p2p/orders")} 
-              className="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all backdrop-blur-md"
+              className="group flex shrink-0 items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all backdrop-blur-md"
             >
               <span className="text-white/70 group-hover:text-white group-hover:-translate-x-0.5 transition-transform">←</span>
             </button>
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="text-white text-xl font-bold tracking-tight">Order <span className="font-mono text-white/50">#{orderId.slice(-8).toUpperCase()}</span></span>
-                <span className={`text-xs font-bold px-3 py-1 rounded-full border shadow-sm backdrop-blur-md ${statusInfo.color}`}>{statusInfo.label}</span>
-              </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 min-w-0">
+              <span className="text-white text-lg sm:text-xl font-bold tracking-tight whitespace-nowrap">Order <span className="font-mono text-white/50">#{orderId.slice(-8).toUpperCase()}</span></span>
+              <span className={`shrink-0 whitespace-nowrap text-xs font-bold px-3 py-1 rounded-full border shadow-sm backdrop-blur-md ${statusInfo.color}`}>{statusInfo.label}</span>
             </div>
           </div>
         </div>
@@ -409,7 +407,7 @@ function OrderRoomPageInner() {
         {/* Main split layout */}
         <div className="flex flex-col min-[1150px]:flex-row gap-6 min-[1150px]:h-[calc(100vh-220px)] min-h-[600px] max-[1150px]:min-h-0">
           {/* LEFT: Order Details Panel */}
-          <div className="min-[1150px]:w-[50%] xl:w-[45%] overflow-y-auto custom-scrollbar pr-0 min-[1150px]:pr-2 pb-10 max-[1150px]:pb-0">
+          <div className="min-w-0 min-[1150px]:w-[50%] xl:w-[45%] overflow-y-auto custom-scrollbar pr-0 min-[1150px]:pr-2 pb-10 max-[1150px]:pb-0">
             <div className="bg-elevated/80 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-2xl max-[1150px]:rounded-xl p-6 min-[1150px]:p-8 max-[1150px]:p-4 flex flex-col relative overflow-hidden">
               
               {/* Subtle inner highlight for 3D glass effect */}
@@ -420,11 +418,12 @@ function OrderRoomPageInner() {
                 <div className="flex items-center justify-between relative z-10">
                   {["Created", "Payment", "Released"].map((step, i) => {
                     const stepNum = i + 1;
-                    const currentStep = normalizedStatus === "PENDING" ? 2 : normalizedStatus === "PAID" ? 2 : (normalizedStatus === "RELEASED" || normalizedStatus === "COMPLETED") ? 3 : 1;
-                    const done = stepNum < currentStep;
-                    const active = stepNum === currentStep;
+                    const isReleased = normalizedStatus === "RELEASED" || normalizedStatus === "COMPLETED";
+                    const currentStep = normalizedStatus === "PENDING" ? 2 : normalizedStatus === "PAID" ? 2 : isReleased ? 3 : 1;
+                    const done = stepNum < currentStep || (isReleased && stepNum === 3);
+                    const active = stepNum === currentStep && !done;
                     return (
-                      <div key={step} className="flex flex-col items-center gap-2 relative bg-elevated px-2">
+                      <div key={step} className="flex flex-col items-center gap-2 relative">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-500
                           ${active ? "border-2 border-red-400 bg-red-400/20 text-red-400" 
                             : done ? "border-2 border-buy bg-buy/20 text-buy" 
@@ -458,9 +457,9 @@ function OrderRoomPageInner() {
                     { label: "Counterparty", value: <span className="text-white/90 font-medium">{counterpartyName || "—"}</span> },
                     { label: "Order Time", value: <span className="text-white/70">{parseBackendDate(order.createdAt ?? "")?.toLocaleString() ?? "—"}</span> },
                   ].map((item, idx) => (
-                    <div key={idx} className="flex flex-col gap-1">
+                    <div key={idx} className="flex min-w-0 flex-col gap-1">
                       <div className="text-white/40 text-xs">{item.label}</div>
-                      <div className="text-white/90">{item.value}</div>
+                      <div className="min-w-0 break-words text-white/90">{item.value}</div>
                     </div>
                   ))}
                 </div>
@@ -492,11 +491,7 @@ function OrderRoomPageInner() {
 
               {normalizedStatus === "PENDING" && isSeller && (
                 <SellerPendingPanel 
-                  fiatAmount={fiatAmount}
-                  fiat={fiat}
-                  paymentMethod={paymentMethod}
                   setCancelModalOpen={setCancelModalOpen}
-                  copyToClipboard={copyToClipboard}
                 />
               )}
 

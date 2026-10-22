@@ -64,10 +64,10 @@ function P2PMarketplacePageInner() {
     <P2PLayout>
       <div className="w-full max-w-7xl mx-auto py-6 max-[1150px]:pb-[90px] max-[1150px]:py-4 page-enter">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">P2P Trading</h1>
-            <p className="text-white/50 text-sm mt-1">Buy and sell crypto peer-to-peer</p>
+            <h1 className="text-xl font-bold text-white sm:text-2xl">P2P Trading</h1>
+            <p className="mt-1 text-xs text-white/50 sm:text-sm">Buy and sell crypto peer-to-peer</p>
           </div>
           <div className="flex items-center gap-3">
             <button
