@@ -6,6 +6,7 @@ import {
   subscribeChatEvents,
   type ChatTypingEvent,
   type ChatWsMessage,
+  type ChatDeliveredEvent,
 } from "@/src/lib/chat-ws";
 import { useWsConnected } from "@/src/hooks/use-ws-connection";
 
@@ -18,6 +19,7 @@ export function useChatWs(
   chatId: string | null | undefined,
   handlers: {
     onMessage?: (message: ChatWsMessage) => void;
+    onDelivered?: (event: ChatDeliveredEvent) => void;
     onTyping?: (event: ChatTypingEvent) => void;
   }
 ): { connected: boolean } {
@@ -34,6 +36,10 @@ export function useChatWs(
       onMessage: (message) => {
         if (message.chatId !== chatId) return;
         handlersRef.current.onMessage?.(message);
+      },
+      onDelivered: (event) => {
+        if (event.chatId !== chatId) return;
+        handlersRef.current.onDelivered?.(event);
       },
       onTyping: (event) => {
         if (event.chatId !== chatId) return;

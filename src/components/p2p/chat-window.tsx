@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChatMessage } from "./chat-message";
 import { ChatInput } from "./chat-input";
@@ -11,7 +11,7 @@ import { useFetchChats, useSendChatMessage } from "@/src/hooks/p2p/use-p2p";
 import { useChatWs, useTypingIndicator } from "@/src/hooks/use-chat-ws";
 import { p2pKey } from "@/src/services/p2p";
 import { P2PChatMessage } from "@/src/types/p2p";
-import type { ChatWsMessage } from "@/src/lib/chat-ws";
+import type { ChatWsMessage, ChatDeliveredEvent } from "@/src/lib/chat-ws";
 
 interface ChatWindowProps {
   chatId: string;
@@ -22,6 +22,7 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
   const queryClient = useQueryClient();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [deliveredIds, setDeliveredIds] = useState<Set<string>>(new Set());
 
   const { peerTyping, onTyping, notifyTyping } = useTypingIndicator(
     chatId,
@@ -52,8 +53,20 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
     [chatId, queryClient]
   );
 
+  const handleDelivered = useCallback(
+    (event: ChatDeliveredEvent) => {
+      setDeliveredIds((prev) => {
+        const next = new Set(prev);
+        next.add(event.chatId + ":" + event.createdAt);
+        return next;
+      });
+    },
+    []
+  );
+
   const { connected } = useChatWs(chatId, {
     onMessage: handleIncomingMessage,
+    onDelivered: handleDelivered,
     onTyping,
   });
 
@@ -158,7 +171,8 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
             <ChatMessage 
               key={msg.id} 
               message={msg} 
-              isOwn={msg.senderId === currentUserId} 
+              isOwn={msg.senderId === currentUserId}
+              delivered={deliveredIds.has(`${chatId}:${msg.createdAt}`)}
             />
           ))
         )}

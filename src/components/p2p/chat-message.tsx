@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { ImageLightbox } from "./image-lightbox";
+import { MdDoneAll } from "react-icons/md";
 
 // Our backend doesn't support images/system types yet, 
 // but we leave room for it if the payload structure changes.
@@ -15,9 +16,10 @@ interface ChatMessageProps {
     imageUrl?: string;
   };
   isOwn: boolean;
+  delivered?: boolean;
 }
 
-export const ChatMessage = ({ message, isOwn }: ChatMessageProps) => {
+export const ChatMessage = ({ message, isOwn, delivered }: ChatMessageProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   if (message.type === "system") {
@@ -62,6 +64,7 @@ export const ChatMessage = ({ message, isOwn }: ChatMessageProps) => {
 
             <div className={`text-[10px] mt-1 flex items-center gap-1 ${isOwn ? "justify-end text-white/70" : "justify-start text-white/50"}`}>
               {formatTime(message.createdAt)}
+              {isOwn && delivered && <MdDoneAll size={12} className="text-green-400" />}
             </div>
 
           </div>
