@@ -15,6 +15,7 @@ import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { readList } from "@/src/lib/api-response";
+import { getLatestTradePrice } from "@/src/lib/recent-trades";
 import {
   Checkbox,
   Loader,
@@ -112,6 +113,7 @@ function SpotTrades() {
   });
 
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "spot");
+  const lastTradedPrice = getLatestTradePrice(recentTrades) ?? feed.price ?? null;
 
   const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
     queryKey: tradingKeys.tradeHistory("spot"),
@@ -534,6 +536,7 @@ function SpotTrades() {
               orderBook={orderBook}
               orderLevels={chartOrderLevels}
               priceRange={{ min: feed.low24h, max: feed.high24h }}
+              lastPrice={lastTradedPrice}
             />
             
             {/* Mobile chart expand toggle */}
@@ -879,6 +882,7 @@ function SpotTrades() {
                 orderBook={orderBook}
                 orderLevels={chartOrderLevels}
                 priceRange={{ min: feed.low24h, max: feed.high24h }}
+                lastPrice={lastTradedPrice}
               />
             </div>
             

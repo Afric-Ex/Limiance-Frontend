@@ -12,6 +12,11 @@ import { useChatWs, useTypingIndicator } from "@/src/hooks/use-chat-ws";
 import { p2pKey } from "@/src/services/p2p";
 import { P2PChatMessage } from "@/src/types/p2p";
 import type { ChatWsMessage, ChatDeliveredEvent } from "@/src/lib/chat-ws";
+import {
+  chatDayKey,
+  formatChatDayLabel,
+  getChatTimestamp,
+} from "@/src/lib/chat-date";
 
 interface ChatWindowProps {
   chatId: string;
@@ -43,6 +48,7 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
                 id: message.id,
                 content: message.content,
                 senderId: message.senderId,
+                senderName: message.senderName,
                 createdAt: message.createdAt,
               },
             ],
@@ -91,6 +97,41 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
     () => chatsData?.data ?? [],
     [chatsData]
   );
+
+  // WhatsApp-style timeline: chronological messages with a day divider before
+  // the first message of each local day.
+  const timeline = useMemo(() => {
+    const ordered = messages
+      .map((message, index) => ({
+        message,
+        index,
+        time: getChatTimestamp(message.createdAt),
+      }))
+      .sort((a, b) =>
+        a.time === b.time ? a.index - b.index : a.time - b.time
+      );
+
+    const items: Array<
+      | { kind: "day"; key: string; label: string }
+      | { kind: "message"; key: string; message: P2PChatMessage }
+    > = [];
+
+    let currentDay: string | null = null;
+    ordered.forEach(({ message }, index) => {
+      const day = chatDayKey(message.createdAt);
+      if (day !== currentDay) {
+        currentDay = day;
+        items.push({
+          kind: "day",
+          key: `day-${day}-${index}`,
+          label: formatChatDayLabel(message.createdAt),
+        });
+      }
+      items.push({ kind: "message", key: message.id, message });
+    });
+
+    return items;
+  }, [messages]);
 
   // Scroll only the chat container to the bottom — NOT the whole page
   const scrollToBottom = (smooth = true) => {
@@ -167,14 +208,24 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
             No messages yet. Say hello!
           </div>
         ) : (
-          messages.map(msg => (
-            <ChatMessage 
-              key={msg.id} 
-              message={msg} 
-              isOwn={msg.senderId === currentUserId}
-              delivered={deliveredIds.has(`${chatId}:${msg.createdAt}`)}
-            />
-          ))
+          timeline.map((item) =>
+            item.kind === "day" ? (
+              <div key={item.key} className="flex justify-center my-4">
+                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[10px] font-medium text-white/45">
+                  {item.label}
+                </span>
+              </div>
+            ) : (
+              <ChatMessage
+                key={item.key}
+                message={item.message}
+                isOwn={item.message.senderId === currentUserId}
+                delivered={deliveredIds.has(
+                  `${chatId}:${item.message.createdAt}`
+                )}
+              />
+            )
+          )
         )}
         
         {peerTyping && <TypingIndicator />}

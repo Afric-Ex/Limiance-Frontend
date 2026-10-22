@@ -463,8 +463,8 @@ export const tradingService = {
     const response = await api.get("trading/kline/historical", {
       params: {
         symbol: params.symbol,
-        "start-time": params.startTime || "",
-        "end-time": params.endTime || "",
+        ...(params.startTime ? { "start-time": params.startTime } : {}),
+        ...(params.endTime ? { "end-time": params.endTime } : {}),
         interval: params.interval,
         limit: params.limit || 500,
         ...(params.market ? { market: params.market } : {}),

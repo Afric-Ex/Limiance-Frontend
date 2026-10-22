@@ -10,6 +10,7 @@ import { useRecentTrades } from '@/src/hooks/use-recent-trades';
 import { OrderBookTabs } from '@/src/components/trades/order-book-tabs';
 import { usePortfolioWs } from '@/src/hooks/use-portfolio-ws';
 import { readList } from '@/src/lib/api-response';
+import { getLatestTradePrice } from '@/src/lib/recent-trades';
 import { errorMessageHandler } from '@/src/lib/error-handler';
 import { successNotification } from '@/src/lib/notification-handler';
 import { useUserStore } from '@/src/stores/user-store';
@@ -246,6 +247,9 @@ function FuturesTradesInner() {
   });
 
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "futures");
+  // The spot/margin feed does not carry futures prices, so only use actual
+  // futures trades here; the depth panel falls back to the futures mid.
+  const lastTradedPrice = getLatestTradePrice(recentTrades);
 
   const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
     queryKey: tradingKeys.tradeHistory("futures"),
@@ -1078,6 +1082,7 @@ function FuturesTradesInner() {
               orderLevels={chartOrderLevels}
               priceRange={{ min: feed.low24h, max: feed.high24h }}
               orderBook={orderBook}
+              lastPrice={lastTradedPrice}
             />
             <button 
               onClick={() => setChartExpanded(!chartExpanded)}
@@ -1697,6 +1702,7 @@ function FuturesTradesInner() {
                 orderLevels={chartOrderLevels}
                 priceRange={{ min: feed.low24h, max: feed.high24h }}
                 orderBook={orderBook}
+                lastPrice={lastTradedPrice}
               />
             </div>
             

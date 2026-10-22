@@ -57,11 +57,15 @@ export function normalizeChatMessage(raw: any): ChatWsMessage | null {
       `${chatId}:${senderId}:${createdAt}:${content}`
   );
 
+  const senderName = payload.senderName ?? payload.sender_name;
   return {
     id,
     chatId,
     senderId,
-    senderName: payload.senderName ?? payload.sender_name ?? payload.sender ?? undefined,
+    senderName:
+      typeof senderName === "string" && senderName.trim()
+        ? senderName.trim()
+        : undefined,
     content,
     createdAt,
   };
@@ -81,12 +85,19 @@ export function normalizeDeliveredEvent(raw: any): ChatDeliveredEvent | null {
 
 export function normalizeTypingEvent(raw: any): ChatTypingEvent | null {
   if (!raw || typeof raw !== "object") return null;
-  const chatId = String(raw.chatId ?? raw.chat_id ?? "");
+  const payload = raw.data && typeof raw.data === "object" ? raw.data : raw;
+  const chatId = String(payload.chatId ?? payload.chat_id ?? "");
   if (!chatId) return null;
+  const rawTyping = payload.isTyping ?? payload.is_typing;
   return {
     chatId,
-    senderId: String(raw.senderId ?? raw.sender_id ?? ""),
-    isTyping: Boolean(raw.isTyping ?? raw.is_typing),
+    senderId: String(
+      payload.senderId ?? payload.sender_id ?? payload.userId ?? payload.user_id ?? ""
+    ),
+    isTyping:
+      typeof rawTyping === "string"
+        ? rawTyping.toLowerCase() === "true"
+        : Boolean(rawTyping),
   };
 }
 
@@ -257,8 +268,9 @@ export function sendTypingWs(chatId: string, isTyping: boolean): boolean {
 }
 
 /**
- * Subscribe to the server-pushed chat events (`new_chat_message`, `new_message`, `message_delivered`, `typing`).
- * Registering these topics also keeps the shared socket open on chat screens.
+ * Subscribe to the server-pushed chat events (`new_chat_message`, `new_message`,
+ * `message_delivered`, `typing`, `user_typing`). Registering these topics also
+ * keeps the shared socket open on chat screens.
  */
 export function subscribeChatEvents(handlers: {
   onMessage?: (message: ChatWsMessage) => void;
@@ -292,15 +304,25 @@ export function subscribeChatEvents(handlers: {
     }
   );
 
-  const unsubscribeTyping = wsClient.subscribe("typing", null, (payload) => {
+  const handleTyping = (payload: any) => {
     const event = normalizeTypingEvent(payload);
     if (event) handlers.onTyping?.(event);
-  });
+  };
+
+  const unsubscribeTyping = wsClient.subscribe("typing", null, handleTyping);
+  // The deployed backend answers `typing_response` with `user_typing` and puts
+  // the acting user under `userId`; keep the documented `typing` topic too.
+  const unsubscribeUserTyping = wsClient.subscribe(
+    "user_typing",
+    null,
+    handleTyping
+  );
 
   return () => {
     unsubscribeMessage();
     unsubscribeNewMessage();
     unsubscribeDelivered();
     unsubscribeTyping();
+    unsubscribeUserTyping();
   };
 }

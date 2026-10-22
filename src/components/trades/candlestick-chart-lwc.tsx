@@ -350,6 +350,10 @@ export function LwcCandlestickChart({
   const lastCandleRef = useRef<CandlestickData | null>(null);
   const candleDataContextRef = useRef<string | null>(null);
   const candleDataSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  // Identity of the last REST history array rendered. A new identity means the
+  // full dataset changed (initial load/refetch), so the incremental last-candle
+  // update path is unsafe until setData has installed all of it.
+  const appliedHistoryRef = useRef<KlineCandle[] | undefined>(undefined);
   const [legend, setLegend] = useState<{ o: number; h: number; l: number; c: number; v?: number; ma7?: number; ma25?: number; ma99?: number } | null>(null);
   const [drawingsBySymbol, setDrawingsBySymbol] = useState<Record<string, Drawing[]>>(() =>
     readStoredDrawings(market)
@@ -578,7 +582,7 @@ export function LwcCandlestickChart({
     drawingsRef.current = drawingsBySymbol;
   }, [drawingsBySymbol]);
 
-  const { candles, isLoading, isError, historyFetched, wsPending } = useCandleFeed(symbol, interval, market);
+  const { candles, historyCandles, isLoading, isError, historyFetched, wsPending } = useCandleFeed(symbol, interval, market);
   const n = candles.length;
   const hasChartData = useMemo(() => toCandleData(candles).length > 0, [candles]);
 
@@ -833,7 +837,9 @@ export function LwcCandlestickChart({
     const previousLastCandleTime = previousLastCandle
       ? chartTimeToSeconds(previousLastCandle.time)
       : null;
+    const historyChanged = appliedHistoryRef.current !== historyCandles;
     const canUpdateLastCandle =
+      !historyChanged &&
       candleDataSeriesRef.current === candlesSeries &&
       candleDataContextRef.current === key &&
       previousLastCandleTime !== null &&
@@ -890,6 +896,7 @@ export function LwcCandlestickChart({
     lastCandleRef.current = lastCandle;
     candleDataContextRef.current = key;
     candleDataSeriesRef.current = candlesSeries;
+    appliedHistoryRef.current = historyCandles;
     // Only reset the viewport when the pair/interval changes. Doing this on
     // every tick would yank the view back on each WS message and make panning
     // and pinch-zoom impossible; the library already keeps the right edge
@@ -903,7 +910,7 @@ export function LwcCandlestickChart({
         to: total + 4,
       });
     }
-  }, [candles, symbol, interval]);
+  }, [candles, historyCandles, symbol, interval]);
 
   // Keep the latest levels in a ref so an interval/pair chart rebuild can
   // replay them immediately, then update the current series without rebuilding
