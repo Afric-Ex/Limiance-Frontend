@@ -193,6 +193,7 @@ function FuturesTradesInner() {
   const [stopLoss, setStopLoss] = useState<number | string>('');
   const [flashClass, setFlashClass] = useState('');
   const [prevPrice, setPrevPrice] = useState<number | null>(null);
+  const [chartLastPrice, setChartLastPrice] = useState<number | null>(null);
   const accountModalShownRef = useRef(false);
   const router = useRouter();
   const priceUserEditedRef = useRef(false); // true when user has manually typed a custom price
@@ -1083,6 +1084,7 @@ function FuturesTradesInner() {
               priceRange={{ min: feed.low24h, max: feed.high24h }}
               orderBook={orderBook}
               lastPrice={lastTradedPrice}
+              onLastPriceChange={setChartLastPrice}
             />
             <button 
               onClick={() => setChartExpanded(!chartExpanded)}
@@ -1456,7 +1458,7 @@ function FuturesTradesInner() {
           recentTradesLoading={recentTradesLoading}
           base={baseAsset}
           quote={quoteAsset}
-          currentPrice={feed.price}
+          currentPrice={chartLastPrice ?? feed.price}
           buyPercentage={orderBook.buyPercentage}
           sellPercentage={orderBook.sellPercentage}
           isConnected={orderBook.isConnected}
@@ -1703,6 +1705,7 @@ function FuturesTradesInner() {
                 priceRange={{ min: feed.low24h, max: feed.high24h }}
                 orderBook={orderBook}
                 lastPrice={lastTradedPrice}
+                onLastPriceChange={setChartLastPrice}
               />
             </div>
             
@@ -1725,7 +1728,7 @@ function FuturesTradesInner() {
               recentTradesLoading={recentTradesLoading}
               base={baseAsset}
               quote="USDT"
-              currentPrice={feed.price}
+              currentPrice={chartLastPrice ?? feed.price}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -1856,7 +1859,7 @@ function FuturesTradesInner() {
               recentTradesLoading={recentTradesLoading}
               base={baseAsset}
               quote="USDT"
-              currentPrice={feed.price}
+              currentPrice={chartLastPrice ?? feed.price}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}

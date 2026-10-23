@@ -65,6 +65,7 @@ function SpotTrades() {
   const [tradeMode, setTradeMode] = useState<TradeMode>("spot");
   const [leverage, setLeverage] = useState(1);
   const [clickedPrice, setClickedPrice] = useState<number | null>(null);
+  const [chartLastPrice, setChartLastPrice] = useState<number | null>(null);
   
   // Mobile chart toggle
   const [chartExpanded, setChartExpanded] = useState(false);
@@ -537,6 +538,7 @@ function SpotTrades() {
               orderLevels={chartOrderLevels}
               priceRange={{ min: feed.low24h, max: feed.high24h }}
               lastPrice={lastTradedPrice}
+              onLastPriceChange={setChartLastPrice}
             />
             
             {/* Mobile chart expand toggle */}
@@ -705,7 +707,7 @@ function SpotTrades() {
           recentTradesLoading={recentTradesLoading}
           base={base}
           quote={quote}
-          currentPrice={feed.price}
+          currentPrice={chartLastPrice ?? feed.price}
           buyPercentage={orderBook.buyPercentage}
           sellPercentage={orderBook.sellPercentage}
           isConnected={orderBook.isConnected}
@@ -883,6 +885,7 @@ function SpotTrades() {
                 orderLevels={chartOrderLevels}
                 priceRange={{ min: feed.low24h, max: feed.high24h }}
                 lastPrice={lastTradedPrice}
+                onLastPriceChange={setChartLastPrice}
               />
             </div>
             
@@ -905,7 +908,7 @@ function SpotTrades() {
               recentTradesLoading={recentTradesLoading}
               base={base}
               quote={quote}
-              currentPrice={feed.price}
+              currentPrice={chartLastPrice ?? feed.price}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -1050,7 +1053,7 @@ function SpotTrades() {
               recentTradesLoading={recentTradesLoading}
               base={base}
               quote={quote}
-              currentPrice={feed.price}
+              currentPrice={chartLastPrice ?? feed.price}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
