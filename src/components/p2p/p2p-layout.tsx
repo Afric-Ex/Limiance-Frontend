@@ -44,7 +44,7 @@ export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex flex-col h-full w-full">
       {/* P2P Header Nav */}
-      <nav className="flex items-center gap-7 max-[600px]:gap-5 border-b border-white/[0.06] mb-6 px-4 overflow-x-auto whitespace-nowrap w-full max-w-7xl mx-auto min-h-11">
+      <nav className="flex items-center gap-6 max-[600px]:gap-5 border-b border-white/[0.06] mb-6 px-4 overflow-x-auto whitespace-nowrap w-full max-w-7xl mx-auto min-h-10">
         {navLinks.map((item) => {
           const isActive = pathname === item.link || (item.link !== "/trades/p2p" && pathname.startsWith(item.link));
           return (
@@ -52,7 +52,7 @@ export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
               key={item.name}
               href={item.link}
               className={clsx(
-                "text-base max-[600px]:text-sm font-medium leading-none transition-colors py-3 border-b-2 -mb-px",
+                "text-sm font-medium leading-none transition-colors py-2.5 border-b-2 -mb-px",
                 isActive 
                   ? "text-white border-primary" 
                   : "text-white/55 border-transparent hover:text-white"
@@ -61,7 +61,7 @@ export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
               <div className="flex items-center gap-1.5">
                 {item.name}
                 {item.name === "Orders" && processingCount > 0 && (
-                  <span className="ml-2 inline-flex items-center justify-center bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px]">
+                  <span className="ml-2 inline-flex items-center justify-center bg-yellow-500 text-black text-[10px] font-bold px-1 rounded-md min-w-[18px] h-[18px]">
                     {processingCount}
                   </span>
                 )}

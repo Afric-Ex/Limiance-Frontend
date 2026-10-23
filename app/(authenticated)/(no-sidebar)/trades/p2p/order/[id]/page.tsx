@@ -8,7 +8,13 @@ import { OrderCancelledOverlay } from "@/src/components/p2p/order-cancelled-over
 import { ChatWindow } from "@/src/components/p2p/chat-window";
 import { Loader, Button, Modal } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { useGetMatchedOrder, useUpdateMatchedOrder, useRequestReleaseCode, useReleaseOrder, useAddReview } from "@/src/hooks/p2p/use-p2p";
+import {
+  useGetMatchedOrder,
+  useUpdateMatchedOrder,
+  useRequestReleaseCode,
+  useReleaseOrder,
+  useAddReview,
+} from "@/src/hooks/p2p/use-p2p";
 import { useP2PMatchRoom } from "@/src/hooks/p2p/use-p2p-realtime";
 import { useQuery } from "@tanstack/react-query";
 import { p2p, p2pKey } from "@/src/services/p2p";
@@ -18,6 +24,7 @@ import { hasReviewForOrder, saveP2PReview } from "@/src/lib/p2p-user-actions";
 import { TotpGateModal } from "@/src/components/transactions/totp-gate-modal";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { P2PMatchStatus } from "@/src/lib/status-constants";
+import { MdArrowBack, MdCheck, MdWarning, MdInfoOutline } from "react-icons/md";
 
 import { BuyerPendingPanel } from "@/src/components/p2p/buyer-pending-panel";
 import { BuyerPaidPanel } from "@/src/components/p2p/buyer-paid-panel";
@@ -38,7 +45,7 @@ function OrderRoomPageInner() {
   const [releaseModalOpen, setReleaseModalOpen] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [disputeOpen, setDisputeOpen] = useState(false);
-  
+
   const [otpValue, setOtpValue] = useState("");
   const [otpRequested, setOtpRequested] = useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
@@ -47,7 +54,7 @@ function OrderRoomPageInner() {
   const [feedbackSkipped, setFeedbackSkipped] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [cancelledNoticeDismissed, setCancelledNoticeDismissed] = useState(false);
-  
+
   const user = useUserStore((state) => state.user);
   const userLoading = useUserStore((state) => state.loading);
   const userHydrated = useUserStore((state) => state.hydrated);
@@ -62,7 +69,6 @@ function OrderRoomPageInner() {
 
   const order: any = (orderData as any)?.data?.data;
 
-  // Fetch the original P2P ad/order to get price, currency and other missing fields
   const originalOrderId = order?.orderId;
   const { data: originalOrderData } = useQuery({
     queryKey: p2pKey.orderById(originalOrderId ?? ""),
@@ -71,15 +77,7 @@ function OrderRoomPageInner() {
   });
   const originalOrder: any = (originalOrderData as any)?.data?.data;
 
-  // Derive useful values
   const status: string = order?.status ?? "";
-  // The API returns `matcherId` but NOT `userId` or `advertiserId`
-  // Use matcherId to determine our role:
-  //   If matcherId === currentUserId → we are the Matcher
-  //   Otherwise → we are the Advertiser (creator of the ad)
-  // Role maps to Buyer/Seller based on ad type:
-  //   BUY ad:  Advertiser = Buyer (pays fiat),  Matcher = Seller (releases crypto)
-  //   SELL ad: Advertiser = Seller (releases crypto), Matcher = Buyer (pays fiat)
   const adType: string = (order?.type ?? "").toUpperCase();
   const currentUserId = user?.id != null ? String(user.id) : "";
   const isMatcher = Boolean(
@@ -91,15 +89,13 @@ function OrderRoomPageInner() {
     order?.buyerId && currentUserId
       ? String(order.buyerId) === currentUserId
       : isAdvertiser
-        ? adType === "BUY"
-        : adType === "SELL";
+      ? adType === "BUY"
+      : adType === "SELL";
   const isSeller = !isBuyer;
 
-  // Backend uses PARTIALLY_COMPLETED to mean "buyer confirmed payment" (= PAID state)
-  // FULFILLED also means buyer has paid
-  const normalizedStatus = 
+  const normalizedStatus =
     status.toUpperCase() === "PARTIALLY_COMPLETED" || status.toUpperCase() === "FULFILLED"
-      ? "PAID" 
+      ? "PAID"
       : status.toUpperCase();
 
   const asset = order?.asset ?? originalOrder?.asset ?? "";
@@ -110,13 +106,11 @@ function OrderRoomPageInner() {
   const paymentMethod = order?.paymentMethod;
   const counterpartyId = isAdvertiser ? order?.matcherId : order?.advertiserId;
   const counterpartyName = isAdvertiser
-    ? (order?.matcherName || order?.buyerName || order?.sellerName || "Trader")
-    : (order?.advertiserName || order?.sellerName || order?.buyerName || "Advertiser");
+    ? order?.matcherName || order?.buyerName || order?.sellerName || "Trader"
+    : order?.advertiserName || order?.sellerName || order?.buyerName || "Advertiser";
 
   const existingFeedbackSubmitted = !!order?.review || hasReviewForOrder(orderId) || feedbackSubmitted;
 
-  // Helper: parse Go backend's non-standard UTC date format
-  // e.g. "2026-06-10 11:34:54.503001 +0000 UTC" → valid JS Date
   const parseBackendDate = (dateStr: string): Date | null => {
     if (!dateStr || dateStr.startsWith("0001")) return null;
     const match = dateStr
@@ -132,15 +126,13 @@ function OrderRoomPageInner() {
           (Math.abs(Number(offsetHour)) * 60 + Number(offsetMinute ?? 0))
         : 0;
       return new Date(
-        Date.UTC(+year, +month - 1, +day, +hour, +minute, +second, millis) -
-          offset * 60000
+        Date.UTC(+year, +month - 1, +day, +hour, +minute, +second, millis) - offset * 60000
       );
     }
     const parsed = new Date(dateStr);
     return isNaN(parsed.getTime()) ? null : parsed;
   };
 
-  // Use expiryTime from backend directly — avoids server clock skew issues
   const deadlineDate = parseBackendDate(order?.expiryTime ?? "");
   const deadlineStr = deadlineDate
     ? deadlineDate.toISOString()
@@ -163,8 +155,6 @@ function OrderRoomPageInner() {
 
   const handleCancel = (reason: string) => {
     void reason;
-    // Reason is passed from modal but intentionally omitted from API payload
-    // because the backend UpdateOrderMatch struct does not support it.
     updateStatus(
       { orderMatchId: orderId, status: P2PMatchStatus.CANCELLED },
       {
@@ -186,7 +176,6 @@ function OrderRoomPageInner() {
       });
     };
 
-    // If 2FA is enabled, gate behind TOTP first, then send email OTP
     if (user?.twoFaEnabled) {
       modals.open({
         children: (
@@ -247,7 +236,11 @@ function OrderRoomPageInner() {
             advertiserId: counterpartyId,
             advertiserName: counterpartyName,
             reviewerId: user?.id || "current-user",
-            reviewerName: user?.username || [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Anonymous user",
+            reviewerName:
+              user?.username ||
+              [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+              user?.email ||
+              "Anonymous user",
             rating,
             numericRating: rating === "POSITIVE" ? 5 : 1,
             review: comment.trim(),
@@ -264,9 +257,9 @@ function OrderRoomPageInner() {
   if (isLoading || !userHydrated) {
     return (
       <P2PLayout>
-        <div className="flex flex-col justify-center items-center h-full min-h-[500px] gap-4">
-          <Loader color="yellow" size="lg" />
-          <p className="text-white/40 text-sm">Loading order...</p>
+        <div className="flex flex-col justify-center items-center h-full min-h-[500px] gap-3">
+          <Loader color="blue" size="md" />
+          <p className="text-white/40 text-xs">Loading trade details...</p>
         </div>
       </P2PLayout>
     );
@@ -275,13 +268,12 @@ function OrderRoomPageInner() {
   if (!user?.id) {
     return (
       <P2PLayout>
-        <div className="flex flex-col justify-center items-center h-full min-h-[400px] gap-4 text-center">
-          <p className="text-white/60 text-sm">
-            We couldn&apos;t load your account details. Your trade actions and
-            chat need your session identity.
+        <div className="flex flex-col justify-center items-center h-full min-h-[400px] gap-3 text-center bg-[#181a20] border border-white/[0.07] rounded-xl p-8 max-w-md mx-auto my-6">
+          <p className="text-white/60 text-xs leading-relaxed">
+            We couldn&apos;t load your session details. Your trade actions and chat require an authenticated account.
           </p>
           <Button
-            className="mt-2"
+            className="mt-2 !bg-primary hover:!bg-primary/90 !text-white !h-8 !text-xs !font-semibold !rounded-lg"
             loading={userLoading}
             onClick={() => void fetchUser()}
           >
@@ -295,36 +287,41 @@ function OrderRoomPageInner() {
   if (!order) {
     return (
       <P2PLayout>
-        <div className="flex flex-col items-center justify-center py-20 text-white/50">
-          <div className="text-4xl mb-4">⚠️</div>
-          <div className="text-white/70">Order not found.</div>
-          <Button className="mt-4" onClick={() => router.push("/trades/p2p/orders")}>View All Orders</Button>
+        <div className="flex flex-col items-center justify-center py-16 text-white/50 bg-[#181a20] border border-white/[0.07] rounded-xl max-w-md mx-auto my-6 p-6 text-center">
+          <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center text-white/30 mb-3">
+            <MdInfoOutline size={22} />
+          </div>
+          <div className="text-white/80 font-medium text-sm mb-1">Order Not Found</div>
+          <p className="text-white/40 text-xs mb-4">This trade does not exist or you do not have permission to access it.</p>
+          <Button
+            className="!bg-primary hover:!bg-primary/90 !text-white !h-8 !text-xs !font-semibold !rounded-lg"
+            onClick={() => router.push("/trades/p2p/orders")}
+          >
+            View All Orders
+          </Button>
         </div>
       </P2PLayout>
     );
   }
 
   const statusConfig: Record<string, { label: string; color: string }> = {
-    PENDING: { label: "Pending Payment", color: "text-red-400 bg-red-400/10 border-red-400/20" },
-    PAID: { label: "Payment Confirmed", color: "text-blue-400 bg-blue-400/10 border-blue-400/20" },
-    PARTIALLY_COMPLETED: { label: "Payment Confirmed", color: "text-blue-400 bg-blue-400/10 border-blue-400/20" },
-    RELEASED: { label: "Released", color: "text-green-400 bg-green-400/10 border-green-400/20" },
-    COMPLETED: { label: "Completed", color: "text-green-400 bg-green-400/10 border-green-400/20" },
-    CANCELLED: { label: "Cancelled", color: "text-red-400 bg-red-400/10 border-red-400/20" },
-    DISPUTED: { label: "Disputed", color: "text-orange-400 bg-orange-400/10 border-orange-400/20" },
+    PENDING: { label: "Pending Payment", color: "text-[#FBA42A] bg-[#FBA42A]/10 border-[#FBA42A]/20" },
+    PAID: { label: "Payment Confirmed", color: "text-[#4d77f0] bg-[#4d77f0]/10 border-[#4d77f0]/20" },
+    PARTIALLY_COMPLETED: { label: "Payment Confirmed", color: "text-[#4d77f0] bg-[#4d77f0]/10 border-[#4d77f0]/20" },
+    RELEASED: { label: "Released", color: "text-buy bg-buy/10 border-buy/20" },
+    COMPLETED: { label: "Completed", color: "text-buy bg-buy/10 border-buy/20" },
+    CANCELLED: { label: "Cancelled", color: "text-white/40 bg-white/[0.05] border-white/[0.07]" },
+    DISPUTED: { label: "Disputed", color: "text-[#F6465D] bg-[#F6465D]/10 border-[#F6465D]/20" },
   };
 
-  const statusInfo = statusConfig[status.toUpperCase()] ?? { label: status, color: "text-white/50 bg-white/5 border-white/10" };
+  const statusInfo = statusConfig[status.toUpperCase()] ?? {
+    label: status,
+    color: "text-white/40 bg-white/[0.05] border-white/[0.07]",
+  };
 
   return (
     <P2PLayout>
-      <div className="relative min-h-[calc(100vh-100px)] w-full max-w-[1400px] mx-auto py-6 max-[1150px]:py-4 px-4 font-sans max-[1150px]:pb-[90px] page-enter">
-        
-        {/* Background */}
-        <div className="absolute top-0 left-10 w-[400px] h-[400px] bg-indigo-600/5 rounded-full blur-[120px] opacity-40 pointer-events-none"></div>
-        <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-slate-600/5 rounded-full blur-[140px] opacity-30 pointer-events-none"></div>
-
-        <div className="relative z-10 w-full h-full">
+      <div className="w-full max-w-7xl mx-auto py-6 max-[1150px]:py-4 px-4 max-[1150px]:pb-[90px] page-enter">
         {/* Completed/Cancelled overlays */}
         {(normalizedStatus === "COMPLETED" || normalizedStatus === "RELEASED") && !feedbackSkipped && (
           <OrderCompletedOverlay
@@ -354,86 +351,130 @@ function OrderRoomPageInner() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => router.push("/trades/p2p/orders")} 
-              className="group flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all backdrop-blur-md"
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push("/trades/p2p/orders")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.07] text-white/60 hover:text-white transition-colors text-xs font-medium"
             >
-              <span className="text-white/70 group-hover:text-white group-hover:-translate-x-0.5 transition-transform">←</span>
+              <MdArrowBack size={14} />
+              <span>Orders</span>
             </button>
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="text-white text-xl font-bold tracking-tight">Order <span className="font-mono text-white/50">#{orderId.slice(-8).toUpperCase()}</span></span>
-                <span className={`text-xs font-bold px-3 py-1 rounded-full border shadow-sm backdrop-blur-md ${statusInfo.color}`}>{statusInfo.label}</span>
-              </div>
+            <div className="flex items-center gap-2.5">
+              <span className="text-white text-base font-semibold">
+                Order <span className="font-mono text-white/50">#{orderId.slice(-8).toUpperCase()}</span>
+              </span>
+              <span
+                className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border uppercase tracking-wider ${statusInfo.color}`}
+              >
+                {statusInfo.label}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Main split layout */}
-        <div className="flex flex-col min-[1150px]:flex-row gap-6 min-[1150px]:h-[calc(100vh-220px)] min-h-[600px] max-[1150px]:min-h-0">
+        <div className="flex flex-col min-[1150px]:flex-row gap-5 min-[1150px]:h-[calc(100vh-210px)] min-h-[600px] max-[1150px]:min-h-0">
           {/* LEFT: Order Details Panel */}
-          <div className="min-[1150px]:w-[50%] xl:w-[45%] overflow-y-auto custom-scrollbar pr-0 min-[1150px]:pr-2 pb-10 max-[1150px]:pb-0">
-            <div className="bg-elevated/80 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-2xl max-[1150px]:rounded-xl p-6 min-[1150px]:p-8 max-[1150px]:p-4 flex flex-col relative overflow-hidden">
-              
-              {/* Subtle inner highlight for 3D glass effect */}
-              <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-              
+          <div className="min-[1150px]:w-[50%] xl:w-[45%] overflow-y-auto custom-scrollbar pr-0 min-[1150px]:pr-1 pb-10 max-[1150px]:pb-0">
+            <div className="bg-[#181a20] border border-white/[0.07] rounded-xl p-5 min-[1150px]:p-6 flex flex-col">
               {/* Step indicator */}
-              <div className="mb-8 relative">
+              <div className="mb-6 relative">
                 <div className="flex items-center justify-between relative z-10">
-                  {["Created", "Payment", "Released"].map((step, i) => {
+                  {["Order Placed", "Fiat Payment", "Crypto Released"].map((step, i) => {
                     const stepNum = i + 1;
-                    const currentStep = normalizedStatus === "PENDING" ? 2 : normalizedStatus === "PAID" ? 2 : (normalizedStatus === "RELEASED" || normalizedStatus === "COMPLETED") ? 3 : 1;
+                    const currentStep =
+                      normalizedStatus === "PENDING"
+                        ? 2
+                        : normalizedStatus === "PAID"
+                        ? 2
+                        : normalizedStatus === "RELEASED" || normalizedStatus === "COMPLETED"
+                        ? 3
+                        : 1;
                     const done = stepNum < currentStep;
                     const active = stepNum === currentStep;
                     return (
-                      <div key={step} className="flex flex-col items-center gap-2 relative bg-elevated px-2">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-500
-                          ${active ? "border-2 border-red-400 bg-red-400/20 text-red-400" 
-                            : done ? "border-2 border-buy bg-buy/20 text-buy" 
-                            : "border border-white/10 bg-white/5 text-white/30"}`}
+                      <div key={step} className="flex flex-col items-center gap-1.5 bg-[#181a20] px-2">
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${
+                            active
+                              ? "border border-primary bg-primary/10 text-primary"
+                              : done
+                              ? "border border-buy bg-buy/10 text-buy"
+                              : "border border-white/10 bg-white/[0.02] text-white/30"
+                          }`}
                         >
-                          {done ? "✓" : stepNum}
+                          {done ? <MdCheck size={14} /> : stepNum}
                         </div>
-                        <span className={`text-xs font-semibold tracking-wide ${active ? "text-white" : done ? "text-buy" : "text-white/30"}`}>{step}</span>
+                        <span
+                          className={`text-[11px] font-medium tracking-tight ${
+                            active ? "text-white" : done ? "text-buy" : "text-white/35"
+                          }`}
+                        >
+                          {step}
+                        </span>
                       </div>
                     );
                   })}
                 </div>
-                {/* Connecting Lines */}
-                <div className="absolute top-[16px] left-8 right-8 h-[2px] bg-white/5 -z-0">
-                   <div className="h-full bg-gradient-to-r from-[#0ECB81] to-red-400 transition-all duration-1000" 
-                        style={{ width: normalizedStatus === 'PENDING' ? '50%' : normalizedStatus === 'PAID' ? '75%' : '100%' }}></div>
+                <div className="absolute top-[14px] left-10 right-10 h-[1px] bg-white/[0.08] -z-0">
+                  <div
+                    className="h-full bg-buy transition-all duration-500"
+                    style={{
+                      width:
+                        normalizedStatus === "PENDING"
+                          ? "50%"
+                          : normalizedStatus === "PAID"
+                          ? "50%"
+                          : normalizedStatus === "RELEASED" || normalizedStatus === "COMPLETED"
+                          ? "100%"
+                          : "0%",
+                    }}
+                  />
                 </div>
               </div>
 
               {/* Order Summary */}
-              <div className="bg-black/20 rounded-xl p-5 border border-white/5 mb-6">
-                <div className="text-white/40 text-[10px] uppercase tracking-widest mb-4 font-bold flex items-center gap-2">
-                  <div className="w-1 h-1 rounded-full bg-white/40"></div>
-                  Order Details
+              <div className="bg-white/[0.02] rounded-lg p-4 border border-white/[0.05] mb-4">
+                <div className="text-white/35 text-[10px] uppercase tracking-wider mb-3 font-semibold">
+                  Transaction Summary
                 </div>
-                <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
-                  {[
-                    { label: isBuyer ? "You Receive" : "Locked in Escrow", value: <span className="font-bold text-white text-base">{quantity.toLocaleString()} <span className="text-white/60 text-sm">{asset}</span></span> },
-                    { label: isBuyer ? "You Pay" : "You Receive", value: <span className="font-bold text-buy text-base drop-shadow-[0_0_8px_rgba(14,203,129,0.4)]">{fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-buy/60 text-sm">{fiat}</span></span> },
-                    { label: "Price", value: `${price.toLocaleString()} ${fiat}/${asset}` },
-                    { label: "Counterparty", value: <span className="text-white/90 font-medium">{counterpartyName || "—"}</span> },
-                    { label: "Order Time", value: <span className="text-white/70">{parseBackendDate(order.createdAt ?? "")?.toLocaleString() ?? "—"}</span> },
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex flex-col gap-1">
-                      <div className="text-white/40 text-xs">{item.label}</div>
-                      <div className="text-white/90">{item.value}</div>
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-xs">
+                  <div className="flex flex-col gap-0.5">
+                    <div className="text-white/40">{isBuyer ? "You Receive" : "Locked in Escrow"}</div>
+                    <div className="font-semibold text-white font-mono text-sm">
+                      {quantity.toLocaleString()} <span className="text-white/50 text-xs font-sans">{asset}</span>
                     </div>
-                  ))}
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <div className="text-white/40">{isBuyer ? "You Pay" : "You Receive"}</div>
+                    <div className="font-semibold text-buy font-mono text-sm">
+                      {fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}{" "}
+                      <span className="text-buy/60 text-xs font-sans">{fiat}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <div className="text-white/40">Unit Price</div>
+                    <div className="text-white font-mono">
+                      {price.toLocaleString()} {fiat}/{asset}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <div className="text-white/40">Counterparty</div>
+                    <div className="text-white/90 font-medium truncate">{counterpartyName || "—"}</div>
+                  </div>
+                  <div className="flex flex-col gap-0.5 col-span-2">
+                    <div className="text-white/40">Order Timestamp</div>
+                    <div className="text-white/70">
+                      {parseBackendDate(order.createdAt ?? "")?.toLocaleString() ?? "—"}
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Dynamic Conditional Panels based on Role and Status */}
               {normalizedStatus === "PENDING" && isBuyer && (
-                <BuyerPendingPanel 
+                <BuyerPendingPanel
                   orderId={orderId}
                   fiatAmount={fiatAmount}
                   fiat={fiat}
@@ -446,7 +487,7 @@ function OrderRoomPageInner() {
               )}
 
               {normalizedStatus === "PAID" && isBuyer && (
-                <BuyerPaidPanel 
+                <BuyerPaidPanel
                   counterpartyName={counterpartyName}
                   quantity={quantity}
                   asset={asset}
@@ -456,7 +497,7 @@ function OrderRoomPageInner() {
               )}
 
               {normalizedStatus === "PENDING" && isSeller && (
-                <SellerPendingPanel 
+                <SellerPendingPanel
                   fiatAmount={fiatAmount}
                   fiat={fiat}
                   paymentMethod={paymentMethod}
@@ -466,7 +507,7 @@ function OrderRoomPageInner() {
               )}
 
               {normalizedStatus === "PAID" && isSeller && (
-                <SellerPaidPanel 
+                <SellerPaidPanel
                   counterpartyName={counterpartyName}
                   fiatAmount={fiatAmount}
                   fiat={fiat}
@@ -479,26 +520,25 @@ function OrderRoomPageInner() {
 
               {/* Read Only views for terminal states */}
               {(normalizedStatus === "COMPLETED" || normalizedStatus === "RELEASED") && (
-                <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-5 text-center mt-6">
-                  <div className="text-green-400 font-bold text-lg mb-1">Order Completed</div>
-                  <p className="text-white/60 text-sm">Crypto was successfully released from escrow.</p>
+                <div className="bg-buy/[0.08] border border-buy/20 rounded-lg p-4 text-center mt-4">
+                  <div className="text-buy font-semibold text-sm mb-1">Order Completed</div>
+                  <p className="text-white/55 text-xs">Cryptocurrency was released from platform escrow successfully.</p>
                 </div>
               )}
 
               {normalizedStatus === "CANCELLED" && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-5 text-center mt-6">
-                  <div className="text-red-400 font-bold text-lg mb-1">Order Cancelled</div>
-                  <p className="text-white/60 text-sm">This order was cancelled. No assets were exchanged.</p>
+                <div className="bg-white/[0.03] border border-white/[0.07] rounded-lg p-4 text-center mt-4">
+                  <div className="text-white/70 font-semibold text-sm mb-1">Order Cancelled</div>
+                  <p className="text-white/40 text-xs">This trade has been cancelled. No assets were exchanged.</p>
                 </div>
               )}
 
               {normalizedStatus === "DISPUTED" && (
-                <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-5 text-center mt-6">
-                  <div className="text-orange-400 font-bold text-lg mb-1">Order under Dispute</div>
-                  <p className="text-white/60 text-sm">Our support team is reviewing this transaction. Please monitor your email.</p>
+                <div className="bg-[#F6465D]/10 border border-[#F6465D]/20 rounded-lg p-4 text-center mt-4">
+                  <div className="text-[#F6465D] font-semibold text-sm mb-1">Under Mediation / Dispute</div>
+                  <p className="text-white/60 text-xs">Our dispute team is reviewing this case. Check chat and email for updates.</p>
                 </div>
               )}
-
             </div>
           </div>
 
@@ -507,16 +547,15 @@ function OrderRoomPageInner() {
             {order?.chatId ? (
               <ChatWindow chatId={order.chatId} currentUserId={currentUserId} />
             ) : (
-              <div className="flex justify-center items-center h-full bg-elevated rounded-xl border border-white/5">
-                <span className="text-white/40 text-sm">Chat is not available for this order</span>
+              <div className="flex justify-center items-center h-full bg-[#181a20] rounded-xl border border-white/[0.07]">
+                <span className="text-white/40 text-xs">Chat is not available for this trade</span>
               </div>
             )}
           </div>
         </div>
       </div>
-      </div>
 
-      <CancelOrderModal 
+      <CancelOrderModal
         opened={cancelModalOpen}
         onClose={() => setCancelModalOpen(false)}
         isBuyer={isBuyer}
@@ -527,7 +566,7 @@ function OrderRoomPageInner() {
         handleCancel={handleCancel}
       />
 
-      <ReleaseCryptoModal 
+      <ReleaseCryptoModal
         opened={releaseModalOpen}
         onClose={() => setReleaseModalOpen(false)}
         quantity={quantity}
@@ -553,43 +592,54 @@ function OrderRoomPageInner() {
         onSuccess={() => refetch()}
       />
 
-      {/* Payment Confirmation Modal */}
+      {/* In-page Payment Confirmation Modal */}
       <Modal
         opened={paymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
         title="Confirm Payment Sent"
         centered
         classNames={{
-          content: "bg-elevated border border-white/10 backdrop-blur-xl",
-          header: "bg-elevated border-b border-white/5",
-          title: "text-white font-bold text-lg",
-          close: "text-white/50 hover:text-white",
+          content: "!bg-[#181a20] !border !border-white/[0.08] !text-white !rounded-xl",
+          header: "!bg-[#181a20] !border-b !border-white/[0.06] !text-white",
+          title: "!text-white !font-semibold !text-base",
+          close: "!text-white/40 hover:!text-white hover:!bg-white/[0.06]",
         }}
       >
-        <div className="flex flex-col gap-5 pt-2">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-5 text-sm">
-            <div className="text-white/50 text-xs uppercase tracking-wider mb-2">You are confirming you sent:</div>
-            <div className="text-white font-bold text-2xl">{fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-white/60 text-lg">{fiat}</span></div>
-            <div className="text-white/50 mt-1 text-xs">via {paymentMethod?.data?.bankName ?? paymentMethod?.method ?? "transfer"}</div>
+        <div className="flex flex-col gap-4 pt-2">
+          <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-4 text-xs">
+            <div className="text-white/40 uppercase tracking-wider text-[10px] mb-1.5">You are confirming payment of:</div>
+            <div className="text-white font-bold text-xl font-mono">
+              {fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}{" "}
+              <span className="text-white/60 text-sm font-sans">{fiat}</span>
+            </div>
+            <div className="text-white/50 mt-1">
+              via {paymentMethod?.data?.bankName ?? paymentMethod?.method ?? "bank transfer"}
+            </div>
           </div>
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-xs flex items-start gap-2">
-            <span className="text-base">⚠️</span>
-            <span>Only confirm if you have <strong>ACTUALLY</strong> sent the payment. False confirmations may lead to account restrictions.</span>
+          <div className="bg-[#FBA42A]/10 border border-[#FBA42A]/20 rounded-lg p-3 text-[#FBA42A] text-xs flex items-start gap-2 leading-relaxed">
+            <MdWarning size={15} className="shrink-0 mt-0.5" />
+            <span>
+              Only confirm if you have <strong>actually</strong> completed the transfer in your bank app. False
+              confirmations will restrict your trading privileges.
+            </span>
           </div>
-          <div className="flex gap-3">
-            <button 
+          <div className="flex gap-2.5 mt-1">
+            <button
               onClick={() => setPaymentModalOpen(false)}
-              className="flex-1 h-11 rounded-xl border border-white/20 text-white/70 hover:text-white hover:bg-white/5 transition-all text-sm font-medium"
-            >Cancel</button>
-            <button 
+              className="flex-1 h-10 rounded-lg border border-white/[0.08] bg-white/[0.04] text-white/70 hover:text-white hover:bg-white/[0.07] transition-colors text-xs font-semibold"
+            >
+              Cancel
+            </button>
+            <button
               onClick={handleConfirmPayment}
               disabled={isUpdating}
-              className="flex-1 h-11 rounded-xl bg-buy hover:bg-emerald-500 text-white font-bold transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >{isUpdating ? "Confirming..." : "Yes, I've Paid"}</button>
+              className="flex-1 h-10 rounded-lg bg-buy hover:bg-buy/90 text-white font-semibold transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isUpdating ? "Confirming..." : "Yes, I've Paid"}
+            </button>
           </div>
         </div>
       </Modal>
-
     </P2PLayout>
   );
 }

@@ -55,16 +55,15 @@ export const ReportUserModal = ({
       title="Report User"
       centered
       classNames={{
-        content: "bg-gray-900 text-white",
-        header: "bg-gray-900 text-white border-b border-white/10",
-        title: "text-lg font-bold text-yellow-400",
-        close: "text-white hover:bg-white/10",
+        content: "!bg-[#181a20] !border !border-white/[0.08] !text-white !rounded-xl",
+        header: "!bg-[#181a20] !border-b !border-white/[0.06] !text-white",
+        title: "!text-white !font-semibold !text-base",
+        close: "!text-white/40 hover:!text-white hover:!bg-white/[0.06]",
       }}
     >
       <div className="flex flex-col gap-4 py-2">
-        <p className="text-sm text-white/80">
-          Tell us why you are reporting{" "}
-          <strong className="text-white">{username}</strong>.
+        <p className="text-xs text-white/70">
+          Tell us why you are reporting <strong className="text-white">{username}</strong>.
         </p>
 
         <Select
@@ -74,38 +73,38 @@ export const ReportUserModal = ({
           onChange={setReason}
           allowDeselect={false}
           classNames={{
-            label: "!text-white/70 !mb-1.5 !text-sm",
+            label: "!text-white/60 !mb-1.5 !text-xs font-medium",
             input:
-              "!bg-black/40 !border-white/10 !text-white focus:!border-yellow-400",
-            dropdown: "!bg-gray-900 !border !border-white/10",
-            option: "!text-white",
+              "!bg-white/[0.04] !border-white/[0.08] !text-white focus:!border-primary/50 !h-10 !rounded-lg !text-xs",
+            dropdown: "!bg-[#181a20] !border !border-white/[0.09] !text-white !rounded-lg !shadow-2xl",
+            option:
+              "hover:!bg-white/[0.08] data-[combobox-selected]:!bg-primary/20 data-[combobox-selected]:!text-primary !rounded-md !mx-1 !my-0.5 !text-xs !transition-colors",
           }}
         />
 
         <Textarea
-          label="Additional details"
-          placeholder="Add anything useful for review"
+          label="Additional Details"
+          placeholder="Provide any context or evidence..."
           minRows={3}
           value={details}
           onChange={(event) => setDetails(event.currentTarget.value)}
           classNames={{
-            label: "!text-white/70 !mb-1.5 !text-sm",
+            label: "!text-white/60 !mb-1.5 !text-xs font-medium",
             input:
-              "!bg-black/40 !border-white/10 !text-white focus:!border-yellow-400",
+              "!bg-white/[0.04] !border-white/[0.08] !text-white focus:!border-primary/50 !rounded-lg !text-xs !p-3",
           }}
         />
 
-        <div className="flex gap-3 mt-2">
+        <div className="flex gap-2.5 mt-2">
           <Button
-            variant="light"
-            color="gray"
-            className="flex-1 bg-white/5 hover:bg-white/10 text-white"
+            variant="subtle"
+            className="flex-1 !bg-white/[0.06] hover:!bg-white/[0.1] !border !border-white/[0.08] !text-white !h-10 !rounded-lg !text-xs !font-semibold"
             onClick={handleClose}
           >
             Cancel
           </Button>
           <Button
-            className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black"
+            className="flex-1 !bg-primary hover:!bg-primary/90 !text-white !h-10 !rounded-lg !text-xs !font-semibold"
             onClick={handleSubmit}
             loading={isSubmitting}
           >

@@ -9,9 +9,11 @@ import { tradingKeys, tradingService } from "@/src/services/trading";
 import { fiatKeys, fiatService } from "@/src/services/fiat";
 
 const selectClassNames = {
-  input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white h-11 rounded-xl focus:border-buy focus:ring-1 focus:ring-buy/30 transition-all font-semibold",
-  dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
-  option: "hover:bg-white/10 data-[combobox-selected]:bg-buy/20 data-[combobox-selected]:text-buy rounded-lg mx-1 my-0.5 transition-colors",
+  input:
+    "!bg-white/[0.04] !border-white/[0.07] hover:!border-white/[0.14] focus:!border-primary/50 !text-white !h-10 !rounded-lg !font-medium !text-xs !transition-colors",
+  dropdown: "!bg-[#181a20] !border !border-white/[0.09] !text-white !rounded-lg !shadow-2xl",
+  option:
+    "hover:!bg-white/[0.08] data-[combobox-selected]:!bg-primary/20 data-[combobox-selected]:!text-primary !rounded-md !mx-1 !my-0.5 !text-xs !transition-colors",
 };
 
 type FilterOption = { value: string; label: string; image?: string };
@@ -47,7 +49,7 @@ const OptionIcon = ({ src, label }: { src?: string; label: string }) => {
 
   if (!src || failed) {
     return (
-      <span className="w-5 h-5 rounded-full bg-white/10 border border-white/10 text-[9px] font-bold text-white/70 flex items-center justify-center shrink-0">
+      <span className="w-4 h-4 rounded-full bg-white/10 border border-white/10 text-[9px] font-bold text-white/70 flex items-center justify-center shrink-0">
         {label.slice(0, 2)}
       </span>
     );
@@ -57,10 +59,10 @@ const OptionIcon = ({ src, label }: { src?: string; label: string }) => {
     <img
       src={src}
       alt=""
-      width={20}
-      height={20}
+      width={18}
+      height={18}
       loading="lazy"
-      className="w-5 h-5 rounded-full object-cover shrink-0"
+      className="w-4 h-4 rounded-full object-cover shrink-0"
       onError={() => setFailed(true)}
     />
   );
@@ -69,16 +71,13 @@ const OptionIcon = ({ src, label }: { src?: string; label: string }) => {
 const renderOption = ({ option }: { option: FilterOption }) => (
   <div className="flex items-center gap-2">
     <OptionIcon src={option.image} label={option.label} />
-    <span>{option.label}</span>
+    <span className="text-xs">{option.label}</span>
   </div>
 );
 
 export const FilterBar = () => {
   const { adFilters, setAdFilters } = useP2PStore();
 
-  // Listed tokens for the asset picker — the backend's own supported-token list.
-  // `listed_tokens` answers one row per token per chain, so collapse to one
-  // entry per symbol (same aggregation the ads/deposit pickers use).
   const { data: listedTokens, isLoading: tokensLoading } = useQuery({
     queryKey: assetKeys.supportedTokensKey("all"),
     queryFn: () => asset.fetchSupportedTokens({ limit: 1000 }),
@@ -103,7 +102,6 @@ export const FilterBar = () => {
     return [...bySymbol.values()];
   }, [listedTokens]);
 
-  // Listed fiat currencies for the fiat picker
   const { data: listedCurrencies, isLoading: currenciesLoading } = useQuery({
     queryKey: tradingKeys.listedCurrencies,
     queryFn: () => tradingService.listedCurrencies({ limit: 200 }),
@@ -120,8 +118,7 @@ export const FilterBar = () => {
         typeof row === "string" ? row : row?.symbol ?? row?.code ?? row?.currency ?? row?.name ?? ""
       ).trim().toUpperCase();
       if (!code) continue;
-      const image =
-        firstImage(row?.logo, row?.image, row?.icon) ?? CURRENCY_ICONS[code];
+      const image = firstImage(row?.logo, row?.image, row?.icon) ?? CURRENCY_ICONS[code];
       const existing = byCode.get(code);
       if (!existing) {
         byCode.set(code, { value: code, label: code, image });
@@ -132,7 +129,6 @@ export const FilterBar = () => {
     return [...byCode.values()];
   }, [listedCurrencies]);
 
-  // Banks for the selected fiat
   const { data: banksData } = useQuery({
     queryKey: fiatKeys.banks,
     queryFn: () => fiatService.getBanks(),
@@ -173,34 +169,34 @@ export const FilterBar = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-wrap items-center gap-4 max-[1150px]:gap-3 bg-[#181a20] border border-white/[0.06] p-6 max-[1150px]:p-4 rounded-2xl max-[1150px]:rounded-xl mb-6 max-[1150px]:mb-4">
-        <div className="flex bg-black/30 rounded-xl p-1.5 border border-white/[0.06] max-[1150px]:w-full">
-          <Skeleton height={40} width={100} />
-          <Skeleton height={40} width={100} />
+      <div className="flex flex-wrap items-center gap-3 bg-[#181a20] border border-white/[0.07] p-3 rounded-xl mb-5">
+        <div className="flex bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.07] max-[1150px]:w-full">
+          <Skeleton height={32} width={70} radius="sm" />
+          <Skeleton height={32} width={70} radius="sm" />
         </div>
-        <Skeleton height={48} width={200} />
-        <Skeleton height={48} width={120} />
-        <Skeleton height={48} width={120} />
-        <Skeleton height={48} width={180} />
+        <Skeleton height={38} width={200} radius="sm" />
+        <Skeleton height={38} width={115} radius="sm" />
+        <Skeleton height={38} width={115} radius="sm" />
+        <Skeleton height={38} width={170} radius="sm" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-4 max-[1150px]:gap-3 bg-[#181a20] border border-white/[0.06] p-6 max-[1150px]:p-4 rounded-2xl max-[1150px]:rounded-xl mb-6 max-[1150px]:mb-4">
+    <div className="flex flex-wrap items-center gap-3 bg-[#181a20] border border-white/[0.07] p-3 rounded-xl mb-5">
       {/* Buy/Sell Tabs */}
-      <div className="flex bg-black/30 rounded-xl p-1.5 border border-white/[0.06] max-[1150px]:w-full">
+      <div className="flex bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.07] max-[1150px]:w-full">
         <button
-          className={`px-8 py-2 rounded-lg text-sm font-bold transition-all duration-300 max-[1150px]:flex-1 ${
-            adFilters.type === "BUY" ? "bg-buy text-white shadow-[0_0_15px_rgba(14,203,129,0.3)]" : "text-white/50 hover:text-white hover:bg-white/5"
+          className={`px-5 py-1.5 rounded-md text-xs font-semibold transition-all max-[1150px]:flex-1 ${
+            adFilters.type === "BUY" ? "bg-buy text-white" : "text-white/50 hover:text-white"
           }`}
           onClick={() => setAdFilters({ type: "BUY" })}
         >
           Buy
         </button>
         <button
-          className={`px-8 py-2 rounded-lg text-sm font-bold transition-all duration-300 max-[1150px]:flex-1 ${
-            adFilters.type === "SELL" ? "bg-[#F6465D] text-white shadow-[0_0_15px_rgba(246,70,93,0.3)]" : "text-white/50 hover:text-white hover:bg-white/5"
+          className={`px-5 py-1.5 rounded-md text-xs font-semibold transition-all max-[1150px]:flex-1 ${
+            adFilters.type === "SELL" ? "bg-[#F6465D] text-white" : "text-white/50 hover:text-white"
           }`}
           onClick={() => setAdFilters({ type: "SELL" })}
         >
@@ -208,20 +204,21 @@ export const FilterBar = () => {
         </button>
       </div>
 
-      <div className="flex-1 min-w-[200px] max-[1150px]:w-full max-[1150px]:flex-none">
+      <div className="flex-1 min-w-[180px] max-[1150px]:w-full max-[1150px]:flex-none">
         <NumberInput
           placeholder="Enter Amount"
           value={adFilters.amount ? Number(adFilters.amount) : ""}
           onChange={(val) => setAdFilters({ amount: val ? val.toString() : "" })}
           hideControls
           classNames={{
-            input: "bg-white/[0.03] backdrop-blur-md border-white/[0.05] text-white placeholder-white/30 h-11 rounded-xl focus:border-buy focus:ring-1 focus:ring-buy/30 transition-all",
+            input:
+              "!bg-white/[0.04] !border-white/[0.07] hover:!border-white/[0.14] focus:!border-primary/50 !text-white !placeholder-white/30 !h-10 !rounded-lg !text-xs !transition-colors",
           }}
-          rightSection={<span className="text-white/50 pr-2 font-medium text-xs">{adFilters.fiat}</span>}
+          rightSection={<span className="text-white/40 pr-2 font-medium text-xs font-mono">{adFilters.fiat}</span>}
         />
       </div>
 
-      <div className="w-[120px] max-[1150px]:w-[calc(50%-6px)]">
+      <div className="w-[115px] max-[1150px]:w-[calc(50%-6px)]">
         <Select
           value={adFilters.asset}
           onChange={(val) => setAdFilters({ asset: val || "USDT" })}
@@ -239,7 +236,7 @@ export const FilterBar = () => {
         />
       </div>
 
-      <div className="w-[120px] max-[1150px]:w-[calc(50%-6px)]">
+      <div className="w-[115px] max-[1150px]:w-[calc(50%-6px)]">
         <Select
           value={adFilters.fiat}
           onChange={handleFiatChange}
@@ -257,14 +254,14 @@ export const FilterBar = () => {
         />
       </div>
 
-      <div className="w-[180px] max-[1150px]:w-full">
+      <div className="w-[170px] max-[1150px]:w-full">
         <Select
           value={adFilters.paymentMethod}
           onChange={(val) => setAdFilters({ paymentMethod: val || "All" })}
           data={paymentMethodOptions}
           searchable
           placeholder="Payment Method"
-          classNames={{ ...selectClassNames, input: selectClassNames.input.replace("font-semibold", "font-medium") }}
+          classNames={selectClassNames}
         />
       </div>
     </div>

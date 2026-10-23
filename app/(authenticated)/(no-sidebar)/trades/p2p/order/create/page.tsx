@@ -10,6 +10,7 @@ import { p2p, p2pKey } from "@/src/services/p2p";
 import { useMatchOrder, usePaymentMethods } from "@/src/hooks/p2p/use-p2p";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import toast from "react-hot-toast";
+import { MdVerified, MdOutlineArrowBack, MdInfoOutline } from "react-icons/md";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2PCreateOrderSkeleton } from "@/src/components/skeletons/p2p";
 
@@ -22,7 +23,6 @@ function PreOrderScreenContent() {
   const [amount, setAmount] = useState<number | "">("");
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
 
-  // Fetch the specific ad
   const { data: adData, isLoading: adLoading } = useQuery({
     queryKey: p2pKey.orderById(adId ?? ""),
     queryFn: () => p2p.getOrderById(adId!),
@@ -30,17 +30,10 @@ function PreOrderScreenContent() {
   });
 
   const ad = (adData?.data as any)?.data;
-  // The user's action is opposite to the ad type:
-  // If the ad is SELL → user is BUYING. If ad is BUY → user is SELLING.
-  // Normalise the ad type first — endpoints return inconsistent casing
-  // ("SELL" from all_orders, "Sell" from get_order_by_id), and a strict
-  // `=== "Sell"` flipped the mode and showed a bogus funding balance.
   const adType = String(ad?.type ?? "").toUpperCase();
   const userAction = adType === "SELL" ? "Buy" : "Sell";
   const isBuying = userAction === "Buy";
 
-  // Saved payment methods belong to the seller. When buying, the seller's
-  // payment method comes from the ad itself; only a seller needs their own.
   const { data: pmData, isLoading: pmLoading } = usePaymentMethods({
     enabled: !!ad && !isBuying,
   });
@@ -48,12 +41,10 @@ function PreOrderScreenContent() {
   const { mutate: matchOrder, isPending: isCreating } = useMatchOrder();
 
   const paymentMethods: any[] = pmData?.data?.data ?? [];
-  const sellerPaymentMethods: any[] = Array.isArray(ad?.paymentMethod)
-    ? ad.paymentMethod
-    : [];
+  const sellerPaymentMethods: any[] = Array.isArray(ad?.paymentMethod) ? ad.paymentMethod : [];
 
   const advertiserName = ad
-    ? [ad.advertiser?.firstName, ad.advertiser?.lastName].filter(Boolean).join(" ")
+    ? [ad.advertiser?.firstName, ad.advertiser?.lastName].filter(Boolean).join(" ") || "Merchant"
     : "";
 
   const price = parseFloat(String(ad?.price ?? 0));
@@ -62,7 +53,7 @@ function PreOrderScreenContent() {
   const available = parseFloat(String(ad?.availableQuantity ?? 0));
   const numAmount = Number(amount) || 0;
 
-  const cryptoAmount = userAction === "Buy" ? numAmount / price : numAmount;
+  const cryptoAmount = userAction === "Buy" ? numAmount / (price || 1) : numAmount;
   const fiatAmount = userAction === "Buy" ? numAmount : numAmount * price;
 
   const effectivePaymentId = isBuying
@@ -70,27 +61,27 @@ function PreOrderScreenContent() {
       ? selectedPaymentId
       : sellerPaymentMethods[0]?.id ?? null
     : paymentMethods.some((pm) => pm.id === selectedPaymentId)
-      ? selectedPaymentId
-      : null;
+    ? selectedPaymentId
+    : null;
 
-  // Fetch portfolio (WebSocket channel) to get the per-asset funding balance (supports fractional amounts)
   const { coins: portfolio, isLoading: balanceLoading } = usePortfolioWs({ coins: true });
 
   const userCoin = portfolio?.find(
     (p: any) => p.symbol.toUpperCase() === (ad?.asset ?? "").toUpperCase()
   );
   const fundingBalance =
-    userAction === "Sell"
-      ? parseFloat(userCoin?.fundingBalance ?? "0") || 0
-      : 0;
+    userAction === "Sell" ? parseFloat(userCoin?.fundingBalance ?? "0") || 0 : 0;
 
-  // Validation
   let validationError = "";
   if (numAmount > 0) {
-    if (cryptoAmount < minQty) validationError = `Minimum order is ${minQty.toLocaleString()} ${ad?.asset?.toUpperCase()}`;
-    else if (cryptoAmount > maxQty) validationError = `Maximum order is ${maxQty.toLocaleString()} ${ad?.asset?.toUpperCase()}`;
-    else if (cryptoAmount > available) validationError = `Only ${available.toLocaleString()} ${ad?.asset?.toUpperCase()} available`;
-    else if (userAction === "Sell" && cryptoAmount > fundingBalance) validationError = `Insufficient funding balance (Available: ${fundingBalance} ${ad?.asset?.toUpperCase()})`;
+    if (cryptoAmount < minQty)
+      validationError = `Minimum order is ${minQty.toLocaleString()} ${ad?.asset?.toUpperCase()}`;
+    else if (cryptoAmount > maxQty)
+      validationError = `Maximum order is ${maxQty.toLocaleString()} ${ad?.asset?.toUpperCase()}`;
+    else if (cryptoAmount > available)
+      validationError = `Only ${available.toLocaleString()} ${ad?.asset?.toUpperCase()} available`;
+    else if (userAction === "Sell" && cryptoAmount > fundingBalance)
+      validationError = `Insufficient funding balance (Available: ${fundingBalance} ${ad?.asset?.toUpperCase()})`;
   }
 
   const canProceed = numAmount > 0 && !validationError && !!effectivePaymentId;
@@ -101,12 +92,18 @@ function PreOrderScreenContent() {
       { orderId: adId, paymentMethodId: effectivePaymentId, quantity: cryptoAmount },
       {
         onSuccess: (res: any) => {
-          const matchId = res?.data?.orderMatchId || res?.data?.data?.id || res?.data?.id || res?.id || res?.data?.data?._id || res?.data?._id;
+          const matchId =
+            res?.data?.orderMatchId ||
+            res?.data?.data?.id ||
+            res?.data?.id ||
+            res?.id ||
+            res?.data?.data?._id ||
+            res?.data?._id;
           if (matchId) {
-            toast.success("Order created!");
+            toast.success("Order created successfully!");
             router.push(`/trades/p2p/order/${matchId}`);
           } else {
-            toast.success("Order created!");
+            toast.success("Order created successfully!");
             router.push(`/trades/p2p`);
           }
         },
@@ -118,7 +115,7 @@ function PreOrderScreenContent() {
     return (
       <P2PLayout>
         <div className="flex justify-center items-center h-full min-h-[400px]">
-          <Loader color="blue" size="lg" />
+          <Loader color="blue" size="md" />
         </div>
       </P2PLayout>
     );
@@ -127,10 +124,18 @@ function PreOrderScreenContent() {
   if (!ad) {
     return (
       <P2PLayout>
-        <div className="flex flex-col items-center justify-center py-20 text-white/50">
-          <div className="text-4xl mb-4">⚠️</div>
-          <div>Ad not found or no longer available.</div>
-          <Button className="mt-4" onClick={() => router.push("/trades/p2p")}>Back to Marketplace</Button>
+        <div className="flex flex-col items-center justify-center py-20 text-white/50 bg-[#181a20] border border-white/[0.07] rounded-xl max-w-xl mx-auto my-6 p-6 text-center">
+          <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center text-white/30 mb-3">
+            <MdInfoOutline size={22} />
+          </div>
+          <div className="text-white/80 font-medium text-sm mb-1">Ad Not Found</div>
+          <p className="text-white/40 text-xs mb-4">This listing has expired, fulfilled, or is no longer available.</p>
+          <Button
+            className="!bg-primary hover:!bg-primary/90 !text-white !h-8 !text-xs !font-semibold !rounded-lg"
+            onClick={() => router.push("/trades/p2p")}
+          >
+            Back to Marketplace
+          </Button>
         </div>
       </P2PLayout>
     );
@@ -138,81 +143,100 @@ function PreOrderScreenContent() {
 
   return (
     <P2PLayout>
-      <div className="w-full max-w-4xl mx-auto py-6 max-[1150px]:py-4 max-[1150px]:pb-[90px] page-enter">
+      <div className="w-full max-w-5xl mx-auto py-6 max-[1150px]:py-4 max-[1150px]:pb-[90px] page-enter">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => router.push("/trades/p2p")} className="text-white/50 hover:text-white transition-colors text-sm flex items-center gap-1">
-            ← Back
+        <div className="flex items-center gap-3 mb-5">
+          <button
+            onClick={() => router.push("/trades/p2p")}
+            className="flex items-center gap-1 text-xs text-white/50 hover:text-white transition-colors px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.07]"
+          >
+            <MdOutlineArrowBack size={14} />
+            <span>Marketplace</span>
           </button>
-          <h1 className="text-2xl font-bold text-white">
-            {userAction} {ad.asset.toUpperCase()}
-            <span className="text-white/40 text-base font-normal ml-2">from {advertiserName}</span>
+          <h1 className="text-lg font-semibold text-white tracking-tight">
+            {userAction} {ad.asset.toUpperCase()}{" "}
+            <span className="text-white/40 text-sm font-normal">from {advertiserName}</span>
           </h1>
         </div>
 
-        <div className="grid grid-cols-1 min-[1150px]:grid-cols-[1fr_380px] gap-6 max-[1150px]:gap-4 max-[1150px]:flex max-[1150px]:flex-col">
+        <div className="grid grid-cols-1 min-[1150px]:grid-cols-[1fr_380px] gap-5">
           {/* Left: Ad Details */}
           <div className="flex flex-col gap-4">
-            {/* Advertiser Card */}
-            <div className="bg-surface border border-white/[0.05] shadow-xl rounded-2xl max-[1150px]:rounded-xl p-6 max-[1150px]:p-4">
-              <div className="flex items-center gap-4 mb-6">
-                <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold text-white ${ad.advertiser?.verified ? "ring-2 ring-blue-500 bg-blue-500/20" : "bg-white/10"}`}>
+            <div className="bg-[#181a20] border border-white/[0.07] rounded-xl p-5">
+              <div className="flex items-center gap-3 mb-5 pb-4 border-b border-white/[0.06]">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">
                   {advertiserName.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-white font-semibold">{advertiserName}</span>
-                    {ad.advertiser?.verified && <span className="text-blue-400 text-xs">✓ Verified</span>}
+                    <span className="text-sm font-semibold text-white">{advertiserName}</span>
+                    {ad.advertiser?.verified && <MdVerified className="text-buy text-sm" />}
                   </div>
-                  <div className="flex gap-4 mt-1.5 text-xs text-white/50">
-                    <span className="bg-white/5 px-2 py-0.5 rounded">{Math.floor(Number(ad.advertiser?.totalOrdersCompleted ?? 0))} orders</span>
-                    <span className="bg-white/5 px-2 py-0.5 rounded">{parseFloat(ad.advertiser?.completionPercentage ?? "0").toFixed(1)}% completion</span>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-white/40">
+                    <span>{Math.floor(Number(ad.advertiser?.totalOrdersCompleted ?? 0))} Orders</span>
+                    <span>·</span>
+                    <span className="text-buy font-medium">
+                      {parseFloat(ad.advertiser?.completionPercentage ?? "0").toFixed(1)}% Completion
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/[0.02] border border-white/[0.05] p-4 rounded-xl">
-                  <div className="text-white/40 text-xs mb-1.5 uppercase tracking-wider">Price</div>
-                  <div className="text-white font-bold text-xl">{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} <span className="text-sm font-normal text-white/60">{ad.fiat.toUpperCase()}</span></div>
-                </div>
-                <div className="bg-white/[0.02] border border-white/[0.05] p-4 rounded-xl">
-                  <div className="text-white/40 text-xs mb-1.5 uppercase tracking-wider">
-                    {userAction === "Sell" ? "Buyer Wants" : "Available"}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/[0.02] border border-white/[0.05] p-3 rounded-lg">
+                  <div className="text-white/35 text-[10px] uppercase tracking-wider mb-0.5">Price</div>
+                  <div className="text-base font-bold text-white font-mono tabular-nums">
+                    {price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}{" "}
+                    <span className="text-xs font-normal text-white/50">{ad.fiat.toUpperCase()}</span>
                   </div>
-                  <div className="text-white font-bold text-xl">{available.toLocaleString()} <span className="text-sm font-normal text-white/60">{ad.asset.toUpperCase()}</span></div>
                 </div>
-                <div className="bg-white/[0.02] border border-white/[0.05] p-4 rounded-xl">
-                  <div className="text-white/40 text-xs mb-1.5 uppercase tracking-wider">Order Limit</div>
-                  <div className="text-white font-medium">
+                <div className="bg-white/[0.02] border border-white/[0.05] p-3 rounded-lg">
+                  <div className="text-white/35 text-[10px] uppercase tracking-wider mb-0.5">
+                    {userAction === "Sell" ? "Buyer Target" : "Available"}
+                  </div>
+                  <div className="text-base font-bold text-white font-mono tabular-nums">
+                    {available.toLocaleString()}{" "}
+                    <span className="text-xs font-normal text-white/50">{ad.asset.toUpperCase()}</span>
+                  </div>
+                </div>
+                <div className="bg-white/[0.02] border border-white/[0.05] p-3 rounded-lg">
+                  <div className="text-white/35 text-[10px] uppercase tracking-wider mb-0.5">Order Limit</div>
+                  <div className="text-xs font-medium text-white font-mono tabular-nums">
                     {minQty.toLocaleString()} – {maxQty.toLocaleString()}{" "}
-                    <span className="text-sm text-white/60">
+                    <span className="text-white/50">
                       {userAction === "Sell" ? ad.asset.toUpperCase() : ad.fiat.toUpperCase()}
                     </span>
                   </div>
                 </div>
-                <div className="bg-white/[0.02] border border-white/[0.05] p-4 rounded-xl">
-                  <div className="text-white/40 text-xs mb-1.5 uppercase tracking-wider">Payment Window</div>
-                  <div className="text-white font-medium">{ad.paymentDuration ?? 15} Minutes</div>
+                <div className="bg-white/[0.02] border border-white/[0.05] p-3 rounded-lg">
+                  <div className="text-white/35 text-[10px] uppercase tracking-wider mb-0.5">Payment Window</div>
+                  <div className="text-xs font-medium text-white">{ad.paymentDuration ?? 15} Minutes</div>
                 </div>
               </div>
             </div>
 
             {/* Remarks */}
             {ad.remark && (
-              <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5">
-                <div className="text-white/60 text-sm font-medium mb-2">Advertiser&apos;s Remarks</div>
-                <div className="text-white/80 text-sm whitespace-pre-line leading-relaxed">{ad.remark}</div>
+              <div className="bg-[#181a20] border border-white/[0.07] rounded-xl p-4">
+                <div className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-1.5">
+                  Counterparty Remarks
+                </div>
+                <div className="text-white/75 text-xs whitespace-pre-line leading-relaxed">{ad.remark}</div>
               </div>
             )}
 
-            {/* Ad's accepted payment methods */}
+            {/* Accepted payment methods */}
             {ad.paymentMethod?.length > 0 && (
-              <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5">
-                <div className="text-white/60 text-sm font-medium mb-3">Accepted Payment Methods</div>
-                <div className="flex flex-wrap gap-2">
+              <div className="bg-[#181a20] border border-white/[0.07] rounded-xl p-4">
+                <div className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-2.5">
+                  Supported Payment Options
+                </div>
+                <div className="flex flex-wrap gap-1.5">
                   {ad.paymentMethod.map((pm: any) => (
-                    <span key={pm.id} className="text-sm bg-white/10 text-white/80 px-3 py-1 rounded-full">
+                    <span
+                      key={pm.id}
+                      className="text-xs bg-white/[0.05] border border-white/[0.07] text-white/70 px-2.5 py-1 rounded font-medium"
+                    >
                       {pm.method}
                     </span>
                   ))}
@@ -223,38 +247,47 @@ function PreOrderScreenContent() {
 
           {/* Right: Order Form */}
           <div>
-            <div className="bg-white/[0.02] border border-white/10 rounded-xl p-6 max-[1150px]:p-4 flex flex-col gap-5 max-[1150px]:gap-4 sticky top-6">
-              <div className={`text-center text-sm font-semibold py-3 px-4 rounded-xl border ${userAction === "Buy" ? "bg-green-500/10 border-green-500/20 text-green-400" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
+            <div className="bg-[#181a20] border border-white/[0.07] rounded-xl p-5 flex flex-col gap-4 sticky top-6">
+              <div
+                className={`text-center text-xs font-semibold py-2 px-3 rounded-lg border ${
+                  userAction === "Buy"
+                    ? "bg-buy/10 border-buy/20 text-buy"
+                    : "bg-[#F6465D]/10 border-[#F6465D]/20 text-[#F6465D]"
+                }`}
+              >
                 You are {userAction === "Buy" ? "Buying" : "Selling"} {ad.asset.toUpperCase()}
               </div>
 
               {/* Amount Input */}
               <div>
-                <label className="text-white/60 text-sm mb-2 block font-medium">
-                  {userAction === "Buy" ? "I want to spend" : "I want to sell (amount in crypto)"}
+                <label className="text-white/50 text-xs mb-1.5 block font-medium">
+                  {userAction === "Buy" ? "I Want to Spend" : "I Want to Sell (Crypto Quantity)"}
                 </label>
                 <NumberInput
                   placeholder={`Enter amount in ${userAction === "Buy" ? ad.fiat.toUpperCase() : ad.asset.toUpperCase()}`}
                   value={amount}
                   onChange={(val) => setAmount(val === "" ? "" : Number(val))}
-                  rightSection={<span className="text-white/50 pr-4 font-medium text-sm">{userAction === "Buy" ? ad.fiat.toUpperCase() : ad.asset.toUpperCase()}</span>}
+                  rightSection={
+                    <span className="text-white/40 pr-3 font-medium text-xs font-mono">
+                      {userAction === "Buy" ? ad.fiat.toUpperCase() : ad.asset.toUpperCase()}
+                    </span>
+                  }
                   classNames={{
-                    input: `bg-black/40 border-${validationError ? "red-500" : "white/10"} text-white text-lg h-14 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all`
+                    input:
+                      "!bg-white/[0.04] !border-white/[0.08] focus:!border-primary/50 !text-white !text-sm !h-11 !rounded-lg !font-mono",
                   }}
                   hideControls
                 />
-                {validationError && (
-                  <p className="text-red-400 text-xs mt-1.5">{validationError}</p>
-                )}
+                {validationError && <p className="text-[#F6465D] text-xs mt-1.5">{validationError}</p>}
                 {userAction === "Sell" && (
-                  <div className="flex justify-between items-center mt-2 px-1">
-                    <span className="text-white/40 text-xs">Your funding balance</span>
-                    <span className="text-white/70 text-xs font-medium">
+                  <div className="flex justify-between items-center mt-1.5 px-0.5 text-xs">
+                    <span className="text-white/35">Available Funding Balance</span>
+                    <span className="text-white/70 font-mono">
                       {balanceLoading
                         ? "Loading..."
                         : userCoin
-                          ? `${fundingBalance.toFixed(8).replace(/\.?0+$/, "")} ${ad.asset.toUpperCase()}`
-                          : "—"}
+                        ? `${fundingBalance.toFixed(8).replace(/\.?0+$/, "")} ${ad.asset.toUpperCase()}`
+                        : "—"}
                     </span>
                   </div>
                 )}
@@ -262,36 +295,38 @@ function PreOrderScreenContent() {
 
               {/* You receive */}
               <div>
-                <label className="text-white/60 text-sm mb-2 block font-medium">I will receive</label>
-                <div className="bg-white/5 border border-white/10 rounded-xl px-4 h-14 flex items-center justify-between">
-                  <span className="text-white text-xl font-medium">
-                    {(userAction === "Buy" ? cryptoAmount : fiatAmount).toLocaleString(undefined, { maximumFractionDigits: 6 })}
+                <label className="text-white/50 text-xs mb-1.5 block font-medium">I Will Receive</label>
+                <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg px-3.5 h-11 flex items-center justify-between text-xs font-mono">
+                  <span className="text-white font-bold text-sm">
+                    {(userAction === "Buy" ? cryptoAmount : fiatAmount).toLocaleString(undefined, {
+                      maximumFractionDigits: 6,
+                    })}
                   </span>
-                  <span className="text-white/50 font-medium text-sm">{userAction === "Buy" ? ad.asset.toUpperCase() : ad.fiat.toUpperCase()}</span>
+                  <span className="text-white/40 font-sans font-medium">
+                    {userAction === "Buy" ? ad.asset.toUpperCase() : ad.fiat.toUpperCase()}
+                  </span>
                 </div>
               </div>
 
               {/* Payment Method Select */}
               <div>
-                <label className="text-white/60 text-sm mb-2 block font-medium">
-                  {isBuying
-                    ? "Pay to (seller's payment method)"
-                    : "Receive payment via (your saved methods)"}
+                <label className="text-white/50 text-xs mb-1.5 block font-medium">
+                  {isBuying ? "Payment Details (Counterparty)" : "Receive Via (Your Saved Methods)"}
                 </label>
                 {isBuying ? (
                   sellerPaymentMethods.length === 0 ? (
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm">
-                      This ad has no payment method available. Please choose another ad.
+                    <div className="bg-[#F6465D]/10 border border-[#F6465D]/20 rounded-lg p-3 text-[#F6465D] text-xs">
+                      No active payment method on this advertisement. Please select another listing.
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-2">
                       {sellerPaymentMethods.map((pm) => (
                         <label
                           key={pm.id}
-                          className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all ${
+                          className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                             effectivePaymentId === pm.id
-                              ? "border-blue-500/50 bg-blue-500/5 shadow-[0_0_15px_rgba(59,130,246,0.1)]"
-                              : "border-white/10 bg-white/5 hover:bg-white/10"
+                              ? "border-primary/50 bg-primary/[0.06]"
+                              : "border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.04]"
                           }`}
                         >
                           <input
@@ -300,56 +335,66 @@ function PreOrderScreenContent() {
                             value={pm.id}
                             checked={effectivePaymentId === pm.id}
                             onChange={() => setSelectedPaymentId(pm.id)}
-                            className="accent-blue-500 w-4 h-4"
+                            className="accent-primary w-3.5 h-3.5"
                           />
-                          <div>
-                            <div className="text-white text-sm font-medium">
+                          <div className="min-w-0">
+                            <div className="text-white text-xs font-medium">
                               {pm.data?.bankName ?? pm.method}
                             </div>
                             {pm.data?.accountName && (
-                              <div className="text-white/60 text-xs">
+                              <div className="text-white/50 text-[11px] truncate">
                                 {pm.data.accountName}
                               </div>
                             )}
                             {pm.data?.accountNumber && (
-                              <div className="text-white/40 text-xs">
-                                Acct: {pm.data.accountNumber}
+                              <div className="text-white/35 font-mono text-[11px]">
+                                {pm.data.accountNumber}
                               </div>
                             )}
                           </div>
                         </label>
                       ))}
-                      <p className="text-white/40 text-xs">
-                        Send the exact amount to this account after the order is confirmed.
-                      </p>
                     </div>
                   )
                 ) : pmLoading ? (
-                  <div className="text-white/40 text-sm">Loading payment methods...</div>
+                  <div className="text-white/40 text-xs">Loading payment methods...</div>
                 ) : paymentMethods.length === 0 ? (
                   <div
                     onClick={() => router.push("/account/payment-methods")}
-                    className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-blue-400 text-sm flex items-center gap-3 cursor-pointer hover:bg-blue-500/20 transition-colors"
+                    className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-primary text-xs flex items-center gap-2.5 cursor-pointer hover:bg-primary/15 transition-colors"
                   >
-                    <span className="text-xl">ℹ️</span>
-                    <span>No payment methods saved. <span className="underline font-medium">Click here to add one in your account settings.</span></span>
+                    <MdInfoOutline size={16} className="shrink-0" />
+                    <span>
+                      No payment methods saved. <span className="underline font-medium">Add one in account settings.</span>
+                    </span>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2">
                     {paymentMethods.map((pm) => (
-                      <label key={pm.id} className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all ${effectivePaymentId === pm.id ? "border-blue-500/50 bg-blue-500/5 shadow-[0_0_15px_rgba(59,130,246,0.1)]" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
+                      <label
+                        key={pm.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          effectivePaymentId === pm.id
+                            ? "border-primary/50 bg-primary/[0.06]"
+                            : "border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.04]"
+                        }`}
+                      >
                         <input
                           type="radio"
                           name="paymentMethod"
                           value={pm.id}
                           checked={effectivePaymentId === pm.id}
                           onChange={() => setSelectedPaymentId(pm.id)}
-                          className="accent-blue-500 w-4 h-4"
+                          className="accent-primary w-3.5 h-3.5"
                         />
-                        <div>
-                          <div className="text-white text-sm font-medium">{pm.data?.bankName ?? pm.method}</div>
+                        <div className="min-w-0">
+                          <div className="text-white text-xs font-medium">
+                            {pm.data?.bankName ?? pm.method}
+                          </div>
                           {pm.data?.accountNumber && (
-                            <div className="text-white/40 text-xs">{pm.data.accountName} · {pm.data.accountNumber}</div>
+                            <div className="text-white/40 text-[11px]">
+                              {pm.data.accountName} · {pm.data.accountNumber}
+                            </div>
                           )}
                         </div>
                       </label>
@@ -359,17 +404,17 @@ function PreOrderScreenContent() {
               </div>
 
               <Button
-                size="xl"
-                radius="md"
-                className={`w-full font-bold text-base shadow-lg ${userAction === "Buy" ? "bg-buy hover:bg-buy/90 shadow-[#0ECB81]/20" : "bg-[#F6465D] hover:bg-[#F6465D]/90 shadow-[#F6465D]/20"} text-white transition-all`}
+                className={`w-full !font-semibold !text-xs !h-11 !rounded-lg text-white transition-colors ${
+                  userAction === "Buy" ? "!bg-buy hover:!bg-buy/90" : "!bg-[#F6465D] hover:!bg-[#F6465D]/90"
+                }`}
                 disabled={!canProceed}
                 onClick={() => setIsModalOpen(true)}
               >
                 {userAction} {ad.asset.toUpperCase()}
               </Button>
 
-              <p className="text-white/30 text-xs text-center">
-                By proceeding you agree to P2P trading terms. Only send payment after order is confirmed.
+              <p className="text-white/30 text-[11px] text-center leading-normal">
+                Cryptocurrency is held in platform escrow until payment verification is confirmed by both parties.
               </p>
             </div>
           </div>
