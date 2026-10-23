@@ -104,6 +104,9 @@ export default function Header() {
 
   const [opened, { open, close }] = useDisclosure(false);
 
+  // The landing page renders its own navigation.
+  if (pathname === "/") return null;
+
   return (
 <header
         className={clsx(

@@ -19,13 +19,13 @@ const NO_FOOTER_ROUTES = [
   "/buy-crypto",
   "/rewards-hub",
   "/markets",
-  "/"
 ];
 
 export const AppContainer = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const showFooter = !NO_FOOTER_ROUTES.some((route) => pathname.startsWith(route));
+  // The landing page ("/") renders its own footer.
+  const showFooter = pathname !== "/" && !NO_FOOTER_ROUTES.some((route) => pathname.startsWith(route));
 
   // Reset scroll to top when pathname changes, because Next.js built-in scroll-to-top
   // only operates on the window object, not our custom overflow container.
