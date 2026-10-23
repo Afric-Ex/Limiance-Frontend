@@ -104,7 +104,31 @@ function OrderRoomPageInner() {
   const price = parseFloat(String(originalOrder?.fixedPrice ?? originalOrder?.price ?? 0));
   const fiatAmount = order?.fiatAmount && order.fiatAmount > 0 ? order.fiatAmount : quantity * price;
   const paymentMethod = order?.paymentMethod;
-  const counterpartyId = isAdvertiser ? order?.matcherId : order?.advertiserId;
+  // Fall back to the buyer/seller pair when the match does not expose the
+  // advertiser id. Never fall back to the signed-in user's own id.
+  const buyerSellerCounterpartyId =
+    order?.buyerId && currentUserId && String(order.buyerId) === currentUserId
+      ? order?.sellerId
+      : order?.sellerId && currentUserId && String(order.sellerId) === currentUserId
+        ? order?.buyerId
+        : undefined;
+  const rawCounterpartyId = isAdvertiser ? order?.matcherId : order?.advertiserId;
+  const counterpartyId =
+    rawCounterpartyId && (!currentUserId || String(rawCounterpartyId) !== currentUserId)
+      ? rawCounterpartyId
+      : buyerSellerCounterpartyId;
+  // A BUY ad has the advertiser as buyer and the matcher as seller; a SELL ad
+  // is the reverse. Only use the name belonging to the counterparty's side so
+  // the review prompt can never show the signed-in user's own name.
+  const personName = (person: any, flatName?: string) =>
+    flatName ||
+    [person?.firstName, person?.lastName].filter(Boolean).join(" ") ||
+    person?.username ||
+    "";
+  const sellerName = personName(order?.seller, order?.sellerName);
+  const buyerName = personName(order?.buyer, order?.buyerName);
+  const advertiserName = personName(order?.advertiser, order?.advertiserName);
+  const matcherName = personName(order?.matcher, order?.matcherName);
   const counterpartyName = isAdvertiser
     ? order?.matcherName || order?.buyerName || order?.sellerName || "Trader"
     : order?.advertiserName || order?.sellerName || order?.buyerName || "Advertiser";
@@ -222,6 +246,10 @@ function OrderRoomPageInner() {
       toast.error("Unable to determine counterparty for this trade");
       return;
     }
+    if (currentUserId && String(counterpartyId) === currentUserId) {
+      toast.error("You can't review your own trade");
+      return;
+    }
 
     addReview(
       {
@@ -337,6 +365,8 @@ function OrderRoomPageInner() {
             onSubmitFeedback={handleSubmitFeedback}
             isSubmittingFeedback={isSubmittingFeedback}
             initialSubmitted={existingFeedbackSubmitted}
+            canReview={canReview}
+            isSelfReview={isSelfReview}
           />
         )}
 
@@ -502,7 +532,6 @@ function OrderRoomPageInner() {
                   fiat={fiat}
                   paymentMethod={paymentMethod}
                   setCancelModalOpen={setCancelModalOpen}
-                  copyToClipboard={copyToClipboard}
                 />
               )}
 

@@ -268,6 +268,7 @@ export interface P2PChatMessage {
   id: string;
   content: string;
   senderId: string;
+  senderName?: string;
   createdAt: string;
 }
 

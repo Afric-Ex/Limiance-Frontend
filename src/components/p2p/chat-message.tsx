@@ -3,12 +3,14 @@
 import React, { useState } from "react";
 import { ImageLightbox } from "./image-lightbox";
 import { MdDoneAll } from "react-icons/md";
+import { formatChatTime } from "@/src/lib/chat-date";
 
 interface ChatMessageProps {
   message: {
     id: string;
     content: string;
     senderId: string;
+    senderName?: string;
     createdAt: string;
     type?: "text" | "system" | "image";
     imageUrl?: string;
@@ -20,7 +22,11 @@ interface ChatMessageProps {
 export const ChatMessage = ({ message, isOwn, delivered }: ChatMessageProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  if (message.type === "system") {
+  const isSystem =
+    message.type === "system" ||
+    message.senderId?.trim().toUpperCase() === "SYSTEM";
+
+  if (isSystem) {
     return (
       <div className="flex justify-center my-2">
         <div className="bg-white/[0.04] border border-white/[0.06] px-3 py-1 rounded-md text-[11px] text-white/50 text-center">

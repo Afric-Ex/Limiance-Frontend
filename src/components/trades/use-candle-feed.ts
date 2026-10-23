@@ -156,6 +156,8 @@ function extractLiveCandles(raw: any): any[] {
 export interface CandleFeed {
   /** History merged with live WS candles, ascending by time. */
   candles: KlineCandle[];
+  /** REST history only; the identity changes whenever history is (re)loaded. */
+  historyCandles?: KlineCandle[];
   isLoading: boolean;
   isError: boolean;
   historyFetched: boolean;
@@ -186,9 +188,10 @@ export function useCandleFeed(symbol: string, interval: string, market: ChartMar
     staleTime: 60_000,
     retry: 1,
     throwOnError: false,
-    // Load history while the socket is down, while no WS candle has arrived
-    // yet for this pair/interval, or after the WS fell back to REST.
-    enabled: !wsConnected || !wsReady || restFallback,
+    // History must always come from REST: the WS candle stream only carries
+    // live updates. Gating this on the socket used to leave charts with just
+    // the current candle whenever the stream connected before/while the
+    // history request was in flight.
   });
 
   // liveCandles only tracks the incremental WS updates; history is merged in
@@ -284,6 +287,7 @@ export function useCandleFeed(symbol: string, interval: string, market: ChartMar
 
   return {
     candles,
+    historyCandles,
     isLoading,
     isError,
     historyFetched,

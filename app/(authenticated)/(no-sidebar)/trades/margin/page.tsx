@@ -14,6 +14,7 @@ import { MarginTradePageSkeleton } from "@/src/components/skeletons/trades";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { readList } from "@/src/lib/api-response";
+import { getLatestTradePrice } from "@/src/lib/recent-trades";
 import {
   Checkbox,
   Loader,
@@ -63,6 +64,7 @@ function MarginTrades() {
   const [tradeMode, setTradeMode] = useState<TradeMode>("cross");
   const [leverage, setLeverage] = useState(3);
   const [clickedPrice, setClickedPrice] = useState<number | null>(null);
+  const [chartLastPrice, setChartLastPrice] = useState<number | null>(null);
   
   // Mobile chart toggle
   const [chartExpanded, setChartExpanded] = useState(false);
@@ -132,6 +134,7 @@ function MarginTrades() {
   });
 
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "margin");
+  const lastTradedPrice = getLatestTradePrice(recentTrades) ?? feed.price ?? null;
 
   const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
     queryKey: tradingKeys.tradeHistory("margin"),
@@ -639,7 +642,7 @@ function MarginTrades() {
         {/* Chart Column (Responsive) */}
         <div className="flex flex-col gap-1 overflow-hidden min-w-0 min-h-0 min-[1150px]:col-start-1">
           <div className={clsx("bg-[#181a20] rounded relative flex flex-col transition-all duration-300", chartExpanded ? "h-[450px] shrink-0" : "flex-1 min-[1150px]:min-h-0")}>
-            <CandlestickChart key={selectedPair} symbol={selectedPair} market="margin" orderBook={orderBook} orderLevels={chartOrderLevels} />
+            <CandlestickChart key={selectedPair} symbol={selectedPair} market="margin" orderBook={orderBook} orderLevels={chartOrderLevels} lastPrice={lastTradedPrice} onLastPriceChange={setChartLastPrice} />
             
             {/* Mobile chart expand toggle */}
             <button 
@@ -812,7 +815,7 @@ function MarginTrades() {
           recentTradesLoading={recentTradesLoading}
           base={base}
           quote={quote}
-          currentPrice={feed.price}
+          currentPrice={chartLastPrice ?? feed.price}
           buyPercentage={orderBook.buyPercentage}
           sellPercentage={orderBook.sellPercentage}
           isConnected={orderBook.isConnected}
@@ -1022,7 +1025,7 @@ function MarginTrades() {
           // --- CHART VIEW ---
           <div className="flex flex-col flex-1 overflow-auto custom-scrollbar pb-[65px]">
             <div className="h-[400px] shrink-0 bg-[#181a20]">
-<CandlestickChart key={selectedPair} symbol={selectedPair} market="margin" orderBook={orderBook} orderLevels={chartOrderLevels} />
+<CandlestickChart key={selectedPair} symbol={selectedPair} market="margin" orderBook={orderBook} orderLevels={chartOrderLevels} lastPrice={lastTradedPrice} onLastPriceChange={setChartLastPrice} />
             </div>
             
             {/* Bottom Action Bar */}
@@ -1044,7 +1047,7 @@ function MarginTrades() {
               recentTradesLoading={recentTradesLoading}
               base={base}
               quote={quote}
-              currentPrice={feed.price}
+              currentPrice={chartLastPrice ?? feed.price}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -1196,7 +1199,7 @@ function MarginTrades() {
               recentTradesLoading={recentTradesLoading}
               base={base}
               quote={quote}
-              currentPrice={feed.price}
+              currentPrice={chartLastPrice ?? feed.price}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}

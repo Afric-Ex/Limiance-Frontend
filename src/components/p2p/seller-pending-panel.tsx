@@ -5,19 +5,11 @@ import { Button } from "@mantine/core";
 import { MdHourglassEmpty, MdContentCopy } from "react-icons/md";
 
 interface SellerPendingPanelProps {
-  fiatAmount: number;
-  fiat: string;
-  paymentMethod: any;
   setCancelModalOpen: (val: boolean) => void;
-  copyToClipboard: (text: string) => void;
 }
 
 export function SellerPendingPanel({
-  fiatAmount,
-  fiat,
-  paymentMethod,
   setCancelModalOpen,
-  copyToClipboard,
 }: SellerPendingPanelProps) {
   return (
     <>

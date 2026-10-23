@@ -10,6 +10,7 @@ import { useRecentTrades } from '@/src/hooks/use-recent-trades';
 import { OrderBookTabs } from '@/src/components/trades/order-book-tabs';
 import { usePortfolioWs } from '@/src/hooks/use-portfolio-ws';
 import { readList } from '@/src/lib/api-response';
+import { getLatestTradePrice } from '@/src/lib/recent-trades';
 import { errorMessageHandler } from '@/src/lib/error-handler';
 import { successNotification } from '@/src/lib/notification-handler';
 import { useUserStore } from '@/src/stores/user-store';
@@ -192,6 +193,7 @@ function FuturesTradesInner() {
   const [stopLoss, setStopLoss] = useState<number | string>('');
   const [flashClass, setFlashClass] = useState('');
   const [prevPrice, setPrevPrice] = useState<number | null>(null);
+  const [chartLastPrice, setChartLastPrice] = useState<number | null>(null);
   const accountModalShownRef = useRef(false);
   const router = useRouter();
   const priceUserEditedRef = useRef(false); // true when user has manually typed a custom price
@@ -246,6 +248,9 @@ function FuturesTradesInner() {
   });
 
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "futures");
+  // The spot/margin feed does not carry futures prices, so only use actual
+  // futures trades here; the depth panel falls back to the futures mid.
+  const lastTradedPrice = getLatestTradePrice(recentTrades);
 
   const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
     queryKey: tradingKeys.tradeHistory("futures"),
@@ -1078,6 +1083,8 @@ function FuturesTradesInner() {
               orderLevels={chartOrderLevels}
               priceRange={{ min: feed.low24h, max: feed.high24h }}
               orderBook={orderBook}
+              lastPrice={lastTradedPrice}
+              onLastPriceChange={setChartLastPrice}
             />
             <button 
               onClick={() => setChartExpanded(!chartExpanded)}
@@ -1451,7 +1458,7 @@ function FuturesTradesInner() {
           recentTradesLoading={recentTradesLoading}
           base={baseAsset}
           quote={quoteAsset}
-          currentPrice={feed.price}
+          currentPrice={chartLastPrice ?? feed.price}
           buyPercentage={orderBook.buyPercentage}
           sellPercentage={orderBook.sellPercentage}
           isConnected={orderBook.isConnected}
@@ -1697,6 +1704,8 @@ function FuturesTradesInner() {
                 orderLevels={chartOrderLevels}
                 priceRange={{ min: feed.low24h, max: feed.high24h }}
                 orderBook={orderBook}
+                lastPrice={lastTradedPrice}
+                onLastPriceChange={setChartLastPrice}
               />
             </div>
             
@@ -1719,7 +1728,7 @@ function FuturesTradesInner() {
               recentTradesLoading={recentTradesLoading}
               base={baseAsset}
               quote="USDT"
-              currentPrice={feed.price}
+              currentPrice={chartLastPrice ?? feed.price}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -1850,7 +1859,7 @@ function FuturesTradesInner() {
               recentTradesLoading={recentTradesLoading}
               base={baseAsset}
               quote="USDT"
-              currentPrice={feed.price}
+              currentPrice={chartLastPrice ?? feed.price}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}

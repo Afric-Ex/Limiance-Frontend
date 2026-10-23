@@ -18,6 +18,9 @@ interface OrderCompletedOverlayProps {
   onSubmitFeedback: (rating: "POSITIVE" | "NEGATIVE", tags: string[], comment: string) => void;
   isSubmittingFeedback?: boolean;
   initialSubmitted?: boolean;
+  /** False when the counterparty is the signed-in user or cannot be resolved. */
+  canReview?: boolean;
+  isSelfReview?: boolean;
 }
 
 export const OrderCompletedOverlay = ({
@@ -33,6 +36,8 @@ export const OrderCompletedOverlay = ({
   onSubmitFeedback,
   isSubmittingFeedback = false,
   initialSubmitted = false,
+  canReview = true,
+  isSelfReview = false,
 }: OrderCompletedOverlayProps) => {
   const [rating, setRating] = useState<"POSITIVE" | "NEGATIVE" | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);

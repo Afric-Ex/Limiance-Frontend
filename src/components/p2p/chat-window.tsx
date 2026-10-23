@@ -12,6 +12,11 @@ import { useChatWs, useTypingIndicator } from "@/src/hooks/use-chat-ws";
 import { p2pKey } from "@/src/services/p2p";
 import { P2PChatMessage } from "@/src/types/p2p";
 import type { ChatWsMessage, ChatDeliveredEvent } from "@/src/lib/chat-ws";
+import {
+  chatDayKey,
+  formatChatDayLabel,
+  getChatTimestamp,
+} from "@/src/lib/chat-date";
 
 interface ChatWindowProps {
   chatId: string;
@@ -43,6 +48,7 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
                 id: message.id,
                 content: message.content,
                 senderId: message.senderId,
+                senderName: message.senderName,
                 createdAt: message.createdAt,
               },
             ],
