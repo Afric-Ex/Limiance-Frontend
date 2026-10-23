@@ -15,15 +15,15 @@ const STATUS_STYLES: Record<string, string> = {
   PENDING: "text-[#FBA42A] bg-[#FBA42A]/10 border-[#FBA42A]/20",
   PAID: "text-[#4d77f0] bg-[#4d77f0]/10 border-[#4d77f0]/20",
   FULFILLED: "text-[#4d77f0] bg-[#4d77f0]/10 border-[#4d77f0]/20",
-  RELEASED: "text-[#25AB42] bg-[#25AB42]/10 border-[#25AB42]/20",
-  COMPLETED: "text-[#25AB42] bg-[#25AB42]/10 border-[#25AB42]/20",
-  CANCELLED: "text-[#F6465D] bg-[#F6465D]/10 border-[#F6465D]/20",
-  EXPIRED: "text-[#F6465D] bg-[#F6465D]/10 border-[#F6465D]/20",
-  DISPUTED: "text-[#FBA42A] bg-[#FBA42A]/10 border-[#FBA42A]/20",
+  RELEASED: "text-buy bg-buy/10 border-buy/20",
+  COMPLETED: "text-buy bg-buy/10 border-buy/20",
+  CANCELLED: "text-white/40 bg-white/[0.05] border-white/[0.07]",
+  CANCELED: "text-white/40 bg-white/[0.05] border-white/[0.07]",
+  EXPIRED: "text-white/40 bg-white/[0.05] border-white/[0.07]",
+  DISPUTED: "text-[#F6465D] bg-[#F6465D]/10 border-[#F6465D]/20",
 };
 
-const fieldLabel =
-  "text-[10px] font-medium uppercase tracking-wider text-white/40";
+const fieldLabel = "text-[10px] font-medium uppercase tracking-wider text-white/35";
 
 type OrderTab = "PROCESSING" | "EXPIRED" | "CANCELLED" | "ALL";
 
@@ -49,19 +49,19 @@ const isCancelledOrder = (order: any) =>
 const EMPTY_STATE: Record<OrderTab, { title: string; body: string }> = {
   PROCESSING: {
     title: "No orders in progress",
-    body: "Orders awaiting payment, release, or resolution will appear here.",
+    body: "Orders awaiting payment, escrow release, or dispute resolution will appear here.",
   },
   EXPIRED: {
     title: "No expired orders",
-    body: "Orders that passed their payment window will appear here.",
+    body: "Orders that exceeded their payment time window will appear here.",
   },
   CANCELLED: {
     title: "No cancelled orders",
     body: "Orders cancelled by you or your counterparty will appear here.",
   },
   ALL: {
-    title: "No orders yet",
-    body: "You haven't made any P2P trades yet",
+    title: "No orders found",
+    body: "Your P2P order transaction history will appear here once you trade.",
   },
 };
 
@@ -103,19 +103,17 @@ function OrderHistoryPageInner() {
 
   return (
     <P2PLayout>
-      <div className="w-full max-w-7xl mx-auto py-6 page-enter">
+      <div className="w-full max-w-7xl mx-auto py-6 max-[1150px]:py-4 page-enter">
         {/* Page header */}
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-              <MdOutlineReceiptLong size={22} />
+        <div className="flex items-center justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 text-primary">
+              <MdOutlineReceiptLong size={20} />
             </div>
             <div>
-              <h1 className="text-[20px] font-bold text-[var(--color-text-primary)] leading-tight">
-                P2P Orders
-              </h1>
-              <p className="text-xs text-[var(--color-text-secondary)]">
-                {allOrders.length} total orders · {processingCount} processing
+              <h1 className="text-xl font-semibold text-white tracking-tight">P2P Orders</h1>
+              <p className="text-xs text-white/45">
+                {allOrders.length} total orders · {processingCount} in progress
               </p>
             </div>
           </div>
@@ -123,22 +121,22 @@ function OrderHistoryPageInner() {
           <button
             onClick={() => refetch()}
             disabled={isRefetching}
-            className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-60"
+            className="flex items-center gap-1.5 text-xs font-medium text-white/60 hover:text-white transition-colors px-3 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.07] disabled:opacity-50"
           >
             <MdRefresh size={16} className={isRefetching ? "animate-spin" : ""} />
-            Refresh
+            <span>Refresh</span>
           </button>
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
           <div className="w-full sm:w-auto max-w-full scroll-x-hidden">
             <SegmentedControl
               value={activeTab}
               onChange={(v) => setActiveTab(v as OrderTab)}
               className="w-max whitespace-nowrap"
               options={[
-                { value: "PROCESSING", label: `Processing (${processingCount})` },
+                { value: "PROCESSING", label: `In Progress (${processingCount})` },
                 { value: "EXPIRED", label: `Expired (${expiredCount})` },
                 { value: "CANCELLED", label: `Cancelled (${cancelledCount})` },
                 {
@@ -146,8 +144,7 @@ function OrderHistoryPageInner() {
                   label: (
                     <>
                       <span className="sm:hidden">All</span>
-                      <span className="hidden sm:inline">All Orders</span> (
-                      {allOrders.length})
+                      <span className="hidden sm:inline">All Orders</span> ({allOrders.length})
                     </>
                   ),
                 },
@@ -155,15 +152,15 @@ function OrderHistoryPageInner() {
             />
           </div>
 
-          <div className="flex gap-2 p-1 bg-white/[0.04] border border-white/[0.06] rounded-xl max-w-full scroll-x-hidden">
+          <div className="flex gap-1 p-0.5 bg-white/[0.03] border border-white/[0.07] rounded-lg max-w-full scroll-x-hidden">
             {["ALL", "Buy", "Sell"].map((t) => (
               <button
                 key={t}
                 onClick={() => setFilterType(t)}
-                className={`shrink-0 whitespace-nowrap px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                   filterType === t
                     ? "bg-primary text-white"
-                    : "text-white/50 hover:text-white/80"
+                    : "text-white/50 hover:text-white"
                 }`}
               >
                 {t === "ALL" ? "All Types" : `${t} Orders`}
@@ -172,27 +169,23 @@ function OrderHistoryPageInner() {
           </div>
         </div>
 
-        {/* Orders */}
+        {/* Orders list */}
         {isLoading ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2.5">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-[122px] w-full !rounded-2xl" />
+              <Skeleton key={i} className="h-[105px] w-full !rounded-xl" />
             ))}
           </div>
         ) : displayOrders.length === 0 ? (
-          <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] flex flex-col items-center justify-center py-20">
-            <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-2xl mb-4">
-              📭
+          <div className="rounded-xl border border-white/[0.07] bg-[#181a20] flex flex-col items-center justify-center py-16 px-4 text-center">
+            <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center text-white/30 mb-3">
+              <MdOutlineReceiptLong size={22} />
             </div>
-            <div className="text-white/70 font-semibold">
-              {EMPTY_STATE[activeTab].title}
-            </div>
-            <p className="text-white/40 text-sm mt-1 max-w-sm text-center">
-              {EMPTY_STATE[activeTab].body}
-            </p>
+            <div className="text-white/70 font-medium text-sm mb-1">{EMPTY_STATE[activeTab].title}</div>
+            <p className="text-white/40 text-xs max-w-sm leading-relaxed">{EMPTY_STATE[activeTab].body}</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2.5">
             {displayOrders.map((order: any) => {
               const asset = order.asset ?? order.order?.asset ?? "?";
               const fiat = (order.fiatCurrency ?? order.fiat ?? order.order?.fiat ?? "").toUpperCase();
@@ -200,9 +193,11 @@ function OrderHistoryPageInner() {
               const fiatAmt = parseFloat(String(order.fiatAmount ?? order.amount ?? 0));
               const orderType = order.type ?? order.order?.type ?? "?";
               const status = (order.status ?? "PENDING").toUpperCase();
-              const statusStyle = STATUS_STYLES[status] ?? "text-white/50 bg-white/5 border-white/10";
-              const sellerName = order.sellerName || [order.seller?.firstName, order.seller?.lastName].filter(Boolean).join(" ") || "—";
-              const buyerName = order.buyerName || [order.buyer?.firstName, order.buyer?.lastName].filter(Boolean).join(" ") || "—";
+              const statusStyle = STATUS_STYLES[status] ?? "text-white/40 bg-white/[0.05] border-white/[0.07]";
+              const sellerName =
+                order.sellerName || [order.seller?.firstName, order.seller?.lastName].filter(Boolean).join(" ") || "—";
+              const buyerName =
+                order.buyerName || [order.buyer?.firstName, order.buyer?.lastName].filter(Boolean).join(" ") || "—";
               const counterparty = orderType?.toUpperCase() === "BUY" ? buyerName : sellerName;
               const isBuy = orderType?.toUpperCase() === "BUY";
               const coinIcon = getCryptoIcon(String(asset ?? ""));
@@ -213,53 +208,53 @@ function OrderHistoryPageInner() {
                   key={order.id}
                   type="button"
                   onClick={() => router.push(`/trades/p2p/order/${order.id}`)}
-                  className="w-full text-left rounded-2xl border border-white/[0.06] bg-[#181a20] p-4 transition-colors hover:border-white/[0.12] hover:bg-white/[0.02]"
+                  className="w-full text-left rounded-xl border border-white/[0.07] bg-[#181a20] p-4 transition-colors hover:border-white/[0.12] hover:bg-white/[0.02]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                       {coinIcon ? (
-                        <img src={coinIcon} alt={asset} width={22} height={22} className="shrink-0" />
+                        <img src={coinIcon} alt={asset} width={20} height={20} className="shrink-0" />
                       ) : (
-                        <span className="w-[22px] h-[22px] shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
+                        <span className="w-5 h-5 shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
                           {String(asset).charAt(0).toUpperCase()}
                         </span>
                       )}
                       <div className="min-w-0">
-                        <div className={`text-sm font-bold ${isBuy ? "text-[#25AB42]" : "text-[#F6465D]"}`}>
+                        <div className={`text-sm font-bold ${isBuy ? "text-buy" : "text-[#F6465D]"}`}>
                           {String(orderType).toUpperCase()} {String(asset).toUpperCase()}
                         </div>
-                        <div className="mt-0.5 truncate font-mono text-[11px] text-white/40" title={orderRef}>
-                          Order {orderRef}
+                        <div className="mt-0.5 truncate font-mono text-[11px] text-white/35" title={orderRef}>
+                          Ref: {orderRef.slice(-10).toUpperCase()}
                         </div>
                       </div>
                     </div>
-                    <span className={`inline-flex shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full border uppercase ${statusStyle}`}>
+                    <span className={`inline-flex shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-md border uppercase tracking-wider ${statusStyle}`}>
                       {status.charAt(0) + status.slice(1).toLowerCase()}
                     </span>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-white/[0.06] pt-3 sm:grid-cols-4">
+                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 border-t border-white/[0.06] pt-3 sm:grid-cols-4">
                     <div className="min-w-0">
                       <div className={fieldLabel}>Counterparty</div>
-                      <div className="mt-0.5 truncate text-sm text-white/80">{counterparty}</div>
+                      <div className="mt-0.5 truncate text-xs text-white/80 font-medium">{counterparty}</div>
                     </div>
                     <div className="min-w-0">
-                      <div className={fieldLabel}>Amount</div>
-                      <div className="mt-0.5 text-sm font-semibold text-white tabular-nums">
+                      <div className={fieldLabel}>Crypto Quantity</div>
+                      <div className="mt-0.5 text-xs font-semibold text-white font-mono tabular-nums">
                         {qty.toLocaleString(undefined, { maximumFractionDigits: 6 })} {String(asset).toUpperCase()}
                       </div>
                     </div>
                     <div className="min-w-0">
-                      <div className={fieldLabel}>Total</div>
-                      <div className="mt-0.5 text-sm text-white/80 tabular-nums">
+                      <div className={fieldLabel}>Fiat Total</div>
+                      <div className="mt-0.5 text-xs text-white/80 font-mono tabular-nums font-medium">
                         {fiatAmt > 0
                           ? `${fiatAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${fiat}`
                           : `— ${fiat}`}
                       </div>
                     </div>
                     <div className="min-w-0">
-                      <div className={fieldLabel}>Date</div>
-                      <div className="mt-0.5 text-sm text-white/60">{formatDate(order.createdAt)}</div>
+                      <div className={fieldLabel}>Created Date</div>
+                      <div className="mt-0.5 text-xs text-white/50">{formatDate(order.createdAt)}</div>
                     </div>
                   </div>
                 </button>

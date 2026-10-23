@@ -1,5 +1,8 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@mantine/core";
+import { MdWarning, MdContentCopy } from "react-icons/md";
 
 interface BuyerPendingPanelProps {
   orderId: string;
@@ -31,15 +34,22 @@ function CountdownTimer({ deadline }: { deadline: string }) {
   const isUrgent = secondsLeft < 120;
   const isWarning = secondsLeft < 300;
 
-  const color = isUrgent ? "text-red-400" : isWarning ? "text-yellow-400" : "text-green-400";
+  const color = isUrgent ? "text-[#F6465D]" : isWarning ? "text-[#FBA42A]" : "text-buy";
 
   return (
-    <div className={`text-center transition-all duration-500 ${color}`}>
-      <div className="text-6xl font-mono font-bold tracking-tight">
+    <div className={`text-center ${color}`}>
+      <div className="text-4xl font-mono font-bold tracking-tight">
         {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
       </div>
-      <div className="text-sm mt-2 text-white/40 uppercase tracking-widest font-semibold">minutes : seconds</div>
-      {isUrgent && <p className="text-red-400 text-xs mt-3 animate-pulse font-bold">⚠️ Order cancelling soon!</p>}
+      <div className="text-[11px] mt-1 uppercase tracking-widest text-white/35 font-medium">
+        minutes : seconds
+      </div>
+      {isUrgent && (
+        <div className="text-[#F6465D] text-xs mt-2 font-medium flex items-center justify-center gap-1.5">
+          <MdWarning size={14} />
+          <span>Payment window closing soon</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -56,65 +66,79 @@ export function BuyerPendingPanel({
 }: BuyerPendingPanelProps) {
   return (
     <>
-      <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 text-center mt-6 relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="text-white/60 text-sm mb-4 font-medium uppercase tracking-wider flex items-center justify-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse"></span>
-            Pay within
-          </div>
-          <CountdownTimer deadline={deadlineStr} />
-          <div className="text-white/40 text-xs mt-4">Order auto-cancels if unpaid</div>
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 text-center mt-4">
+        <div className="text-white/45 text-[11px] mb-3 uppercase tracking-wider font-semibold">
+          Pay Counterparty Within
         </div>
+        <CountdownTimer deadline={deadlineStr} />
+        <div className="text-white/35 text-xs mt-3">Order will automatically cancel if unpaid</div>
       </div>
 
       {paymentMethod && (
-        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 mt-6">
-          <div className="text-white/70 text-sm font-bold tracking-wide uppercase mb-4 flex items-center gap-2">
-            <span className="text-lg">💳</span> Payment Instructions
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 mt-4">
+          <div className="text-white/60 text-xs font-semibold tracking-wider uppercase mb-3.5">
+            Payment Account Details
           </div>
-          <div className="flex flex-col gap-2 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-white/50">Bank</span>
-              <span className="text-white">{paymentMethod?.data?.bankName ?? paymentMethod?.method ?? "—"}</span>
+          <div className="flex flex-col divide-y divide-white/[0.05] text-xs">
+            <div className="flex justify-between items-center py-2.5">
+              <span className="text-white/40">Bank / Provider</span>
+              <span className="text-white font-medium">{paymentMethod?.data?.bankName ?? paymentMethod?.method ?? "—"}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-white/50">Account Name</span>
-              <span className="text-white">{paymentMethod?.data?.accountName ?? "—"}</span>
+            <div className="flex justify-between items-center py-2.5">
+              <span className="text-white/40">Account Name</span>
+              <span className="text-white font-medium">{paymentMethod?.data?.accountName ?? "—"}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-white/50">Account Number</span>
+            <div className="flex justify-between items-center py-2.5">
+              <span className="text-white/40">Account Number</span>
               <div className="flex items-center gap-2">
-                <span className="text-white font-mono">{paymentMethod?.data?.accountNumber ?? "—"}</span>
+                <span className="text-white font-mono font-medium">{paymentMethod?.data?.accountNumber ?? "—"}</span>
                 {paymentMethod?.data?.accountNumber && (
-                  <button onClick={() => copyToClipboard(paymentMethod.data.accountNumber)} className="text-yellow-400 hover:text-yellow-300 text-xs">Copy</button>
+                  <button
+                    onClick={() => copyToClipboard(paymentMethod.data.accountNumber)}
+                    className="text-primary hover:text-primary/80 transition-colors p-1"
+                    title="Copy Account Number"
+                  >
+                    <MdContentCopy size={13} />
+                  </button>
                 )}
               </div>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-white/50">Amount</span>
+            <div className="flex justify-between items-center py-2.5">
+              <span className="text-white/40">Payment Amount</span>
               <div className="flex items-center gap-2">
-                <span className="text-white font-bold">{fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {fiat}</span>
-                <button onClick={() => copyToClipboard(String(fiatAmount))} className="text-yellow-400 hover:text-yellow-300 text-xs">Copy</button>
+                <span className="text-white font-bold font-mono text-sm">
+                  {fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {fiat}
+                </span>
+                <button
+                  onClick={() => copyToClipboard(String(fiatAmount))}
+                  className="text-primary hover:text-primary/80 transition-colors p-1"
+                  title="Copy Amount"
+                >
+                  <MdContentCopy size={13} />
+                </button>
               </div>
             </div>
           </div>
-          <div className="mt-5 text-xs text-white/60 bg-black/30 border border-white/10 p-4 rounded-xl flex gap-3 items-start">
-            <span className="text-xl leading-none">⚠️</span>
-            <span className="leading-relaxed">Include your Order ID <strong className="text-white bg-white/10 px-1 rounded">{orderId.slice(-8).toUpperCase()}</strong> as the payment reference or narration.</span>
+
+          <div className="mt-4 text-xs text-[#FBA42A]/90 bg-[#FBA42A]/10 border border-[#FBA42A]/20 p-3 rounded-lg flex items-start gap-2.5 leading-relaxed">
+            <MdWarning size={16} className="shrink-0 mt-0.5" />
+            <span>
+              Include order reference <strong className="font-mono text-white bg-white/10 px-1 py-0.5 rounded">{orderId.slice(-8).toUpperCase()}</strong> in payment narration. Do not include crypto terms like &quot;USDT&quot; or &quot;crypto&quot;.
+            </span>
           </div>
         </div>
       )}
 
-      <div className="flex flex-col gap-4 mt-8">
-        <Button 
-          className="w-full bg-gradient-to-r from-[#0ECB81] to-emerald-600 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold h-14 text-lg rounded-xl shadow-[0_4px_15px_rgba(14,203,129,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(14,203,129,0.5)]" 
+      <div className="flex flex-col gap-2.5 mt-6">
+        <Button
+          className="w-full !bg-buy hover:!bg-buy/90 !text-white !font-semibold !h-11 !text-sm !rounded-lg"
           onClick={() => setPaymentModalOpen(true)}
         >
           I Have Paid
         </Button>
-        <Button 
-          variant="subtle" 
-          className="w-full text-white/50 hover:text-white hover:bg-white/5 h-12 rounded-xl transition-colors" 
+        <Button
+          variant="subtle"
+          className="w-full !bg-white/[0.04] hover:!bg-white/[0.08] !border !border-white/[0.06] !text-white/50 hover:!text-[#F6465D] !h-10 !rounded-lg !text-xs !font-medium"
           onClick={() => setCancelModalOpen(true)}
         >
           Cancel Order

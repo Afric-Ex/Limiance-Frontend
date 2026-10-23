@@ -11,6 +11,7 @@ import { useOrderListings, useAdvertiserInfo } from "@/src/hooks/p2p/use-p2p";
 import { useRouter } from "next/navigation";
 import { P2POrderListings } from "@/src/types/p2p";
 import { isAdvertiserBlocked } from "@/src/lib/p2p-user-actions";
+import { MdOutlineStorefront, MdVerified, MdRefresh } from "react-icons/md";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2PMarketplaceSkeleton } from "@/src/components/skeletons/p2p";
 
@@ -34,7 +35,7 @@ function P2PMarketplacePageInner() {
       : {}),
   };
 
-  const { data: listingsData, isLoading, refetch } = useOrderListings(queryParams);
+  const { data: listingsData, isLoading, refetch, isRefetching } = useOrderListings(queryParams);
   const { data: advertiserData, isLoading: isAdvertiserLoading } = useAdvertiserInfo();
 
   const listings: P2POrderListings["data"] =
@@ -64,21 +65,23 @@ function P2PMarketplacePageInner() {
     <P2PLayout>
       <div className="w-full max-w-7xl mx-auto py-6 max-[1150px]:pb-[90px] max-[1150px]:py-4 page-enter">
         {/* Header */}
-        <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-xl font-bold text-white sm:text-2xl">P2P Trading</h1>
-            <p className="mt-1 text-xs text-white/50 sm:text-sm">Buy and sell crypto peer-to-peer</p>
+            <h1 className="text-xl font-semibold text-white tracking-tight">P2P Trading</h1>
+            <p className="text-white/45 text-xs mt-1">Buy and sell crypto directly with verified counterparties</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <button
               onClick={() => refetch()}
-              className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors px-3 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1]"
+              disabled={isRefetching}
+              className="flex items-center gap-1.5 text-xs font-medium text-white/60 hover:text-white transition-colors px-3 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.07] disabled:opacity-50"
             >
-              <span>⟳</span> Refresh
+              <MdRefresh size={16} className={isRefetching ? "animate-spin" : ""} />
+              <span>Refresh</span>
             </button>
             <Button
               onClick={handlePostAd}
-              className="!bg-primary hover:!bg-primary/90 !text-white font-semibold"
+              className="!bg-primary hover:!bg-primary/90 !text-white !font-semibold !rounded-lg !text-xs !h-8 !px-3.5"
             >
               + Post Ad
             </Button>
@@ -88,134 +91,162 @@ function P2PMarketplacePageInner() {
         <FilterBar />
 
         {isLoading ? (
-          <div className="flex flex-col gap-2">
-            {/* Table Header Skeleton */}
-            <div className="max-[1150px]:hidden grid grid-cols-[2fr_1.5fr_1.5fr_1.5fr_auto] gap-4 px-4 py-2 mb-1">
-              <Skeleton height={14} width={80} />
-              <Skeleton height={14} width={60} />
-              <Skeleton height={14} width={100} />
-              <Skeleton height={14} width={70} />
-              <Skeleton height={14} width={40} />
+          <div className="bg-[#181a20] border border-white/[0.07] rounded-xl overflow-hidden">
+            <div className="hidden min-[1150px]:grid grid-cols-[minmax(180px,2fr)_1.5fr_1.5fr_1.5fr_minmax(120px,auto)] gap-4 px-5 py-3 border-b border-white/[0.06]">
+              <Skeleton height={10} width={80} />
+              <Skeleton height={10} width={60} />
+              <Skeleton height={10} width={90} />
+              <Skeleton height={10} width={70} />
+              <Skeleton height={10} width={40} className="ml-auto" />
             </div>
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="p-4 rounded-xl border border-white/[0.06] bg-[#181a20] flex flex-col min-[1150px]:grid min-[1150px]:grid-cols-[2fr_1.5fr_1.5fr_1.5fr_auto] gap-4 max-[1150px]:gap-3 items-start min-[1150px]:items-center">
-                <div className="flex gap-3 items-center">
-                  <Skeleton height={40} circle />
-                  <div className="flex flex-col gap-2">
-                    <Skeleton height={14} width={120} />
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="grid grid-cols-1 min-[1150px]:grid-cols-[minmax(180px,2fr)_1.5fr_1.5fr_1.5fr_minmax(120px,auto)] gap-4 px-5 py-4 border-b border-white/[0.06] last:border-0 items-center"
+              >
+                <div className="flex items-center gap-3">
+                  <Skeleton height={36} width={36} radius="md" />
+                  <div className="flex flex-col gap-1.5">
+                    <Skeleton height={13} width={110} />
                     <Skeleton height={10} width={80} />
                   </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Skeleton height={20} width={90} />
-                  <Skeleton height={12} width={50} />
+                <div>
+                  <Skeleton height={18} width={100} />
+                  <Skeleton height={10} width={40} className="mt-1" />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Skeleton height={14} width={140} />
-                  <Skeleton height={14} width={110} />
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton height={12} width={120} />
+                  <Skeleton height={12} width={110} />
                 </div>
-                <div className="flex gap-2">
-                  <Skeleton height={24} width={50} radius="xl" />
-                  <Skeleton height={24} width={50} radius="xl" />
+                <div className="flex gap-1.5">
+                  <Skeleton height={22} width={60} radius="sm" />
+                  <Skeleton height={22} width={60} radius="sm" />
                 </div>
-                <div className="flex justify-end w-full md:w-auto">
-                  <Skeleton height={36} width={100} radius="md" />
+                <div className="flex justify-end">
+                  <Skeleton height={34} width={90} radius="md" />
                 </div>
               </div>
             ))}
           </div>
         ) : listings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-white/50 bg-[#181a20] border border-white/[0.06] rounded-2xl">
-            <div className="text-5xl mb-4">📭</div>
-            <div className="text-lg font-semibold text-white/70">No ads found</div>
-            <div className="text-sm mt-1">Try adjusting your filters or check back later</div>
+          <div className="bg-[#181a20] border border-white/[0.07] rounded-xl px-6 py-16 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center mb-3 text-white/30">
+              <MdOutlineStorefront size={22} />
+            </div>
+            <div className="text-white/70 font-medium text-sm mb-1">No advertisements found</div>
+            <div className="text-white/40 text-xs max-w-sm leading-relaxed">
+              No active listings match your current filters. Try adjusting amount or payment method, or post an ad yourself.
+            </div>
           </div>
         ) : (
-          <>
+          <div className="bg-[#181a20] border border-white/[0.07] rounded-xl overflow-hidden">
             {/* Table Header */}
-            <div className="max-[1150px]:hidden grid grid-cols-[2fr_1.5fr_1.5fr_1.5fr_auto] gap-4 px-4 py-2 text-xs text-white/40 uppercase tracking-wider mb-1">
+            <div className="hidden min-[1150px]:grid grid-cols-[minmax(180px,2fr)_1.5fr_1.5fr_1.5fr_minmax(120px,auto)] gap-4 px-5 py-3 border-b border-white/[0.06] text-[11px] font-medium uppercase tracking-wider text-white/40">
               <span>Advertiser</span>
               <span>Price</span>
               <span>Quantity / Limits</span>
               <span>Payment</span>
-              <span></span>
+              <span className="text-right">Action</span>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="divide-y divide-white/[0.06]">
               {listings.map((ad) => {
                 const isOwn = ad.advertiser?.id === advertiserData?.data?.data?.id;
-                const advertiserName = [ad.advertiser?.firstName, ad.advertiser?.lastName].filter(Boolean).join(" ") || "Unknown";
+                const advertiserName =
+                  [ad.advertiser?.firstName, ad.advertiser?.lastName].filter(Boolean).join(" ") || "Merchant";
                 const completionRate = parseFloat(ad.advertiser?.completionPercentage ?? "0");
-                const completionColor = completionRate >= 95 ? "text-green-400" : completionRate >= 90 ? "text-yellow-400" : "text-red-400";
+                const completionColor =
+                  completionRate >= 95 ? "text-buy" : completionRate >= 80 ? "text-[#FBA42A]" : "text-white/60";
                 const paymentMethods = ad.paymentMethod ?? [];
+                const fiatSymbol = ad.fiat === "NGN" ? "₦" : ad.fiat === "USD" ? "$" : "";
 
                 return (
                   <div
                     key={ad.id}
-                    className={`p-4 rounded-xl border transition-colors ${isOwn ? "border-primary/40 bg-primary/[0.08]" : "border-white/[0.06] bg-[#181a20] hover:bg-white/[0.03]"} flex flex-col min-[1150px]:grid min-[1150px]:grid-cols-[2fr_1.5fr_1.5fr_1.5fr_auto] gap-4 max-[1150px]:gap-3 items-start min-[1150px]:items-center`}
+                    className={`grid grid-cols-1 min-[1150px]:grid-cols-[minmax(180px,2fr)_1.5fr_1.5fr_1.5fr_minmax(120px,auto)] gap-4 px-5 py-4 transition-colors ${
+                      isOwn ? "bg-primary/[0.04] hover:bg-primary/[0.07]" : "hover:bg-white/[0.02]"
+                    } items-start min-[1150px]:items-center`}
                   >
                     {/* Advertiser */}
                     <div
                       className="flex items-center gap-3 cursor-pointer group"
                       onClick={() => setSelectedAdvertiser(ad.advertiser)}
                     >
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 ${ad.advertiser?.verified ? "ring-2 ring-primary bg-gradient-to-br from-primary to-blue-600" : "bg-gradient-to-br from-gray-700 to-gray-600"}`}>
-                        {advertiserName.slice(0, 2).toUpperCase()}
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                        {advertiserName.charAt(0).toUpperCase()}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-1">
-                          {isOwn && <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded mr-1">You</span>}
-                          <span className="text-white font-medium text-sm group-hover:text-primary transition-colors">{advertiserName}</span>
-                          {ad.advertiser?.verified && <span className="text-primary text-xs">✓</span>}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          {isOwn && (
+                            <span className="text-[10px] font-semibold bg-primary/15 text-primary px-1.5 py-0.5 rounded mr-0.5">
+                              You
+                            </span>
+                          )}
+                          <span className="text-sm font-semibold text-white group-hover:text-primary transition-colors truncate">
+                            {advertiserName}
+                          </span>
+                          {ad.advertiser?.verified && <MdVerified className="text-buy text-sm shrink-0" />}
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-white/40">{Math.floor(Number(ad.advertiser?.totalOrdersCompleted ?? 0))} Orders</span>
-                          <span className="text-xs text-white/40">|</span>
-                          <span className={`text-xs font-medium ${completionColor}`}>{completionRate.toFixed(0)} %</span>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-white/40">
+                          <span>{Math.floor(Number(ad.advertiser?.totalOrdersCompleted ?? 0))} Orders</span>
+                          <span className="text-white/20">·</span>
+                          <span className={`font-medium ${completionColor}`}>{completionRate.toFixed(0)}%</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Price */}
                     <div>
-                      <div className="text-xl font-bold text-white font-mono">
-                        <span className="mr-1">{ad.fiat === "NGN" ? "₦" : ad.fiat === "USD" ? "$" : ad.fiat?.toUpperCase()}</span>
-                        {parseFloat(String(ad.price ?? 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                      <div className="text-base font-bold text-white font-mono tabular-nums">
+                        {fiatSymbol}
+                        {parseFloat(String(ad.price ?? 0)).toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 4,
+                        })}
                       </div>
+                      <div className="text-xs text-white/40 mt-0.5">{ad.fiat?.toUpperCase()}</div>
                     </div>
 
                     {/* Limits */}
-                    <div className="text-sm text-white/60">
+                    <div className="text-xs text-white/60 space-y-1">
                       <div>
-                        <span className="text-white/40">Quantity </span>
-                        {parseFloat(String(ad.availableQuantity ?? 0)).toLocaleString()} {ad.asset?.toUpperCase()}
+                        <span className="text-white/35">Avail </span>
+                        <span className="text-white/80 font-medium font-mono tabular-nums">
+                          {parseFloat(String(ad.availableQuantity ?? 0)).toLocaleString()} {ad.asset?.toUpperCase()}
+                        </span>
                       </div>
-                      <div className="mt-0.5">
-                        <span className="text-white/40">Limits </span>
-                        {(ad.minQuantity ?? 0).toLocaleString()} – {(ad.maxQuantity ?? 0).toLocaleString()} {ad.asset?.toUpperCase()}
+                      <div>
+                        <span className="text-white/35">Limit </span>
+                        <span className="text-white/70 font-mono tabular-nums">
+                          {(ad.minQuantity ?? 0).toLocaleString()} – {(ad.maxQuantity ?? 0).toLocaleString()}{" "}
+                          {ad.asset?.toUpperCase()}
+                        </span>
                       </div>
                     </div>
 
                     {/* Payment Methods */}
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-white/20 text-xs">|</span>
                       {paymentMethods.slice(0, 3).map((pm) => (
-                        <span key={pm.id} className="text-xs text-white/70">
+                        <span
+                          key={pm.id}
+                          className="text-xs bg-white/[0.05] border border-white/[0.07] text-white/65 px-2 py-0.5 rounded font-medium"
+                        >
                           {pm.method}
                         </span>
                       ))}
                       {paymentMethods.length > 3 && (
-                        <span className="text-xs text-white/40">
-                          +{paymentMethods.length - 3}
-                        </span>
+                        <span className="text-xs text-white/35">+{paymentMethods.length - 3}</span>
                       )}
                     </div>
 
                     {/* Action */}
-                    <div className="flex items-center justify-end min-w-[100px] max-[1150px]:w-full max-[1150px]:mt-2">
+                    <div className="flex items-center justify-start min-[1150px]:justify-end min-w-[110px] max-[1150px]:w-full max-[1150px]:mt-1">
                       {isOwn ? (
-                        <div className="flex min-[1150px]:flex-col items-center min-[1150px]:items-end justify-between w-full gap-1">
-                          <span className="text-xs font-semibold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded">Your Ad</span>
+                        <div className="flex min-[1150px]:flex-col items-center min-[1150px]:items-end justify-between w-full gap-1.5">
+                          <span className="text-[11px] font-semibold text-[#FBA42A] bg-[#FBA42A]/10 border border-[#FBA42A]/20 px-2 py-0.5 rounded-md">
+                            Your Ad
+                          </span>
                           <button
                             onClick={() => handleAdAction(ad, true)}
                             className="text-xs text-white/50 hover:text-white transition-colors"
@@ -224,29 +255,30 @@ function P2PMarketplacePageInner() {
                           </button>
                         </div>
                       ) : (
-                        <Button
-                          size="sm"
-                          className={`max-[1150px]:w-full ${adFilters.type === "BUY" ? "bg-buy hover:bg-buy/90 text-white font-semibold" : "bg-[#F6465D] hover:bg-[#F6465D]/90 text-white font-semibold"}`}
+                        <button
                           onClick={() => handleAdAction(ad, false)}
+                          className={`w-full min-[1150px]:w-auto px-4 py-2 text-xs font-semibold text-white rounded-lg transition-colors ${
+                            adFilters.type === "BUY"
+                              ? "bg-buy hover:bg-buy/90"
+                              : "bg-[#F6465D] hover:bg-[#F6465D]/90"
+                          }`}
                         >
                           {adFilters.type === "BUY" ? "Buy" : "Sell"} {ad.asset?.toUpperCase()}
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </div>
                 );
               })}
             </div>
-          </>
+          </div>
         )}
       </div>
 
       <AdvertiserProfilePanel
         advertiser={selectedAdvertiser}
         onClose={() => setSelectedAdvertiser(null)}
-        onRelationshipChange={() =>
-          setRelationshipRefreshKey((value) => value + 1)
-        }
+        onRelationshipChange={() => setRelationshipRefreshKey((value) => value + 1)}
       />
 
       <NonAdvertiserModal

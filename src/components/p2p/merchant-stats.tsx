@@ -2,7 +2,6 @@
 
 import React from "react";
 import { MdVerified } from "react-icons/md";
-import { FaThumbsUp } from "react-icons/fa";
 
 interface MerchantStatsProps {
   name: string;
@@ -15,26 +14,16 @@ interface MerchantStatsProps {
 export const MerchantStats = ({ name, verified, trades, completionRate, responseTime }: MerchantStatsProps) => {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white bg-blue-500/20 text-blue-400">
+      <div className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold bg-primary/10 text-primary">
         {name ? name.charAt(0).toUpperCase() : "M"}
       </div>
       <div className="flex flex-col">
         <div className="flex items-center gap-1">
-          <span className="text-base font-semibold text-white">{name}</span>
+          <span className="text-sm font-semibold text-white">{name}</span>
           {verified && <MdVerified className="text-buy text-sm" />}
         </div>
-        <div className="flex items-center gap-2 text-xs text-white/50 mt-1">
-          <span>{trades} orders</span>
-          <span className="w-1 h-1 rounded-full bg-white/20" />
-          <span>{completionRate}%</span>
-          <span className="w-1 h-1 rounded-full bg-white/20" />
-          <div className="flex items-center gap-1">
-            <FaThumbsUp className="text-white/40" size={10} />
-            <span>98%</span>
-          </div>
-        </div>
-        <div className="text-xs text-white/40 mt-0.5">
-          Avg. pay: {responseTime}
+        <div className="text-xs text-white/50 mt-0.5">
+          {trades} Orders · {completionRate}% · {responseTime}
         </div>
       </div>
     </div>

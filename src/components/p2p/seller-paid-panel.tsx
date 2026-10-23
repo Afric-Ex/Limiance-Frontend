@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import { Button } from "@mantine/core";
+import { MdWarning, MdSecurity } from "react-icons/md";
 
 interface SellerPaidPanelProps {
   counterpartyName: string;
@@ -22,44 +25,48 @@ export function SellerPaidPanel({
 }: SellerPaidPanelProps) {
   return (
     <>
-      <div className="bg-gradient-to-r from-warning/10 to-warning/5 backdrop-blur-md border-l-4 border-warning p-5 mb-6 rounded-r-2xl mt-6 shadow-[0_4px_24px_rgba(251,164,42,0.15)] relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
-        <div className="relative z-10">
-          <div className="text-warning font-bold text-lg mb-2 flex items-center gap-2">
-            <span className="text-2xl drop-shadow-md">⚠️</span> Buyer Has Confirmed Payment
-          </div>
-          <p className="text-white/80 text-sm leading-relaxed">
-            <span className="text-white font-medium">{counterpartyName || "Buyer"}</span> confirmed they sent <span className="font-bold text-yellow-400 bg-yellow-400/10 px-1 rounded">{fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {fiat}</span> via {paymentMethod?.method || "transfer"} at <span className="text-white/90">{new Date(updatedAt).toLocaleTimeString()}</span>.
-          </p>
+      <div className="bg-[#FBA42A]/10 border border-[#FBA42A]/20 p-4 rounded-xl mt-4">
+        <div className="text-[#FBA42A] font-semibold text-sm mb-1.5 flex items-center gap-2">
+          <MdWarning size={16} className="shrink-0" />
+          <span>Buyer Has Confirmed Payment</span>
+        </div>
+        <p className="text-white/75 text-xs leading-relaxed">
+          <span className="text-white font-medium">{counterpartyName || "Buyer"}</span> marked that they sent{" "}
+          <span className="font-bold text-white font-mono">
+            {fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {fiat}
+          </span>{" "}
+          via {paymentMethod?.method || "bank transfer"} at{" "}
+          <span className="text-white/90">{new Date(updatedAt).toLocaleTimeString()}</span>.
+        </p>
+      </div>
+
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 mt-4 text-xs space-y-2.5">
+        <div className="flex items-start gap-2.5 text-white/80 leading-relaxed">
+          <MdSecurity size={15} className="text-primary shrink-0 mt-0.5" />
+          <span>
+            Check your actual {paymentMethod?.data?.bankName || "bank"} account or payment app to confirm you have
+            received{" "}
+            <strong className="text-white font-mono">
+              {fiatAmount.toLocaleString()} {fiat}
+            </strong>{" "}
+            before releasing crypto.
+          </span>
+        </div>
+        <div className="p-3 bg-[#F6465D]/10 border border-[#F6465D]/20 rounded-lg text-[#F6465D] font-medium leading-relaxed">
+          Releasing crypto is irreversible. Never release funds based on payment screenshots alone.
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-orange-500/10 to-red-500/5 backdrop-blur-md border border-orange-500/30 rounded-2xl p-6 mb-8 text-sm shadow-lg">
-        <div className="flex flex-col gap-4 text-orange-400/90 leading-relaxed">
-          <p className="font-bold text-orange-400 flex items-start gap-2">
-            <span className="text-lg">🏦</span>
-            <span>Check your {paymentMethod?.data?.bankName || "bank"} account NOW to confirm you received <strong className="text-white underline decoration-orange-500">{fiatAmount.toLocaleString()} {fiat}</strong> before releasing.</span>
-          </p>
-          <p className="flex items-start gap-2">
-            <span className="text-lg">🚫</span>
-            <span>Do NOT release based on screenshots or chat messages alone.</span>
-          </p>
-          <p className="font-bold text-red-400 bg-red-500/10 border border-red-500/20 p-3 rounded-xl">
-            Releasing crypto is IRREVERSIBLE. Once released, it cannot be undone.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <Button 
-          className="w-full bg-gradient-to-r from-[#0ECB81] to-emerald-600 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold h-14 text-lg rounded-xl shadow-[0_4px_15px_rgba(14,203,129,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(14,203,129,0.5)]" 
+      <div className="flex flex-col gap-2.5 mt-6">
+        <Button
+          className="w-full !bg-buy hover:!bg-buy/90 !text-white !font-semibold !h-11 !text-sm !rounded-lg"
           onClick={() => setReleaseModalOpen(true)}
         >
           Release Crypto
         </Button>
-        <Button 
-          variant="outline" 
-          className="w-full border-orange-500/30 text-orange-400 hover:bg-orange-500/10 h-12 rounded-xl transition-all hover:border-orange-500/50" 
+        <Button
+          variant="outline"
+          className="w-full !border-[#FBA42A]/30 !text-[#FBA42A] hover:!bg-[#FBA42A]/[0.08] !h-10 !rounded-lg !text-xs !font-medium"
           onClick={onDisputeOpen}
         >
           File Dispute
