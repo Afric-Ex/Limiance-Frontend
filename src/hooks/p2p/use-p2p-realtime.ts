@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { p2pKey } from "@/src/services/p2p";
 import {
+  normalizeWsMatch,
   subscribeP2PGlobalEvents,
   subscribeP2PMatchRoom,
   subscribeP2POrdersFeed,
@@ -115,7 +116,7 @@ export function useP2PMatchRoom(orderMatchId: string) {
         hasSubscribed = true;
       },
       onState: (order) => {
-        patchMatchedOrder(queryClient, orderMatchId, order, true);
+        patchMatchedOrder(queryClient, orderMatchId, normalizeWsMatch(order), true);
       },
       onStatusChanged: applyStatus,
       onCompleted: (event) => {

@@ -379,7 +379,7 @@ export function normalizeWsP2PUserAdsResponse(payload: any): UserAds {
   return normalizeWsP2POrdersResponse(payload) as unknown as UserAds;
 }
 
-function normalizeWsMatch(raw: any) {
+export function normalizeWsMatch(raw: any) {
   const source = raw && typeof raw === "object" ? raw : {};
   const amount = toNumberValue(source.amount ?? source.fiatAmount ?? source.fiat_amount);
 

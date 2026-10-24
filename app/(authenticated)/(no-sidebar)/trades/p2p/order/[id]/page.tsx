@@ -77,8 +77,16 @@ function OrderRoomPageInner() {
   });
   const originalOrder: any = (originalOrderData as any)?.data?.data;
 
-  const status: string = order?.status ?? "";
-  const adType: string = (order?.type ?? "").toUpperCase();
+  // Derive useful values
+  const status: string = String(order?.status ?? "");
+  // The API returns `matcherId` but NOT `userId` or `advertiserId`
+  // Use matcherId to determine our role:
+  //   If matcherId === currentUserId → we are the Matcher
+  //   Otherwise → we are the Advertiser (creator of the ad)
+  // Role maps to Buyer/Seller based on ad type:
+  //   BUY ad:  Advertiser = Buyer (pays fiat),  Matcher = Seller (releases crypto)
+  //   SELL ad: Advertiser = Seller (releases crypto), Matcher = Buyer (pays fiat)
+  const adType: string = String(order?.type ?? "").toUpperCase();
   const currentUserId = user?.id != null ? String(user.id) : "";
   const isMatcher = Boolean(
     order?.matcherId && currentUserId && String(order.matcherId) === currentUserId
@@ -99,7 +107,7 @@ function OrderRoomPageInner() {
       : status.toUpperCase();
 
   const asset = order?.asset ?? originalOrder?.asset ?? "";
-  const fiat = (order?.fiatCurrency ?? originalOrder?.currency ?? originalOrder?.fiat ?? "USD").toUpperCase();
+  const fiat = String(order?.fiatCurrency ?? originalOrder?.currency ?? originalOrder?.fiat ?? "USD").toUpperCase();
   const quantity = parseFloat(String(order?.quantity ?? 0));
   const price = parseFloat(String(originalOrder?.fixedPrice ?? originalOrder?.price ?? 0));
   const fiatAmount = order?.fiatAmount && order.fiatAmount > 0 ? order.fiatAmount : quantity * price;
@@ -135,7 +143,21 @@ function OrderRoomPageInner() {
 
   const existingFeedbackSubmitted = !!order?.review || hasReviewForOrder(orderId) || feedbackSubmitted;
 
-  const parseBackendDate = (dateStr: string): Date | null => {
+  // Helper: parse Go backend's non-standard UTC date format
+  // e.g. "2026-06-10 11:34:54.503001 +0000 UTC" → valid JS Date
+  // Values can arrive as strings, numbers (unix seconds/millis) or Date objects
+  // depending on whether they came from REST or the realtime match room.
+  const parseBackendDate = (value: unknown): Date | null => {
+    if (value === null || value === undefined || value === "") return null;
+    if (value instanceof Date) {
+      return isNaN(value.getTime()) ? null : value;
+    }
+    if (typeof value === "number") {
+      const millis = value > 1e12 ? value : value * 1000;
+      const fromNumber = new Date(millis);
+      return isNaN(fromNumber.getTime()) ? null : fromNumber;
+    }
+    const dateStr = String(value);
     if (!dateStr || dateStr.startsWith("0001")) return null;
     const match = dateStr
       .trim()
