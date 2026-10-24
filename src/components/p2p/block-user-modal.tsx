@@ -27,24 +27,24 @@ export const BlockUserModal = ({ isOpen, onClose, onConfirm, username }: BlockUs
     <Modal
       opened={isOpen}
       onClose={handleClose}
-      title="Block User"
+      title="Block Counterparty"
       centered
       classNames={{
-        content: "bg-gray-900 text-white",
-        header: "bg-gray-900 text-white border-b border-white/10",
-        title: "text-lg font-bold text-[#F6465D]",
-        close: "text-white hover:bg-white/10"
+        content: "!bg-[#181a20] !border !border-white/[0.08] !text-white !rounded-xl",
+        header: "!bg-[#181a20] !border-b !border-white/[0.06] !text-white",
+        title: "!text-white !font-semibold !text-base",
+        close: "!text-white/40 hover:!text-white hover:!bg-white/[0.06]",
       }}
     >
       <div className="flex flex-col gap-4 py-2">
-        <p className="text-white/80">
+        <p className="text-white/80 text-xs">
           Are you sure you want to block <strong className="text-white">{username}</strong>?
         </p>
-        
-        <ul className="list-disc pl-5 text-sm text-white/60 mb-2">
-          <li>You will no longer see their ads.</li>
-          <li>They will not be able to interact with your ads.</li>
-          <li>You cannot send them direct messages.</li>
+
+        <ul className="list-disc pl-5 text-xs text-white/50 space-y-1">
+          <li>You will no longer see their advertisements in the marketplace.</li>
+          <li>They will not be able to interact with or place orders on your ads.</li>
+          <li>Direct chat messaging with this user will be disabled.</li>
         </ul>
 
         <Textarea
@@ -53,16 +53,21 @@ export const BlockUserModal = ({ isOpen, onClose, onConfirm, username }: BlockUs
           value={reason}
           onChange={(event) => setReason(event.currentTarget.value)}
           classNames={{
-            input: "bg-black/40 border-white/10 text-white focus:border-[#F6465D]"
+            input:
+              "!bg-white/[0.04] !border-white/[0.08] !text-white focus:!border-[#F6465D]/60 !rounded-lg !text-xs !p-3",
           }}
         />
 
-        <div className="flex gap-3 mt-4">
-          <Button variant="light" color="gray" className="flex-1 bg-white/5 hover:bg-white/10 text-white" onClick={handleClose}>
+        <div className="flex gap-2.5 mt-2">
+          <Button
+            variant="subtle"
+            className="flex-1 !bg-white/[0.06] hover:!bg-white/[0.1] !border !border-white/[0.08] !text-white !h-10 !rounded-lg !text-xs !font-semibold"
+            onClick={handleClose}
+          >
             Cancel
           </Button>
-          <Button 
-            className="flex-1 bg-[#F6465D] hover:bg-[#F6465D]/90 text-white"
+          <Button
+            className="flex-1 !bg-[#F6465D] hover:!bg-[#F6465D]/90 !text-white !h-10 !rounded-lg !text-xs !font-semibold"
             onClick={handleConfirm}
           >
             Block User

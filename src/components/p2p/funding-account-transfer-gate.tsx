@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Modal, Button, NumberInput } from "@mantine/core";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { HiArrowNarrowRight } from "react-icons/hi";
 
 interface FundingAccountTransferGateProps {
   isOpen: boolean;
@@ -11,7 +12,12 @@ interface FundingAccountTransferGateProps {
   onTransferComplete: () => void;
 }
 
-export const FundingAccountTransferGate = ({ isOpen, onClose, asset: assetSymbol, onTransferComplete }: FundingAccountTransferGateProps) => {
+export const FundingAccountTransferGate = ({
+  isOpen,
+  onClose,
+  asset: assetSymbol,
+  onTransferComplete,
+}: FundingAccountTransferGateProps) => {
   const [amount, setAmount] = useState<number | "">("");
 
   const { coins: portfolio } = usePortfolioWs({ coins: true });
@@ -27,54 +33,70 @@ export const FundingAccountTransferGate = ({ isOpen, onClose, asset: assetSymbol
       title="Transfer to Funding Account"
       centered
       classNames={{
-        content: "bg-gray-900 text-white",
-        header: "bg-gray-900 text-white border-b border-white/10",
-        title: "text-lg font-bold text-white",
-        close: "text-white hover:bg-white/10"
+        content: "!bg-[#181a20] !text-white !border !border-white/[0.08] !rounded-xl !p-2",
+        header: "!bg-[#181a20] !text-white !border-b !border-white/[0.06] !pb-3",
+        title: "!text-sm !font-semibold !text-white",
+        close: "!text-white/40 hover:!text-white hover:!bg-white/[0.06]",
       }}
     >
-      <div className="flex flex-col gap-6 py-2">
-        <p className="text-white/80 text-sm">
-          To sell crypto on P2P, the funds must be in your Funding Account.
+      <div className="flex flex-col gap-4 py-2">
+        <p className="text-white/50 text-xs leading-relaxed">
+          To sell crypto on Limiance P2P, escrowed funds must reside in your Funding Account.
         </p>
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-4">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-white/50">From</span>
-            <span className="font-bold text-white">Spot Account</span>
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3.5 flex items-center justify-between text-xs">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-white/40 text-[10px] uppercase tracking-wider">From</span>
+            <span className="font-semibold text-white">Spot Account</span>
           </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-white/50">To</span>
-            <span className="font-bold text-white">Funding Account</span>
+          <HiArrowNarrowRight size={18} className="text-white/30" />
+          <div className="flex flex-col gap-0.5 text-right">
+            <span className="text-white/40 text-[10px] uppercase tracking-wider">To</span>
+            <span className="font-semibold text-white">Funding Account</span>
           </div>
         </div>
 
         <div>
-          <div className="flex justify-between items-end mb-2">
-            <span className="text-white/70 text-sm">Amount</span>
-            <span className="text-white/50 text-xs">Available: {spotBalance} {assetSymbol}</span>
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="text-white/60 text-xs font-medium">Transfer Amount</span>
+            <span className="text-white/40 text-[11px] font-mono">
+              Available: {spotBalance.toLocaleString(undefined, { maximumFractionDigits: 8 })} {assetSymbol}
+            </span>
           </div>
           <NumberInput
             value={amount}
             onChange={(val) => setAmount(val === "" ? "" : Number(val))}
             placeholder="0.00"
-            rightSection={<span className="text-white/50 pr-4">{assetSymbol}</span>}
+            rightSection={
+              <button
+                type="button"
+                className="text-[11px] font-bold text-primary hover:text-primary/80 pr-3"
+                onClick={() => setAmount(spotBalance)}
+              >
+                MAX
+              </button>
+            }
             hideControls
             classNames={{
-              input: "bg-black/40 border-white/10 text-white focus:border-primary h-12 text-lg"
+              input:
+                "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.15] focus:!border-primary/60 !text-white !h-11 !text-sm font-mono !rounded-lg",
+              section: "!w-fit !right-2",
             }}
           />
         </div>
 
-        <div className="flex gap-3 mt-4">
-          <Button variant="light" color="gray" className="flex-1 bg-white/5 hover:bg-white/10 text-white" onClick={onClose}>
+        <div className="flex gap-2.5 mt-2">
+          <Button
+            variant="subtle"
+            className="flex-1 !bg-white/[0.04] !border !border-white/[0.08] !text-white/70 hover:!text-white hover:!bg-white/[0.08] !rounded-lg !h-10 !text-xs !font-semibold"
+            onClick={onClose}
+          >
             Cancel
           </Button>
-          <Button 
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+          <Button
+            className="flex-1 !bg-primary hover:!bg-primary/90 !text-white !rounded-lg !h-10 !text-xs !font-semibold"
             disabled={!amount || Number(amount) <= 0 || Number(amount) > spotBalance}
             onClick={() => {
-              // Mock API call
               onTransferComplete();
               onClose();
             }}

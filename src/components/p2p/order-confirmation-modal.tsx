@@ -30,81 +30,59 @@ export const OrderConfirmationModal = ({
   if (!isOpen) return null;
 
   const isBuy = type === "BUY";
-  const accentColor = isBuy ? "#0ECB81" : "#F6465D";
-  const accentBg = isBuy ? "rgba(14,203,129,0.12)" : "rgba(246,70,93,0.12)";
-  const accentBorder = isBuy ? "rgba(14,203,129,0.25)" : "rgba(246,70,93,0.25)";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-sm bg-elevated border border-white/10 rounded-2xl shadow-[0_24px_48px_rgba(0,0,0,0.7)] overflow-hidden">
-        {/* Top gradient bar */}
-        <div
-          className="h-1 w-full"
-          style={{
-            background: `linear-gradient(to right, transparent, ${accentColor}, transparent)`,
-          }}
-        />
-
+      <div className="relative w-full max-w-sm bg-[#181a20] border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-          <span className="text-white font-bold text-base tracking-tight">Confirm Order</span>
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06]">
+          <span className="text-white font-semibold text-sm">Confirm Order</span>
           <button
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all text-lg"
+            className="w-6 h-6 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors text-base"
           >
             ×
           </button>
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 flex flex-col gap-5">
+        <div className="p-5 flex flex-col gap-4">
           {/* Summary hero */}
-          <div className="text-center py-2">
-            <div className="text-white/50 text-sm mb-2">
-              You are about to{" "}
-              <span
-                className="font-bold"
-                style={{ color: accentColor }}
-              >
-                {type.toLowerCase()}
-              </span>
+          <div className="text-center py-1">
+            <div className="text-white/40 text-xs mb-1">
+              You are about to <span className={isBuy ? "text-buy font-semibold" : "text-[#F6465D] font-semibold"}>{type.toLowerCase()}</span>
             </div>
-            <div className="text-4xl font-bold text-white tracking-tight mb-1">
+            <div className="text-2xl font-bold text-white font-mono tracking-tight mb-1">
               {cryptoAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })}{" "}
-              <span className="text-white/60 text-3xl">{asset}</span>
+              <span className="text-white/60 text-lg font-sans">{asset}</span>
             </div>
-            <div className="text-sm text-white/50">
+            <div className="text-xs text-white/50">
               for{" "}
-              <span className="font-bold text-white text-base">
+              <span className="font-semibold text-white font-mono text-sm">
                 {fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {fiat}
               </span>
             </div>
           </div>
 
           {/* Detail rows */}
-          <div
-            className="rounded-xl p-4 flex flex-col gap-3 text-sm"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
-          >
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-3.5 flex flex-col gap-2.5 text-xs">
             <div className="flex justify-between items-center">
-              <span className="text-white/40 font-medium">Price</span>
-              <span className="text-white font-semibold">
+              <span className="text-white/40">Unit Price</span>
+              <span className="text-white font-medium font-mono">
                 {price.toLocaleString()} {fiat}
               </span>
             </div>
-            <div className="h-px bg-white/5" />
+            <div className="h-px bg-white/[0.05]" />
             <div className="flex justify-between items-center">
-              <span className="text-white/40 font-medium">Action</span>
+              <span className="text-white/40">Order Type</span>
               <span
-                className="font-bold text-sm px-3 py-1 rounded-lg"
-                style={{ color: accentColor, background: accentBg, border: `1px solid ${accentBorder}` }}
+                className={`font-semibold text-[11px] px-2 py-0.5 rounded border ${
+                  isBuy ? "text-buy bg-buy/10 border-buy/20" : "text-[#F6465D] bg-[#F6465D]/10 border-[#F6465D]/20"
+                }`}
               >
                 {type}
               </span>
@@ -112,18 +90,19 @@ export const OrderConfirmationModal = ({
           </div>
 
           {/* Buttons */}
-          <div className="flex gap-3">
+          <div className="flex gap-2.5 pt-1">
             <button
               onClick={onClose}
-              className="flex-1 h-11 rounded-xl border border-white/15 text-white/60 hover:text-white hover:bg-white/5 transition-all text-sm font-medium"
+              className="flex-1 h-10 rounded-lg border border-white/[0.08] bg-white/[0.04] text-white/70 hover:text-white hover:bg-white/[0.07] transition-colors text-xs font-semibold"
             >
               Cancel
             </button>
             <button
               onClick={onConfirm}
               disabled={isLoading}
-              className="flex-1 h-11 rounded-xl font-bold text-white text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90"
-              style={{ background: accentColor }}
+              className={`flex-1 h-10 rounded-lg font-semibold text-white text-xs transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                isBuy ? "bg-buy hover:bg-buy/90" : "bg-[#F6465D] hover:bg-[#F6465D]/90"
+              }`}
             >
               {isLoading ? "Processing..." : `Confirm ${type}`}
             </button>

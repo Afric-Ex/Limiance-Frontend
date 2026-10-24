@@ -30,11 +30,11 @@ export const ChatInput = ({ onSendMessage, onTypingChange, disabled }: ChatInput
   };
 
   return (
-    <div className="border-t border-white/10 p-4 bg-black/20 rounded-b-xl flex flex-col gap-2 relative">
+    <div className="border-t border-white/[0.07] p-3 bg-black/30 rounded-b-xl flex flex-col gap-2 relative">
       <div className="flex items-end gap-2">
         <Textarea
           className="flex-1"
-          placeholder="Type a message..."
+          placeholder="Type a message to counterparty..."
           minRows={1}
           maxRows={4}
           autosize
@@ -47,18 +47,19 @@ export const ChatInput = ({ onSendMessage, onTypingChange, disabled }: ChatInput
           onKeyDown={handleKeyDown}
           disabled={disabled}
           classNames={{
-            input: "bg-black/40 border-white/10 text-white focus:border-primary resize-none"
+            input:
+              "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.15] focus:!border-primary/60 !text-white !text-xs !rounded-lg !p-2.5 resize-none placeholder:!text-white/20",
           }}
         />
 
-        <ActionIcon 
-          size="lg" 
+        <ActionIcon
+          size="md"
           variant="filled"
-          className="mb-1 bg-emerald-500 hover:bg-emerald-400 text-white disabled:bg-emerald-500/20 disabled:text-white/20"
+          className="mb-0.5 !bg-primary hover:!bg-primary/90 !text-white disabled:!bg-white/[0.05] disabled:!text-white/20 !rounded-lg !w-9 !h-9"
           disabled={disabled || !text.trim()}
           onClick={handleSend}
         >
-          <MdSend size={20} />
+          <MdSend size={16} />
         </ActionIcon>
       </div>
     </div>

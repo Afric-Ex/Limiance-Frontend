@@ -35,7 +35,6 @@ export const ReleaseModal = ({ isOpen, onClose, onCodeVerified }: ReleaseModalPr
   const handleResend = () => {
     setCountdown(45);
     setCanResend(false);
-    // TODO: call API to resend code
   };
 
   const handleConfirm = () => {
@@ -51,49 +50,54 @@ export const ReleaseModal = ({ isOpen, onClose, onCodeVerified }: ReleaseModalPr
       title="Security Verification"
       centered
       classNames={{
-        content: "bg-gray-900 text-white",
-        header: "bg-gray-900 text-white border-b border-white/10",
-        title: "text-lg font-bold text-white",
-        close: "text-white hover:bg-white/10"
+        content: "!bg-[#181a20] !border !border-white/[0.08] !text-white !rounded-xl",
+        header: "!bg-[#181a20] !border-b !border-white/[0.06] !text-white",
+        title: "!text-white !font-semibold !text-base",
+        close: "!text-white/40 hover:!text-white hover:!bg-white/[0.06]",
       }}
     >
-      <div className="flex flex-col items-center gap-6 py-4 text-center">
+      <div className="flex flex-col items-center gap-5 py-3 text-center">
         <div>
-          <p className="text-white/80 text-sm mb-1">Enter the 6-digit code sent to your email/phone.</p>
-          <p className="text-white/50 text-xs">This is required before releasing crypto.</p>
+          <p className="text-white/80 text-xs mb-1">Enter the 6-digit code sent to your email or mobile device.</p>
+          <p className="text-white/40 text-[11px]">This verification is required before releasing cryptocurrency from escrow.</p>
         </div>
 
-        <PinInput 
-          length={6} 
-          value={code} 
-          onChange={setCode} 
-          size="lg"
+        <PinInput
+          length={6}
+          value={code}
+          onChange={setCode}
+          size="md"
           classNames={{
-            input: "bg-black/40 border-white/10 text-white focus:border-primary",
+            input:
+              "!bg-white/[0.04] !border-white/[0.08] !text-white focus:!border-primary/50 !rounded-lg !w-10 !h-12 !text-base !font-mono",
           }}
         />
 
-        <div className="text-sm">
-          <span className="text-white/50">Didn&apos;t receive it? </span>
+        <div className="text-xs">
+          <span className="text-white/40">Didn&apos;t receive code? </span>
           {canResend ? (
-            <button onClick={handleResend} className="text-blue-400 hover:text-blue-300 transition-colors">
+            <button onClick={handleResend} className="text-primary hover:underline font-medium transition-colors">
               Resend Code
             </button>
           ) : (
-            <span className="text-white/50">Resend in {countdown}s</span>
+            <span className="text-white/40 font-mono">Resend in {countdown}s</span>
           )}
         </div>
 
-        <div className="flex gap-3 w-full mt-2">
-          <Button variant="light" color="gray" className="flex-1 bg-white/5 hover:bg-white/10 text-white" onClick={onClose}>
+        <div className="flex gap-2.5 w-full mt-2">
+          <Button
+            variant="subtle"
+            className="flex-1 !bg-white/[0.06] hover:!bg-white/[0.1] !border !border-white/[0.08] !text-white !h-10 !rounded-lg !text-xs !font-semibold"
+            onClick={onClose}
+          >
             Cancel
           </Button>
-          <Button 
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+          <Button
+            className="flex-1 !bg-primary hover:!bg-primary/90 !text-white !h-10 !rounded-lg !text-xs !font-semibold"
             disabled={code.length !== 6}
             onClick={handleConfirm}
           >
-            Verify Code
+            Verify &amp; Release
           </Button>
         </div>
       </div>

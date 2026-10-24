@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Button } from "@mantine/core";
+import { MdCheckCircle, MdWarning } from "react-icons/md";
 
 interface BuyerPaidPanelProps {
   counterpartyName: string;
   quantity: number;
   asset: string;
-  updatedAt: string; // Time payment was confirmed
+  updatedAt: string;
   onDisputeOpen: () => void;
 }
 
@@ -16,14 +17,13 @@ export function BuyerPaidPanel({
   updatedAt,
   onDisputeOpen,
 }: BuyerPaidPanelProps) {
-  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [secondsLeft, setSecondsLeft] = React.useState(0);
 
-  // Assuming seller has 15 minutes to release after buyer paid
   const deadlineStr = updatedAt
     ? new Date(new Date(updatedAt).getTime() + 15 * 60000).toISOString()
     : new Date(Date.now() + 900000).toISOString();
 
-  useEffect(() => {
+  React.useEffect(() => {
     const end = new Date(deadlineStr).getTime();
     const tick = () => {
       const diff = Math.floor((end - Date.now()) / 1000);
@@ -39,48 +39,55 @@ export function BuyerPaidPanel({
 
   return (
     <>
-      <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/5 backdrop-blur-md border border-green-500/30 rounded-2xl p-5 text-center mt-6 shadow-[0_4px_24px_rgba(16,185,129,0.15)] relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
-        <div className="relative z-10">
-          <div className="text-buy font-bold text-lg mb-1 flex items-center justify-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-buy/20 flex items-center justify-center">✓</div>
-            Payment Confirmed
-          </div>
-          <p className="text-white/60 text-sm mt-2">
+      {/* Payment confirmed notice */}
+      <div className="bg-buy/[0.08] border border-buy/20 rounded-xl p-4 mt-4 flex items-start gap-3">
+        <MdCheckCircle className="text-buy shrink-0 mt-0.5" size={18} />
+        <div>
+          <div className="text-buy font-semibold text-sm">Payment Confirmed</div>
+          <p className="text-white/55 text-xs mt-0.5">
             You confirmed payment at {new Date(updatedAt).toLocaleTimeString()}
           </p>
         </div>
       </div>
 
-      <div className="flex flex-col items-center justify-center my-8">
-        <div className="text-white/40 text-sm mb-3 uppercase tracking-widest font-semibold">Seller must release within</div>
-        <div className="text-5xl font-mono font-bold text-white tracking-widest drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+      {/* Countdown */}
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 mt-4 text-center">
+        <div className="text-[11px] uppercase tracking-wider text-white/40 mb-3">Seller must release within</div>
+        <div className="text-4xl font-mono font-bold text-white tracking-tight">
           {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
         </div>
+        <div className="text-[11px] uppercase tracking-widest text-white/35 mt-1.5">minutes : seconds</div>
       </div>
 
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 text-center shadow-lg">
-        <div className="text-white text-lg font-medium mb-3 flex items-center justify-center gap-2">
-          <span className="text-2xl animate-spin-slow">⏳</span> Waiting for {counterpartyName || "seller"}
+      {/* Waiting for seller */}
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 mt-4 text-center">
+        <div className="text-white text-sm font-semibold mb-1.5">
+          Waiting for {counterpartyName || "seller"}
         </div>
         <p className="text-white/50 text-sm">
-          Waiting for them to release <span className="text-white font-bold">{quantity.toLocaleString()} {asset}</span> to your account.
+          Waiting for them to release{" "}
+          <span className="text-white font-semibold font-mono">{quantity.toLocaleString()} {asset}</span> to your account.
         </p>
       </div>
 
-      <div className="mt-6 text-xs text-white/50 bg-black/40 border border-white/5 p-4 rounded-xl text-center leading-relaxed backdrop-blur-sm">
-        Do not attempt to cancel. Your payment has already been sent. If you filed a false payment confirmation, your account may be restricted.
+      {/* Warning notice */}
+      <div className="bg-[#FBA42A]/10 border border-[#FBA42A]/20 rounded-lg p-3 mt-4 flex items-start gap-2">
+        <MdWarning className="text-[#FBA42A] shrink-0 mt-0.5" size={14} />
+        <p className="text-[#FBA42A]/90 text-xs leading-relaxed">
+          Do not attempt to cancel. Your payment has already been sent. If you filed a false payment confirmation, your account may be restricted.
+        </p>
       </div>
 
-      <div className="mt-8 flex justify-center">
-          <Button 
-            variant="outline" 
-            className="w-full border-orange-500/30 text-orange-400 hover:bg-orange-500/10 h-12 rounded-xl transition-all hover:border-orange-500/50"
-            onClick={onDisputeOpen}
-          >
-            File a Dispute
-          </Button>
-        </div>
+      {/* Dispute button */}
+      <div className="mt-6">
+        <Button
+          variant="outline"
+          className="w-full !border-[#FBA42A]/30 !text-[#FBA42A] hover:!bg-[#FBA42A]/[0.08] !h-10 !rounded-lg !transition-colors"
+          onClick={onDisputeOpen}
+        >
+          File a Dispute
+        </Button>
+      </div>
     </>
   );
 }

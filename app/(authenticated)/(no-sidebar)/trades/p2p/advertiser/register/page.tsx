@@ -22,7 +22,7 @@ function getAccountAgeDays(raw: string | number | undefined | null): number | nu
   const num = Number(digits);
   let ts: number;
   if (digits !== "" && Number.isFinite(num)) {
-    ts = digits.length <= 10 ? num * 1000 : num; // Unix seconds vs milliseconds
+    ts = digits.length <= 10 ? num * 1000 : num;
   } else {
     ts = Date.parse(digits);
   }
@@ -37,9 +37,10 @@ function AdvertiserRegisterPageInner() {
   const [agreed, setAgreed] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // We check if they are already an advertiser. If so, they shouldn't need to register again.
   const { data: advertiserData, isLoading } = useAdvertiserInfo();
   const isAdvertiser = !!advertiserData?.data?.data?.id;
 
@@ -50,9 +51,6 @@ function AdvertiserRegisterPageInner() {
   const { mutate: becomeAdvertiser, isPending: isRegistering } = useBecomeAdvertiser();
   const { user } = useUserStore();
 
-  // Real KYC status from the backend (users/kyc_status) — the user-store flags
-  // (isIDverified / isVerified) are unreliable because other pages set them
-  // optimistically, so we only fall back to them if the endpoint has no data.
   const { data: kycStatus } = useQuery({
     queryKey: userKeys.kycStatus,
     queryFn: () => userService.getKycStatus(),
@@ -62,50 +60,51 @@ function AdvertiserRegisterPageInner() {
     throwOnError: false,
   });
 
-  // Fetch real funding balance via WebSocket portfolio channel
   const { coins: portfolioCoins } = usePortfolioWs({ coins: true });
 
   const balanceArray = Array.isArray(portfolioCoins) ? portfolioCoins : [];
-  const fundingBalance = balanceArray.reduce((acc: number, b: any) =>
-    acc + parseFloat(b.fundingBalance || "0"), 0
+  const fundingBalance = balanceArray.reduce(
+    (acc: number, b: any) => acc + parseFloat(b.fundingBalance || "0"),
+    0
   );
 
-  // Real requirement checks — no mock bypass
-  const kycLevel2 =
-    kycStatus?.status
-      ? isKycApproved(kycStatus.status)
-      : !!user?.isIDverified || !!user?.isVerified;
+  const kycLevel2 = kycStatus?.status
+    ? isKycApproved(kycStatus.status)
+    : !!user?.isIDverified || !!user?.isVerified;
   const accountAgeDays = getAccountAgeDays(user?.createdAt ?? user?.accountCreatedAt);
   const accountAge = accountAgeDays !== null && accountAgeDays >= MIN_ACCOUNT_AGE_DAYS;
   const fundingAccount = fundingBalance > 0;
 
   const requirements = { kycLevel2, accountAge, fundingAccount };
-  const allRequirementsMet = requirements.kycLevel2 && requirements.accountAge && requirements.fundingAccount;
+  const allRequirementsMet =
+    requirements.kycLevel2 && requirements.accountAge && requirements.fundingAccount;
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const bottom = e.currentTarget.scrollHeight - e.currentTarget.scrollTop <= e.currentTarget.clientHeight + 10;
+    const bottom =
+      e.currentTarget.scrollHeight - e.currentTarget.scrollTop <= e.currentTarget.clientHeight + 10;
     if (bottom) setHasScrolledToBottom(true);
   };
 
   const handleSubmit = () => {
     becomeAdvertiser(undefined, {
       onSuccess: () => {
-        setActiveStep(2); // Move to complete step
-      }
+        setActiveStep(2);
+      },
     });
   };
 
-  if (!mounted) return (
-    <P2PLayout>
-      <P2PAdvertiserRegisterSkeleton />
-    </P2PLayout>
-  );
+  if (!mounted)
+    return (
+      <P2PLayout>
+        <P2PAdvertiserRegisterSkeleton />
+      </P2PLayout>
+    );
 
   if (isLoading) {
     return (
       <P2PLayout>
-        <div className="flex justify-center items-center py-20 text-white/50">
-          Loading...
+        <div className="flex justify-center items-center py-20 text-white/50 text-xs">
+          Loading application requirements...
         </div>
       </P2PLayout>
     );
@@ -113,154 +112,179 @@ function AdvertiserRegisterPageInner() {
 
   return (
     <P2PLayout>
-      <div className="w-full max-w-4xl mx-auto py-8">
-        <h1 className="text-3xl font-bold text-white mb-8 text-center">Advertiser Application</h1>
+      <div className="w-full max-w-3xl mx-auto py-6 max-[1150px]:py-4 page-enter">
+        <h1 className="text-xl font-semibold text-white tracking-tight mb-5 text-center">
+          P2P Advertiser Application
+        </h1>
 
-        <div className="bg-black/20 p-8 rounded-xl border border-white/5">
-          <Stepper 
-            active={activeStep} 
-            onStepClick={setActiveStep} 
+        <div className="bg-[#181a20] border border-white/[0.07] rounded-xl p-6">
+          <Stepper
+            active={activeStep}
+            onStepClick={setActiveStep}
             allowNextStepsSelect={false}
             classNames={{
-              stepIcon: "bg-white/10 border-white/20 text-white data-[completed]:bg-buy data-[completed]:border-buy",
-              separator: "bg-white/10 data-[active]:bg-buy",
-              stepLabel: "text-white/70 font-medium"
+              stepIcon:
+                "!bg-white/[0.04] !border-white/[0.1] !text-white data-[completed]:!bg-buy data-[completed]:!border-buy data-[active]:!border-primary",
+              separator: "!bg-white/[0.08] data-[active]:!bg-primary",
+              stepLabel: "!text-white/60 !font-medium !text-xs data-[active]:!text-white data-[completed]:!text-white",
             }}
           >
-            <Stepper.Step label="Requirements">
-              <div className="py-8 max-w-lg mx-auto flex flex-col gap-6">
-                <h2 className="text-xl font-bold text-white mb-2">Check Prerequisites</h2>
-                
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
+            <Stepper.Step label="Prerequisites">
+              <div className="py-6 max-w-lg mx-auto flex flex-col gap-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-white mb-0.5">Eligibility Checklist</h2>
+                  <p className="text-xs text-white/40">
+                    Verify that your Limiance account meets all merchant criteria
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between p-3.5 bg-white/[0.02] rounded-lg border border-white/[0.06]">
                   <div className="flex flex-col">
-                    <span className="font-medium text-white">KYC Level 2 Verification</span>
-                    <span className="text-sm text-white/50">
+                    <span className="font-medium text-white text-xs">KYC Level 2 Verification</span>
+                    <span className="text-[11px] text-white/45 mt-0.5">
                       {requirements.kycLevel2
                         ? "Identity verified"
                         : kycStatus?.status === "pending"
-                        ? "Verification is pending review"
-                        : "Complete identity verification."}
+                        ? "Verification is currently under review"
+                        : "Complete identity verification to post ads."}
                     </span>
                   </div>
                   {requirements.kycLevel2 ? (
-                    <MdCheckCircle className="text-buy" size={24} />
+                    <MdCheckCircle className="text-buy shrink-0" size={20} />
                   ) : kycStatus?.status === "pending" ? (
-                    <span className="text-[#FBA42A] text-sm font-semibold flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#FBA42A] animate-pulse" />
+                    <span className="text-[#FBA42A] text-xs font-semibold flex items-center gap-1.5 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#FBA42A] animate-pulse" />
                       Pending
                     </span>
                   ) : (
-                    <div className="flex items-center gap-3">
-                      <Button size="xs" color="blue" onClick={() => router.push("/account/kyc")}>Verify</Button>
-                      <MdCancel className="text-[#F6465D]" size={24} />
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="xs"
+                        className="!bg-primary hover:!bg-primary/90 !text-white !h-7 !text-xs !px-2.5 !rounded-md"
+                        onClick={() => router.push("/account/kyc")}
+                      >
+                        Verify
+                      </Button>
+                      <MdCancel className="text-[#F6465D]" size={20} />
                     </div>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
+                <div className="flex items-center justify-between p-3.5 bg-white/[0.02] rounded-lg border border-white/[0.06]">
                   <div className="flex flex-col">
-                    <span className="font-medium text-white">Account Age &gt; 30 Days</span>
-                    <span className="text-sm text-white/50">Your account must be at least 30 days old.</span>
+                    <span className="font-medium text-white text-xs">Account Age ≥ 30 Days</span>
+                    <span className="text-[11px] text-white/45 mt-0.5">
+                      Your account must be registered for at least 30 days.
+                    </span>
                   </div>
                   {requirements.accountAge ? (
-                    <MdCheckCircle className="text-buy" size={24} />
+                    <MdCheckCircle className="text-buy shrink-0" size={20} />
                   ) : (
-                    <MdCancel className="text-[#F6465D]" size={24} />
+                    <MdCancel className="text-[#F6465D] shrink-0" size={20} />
                   )}
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
+                <div className="flex items-center justify-between p-3.5 bg-white/[0.02] rounded-lg border border-white/[0.06]">
                   <div className="flex flex-col">
-                    <span className="font-medium text-white">Funding Account Setup</span>
-                    <span className="text-sm text-white/50">You must have an active Funding Account.</span>
+                    <span className="font-medium text-white text-xs">Funding Account Balance</span>
+                    <span className="text-[11px] text-white/45 mt-0.5">
+                      You must hold active funds in your Funding Account.
+                    </span>
                   </div>
                   {requirements.fundingAccount ? (
-                    <MdCheckCircle className="text-buy" size={24} />
+                    <MdCheckCircle className="text-buy shrink-0" size={20} />
                   ) : (
-                    <div className="flex items-center gap-3">
-                      <Button size="xs" color="blue" onClick={() => router.push("/assets/funding")}>Set up</Button>
-                      <MdCancel className="text-[#F6465D]" size={24} />
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="xs"
+                        className="!bg-primary hover:!bg-primary/90 !text-white !h-7 !text-xs !px-2.5 !rounded-md"
+                        onClick={() => router.push("/assets/funding")}
+                      >
+                        Deposit
+                      </Button>
+                      <MdCancel className="text-[#F6465D]" size={20} />
                     </div>
                   )}
                 </div>
 
                 {!allRequirementsMet && (
-                  <div className="text-[#F6465D] text-sm bg-[#F6465D]/10 p-4 rounded-lg border border-[#F6465D]/20 mt-2">
-                    Please complete all requirements to proceed with your application.
+                  <div className="text-[#F6465D] text-xs bg-[#F6465D]/10 p-3 rounded-lg border border-[#F6465D]/20 mt-1">
+                    Please fulfill all criteria above to unlock advertiser registration.
                   </div>
                 )}
 
-                <Button 
-                  size="lg" 
-                  className="mt-4 bg-yellow-500 hover:bg-yellow-400 text-black font-semibold"
+                <Button
+                  className="mt-2 !bg-primary hover:!bg-primary/90 !text-white !font-semibold !h-10 !rounded-lg !text-xs"
                   disabled={!allRequirementsMet}
                   onClick={() => setActiveStep(1)}
                 >
-                  Next Step
+                  Proceed to Agreement
                 </Button>
               </div>
             </Stepper.Step>
 
             <Stepper.Step label="Agreement">
-              <div className="py-8 max-w-2xl mx-auto flex flex-col gap-6">
-                <h2 className="text-xl font-bold text-white mb-2">Advertiser Agreement</h2>
-                
-<div
-                  className="bg-black/40 border border-white/10 rounded-lg p-6 h-64 overflow-y-auto text-sm text-white/70 leading-relaxed"
+              <div className="py-6 max-w-2xl mx-auto flex flex-col gap-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-white mb-0.5">Advertiser Agreement</h2>
+                  <p className="text-xs text-white/40">Read through the terms of service and maker regulations</p>
+                </div>
+
+                <div
+                  className="bg-white/[0.02] border border-white/[0.07] rounded-lg p-5 h-64 overflow-y-auto text-xs text-white/70 leading-relaxed space-y-3"
                   onScroll={handleScroll}
                 >
-                  <p className="font-bold text-white mb-4">Limiance P2P Trading Rules &amp; Agreement</p>
-                  <p className="mb-2 font-semibold text-white/80">Identity &amp; Payment Accounts</p>
-                  <ul className="list-disc pl-5 mb-4 flex flex-col gap-1.5">
-                    <li>You must use a payment method whose registered name matches your verified identity.</li>
-                    <li>All bank accounts and payment cards you link must belong to you. You may not use third-party accounts under any circumstance.</li>
-                    <li>You must complete KYC Level 2 verification before posting ads, and maintain valid verification for the lifetime of your advertiser account.</li>
-                  </ul>
-                  <p className="mb-2 font-semibold text-white/80">Payment &amp; Release Rules</p>
-                  <ul className="list-disc pl-5 mb-4 flex flex-col gap-1.5">
-                    <li>Funds being sold must sit in your Funding Account before an ad is created or matched.</li>
-                    <li>Do not include crypto-related keywords (e.g. wallet, BTC, USDT) in your bank payment remarks.</li>
-                    <li>You are responsible for verifying that payment has actually been received before releasing crypto.</li>
-                    <li>Only release crypto after confirming the exact amount, sender name, and payment reference match the order.</li>
-                    <li>Do not ask buyers or sellers to confirm payment outside the Limiance chat system.</li>
-                  </ul>
-                  <p className="mb-2 font-semibold text-white/80">Prohibited Conduct</p>
-                  <ul className="list-disc pl-5 mb-4 flex flex-col gap-1.5">
-                    <li>Multiple accounts created to bypass limits or fees are prohibited.</li>
-                    <li>Manipulating prices, self-matching, or placing ads you cannot fulfil is prohibited.</li>
-                    <li>Fraudulent behaviour, chargebacks, or deliberate payment disputes will result in permanent account bans.</li>
-                    <li>Do not share your login, API keys, or funds with other users.</li>
-                  </ul>
-                  <p className="mb-2 font-semibold text-white/80">Limits, Fees &amp; Liability</p>
-                  <ul className="list-disc pl-5 mb-4 flex flex-col gap-1.5">
-                    <li>Advertiser limits and P2P fees are set by Limiance and may change with notice.</li>
-                    <li>Limiance is a matching and escrow platform; it is not a party to your payment transactions.</li>
-                    <li>Limiance is not liable for losses caused by user error, off-platform payment, or third-party misuse.</li>
-                    <li>Disputes are reviewed based on evidence provided in order chat; always keep proof of payment.</li>
-                  </ul>
-                  <p className="mb-2 font-semibold text-white/80">Enforcement</p>
-                  <ul className="list-disc pl-5 mb-4 flex flex-col gap-1.5">
-                    <li>Violations may lead to warnings, temporary suspension, or permanent revocation of advertiser status.</li>
-                    <li>Limiance may withhold funds pending investigation of fraud or regulatory requirements.</li>
-                  </ul>
-                  <p className="mb-4 text-white">By clicking &quot;I Agree&quot;, you acknowledge that you have read, understood, and agreed to these terms.</p>
+                  <p className="font-bold text-white text-sm">Limiance P2P Trading Rules &amp; Merchant Code</p>
+                  <div>
+                    <p className="font-semibold text-white/90 mb-1">1. Identity &amp; Bank Accounts</p>
+                    <ul className="list-disc pl-4 space-y-1 text-white/65">
+                      <li>Payment account names must strictly match your verified KYC legal name.</li>
+                      <li>Third-party bank accounts or payment proxies are strictly prohibited.</li>
+                      <li>You must maintain active KYC Level 2 verification throughout your advertiser tenure.</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-white/90 mb-1">2. Escrow &amp; Release Guidelines</p>
+                    <ul className="list-disc pl-4 space-y-1 text-white/65">
+                      <li>Only release crypto once you have confirmed receipt of fiat in your actual bank account.</li>
+                      <li>Never release cryptocurrency based on chat screenshots alone.</li>
+                      <li>Do not request counterparties to transact outside the Limiance platform.</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-white/90 mb-1">3. Prohibited Market Conduct</p>
+                    <ul className="list-disc pl-4 space-y-1 text-white/65">
+                      <li>Self-matching orders, price manipulation, and fraudulent chargebacks result in immediate bans.</li>
+                      <li>Limiance will mediate disputes using chat history and verified bank statements.</li>
+                    </ul>
+                  </div>
+
+                  <p className="text-white/80 font-medium pt-2">
+                    By checking the box below, you acknowledge full compliance with these policies.
+                  </p>
                 </div>
 
                 <Checkbox
-                  label="I have read, understood, and agree to the Advertiser Agreement."
+                  label="I have read, understood, and agree to the Limiance Advertiser Terms."
                   checked={agreed}
                   onChange={(e) => setAgreed(e.currentTarget.checked)}
                   disabled={!hasScrolledToBottom}
-                  color="yellow"
-                  classNames={{ label: "text-white/80" }}
+                  color="blue"
+                  classNames={{ label: "!text-white/80 !text-xs" }}
                 />
 
-                <div className="flex gap-4 mt-4">
-                  <Button variant="light" color="gray" className="flex-1 bg-white/5 hover:bg-white/10 text-white" onClick={() => setActiveStep(0)}>
+                <div className="flex gap-2.5 mt-2">
+                  <Button
+                    variant="subtle"
+                    className="flex-1 !bg-white/[0.06] hover:!bg-white/[0.1] !border !border-white/[0.08] !text-white !h-10 !rounded-lg !text-xs !font-semibold"
+                    onClick={() => setActiveStep(0)}
+                  >
                     Back
                   </Button>
-                  <Button 
-                    className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-semibold"
+                  <Button
+                    className="flex-1 !bg-primary hover:!bg-primary/90 !text-white !h-10 !rounded-lg !text-xs !font-semibold"
                     disabled={!agreed}
                     loading={isRegistering}
                     onClick={handleSubmit}
@@ -272,21 +296,31 @@ function AdvertiserRegisterPageInner() {
             </Stepper.Step>
 
             <Stepper.Step label="Complete">
-              <div className="py-16 max-w-lg mx-auto flex flex-col items-center text-center gap-6">
-                <div className="w-24 h-24 bg-buy/20 text-buy rounded-full flex items-center justify-center text-5xl">
-                  ✓
+              <div className="py-12 max-w-md mx-auto flex flex-col items-center text-center gap-4">
+                <div className="w-14 h-14 bg-buy/10 border border-buy/20 text-buy rounded-xl flex items-center justify-center">
+                  <MdCheckCircle size={28} />
                 </div>
-                <h2 className="text-2xl font-bold text-white">Application Approved</h2>
-                <p className="text-white/70">
-                  Congratulations! You are now a Limiance P2P Advertiser. You can start posting your own ads immediately.
-                </p>
+                <div>
+                  <h2 className="text-lg font-bold text-white mb-1">Application Approved</h2>
+                  <p className="text-white/60 text-xs max-w-sm leading-relaxed">
+                    You are now a registered Limiance P2P Advertiser. You can create customized Buy and Sell listings
+                    immediately.
+                  </p>
+                </div>
 
-                <div className="flex w-full gap-4 mt-6">
-                  <Button variant="light" color="gray" className="flex-1 bg-white/5 hover:bg-white/10 text-white" onClick={() => router.push("/trades/p2p/my-ads")}>
+                <div className="flex w-full gap-2.5 mt-4">
+                  <Button
+                    variant="subtle"
+                    className="flex-1 !bg-white/[0.06] hover:!bg-white/[0.1] !border !border-white/[0.08] !text-white !h-10 !rounded-lg !text-xs !font-semibold"
+                    onClick={() => router.push("/trades/p2p/my-ads")}
+                  >
                     Go to My Ads
                   </Button>
-                  <Button className="flex-1 bg-buy hover:bg-buy/90 text-white font-semibold" onClick={() => router.push("/trades/p2p/ads/create")}>
-                    Post Ad Now
+                  <Button
+                    className="flex-1 !bg-primary hover:!bg-primary/90 !text-white !h-10 !rounded-lg !text-xs !font-semibold"
+                    onClick={() => router.push("/trades/p2p/ads/create")}
+                  >
+                    Post an Ad
                   </Button>
                 </div>
               </div>

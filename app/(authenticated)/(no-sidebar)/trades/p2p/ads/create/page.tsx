@@ -16,6 +16,7 @@ import { tradingKeys, tradingService } from "@/src/services/trading";
 import { fiatKeys, fiatService } from "@/src/services/fiat";
 import { IoMdInformationCircleOutline } from "react-icons/io";
 import { IoChevronBack } from "react-icons/io5";
+import { MdPersonOff } from "react-icons/md";
 import { getBanksForFiat } from "@/src/lib/banks";
 import { NonAdvertiserModal } from "@/src/components/p2p/non-advertiser-modal";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
@@ -26,17 +27,22 @@ import clsx from "clsx";
 const FALLBACK_ASSETS = ["USDT", "BTC", "ETH"];
 const FALLBACK_FIATS = ["USD", "EUR", "NGN", "GBP"];
 
-// ─── Shared piece styles (matches withdrawal / account flows) ─────────────────
-
 const StepBadge = ({ num }: { num: number }) => (
-  <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-[0_0_10px_rgba(77,119,240,0.4)]">
+  <div className="w-6 h-6 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-xs font-bold shrink-0 font-mono">
     {num}
   </div>
 );
 
 const InfoTooltip = ({ label }: { label: string }) => (
-  <Tooltip withArrow multiline w={260} arrowSize={8} color="#181a20" label={label}
-    classNames={{ tooltip: "!text-xs !font-medium !border !border-white/[0.08]" }}>
+  <Tooltip
+    withArrow
+    multiline
+    w={260}
+    arrowSize={6}
+    color="#181a20"
+    label={label}
+    classNames={{ tooltip: "!text-xs !font-medium !border !border-white/[0.08] !text-white/80" }}
+  >
     <span className="cursor-help text-white/30 hover:text-white/60 transition-colors">
       <IoMdInformationCircleOutline size={15} />
     </span>
@@ -55,10 +61,10 @@ function StepCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl flex flex-col gap-5 max-[1150px]:gap-4">
-      <div className="flex items-center gap-3">
+    <section className="bg-[#181a20] border border-white/[0.07] rounded-xl p-5 max-[1150px]:p-4 flex flex-col gap-4">
+      <div className="flex items-center gap-2.5">
         <StepBadge num={num} />
-        <h3 className="text-base font-bold text-white">{title}</h3>
+        <h3 className="text-sm font-semibold text-white">{title}</h3>
         {right && <div className="ml-auto">{right}</div>}
       </div>
       {children}
@@ -66,14 +72,16 @@ function StepCard({
   );
 }
 
-const labelClass = "!text-xs !font-semibold !text-white/40 !uppercase !tracking-wider !mb-2";
+const labelClass = "!text-xs !font-semibold !text-white/50 !uppercase !tracking-wider !mb-1.5";
 const inputClass =
-  "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 focus:!shadow-[0_0_10px_rgba(77,119,240,0.12)] !rounded-xl !h-[56px] !text-white !text-sm !transition-all !duration-200 placeholder:!text-white/20";
-const descriptionClass = "!text-xs !text-white/30 !mt-1.5";
-const dropdownClass = "!bg-[#1c1e27] !border !border-white/[0.1] !shadow-2xl !rounded-xl";
+  "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !rounded-lg !h-11 !text-white !text-xs !transition-all !duration-150 placeholder:!text-white/20 font-mono";
+const selectClass =
+  "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !rounded-lg !h-11 !text-white !text-xs !transition-all !duration-150 placeholder:!text-white/20";
+const descriptionClass = "!text-[11px] !text-white/40 !mt-1";
+const dropdownClass = "!bg-[#181a20] !border !border-white/[0.1] !shadow-2xl !rounded-lg";
 const optionClass =
-  "hover:!bg-white/10 data-[combobox-selected]:!bg-primary/20 data-[combobox-selected]:!text-primary !rounded-lg !mx-1 !my-0.5 !transition-colors";
-const pillBuy = "!bg-buy !text-white !font-semibold !rounded-md";
+  "hover:!bg-white/5 data-[combobox-selected]:!bg-primary/20 data-[combobox-selected]:!text-primary !rounded-md !mx-1 !my-0.5 !text-xs !transition-colors";
+const pillBuy = "!bg-buy/15 !border !border-buy/30 !text-buy !font-semibold !rounded-md !text-xs";
 
 function CreateAdPageInner() {
   const router = useRouter();
@@ -117,9 +125,7 @@ function CreateAdPageInner() {
     return m?.data?.bankName || m?.method || id;
   };
 
-  // Listed tokens for the asset picker — the backend's own supported-token list.
-  // `listed_tokens` answers one row per token per chain, so collapse to one
-  // entry per symbol (same aggregation the deposit/withdraw token pickers use).
+  // Listed tokens for the asset picker
   const { data: listedTokens } = useQuery({
     queryKey: assetKeys.supportedTokensKey("all"),
     queryFn: () => asset.fetchSupportedTokens({ limit: 1000 }),
@@ -149,8 +155,7 @@ function CreateAdPageInner() {
     return token?.image || token?.logo || token?.icon || undefined;
   }, [listedTokens, selectedAsset]);
 
-  // Listed fiat currencies for the fiat picker — the fallback set only covers
-  // the window before this resolves (or a failed request).
+  // Listed fiat currencies for the fiat picker
   const { data: listedCurrencies } = useQuery({
     queryKey: tradingKeys.listedCurrencies,
     queryFn: () => tradingService.listedCurrencies({ limit: 200 }),
@@ -183,15 +188,12 @@ function CreateAdPageInner() {
   const assetBalanceInfo = balanceArray.find((b: any) =>
     b.coin === selectedAsset || b.symbol === selectedAsset || b.asset === selectedAsset
   );
-  // console.log(assetBalanceInfo)
   const balanceAvailable = !!assetBalanceInfo;
   const fundingBalance = assetBalanceInfo
     ? parseFloat(assetBalanceInfo.fundingBalance || "0")
     : 0;
 
   // Validation: for SELL ads, total amount can't exceed balance.
-  // Only enforced when the coin's balance is actually known — if the portfolio
-  // feed hasn't loaded (or the coin has no record), don't block submission.
   const isOverBalance =
     adMode === "SELL" &&
     balanceAvailable &&
@@ -199,8 +201,6 @@ function CreateAdPageInner() {
     Number(totalAmount) > fundingBalance;
 
   // Market price in the selected fiat from the fiat-deposit quote
-  // (`wallet/fiat/quote`) — the same quote call the deposit flows price
-  // against. No locally invented rates.
   const quoteSymbol = selectedAsset.trim().toLowerCase();
   const quoteCurrency = fiat.trim().toLowerCase();
   const { data: fiatQuote } = useQuery({
@@ -233,7 +233,6 @@ function CreateAdPageInner() {
       body = body.data;
     }
 
-    // A 200 response can still carry a failure envelope — treat it as no quote.
     if (body?.success === false || body?.error) return null;
 
     const toPrice = (value: unknown) => {
@@ -244,8 +243,6 @@ function CreateAdPageInner() {
     const rate = toPrice(body?.rate ?? body?.Rate ?? body?.buyRate);
     if (rate !== null) return rate;
 
-    // Fallback for responses that only carry the receive amount for the
-    // 1-unit fiat probe: symbol per fiat → fiat per symbol.
     const received = toPrice(body?.symbolAmountToReceive ?? body?.symbolAmountToReceived);
     return received !== null ? toPrice(1 / received) : null;
   }, [fiatQuote]);
@@ -295,45 +292,56 @@ function CreateAdPageInner() {
 
       {/* Loading state while checking advertiser status */}
       {isCheckingAdvertiser ? (
-        <div className="w-full max-w-3xl mx-auto py-6 flex flex-col gap-6 animate-pulse">
-          <div className="h-10 bg-white/10 rounded-xl w-1/2" />
-          <div className="h-64 bg-white/5 border border-white/10 rounded-xl" />
-          <div className="h-40 bg-white/5 border border-white/10 rounded-xl" />
+        <div className="w-full max-w-3xl mx-auto py-6 flex flex-col gap-4 animate-pulse">
+          <div className="h-9 bg-white/[0.04] rounded-lg w-1/3" />
+          <div className="h-48 bg-[#181a20] border border-white/[0.07] rounded-xl" />
+          <div className="h-40 bg-[#181a20] border border-white/[0.07] rounded-xl" />
         </div>
       ) : !isAdvertiser ? (
-        <div className="w-full max-w-3xl mx-auto py-20 flex flex-col items-center gap-4 text-white/40">
-          <p className="text-lg">You must be a registered advertiser to post ads.</p>
-          <Button onClick={() => router.push("/trades/p2p/advertiser/register")} className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
+        <div className="w-full max-w-3xl mx-auto py-20 flex flex-col items-center gap-4 text-white/50 text-center">
+          <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white/40">
+            <MdPersonOff size={24} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <p className="text-base font-semibold text-white">Advertiser Account Required</p>
+            <p className="text-xs text-white/40 max-w-md">
+              You must be a registered and verified P2P advertiser to create and publish listings on the marketplace.
+            </p>
+          </div>
+          <Button
+            onClick={() => router.push("/trades/p2p/advertiser/register")}
+            className="!bg-primary hover:!bg-primary/90 !text-white !font-semibold !rounded-lg !h-10 !px-5 !text-xs !mt-2"
+          >
             Register as Advertiser
           </Button>
         </div>
       ) : (
-        <div className="w-full max-w-3xl mx-auto py-6 flex flex-col gap-5 max-[1150px]:gap-4 page-enter">
+        <div className="w-full max-w-3xl mx-auto py-6 flex flex-col gap-4 page-enter">
 
           {/* Back + Header */}
-          <div className="flex flex-col gap-4 mb-1">
+          <div className="flex flex-col gap-3 mb-1">
             <Link
               href="/trades/p2p/my-ads"
-              className="flex items-center gap-1 w-fit text-sm font-medium text-white/40 hover:text-primary transition-colors"
+              className="flex items-center gap-1.5 w-fit text-xs font-medium text-white/40 hover:text-white transition-colors"
             >
-              <IoChevronBack size={16} />
+              <IoChevronBack size={14} />
               Back to My Ads
             </Link>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold text-white">Post Ad</h1>
-                <p className="text-sm text-white/40">
-                  Advertise your price to buy or sell crypto on the P2P marketplace
+              <div className="flex flex-col gap-0.5">
+                <h1 className="text-xl font-bold text-white tracking-tight">Post Advertisement</h1>
+                <p className="text-xs text-white/40">
+                  Publish a buy or sell offer to the Limiance P2P marketplace
                 </p>
               </div>
 
               {/* Buy/Sell Toggle */}
-              <div className="flex bg-black/40 border border-white/[0.06] rounded-xl p-1 self-start sm:self-center">
+              <div className="flex bg-black/40 border border-white/[0.06] rounded-lg p-1 self-start sm:self-center">
                 <button
                   className={clsx(
-                    "px-6 py-2 rounded-lg text-sm font-bold transition-colors",
-                    adMode === "BUY" ? "bg-buy text-white shadow-[0_0_20px_rgba(37,171,66,0.35)]" : "text-white/50 hover:text-white"
+                    "px-5 py-1.5 rounded-md text-xs font-semibold transition-colors",
+                    adMode === "BUY" ? "bg-buy text-white" : "text-white/50 hover:text-white"
                   )}
                   onClick={() => setAdMode("BUY")}
                 >
@@ -341,8 +349,8 @@ function CreateAdPageInner() {
                 </button>
                 <button
                   className={clsx(
-                    "px-6 py-2 rounded-lg text-sm font-bold transition-colors",
-                    adMode === "SELL" ? "bg-sell text-white shadow-[0_0_20px_rgba(246,70,93,0.35)]" : "text-white/50 hover:text-white"
+                    "px-5 py-1.5 rounded-md text-xs font-semibold transition-colors",
+                    adMode === "SELL" ? "bg-sell text-white" : "text-white/50 hover:text-white"
                   )}
                   onClick={() => setAdMode("SELL")}
                 >
@@ -361,7 +369,7 @@ function CreateAdPageInner() {
                 onChange={(v) => setSelectedAsset(v || "USDT")}
                 data={assetOptions}
                 searchable
-                classNames={{ label: labelClass, input: inputClass, dropdown: dropdownClass, option: optionClass }}
+                classNames={{ label: labelClass, input: selectClass, dropdown: dropdownClass, option: optionClass }}
               />
               <Select
                 label="Fiat Currency"
@@ -369,14 +377,14 @@ function CreateAdPageInner() {
                 onChange={(v) => setFiat(v || "NGN")}
                 data={fiatOptions}
                 searchable
-                classNames={{ label: labelClass, input: inputClass, dropdown: dropdownClass, option: optionClass }}
+                classNames={{ label: labelClass, input: selectClass, dropdown: dropdownClass, option: optionClass }}
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="flex items-center justify-between bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 py-3">
-                <span className="text-xs font-medium text-white/40">Market Price</span>
-                <span className="text-sm font-bold text-white">
+              <div className="flex items-center justify-between bg-white/[0.02] border border-white/[0.05] rounded-lg px-3.5 py-2.5">
+                <span className="text-xs text-white/40">Market Price</span>
+                <span className="text-xs font-semibold text-white font-mono tabular-nums">
                   {marketPriceInFiat !== null
                     ? `${marketPriceInFiat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${fiat}`
                     : "—"}
@@ -384,18 +392,18 @@ function CreateAdPageInner() {
               </div>
 
               {adMode === "SELL" ? (
-                <div className="flex items-center justify-between bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 py-3">
-                  <span className="text-xs font-medium text-white/40">Available Balance</span>
-                  <span className="text-sm font-bold text-white">
+                <div className="flex items-center justify-between bg-white/[0.02] border border-white/[0.05] rounded-lg px-3.5 py-2.5">
+                  <span className="text-xs text-white/40">Funding Balance</span>
+                  <span className="text-xs font-semibold text-white font-mono tabular-nums">
                     {balanceAvailable
                       ? `${fundingBalance.toLocaleString(undefined, { maximumFractionDigits: 8 })} ${selectedAsset}`
                       : "—"}
                   </span>
                 </div>
               ) : (
-                <div className="hidden sm:flex items-center justify-between bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 py-3">
-                  <span className="text-xs font-medium text-white/40">You&apos;re buying</span>
-                  <span className="text-sm font-bold text-buy">
+                <div className="hidden sm:flex items-center justify-between bg-white/[0.02] border border-white/[0.05] rounded-lg px-3.5 py-2.5">
+                  <span className="text-xs text-white/40">You are buying</span>
+                  <span className="text-xs font-semibold text-buy font-mono">
                     {selectedAsset} in {fiat}
                   </span>
                 </div>
@@ -407,16 +415,16 @@ function CreateAdPageInner() {
           <StepCard num={2} title="Price Settings">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-white/50 uppercase tracking-wider flex items-center gap-1.5">
                   Price Type
                   <InfoTooltip
-                    label="Fixed lets you set a set price for each trade. Floating automatically adjusts your price against the live market price by the margin you set."
+                    label="Fixed sets a specific price for every trade. Floating automatically indexes your price against the market price with your chosen margin percentage."
                   />
                 </span>
-                <div className="flex bg-black/40 border border-white/[0.06] rounded-xl p-1 w-fit">
+                <div className="flex bg-black/40 border border-white/[0.06] rounded-lg p-1 w-fit">
                   <button
                     className={clsx(
-                      "px-5 py-1.5 rounded-lg text-sm font-semibold transition-colors",
+                      "px-4 py-1.5 rounded-md text-xs font-semibold transition-colors",
                       priceType === "FIXED" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
                     )}
                     onClick={() => setPriceType("FIXED")}
@@ -425,7 +433,7 @@ function CreateAdPageInner() {
                   </button>
                   <button
                     className={clsx(
-                      "px-5 py-1.5 rounded-lg text-sm font-semibold transition-colors",
+                      "px-4 py-1.5 rounded-md text-xs font-semibold transition-colors",
                       priceType === "FLOATING" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
                     )}
                     onClick={() => setPriceType("FLOATING")}
@@ -440,15 +448,15 @@ function CreateAdPageInner() {
                 description={
                   priceType === "FIXED"
                     ? marketPriceInFiat !== null
-                      ? `Market price is ${marketPriceInFiat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${fiat}`
+                      ? `Market price: ${marketPriceInFiat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${fiat}`
                       : undefined
-                    : "Positive value adds a premium, negative applies a discount to the live market price."
+                    : "Positive values add a premium above market, negative values discount below market."
                 }
                 value={price}
                 onChange={(val) => setPrice(val === "" ? "" : Number(val))}
                 decimalScale={priceType === "FIXED" ? 4 : 2}
                 hideControls
-                rightSection={<span className="text-white/50 pr-4">{priceType === "FIXED" ? fiat : "%"}</span>}
+                rightSection={<span className="text-white/40 pr-3 text-xs font-medium">{priceType === "FIXED" ? fiat : "%"}</span>}
                 classNames={{
                   label: labelClass,
                   description: descriptionClass,
@@ -462,39 +470,39 @@ function CreateAdPageInner() {
           <StepCard num={3} title="Order Limits">
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">
-                  Min / Max sets the fiat range a buyer can trade per order
+                <span className="text-xs text-white/40">
+                  Define the trade volume and the per-order order limit range in {selectedAsset}
                 </span>
                 <InfoTooltip
-                  label="Min/Max Order sets the range a buyer can trade per order. E.g. Min ₦5,000 and Max ₦500,000 means each trade must be within that range."
+                  label="Min/Max sets the allowable order amount per trade. Transactions outside this range will be rejected."
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <NumberInput
                   label={`Total Amount (${selectedAsset})`}
-                  description={adMode === "SELL" && balanceAvailable ? `Max ${fundingBalance.toLocaleString()} ${selectedAsset}` : undefined}
+                  description={adMode === "SELL" && balanceAvailable ? `Available: ${fundingBalance.toLocaleString()} ${selectedAsset}` : undefined}
                   value={totalAmount}
                   onChange={(val) => setTotalAmount(val === "" ? "" : Number(val))}
                   hideControls
-                  error={isOverBalance ? `Exceeds your balance of ${fundingBalance.toLocaleString()} ${selectedAsset}` : undefined}
+                  error={isOverBalance ? `Exceeds funding balance (${fundingBalance.toLocaleString()} ${selectedAsset})` : undefined}
                   rightSection={
                     adMode === "SELL" && balanceAvailable ? (
                       <button
-                        className="text-xs font-bold text-warning-1 hover:text-warning-1/80 pr-3"
+                        className="text-[11px] font-bold text-primary hover:text-primary/80 pr-2"
                         onClick={() => setTotalAmount(fundingBalance)}
                       >
                         MAX
                       </button>
                     ) : (
-                      <span className="text-white/50 pr-4">{selectedAsset}</span>
+                      <span className="text-white/40 pr-3 text-xs font-mono">{selectedAsset}</span>
                     )
                   }
                   classNames={{
                     label: labelClass,
                     description: descriptionClass,
                     input: inputClass,
-                    section: "!w-fit !right-3",
+                    section: "!w-fit !right-2",
                   }}
                 />
 
@@ -536,8 +544,8 @@ function CreateAdPageInner() {
             right={
               adMode === "SELL" ? (
                 <Button
-                  variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10"
+                  variant="subtle"
+                  className="!border !border-white/[0.08] !text-white/70 hover:!text-white hover:!bg-white/[0.06] !rounded-lg !h-8 !px-3 !text-xs !font-medium"
                   size="xs"
                   onClick={() => setIsMethodManagerOpen(true)}
                 >
@@ -549,9 +557,8 @@ function CreateAdPageInner() {
             <div className="flex flex-col gap-3">
               <p className="text-xs text-white/40 leading-relaxed">
                 {adMode === "SELL"
-                  ? "Choose the accounts where buyers will send fiat payment. Your account details (name, number, bank) will be visible to the buyer."
-                  : "Choose the payment methods you support. Sellers with matching methods will appear in the marketplace."}
-                {" "}(Max 3)
+                  ? "Select the bank accounts where buyers will deposit fiat payment (maximum 3 accounts)."
+                  : "Select the payment methods you accept from sellers (maximum 3 methods)."}
               </p>
 
               {adMode === "BUY" ? (
@@ -564,20 +571,20 @@ function CreateAdPageInner() {
                   searchable
                   placeholder="Select up to 3 payment methods"
                   classNames={{
-                    input: "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !text-white !text-sm !transition-all !duration-200 !rounded-xl !min-h-[56px]",
+                    input: "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !text-white !text-xs !transition-all !duration-150 !rounded-lg !min-h-[44px]",
                     dropdown: dropdownClass,
                     option: optionClass,
                     pill: pillBuy,
                   }}
                 />
               ) : selectedMethodIds.length === 0 ? (
-                <div className="text-sm text-sell bg-sell/10 p-4 rounded-xl border border-sell/20">
-                  You must select at least one payment method.
+                <div className="text-xs text-[#F6465D] bg-[#F6465D]/10 px-3 py-2.5 rounded-lg border border-[#F6465D]/20">
+                  You must select at least one payment method to receive funds.
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {selectedMethodIds.map((id) => (
-                    <PaymentMethodBadge key={id} method={methodName(id)} className="px-4 py-2 text-sm" />
+                    <PaymentMethodBadge key={id} method={methodName(id)} className="px-3 py-1.5 text-xs" />
                   ))}
                 </div>
               )}
@@ -597,47 +604,47 @@ function CreateAdPageInner() {
                     { value: "30", label: "30 Minutes" },
                     { value: "45", label: "45 Minutes" },
                   ]}
-                  classNames={{ label: labelClass, input: inputClass, dropdown: dropdownClass, option: optionClass }}
+                  classNames={{ label: labelClass, input: selectClass, dropdown: dropdownClass, option: optionClass }}
                 />
               </div>
             </div>
             <Textarea
               label="Remarks (Optional)"
-              placeholder="Terms of trade..."
+              placeholder="Terms and trading conditions for counterparties..."
               value={remarks}
               onChange={(e) => setRemarks(e.currentTarget.value)}
               minRows={3}
               classNames={{
                 label: labelClass,
-                input: "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 focus:!shadow-[0_0_10px_rgba(77,119,240,0.12)] !text-white !text-sm !transition-all !duration-200 !rounded-xl !p-4 placeholder:!text-white/20",
+                input: "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !text-white !text-xs !transition-all !duration-150 !rounded-lg !p-3 placeholder:!text-white/20",
               }}
             />
           </StepCard>
 
           {/* Step 6: Review & Publish */}
           <StepCard num={6} title="Review & Publish">
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-4">
               <Checkbox
-                label="I have read and agree to the Limiance P2P Trading Rules."
+                label="I have read and agree to the Limiance P2P Trading Rules and terms of escrow service."
                 checked={agreed}
                 onChange={(e) => setAgreed(e.currentTarget.checked)}
-                color="green"
-                classNames={{ label: "!text-white/80 !text-sm" }}
+                color="blue"
+                classNames={{ label: "!text-white/70 !text-xs !cursor-pointer" }}
               />
 
               <Button
-                size="lg"
+                size="md"
                 className={clsx(
-                  "w-full text-white font-bold text-lg rounded-xl h-14 transition-all",
+                  "w-full text-white font-semibold text-xs rounded-lg h-11 transition-all",
                   adMode === "BUY"
-                    ? "bg-buy hover:bg-buy/90"
-                    : "bg-sell hover:bg-sell/90"
+                    ? "!bg-buy hover:!bg-buy/90"
+                    : "!bg-sell hover:!bg-sell/90"
                 )}
                 disabled={!price || !totalAmount || !minOrder || !maxOrder || selectedMethodIds.length === 0 || !agreed || isOverBalance}
                 loading={isCreating}
                 onClick={handleSubmit}
               >
-                Post {adMode === "BUY" ? "Buy" : "Sell"} Ad
+                Post {adMode === "BUY" ? "Buy" : "Sell"} Advertisement
               </Button>
             </div>
           </StepCard>
