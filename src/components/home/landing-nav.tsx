@@ -46,9 +46,9 @@ export function LandingNav() {
     <>
       <div ref={sentinel} aria-hidden className="absolute left-0 top-0 h-px w-px" />
       <header className={`${sans.className} sticky top-0 z-50 border-b transition-colors ${scrolled || open ? "border-white/[0.08] bg-[#0B0D12]/90 backdrop-blur-xl" : "border-transparent bg-transparent"}`}>
-        <div className="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between gap-6 px-4">
+        <div className="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between gap-3 px-4 sm:gap-6">
           <Link href="/" aria-label="Limiance home" className="shrink-0">
-            <Image src={Wordmark} alt="Limiance" priority width={168} height={42} className="h-auto w-[140px] sm:w-[168px]" />
+            <Image src={Wordmark} alt="Limiance" priority width={168} height={42} className="h-auto w-[120px] sm:w-[140px] md:w-[168px]" />
           </Link>
 
           <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
