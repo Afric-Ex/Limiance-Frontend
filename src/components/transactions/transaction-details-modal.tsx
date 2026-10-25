@@ -102,22 +102,16 @@ const firstAddress = (...values: unknown[]): string => {
   return "";
 };
 
-const firstNumber = (...values: unknown[]): number | null => {
-  for (const value of values) {
-    if (value === null || value === undefined || value === "") continue;
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return null;
-};
-
 const amountText = (value: unknown): string => {
   const text = firstText(value);
   return text ? formatTransactionAmount(text) : "";
 };
 
 const humanize = (value: string): string => {
-  const text = value.replace(/[_-]+/g, " ").trim();
+  const text = value
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim();
   if (!text) return "";
   return text
     .split(/\s+/)
@@ -416,8 +410,8 @@ export const TransactionDetailsModal = ({
   const toAsset = firstText(tx.toAsset, tx.asset, readMeta("asset")).toUpperCase();
   const fromAmount = firstText(tx.fromAmount);
   const toAmount = firstText(tx.toAmount);
-  const showFromAmount = (firstNumber(fromAmount) ?? 0) > 0;
-  const showToAmount = (firstNumber(toAmount) ?? 0) > 0;
+  const showFromAmount = Boolean(fromAmount);
+  const showToAmount = Boolean(toAmount);
   const hasTransfer = Boolean(
     fromAccount ||
       toAccount ||
@@ -428,22 +422,17 @@ export const TransactionDetailsModal = ({
   );
 
   const quantity = readMeta("quantity");
-  const consumedMeta = new Set([
-    "description",
-    "order_id",
-    "order_match_id",
-    "advertiser_id",
-    "matcher_id",
-    "quantity",
-    "role",
-    "type",
-    "asset",
-    "note",
-  ]);
-  const extraMeta = metadata
+  const metadataEntries = metadata
     ? Object.entries(metadata).filter(([key, value]) => {
         const normalized = key.toLowerCase();
-        if (consumedMeta.has(normalized)) return false;
+        if (
+          normalized === "quantity" ||
+          normalized === "role" ||
+          normalized === "type" ||
+          normalized === "note"
+        ) {
+          return false;
+        }
         return metaValue(value) !== "";
       })
     : [];
@@ -453,10 +442,87 @@ export const TransactionDetailsModal = ({
     !!metaRole ||
     !!metaType ||
     showNote ||
-    extraMeta.length > 0;
+    metadataEntries.length > 0;
+
+  // Any top-level field we do not render explicitly is still surfaced so no
+  // part of the API response is silently dropped.
+  const renderedKeys = new Set([
+    "amount",
+    "quantity",
+    "coin",
+    "asset",
+    "symbol",
+    "fiatamount",
+    "currency",
+    "fiatcurrency",
+    "assetamount",
+    "type",
+    "transactiontype",
+    "operation",
+    "status",
+    "state",
+    "createdat",
+    "created_at",
+    "completedat",
+    "completed_at",
+    "updatedat",
+    "updated_at",
+    "failedat",
+    "failed_at",
+    "failurereason",
+    "failure_reason",
+    "rate",
+    "fee",
+    "networkfee",
+    "feeamount",
+    "feeasset",
+    "feecurrency",
+    "id",
+    "transactionid",
+    "txid",
+    "reference",
+    "transactionreference",
+    "txref",
+    "chain",
+    "network",
+    "wallet",
+    "fromwallet",
+    "fromaddress",
+    "hash",
+    "transactionhash",
+    "txhash",
+    "destination",
+    "address",
+    "toaddress",
+    "bankname",
+    "bank",
+    "accountname",
+    "accountnumber",
+    "fromuserid",
+    "touserid",
+    "userid",
+    "frombalance",
+    "from",
+    "tobalance",
+    "to",
+    "fromamount",
+    "toamount",
+    "fromasset",
+    "toasset",
+    "metadata",
+  ]);
+  const otherEntries = Object.entries(tx).filter(([key, value]) => {
+    if (renderedKeys.has(key.toLowerCase())) return false;
+    if (value === null || value === undefined || value === "") return false;
+    return true;
+  });
+  const showOther = otherEntries.length > 0;
 
   const showOverview = Boolean(
     typeLabel ||
+      status ||
+      assetSymbol ||
+      amountText(amount) ||
       directionLabel ||
       fee ||
       createdAt ||
@@ -471,6 +537,8 @@ export const TransactionDetailsModal = ({
     transactionId ||
       orderId ||
       orderMatchId ||
+      advertiserId ||
+      matcherId ||
       reference ||
       network ||
       hash ||
@@ -581,6 +649,31 @@ export const TransactionDetailsModal = ({
                 </DetailRow>
               )}
 
+              {status && (
+                <DetailRow label="Status">
+                  <span className="capitalize">
+                    {STATUS_LABELS[status.toLowerCase()] ?? status}
+                  </span>
+                </DetailRow>
+              )}
+
+              {assetSymbol && (
+                <DetailRow label="Asset">
+                  <span className="uppercase">{assetSymbol}</span>
+                </DetailRow>
+              )}
+
+              {!isFiat && amountText(amount) && (
+                <DetailRow label="Amount">
+                  <span className="tabular-nums">
+                    {amountText(amount)}
+                    {assetSymbol && (
+                      <span className="ml-1 text-white/45">{assetSymbol}</span>
+                    )}
+                  </span>
+                </DetailRow>
+              )}
+
               {directionLabel && (
                 <DetailRow label="Direction">
                   <span
@@ -640,8 +733,8 @@ export const TransactionDetailsModal = ({
                 </DetailRow>
               )}
 
-              {updatedAt && updatedAt !== completedAt && (
-                <DetailRow label="Last Updated">
+              {updatedAt && (
+                <DetailRow label="Updated">
                   <span className="font-medium text-white/75">{updatedAt}</span>
                 </DetailRow>
               )}
@@ -665,7 +758,7 @@ export const TransactionDetailsModal = ({
           {hasTransfer && (
             <Section title="Transfer">
               {fromAccount && (
-                <DetailRow label="From Account">
+                <DetailRow label="From Balance">
                   <AccountValue raw={fromAccountRaw} label={fromAccount} />
                 </DetailRow>
               )}
@@ -676,22 +769,6 @@ export const TransactionDetailsModal = ({
                     id={fromUser}
                     role={fromRole}
                     isYou={!!ownerId && fromUser === ownerId}
-                  />
-                </DetailRow>
-              )}
-
-              {toAccount && (
-                <DetailRow label="To Account">
-                  <AccountValue raw={toAccountRaw} label={toAccount} />
-                </DetailRow>
-              )}
-
-              {toUser && (
-                <DetailRow label="To User">
-                  <PartyValue
-                    id={toUser}
-                    role={toRole}
-                    isYou={!!ownerId && toUser === ownerId}
                   />
                 </DetailRow>
               )}
@@ -707,6 +784,22 @@ export const TransactionDetailsModal = ({
                 </DetailRow>
               )}
 
+              {toAccount && (
+                <DetailRow label="To Balance">
+                  <AccountValue raw={toAccountRaw} label={toAccount} />
+                </DetailRow>
+              )}
+
+              {toUser && (
+                <DetailRow label="To User">
+                  <PartyValue
+                    id={toUser}
+                    role={toRole}
+                    isYou={!!ownerId && toUser === ownerId}
+                  />
+                </DetailRow>
+              )}
+
               {showToAmount && (
                 <DetailRow label="To Amount">
                   <span className="tabular-nums">
@@ -715,6 +808,12 @@ export const TransactionDetailsModal = ({
                       <span className="ml-1 text-white/45">{toAsset}</span>
                     )}
                   </span>
+                </DetailRow>
+              )}
+
+              {ownerId && (
+                <DetailRow label="User ID">
+                  <PartyValue id={ownerId} isYou />
                 </DetailRow>
               )}
             </Section>
@@ -737,6 +836,18 @@ export const TransactionDetailsModal = ({
               {orderMatchId && (
                 <DetailRow label="Order Match ID">
                   <IdValue value={orderMatchId} />
+                </DetailRow>
+              )}
+
+              {advertiserId && (
+                <DetailRow label="Advertiser ID">
+                  <IdValue value={advertiserId} />
+                </DetailRow>
+              )}
+
+              {matcherId && (
+                <DetailRow label="Matcher ID">
+                  <IdValue value={matcherId} />
                 </DetailRow>
               )}
 
@@ -795,7 +906,7 @@ export const TransactionDetailsModal = ({
           )}
 
           {hasAdditional && (
-            <Section title="Additional Details">
+            <Section title="Metadata">
               {quantity && (
                 <DetailRow label="Quantity">
                   <span className="tabular-nums">
@@ -829,7 +940,25 @@ export const TransactionDetailsModal = ({
                 </DetailRow>
               )}
 
-              {extraMeta.map(([key, value]) => {
+              {metadataEntries.map(([key, value]) => {
+                const text = metaValue(value);
+                const isId = /(^|_)id$/i.test(key);
+                return (
+                  <DetailRow key={key} label={humanize(key)}>
+                    {isId ? (
+                      <IdValue value={text} />
+                    ) : (
+                      <span className="break-words">{text}</span>
+                    )}
+                  </DetailRow>
+                );
+              })}
+            </Section>
+          )}
+
+          {showOther && (
+            <Section title="Other Details">
+              {otherEntries.map(([key, value]) => {
                 const text = metaValue(value);
                 const isId = /(^|_)id$/i.test(key);
                 return (
