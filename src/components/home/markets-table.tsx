@@ -33,7 +33,7 @@ function Row({ p, href }: { p: Pair; href: string }) {
     <tr className="group border-t border-white/[0.06] transition-colors hover:bg-white/[0.03]">
       <td className="py-3.5 pl-4">
         <div className="flex items-center gap-3">
-          <span className={`${mono.className} grid h-8 w-8 place-items-center rounded-full border border-white/10 text-[10px] text-[#A7AEBD]`}>{base.slice(0, 3)}</span>
+          <span className={`${mono.className} hidden h-8 w-8 place-items-center rounded-full border border-white/10 text-[10px] text-[#A7AEBD] sm:grid`}>{base.slice(0, 3)}</span>
           <span className="text-white">{base}<span className="text-[#8A91A0]">/{quote}</span></span>
         </div>
       </td>
@@ -43,7 +43,7 @@ function Row({ p, href }: { p: Pair; href: string }) {
       </td>
       <td className={`${mono.className} hidden py-3.5 text-right tabular-nums text-[#8A91A0] sm:table-cell`}>{p.prev !== null ? fmtPrice(p.prev) : "\u2014"}</td>
       <td className="py-3.5 pr-4 text-right">
-        <Link href={href} className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-[#E6E8EE] transition-colors group-hover:border-[#4D77F0] group-hover:text-white">Trade</Link>
+        <Link href={href} className="rounded-md border border-white/10 px-2.5 py-1.5 text-xs sm:px-3 text-[#E6E8EE] transition-colors group-hover:border-[#4D77F0] group-hover:text-white">Trade</Link>
       </td>
     </tr>
   );
@@ -68,7 +68,7 @@ export function MarketsTable() {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[460px] text-sm">
+        <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-[#8A91A0]">
               <th className="py-3 pl-4 text-left font-normal">Pair</th>

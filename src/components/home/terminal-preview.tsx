@@ -45,7 +45,7 @@ export function TerminalPreview() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_210px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_210px]">
         <div className="min-w-0 p-4">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
             <div>

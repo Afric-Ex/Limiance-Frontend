@@ -47,8 +47,8 @@ export function LandingNav() {
       <div ref={sentinel} aria-hidden className="absolute left-0 top-0 h-px w-px" />
       <header className={`${sans.className} sticky top-0 z-50 border-b transition-colors ${scrolled || open ? "border-white/[0.08] bg-[#0B0D12]/90 backdrop-blur-xl" : "border-transparent bg-transparent"}`}>
         <div className="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between gap-3 px-4 sm:gap-6">
-          <Link href="/" aria-label="Limiance home" className="shrink-0">
-            <Image src={Wordmark} alt="Limiance" priority width={168} height={42} className="h-auto w-[120px] sm:w-[140px] md:w-[168px]" />
+          <Link href="/" aria-label="Limiance home" className="min-w-0 shrink">
+            <Image src={Wordmark} alt="Limiance" priority width={168} height={42} className="h-auto w-[96px] min-[340px]:w-[120px] sm:w-[140px] md:w-[168px]" />
           </Link>
 
           <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
@@ -68,12 +68,12 @@ export function LandingNav() {
             ) : (
               <>
                 <Link href="/auth/login" className="hidden rounded-md px-3 py-2 text-sm text-[#E6E8EE] transition-colors hover:bg-white/5 sm:block">Log in</Link>
-                <Link href="/auth/signup" className="rounded-md bg-[#4168DD] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4D77F0]">Sign up</Link>
+                <Link href="/auth/signup" className="rounded-md bg-[#4168DD] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4D77F0] min-[340px]:px-4">Sign up</Link>
               </>
             )}
             <button
               aria-label="Menu" aria-expanded={open} aria-controls="mobile-menu" onClick={() => setOpen((o) => !o)}
-              className="grid h-10 w-10 place-items-center rounded-md border border-white/10 text-white lg:hidden"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-white/10 text-white lg:hidden"
             >
               <span className="relative block h-3 w-4">
                 <span className={`absolute left-0 h-px w-4 bg-current transition-all ${open ? "top-1.5 rotate-45" : "top-0"}`} />
