@@ -13,11 +13,14 @@ import { IoClose } from "react-icons/io5";
 export interface MobileSideDrawerProps {
   open: boolean;
   onClose: () => void;
+  /** Show the drawer at desktop widths too (used on pages without a permanent sidebar). */
+  showOnDesktop?: boolean;
 }
 
 export const MobileSideDrawer: React.FC<MobileSideDrawerProps> = ({
   open,
   onClose,
+  showOnDesktop = false,
 }) => {
   const pathname = usePathname();
 
@@ -44,14 +47,19 @@ export const MobileSideDrawer: React.FC<MobileSideDrawerProps> = ({
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] min-[1150px]:hidden animate-fade-in"
+        className={clsx(
+          "fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] animate-fade-in",
+          !showOnDesktop && "min-[1150px]:hidden"
+        )}
         onClick={onClose}
       />
 
       {/* Drawer panel */}
       <div
+        id="app-sidebar-drawer"
         className={clsx(
-          "fixed inset-y-0 left-0 w-[300px] z-[9999] min-[1150px]:hidden",
+          "fixed inset-y-0 left-0 w-[300px] z-[9999]",
+          !showOnDesktop && "min-[1150px]:hidden",
           "bg-[#181a20] border-r border-white/[0.06] flex flex-col overflow-hidden isolation-isolate",
           "transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "-translate-x-full"
