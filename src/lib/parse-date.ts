@@ -15,9 +15,31 @@ const MONTHS = [
 
 export const parseDate = (value: unknown): Date | null => {
   if (!value) return null;
+
+  // Some endpoints return epoch timestamps (often as numeric strings). Go's
+  // zero time (`-62135596800000`) and `0` mean "not set", so reject them.
+  const isNumeric =
+    typeof value === "number" ||
+    (typeof value === "string" && /^-?\d+$/.test(value.trim()));
+  if (isNumeric) {
+    const numeric = Number(value);
+    // Values below 1e9 cannot be epoch timestamps; `0` (and Go's negative
+    // zero time) mean "not set", and short bare numbers must not reach
+    // `new Date`, which would interpret them as years.
+    if (!Number.isFinite(numeric) || numeric < 1_000_000_000) return null;
+    // 10-digit values are seconds; 13-digit values are milliseconds.
+    const ms = numeric < 1_000_000_000_000 ? numeric * 1000 : numeric;
+    const epoch = new Date(ms);
+    return Number.isNaN(epoch.getTime()) || epoch.getUTCFullYear() < 1970
+      ? null
+      : epoch;
+  }
+
   const str = String(value).trim();
   const direct = new Date(str);
-  if (!Number.isNaN(direct.getTime())) return direct;
+  if (!Number.isNaN(direct.getTime())) {
+    return direct.getUTCFullYear() < 1970 ? null : direct;
+  }
   // Handles Go-style backend format like "2026-10-15 13:39:35.123262 +0000 UTC"
   // (Safari rejects it in `new Date`, so parse the parts manually).
   const go = str.match(
