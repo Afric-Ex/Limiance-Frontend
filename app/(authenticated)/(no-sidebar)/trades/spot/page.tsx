@@ -40,6 +40,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { MobileTopBar } from "@/src/components/shared/mobile-top-bar";
+import { SidebarMenuButton } from "@/src/components/shared/sidebar-menu";
 import { IoChevronDown, IoChevronUp, IoSwapHorizontal, IoBarChartOutline, IoListOutline } from "react-icons/io5";
 import { MobileBottomSheet } from "@/src/components/shared/mobile-bottom-sheet";
 import { MobileBottomNav } from "@/src/components/shared/mobile-bottom-nav";
@@ -322,13 +323,10 @@ function SpotTrades() {
 
       {/* ─── Mobile Sticky Top Bar ─── */}
       <MobileTopBar
-        showBack
         title=""
         leftElement={
           <div className="flex items-center gap-1">
-            <button aria-label="Go back" onClick={() => window.history.back()} className="tap-scale p-0.5 -ml-1 shrink-0">
-              <IoChevronDown className="rotate-90 text-white/70" size={20} />
-            </button>
+            <SidebarMenuButton className="-ml-1 h-9 w-9" />
             <Popover width={300} position="bottom-start" shadow="md" opened={pairMenuOpen} onChange={setPairMenuOpen}>
               <PopoverTarget>
                 <button
@@ -410,6 +408,7 @@ function SpotTrades() {
       {/* Top Header Desktop */}
       <div className="hidden min-[1150px]:flex bg-[#181a20] py-3 px-4 justify-between items-center border-b border-white/[0.06]">
         <div className="flex items-center gap-6">
+          <SidebarMenuButton />
           {/* Pair selector */}
           <Popover width={360} position="bottom-start" shadow="md" opened={pairMenuDesktopOpen} onChange={setPairMenuDesktopOpen}>
             <PopoverTarget>

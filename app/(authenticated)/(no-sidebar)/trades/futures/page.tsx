@@ -43,6 +43,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { MdKeyboardArrowDown, MdMoreVert, MdRefresh } from 'react-icons/md';
 import { MobileTopBar } from '@/src/components/shared/mobile-top-bar';
+import { SidebarMenuButton } from '@/src/components/shared/sidebar-menu';
 import { IoChevronDown, IoChevronUp, IoSwapHorizontal, IoBarChartOutline, IoListOutline } from 'react-icons/io5';
 import { MobileBottomSheet } from '@/src/components/shared/mobile-bottom-sheet';
 import { MobileBottomNav } from '@/src/components/shared/mobile-bottom-nav';
@@ -885,13 +886,10 @@ function FuturesTradesInner() {
 
       {/* ─── Mobile Sticky Top Bar ─── */}
       <MobileTopBar
-        showBack
         title=""
         leftElement={
           <div className="flex items-center gap-1">
-            <button aria-label="Go back" onClick={() => window.history.back()} className="tap-scale p-0.5 -ml-1">
-              <IoChevronDown className="rotate-90 text-white/70" size={20} />
-            </button>
+            <SidebarMenuButton className="-ml-1 h-9 w-9" />
             <Popover width={300} position="bottom-start" shadow="md" opened={pairMenuOpen} onChange={setPairMenuOpen}>
               <PopoverTarget>
                 <button
@@ -968,10 +966,7 @@ function FuturesTradesInner() {
 
       <div className="hidden min-[1150px]:flex bg-[#181a20] py-3 px-4 justify-between items-center border-b border-white/[0.06]">
         <div className="flex items-center gap-8">
-          {/* Back */}
-          <button className="flex items-center gap-1 tap-scale" onClick={() => window.history.back()}>
-            <IoChevronDown className="rotate-90 text-white/70" size={22} />
-          </button>
+          <SidebarMenuButton />
           <Popover width={350} position="bottom-start" shadow="md" opened={pairMenuDesktopOpen} onChange={setPairMenuDesktopOpen}>
             <PopoverTarget>
               <button
