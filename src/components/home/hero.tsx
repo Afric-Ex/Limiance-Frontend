@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Wordmark from "@/public/limiance-wordmark.png";
+import Backdrop from "@/public/limiance-landing.png";
 import { HeroSignup } from "./hero-signup";
 import { GoogleSign } from "./google-sign";
 import { HeroIconContainer } from "@/src/components/shared/hero-icon-container";
@@ -14,10 +15,11 @@ export function Hero() {
   return (
     <section id="top" className="relative overflow-hidden">
       <div aria-hidden className="absolute inset-0 -z-0 bg-[radial-gradient(60%_50%_at_15%_0%,rgba(77,119,240,0.10),transparent)]" />
-      <div aria-hidden className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_at_top,black,transparent_72%)]" />
+      {/* Brand texture, kept faint and faded toward the bottom. To go back to a plain grid, swap this for the previous grid div. */}
+      <Image src={Backdrop} alt="" aria-hidden fill priority sizes="100vw" className="object-cover object-top opacity-60 [mask-image:linear-gradient(to_bottom,black_35%,transparent_95%)]" />
 
-      <div className="relative mx-auto grid max-w-[1240px] items-center gap-14 px-4 pb-24 pt-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-12 lg:pt-16">
-        <div className="flex flex-col gap-8">
+      <div className="relative mx-auto grid max-w-[1240px] grid-cols-[minmax(0,1fr)] items-center gap-14 px-4 pb-24 pt-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-12 lg:pt-16">
+        <div className="flex min-w-0 flex-col gap-8">
           <Image src={Wordmark} alt="Limiance Exchange" priority width={240} height={60} className="h-auto w-[200px] sm:w-[240px]" />
           <div className="flex flex-col gap-5">
             <h1 className={`${sans.className} text-[40px] font-semibold leading-[1.04] tracking-[-0.03em] text-white sm:text-[56px]`}>

@@ -12,7 +12,7 @@ const COLS: { title: string; links: [string, string][] }[] = [
 export function LandingFooter() {
   return (
     <footer className={`${sans.className} border-t border-white/[0.08]`}>
-      <div className="mx-auto grid max-w-[1240px] gap-12 px-4 py-14 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+      <div className="mx-auto grid max-w-[1240px] grid-cols-[minmax(0,1fr)] gap-12 px-4 py-14 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
         <div className="flex flex-col gap-4">
           <Image src={Wordmark} alt="Limiance Exchange" width={170} height={43} className="h-auto w-[160px]" />
           <p className="max-w-[40ch] text-sm leading-relaxed text-[#8A91A0]">

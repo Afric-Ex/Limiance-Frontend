@@ -337,7 +337,7 @@ function OrderRoomPageInner() {
   if (!order) {
     return (
       <P2PLayout>
-        <div className="flex flex-col items-center justify-center py-16 text-white/50 bg-[#181a20] border border-white/[0.07] rounded-xl max-w-md mx-auto my-6 p-6 text-center">
+        <div className="flex flex-col items-center justify-center py-16 text-white/50 bg-[#181a20] border border-white/[0.07] rounded-xl max-w-md mx-auto my-6 px-4 text-center">
           <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center text-white/30 mb-3">
             <MdInfoOutline size={22} />
           </div>
@@ -371,7 +371,7 @@ function OrderRoomPageInner() {
 
   return (
     <P2PLayout>
-      <div className="w-full max-w-7xl mx-auto py-6 max-[1150px]:py-4 px-4 max-[1150px]:pb-[90px] page-enter">
+      <div className="w-full max-w-7xl mx-auto py-6 px-4 sm:px-5 max-[1150px]:pb-[90px] page-enter">
         {/* Completed/Cancelled overlays */}
         {(normalizedStatus === "COMPLETED" || normalizedStatus === "RELEASED") && !feedbackSkipped && (
           <OrderCompletedOverlay
@@ -403,21 +403,22 @@ function OrderRoomPageInner() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
-          <div className="flex items-center gap-3">
+                {/* Header */}
+        <div className="mb-7 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
             <button
               onClick={() => router.push("/trades/p2p/orders")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.07] text-white/60 hover:text-white transition-colors text-xs font-medium"
+              className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3.5 text-[13px] font-medium text-white/65 transition-colors hover:bg-white/[0.07] hover:text-white"
             >
-              <MdArrowBack size={14} />
+              <MdArrowBack size={16} />
               <span>Orders</span>
             </button>
-            <div className="flex items-center gap-2.5">
-              <span className="text-white text-base font-semibold">
+            <div className="flex min-w-0 flex-col items-start gap-2.5 sm:flex-row sm:items-center sm:gap-3">
+              <h1 className="text-xl font-semibold leading-tight text-white">
                 Order <span className="font-mono text-white/50">#{orderId.slice(-8).toUpperCase()}</span>
-              </span>
+              </h1>
               <span
-                className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border uppercase tracking-wider ${statusInfo.color}`}
+                className={`inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase leading-none tracking-wider ${statusInfo.color}`}
               >
                 {statusInfo.label}
               </span>
@@ -426,13 +427,13 @@ function OrderRoomPageInner() {
         </div>
 
         {/* Main split layout */}
-        <div className="flex flex-col min-[1150px]:flex-row gap-5 min-[1150px]:h-[calc(100vh-210px)] min-h-[600px] max-[1150px]:min-h-0">
+        <div className="flex flex-col min-[1150px]:flex-row gap-6 min-[1150px]:h-[calc(100vh-210px)] min-h-[600px] max-[1150px]:min-h-0">
           {/* LEFT: Order Details Panel */}
           <div className="min-[1150px]:w-[50%] xl:w-[45%] overflow-y-auto custom-scrollbar pr-0 min-[1150px]:pr-1 pb-10 max-[1150px]:pb-0">
-            <div className="bg-[#181a20] border border-white/[0.07] rounded-xl p-5 min-[1150px]:p-6 flex flex-col">
+            <div className="flex flex-col rounded-xl border border-white/[0.07] bg-[#181a20] p-5 sm:p-6">
               {/* Step indicator */}
-              <div className="mb-6 relative">
-                <div className="flex items-center justify-between relative z-10">
+              <div className="relative mb-8">
+                <div className="relative z-10 flex items-start justify-between">
                   {["Order Placed", "Fiat Payment", "Crypto Released"].map((step, i) => {
                     const stepNum = i + 1;
                     const currentStep =
@@ -446,9 +447,9 @@ function OrderRoomPageInner() {
                     const done = stepNum < currentStep;
                     const active = stepNum === currentStep;
                     return (
-                      <div key={step} className="flex flex-col items-center gap-1.5 bg-[#181a20] px-2">
+                      <div key={step} className="flex max-w-[92px] flex-col items-center gap-2.5 bg-[#181a20] px-1.5">
                         <div
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold transition-colors ${
                             active
                               ? "border border-primary bg-primary/10 text-primary"
                               : done
@@ -456,10 +457,10 @@ function OrderRoomPageInner() {
                               : "border border-white/10 bg-white/[0.02] text-white/30"
                           }`}
                         >
-                          {done ? <MdCheck size={14} /> : stepNum}
+                          {done ? <MdCheck size={15} /> : stepNum}
                         </div>
                         <span
-                          className={`text-[11px] font-medium tracking-tight ${
+                          className={`text-center text-xs font-medium leading-tight ${
                             active ? "text-white" : done ? "text-buy" : "text-white/35"
                           }`}
                         >
@@ -469,7 +470,7 @@ function OrderRoomPageInner() {
                     );
                   })}
                 </div>
-                <div className="absolute top-[14px] left-10 right-10 h-[1px] bg-white/[0.08] -z-0">
+                <div className="absolute left-10 right-10 top-4 -z-0 h-[1px] bg-white/[0.08]">
                   <div
                     className="h-full bg-buy transition-all duration-500"
                     style={{
@@ -487,36 +488,36 @@ function OrderRoomPageInner() {
               </div>
 
               {/* Order Summary */}
-              <div className="bg-white/[0.02] rounded-lg p-4 border border-white/[0.05] mb-4">
-                <div className="text-white/35 text-[10px] uppercase tracking-wider mb-3 font-semibold">
+              <div className="mb-6 rounded-lg border border-white/[0.05] bg-white/[0.02] p-5">
+                <div className="mb-4 text-[11px] font-semibold uppercase tracking-wider text-white/40">
                   Transaction Summary
                 </div>
-                <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-xs">
-                  <div className="flex flex-col gap-0.5">
-                    <div className="text-white/40">{isBuyer ? "You Receive" : "Locked in Escrow"}</div>
-                    <div className="font-semibold text-white font-mono text-sm">
-                      {quantity.toLocaleString()} <span className="text-white/50 text-xs font-sans">{asset}</span>
+                <div className="grid grid-cols-2 gap-x-5 gap-y-5 text-[13px]">
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <div className="text-white/45">{isBuyer ? "You Receive" : "Locked in Escrow"}</div>
+                    <div className="font-mono text-[15px] font-semibold text-white">
+                      {quantity.toLocaleString()} <span className="font-sans text-xs text-white/50">{asset}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-0.5">
-                    <div className="text-white/40">{isBuyer ? "You Pay" : "You Receive"}</div>
-                    <div className="font-semibold text-buy font-mono text-sm">
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <div className="text-white/45">{isBuyer ? "You Pay" : "You Receive"}</div>
+                    <div className="font-mono text-[15px] font-semibold text-buy">
                       {fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}{" "}
-                      <span className="text-buy/60 text-xs font-sans">{fiat}</span>
+                      <span className="font-sans text-xs text-buy/60">{fiat}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-0.5">
-                    <div className="text-white/40">Unit Price</div>
-                    <div className="text-white font-mono">
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <div className="text-white/45">Unit Price</div>
+                    <div className="font-mono text-white">
                       {price.toLocaleString()} {fiat}/{asset}
                     </div>
                   </div>
-                  <div className="flex flex-col gap-0.5">
-                    <div className="text-white/40">Counterparty</div>
-                    <div className="text-white/90 font-medium truncate">{counterpartyName || "—"}</div>
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <div className="text-white/45">Counterparty</div>
+                    <div className="truncate font-medium text-white/90">{counterpartyName || "—"}</div>
                   </div>
-                  <div className="flex flex-col gap-0.5 col-span-2">
-                    <div className="text-white/40">Order Timestamp</div>
+                  <div className="col-span-2 flex flex-col gap-1.5">
+                    <div className="text-white/45">Order Timestamp</div>
                     <div className="text-white/70">
                       {parseBackendDate(order.createdAt ?? "")?.toLocaleString() ?? "—"}
                     </div>

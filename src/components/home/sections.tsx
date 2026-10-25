@@ -7,7 +7,7 @@ import { PlatformTabs } from "./platform-tabs";
 import { Reveal } from "./reveal";
 import { mono, sans } from "./fonts";
 
-const wrap = `${sans.className} mx-auto max-w-[1240px] scroll-mt-20 px-4 py-20 md:py-28`;
+const wrap = `${sans.className} mx-auto w-full min-w-0 max-w-[1240px] scroll-mt-20 px-4 py-20 md:py-28`;
 
 function Head({ title, intro }: { title: string; intro?: string }) {
   return (
@@ -51,7 +51,7 @@ const WHY = [
 
 export function WhySection() {
   return (
-    <section id="why" className={`${wrap} grid gap-12 lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] lg:gap-20`}>
+    <section id="why" className={`${wrap} grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] lg:gap-20`}>
       <div className="lg:sticky lg:top-28 lg:self-start">
         <Head title="Why traders choose Limiance" intro="Specific tools and workflows you can use today, not general promises." />
       </div>
@@ -130,7 +130,7 @@ export function FaqSection() {
 
 export function ClosingSection() {
   return (
-    <section className={`${sans.className} mx-auto max-w-[1240px] px-4 pb-24`}>
+    <section className={`${sans.className} mx-auto w-full min-w-0 max-w-[1240px] px-4 pb-24`}>
       <div className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-[#10131A] px-6 py-16 md:px-16">
         <div aria-hidden className="absolute inset-0 bg-[radial-gradient(50%_80%_at_50%_0%,rgba(77,119,240,0.12),transparent)]" />
         <div className="relative mx-auto flex max-w-[560px] flex-col items-center gap-6 text-center">

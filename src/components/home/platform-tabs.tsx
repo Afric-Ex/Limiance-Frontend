@@ -52,8 +52,8 @@ export function PlatformTabs() {
         ))}
       </div>
 
-      <div id="platform-panel" role="tabpanel" aria-labelledby={`tab-${id}`} className="grid items-center gap-10 pt-10 lg:grid-cols-2 lg:gap-16">
-        <div className="flex flex-col gap-6">
+      <div id="platform-panel" role="tabpanel" aria-labelledby={`tab-${id}`} className="grid grid-cols-[minmax(0,1fr)] items-center gap-10 pt-10 lg:grid-cols-2 lg:gap-16">
+        <div className="flex min-w-0 flex-col gap-6">
           <h3 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-white">{tab.title}</h3>
           <ul className="flex flex-col gap-3">
             {tab.points.map((p) => (
