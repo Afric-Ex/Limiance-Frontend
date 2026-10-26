@@ -2,12 +2,10 @@
  * Single source of truth for turning deployment configuration into backend base
  * URLs.
  *
- * Both `next.config.ts` (which builds the `/proxy`, `/proxy-root` and
- * `/ws-proxy` rewrites) and the browser/server axios clients read the result, so
- * the `/api/v1` prefix can never be doubled on one side and missing on the other.
+ * Both the browser and server axios clients read the result, so the `/api/v1`
+ * prefix can never be doubled on one side and missing on the other.
  *
- * This module runs in Node (config load) *and* in the browser bundle, so it must
- * stay dependency-free and must never log the configured value.
+ * This module is dependency-free and must never log the configured value.
  */
 
 export interface BackendUrls {
@@ -23,11 +21,10 @@ const stripTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
 /**
  * Only absolute http(s) origins are accepted.
  *
- * The rewrite destinations interpolate this value, so anything else would either
- * crash config load or — for a scheme-relative `//evil.example` — silently
- * re-point the proxy at an attacker-chosen host. Refusing is the only safe
- * answer: a misconfigured deployment should fail loudly, not proxy somewhere
- * unexpected.
+ * The value becomes the base for credentialed API requests, so a scheme-relative
+ * `//evil.example` would silently re-point them at an attacker-chosen host.
+ * Refusing is the only safe answer: a misconfigured deployment should fail
+ * loudly, not send cookies somewhere unexpected.
  */
 const isSafeOrigin = (value: string): boolean => {
   let parsed: URL;
@@ -37,7 +34,7 @@ const isSafeOrigin = (value: string): boolean => {
     return false;
   }
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
-  // Credentials in the URL would be sent on every proxied request.
+  // Credentials in the URL would be sent on every API request.
   if (parsed.username || parsed.password) return false;
   // Query/fragment in a base URL are almost certainly a config mistake.
   if (parsed.search || parsed.hash) return false;
@@ -70,10 +67,22 @@ export const resolveBackendUrls = (raw: string | undefined): BackendUrls | null 
 };
 
 /**
- * Resolve from the environment, preferring the server-only name so a
- * `NEXT_PUBLIC_*` value baked into the client bundle is never the thing that
- * decides where the proxy points.
+ * Resolve from the environment on the server, preferring the private
+ * server-only name. Browser code must read the literal
+ * `process.env.NEXT_PUBLIC_API_URL` instead: Next.js only inlines that reference
+ * into the client bundle.
  */
 export const resolveBackendUrlsFromEnv = (
   env: Record<string, string | undefined>,
 ): BackendUrls | null => resolveBackendUrls(env.BACKEND_URL || env.NEXT_PUBLIC_API_URL);
+
+/**
+ * Browser-facing base URLs. The `NEXT_PUBLIC_API_URL` read is written out
+ * literally so Next.js can inline it into the client bundle.
+ */
+const publicBackendUrls = resolveBackendUrls(process.env.NEXT_PUBLIC_API_URL);
+
+/** API base (`.../api/v1`) for browser requests. */
+export const API_BASE_URL = publicBackendUrls?.apiBaseUrl;
+/** Root base (without `/api/v1`) for browser requests. */
+export const API_ROOT_BASE_URL = publicBackendUrls?.rootBaseUrl;

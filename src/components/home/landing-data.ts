@@ -2,12 +2,13 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useUserStore } from "@/src/stores/user-store";
+import { API_BASE_URL } from "@/src/lib/backend-url";
 
 /**
  * Public market data for the landing page.
  *
- * Uses a plain same-origin fetch to the app's /proxy rewrite instead of the shared
- * axios client: that client's 401 interceptor logs the user out and redirects to
+ * Uses a plain credentialed fetch to the API base instead of the shared axios
+ * client: that client's 401 interceptor logs the user out and redirects to
  * /auth/login, which must never happen to a visitor browsing the landing page.
  * Anything that fails here simply renders its empty state. Nothing is invented.
  */
@@ -20,8 +21,9 @@ export type Interval = (typeof INTERVALS)[number];
 export const DEFAULT_PAIR = "BTC/USDT";
 
 async function getJson(path: string, params: Record<string, string | number> = {}) {
+  if (!API_BASE_URL) throw new Error("NEXT_PUBLIC_API_URL is not configured");
   const qs = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)])).toString();
-  const res = await fetch(`/proxy/${path}${qs ? `?${qs}` : ""}`, { credentials: "include", cache: "no-store" });
+  const res = await fetch(`${API_BASE_URL}/${path}${qs ? `?${qs}` : ""}`, { credentials: "include", cache: "no-store" });
   if (!res.ok) throw new Error(`${path} ${res.status}`);
   return res.json();
 }

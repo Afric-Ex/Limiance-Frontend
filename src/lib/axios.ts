@@ -3,30 +3,17 @@ import { handleLogout } from "./handle-logout";
 import { authDebug } from "./auth-debug";
 import { sanitizeUrl } from "./pii-policy";
 import { sessionCoordinator } from "./session-coordinator";
-import { resolveBackendUrlsFromEnv } from "./backend-url";
+import { API_BASE_URL, API_ROOT_BASE_URL, resolveBackendUrlsFromEnv } from "./backend-url";
 
 /**
- * Same-origin proxy prefixes. The browser must never talk to the backend
- * directly: the backend answers cross-origin requests with
- * `Access-Control-Allow-Origin: *` alongside `Access-Control-Allow-Credentials: true`,
- * which is a combination the spec rejects for credentialed requests — so every
- * direct browser call fails CORS. Going through Next.js makes the request
- * same-origin, which also means the session cookie is attached as a first-party
- * cookie and no CORS headers are needed at all.
- */
-export const PROXY_PREFIX = "/proxy";
-export const PROXY_ROOT_PREFIX = "/proxy-root";
-
-const backend = resolveBackendUrlsFromEnv(process.env);
-
-/**
- * On the server there is no origin to be same-origin with, so requests go
- * straight to the backend — there is no CORS there and no cookie jar to rely on.
+ * On the server there is no cross-origin request and no browser cookie jar, so
+ * requests go straight to the backend using the private URL when configured.
  */
 const isBrowser = typeof window !== "undefined";
-const apiBaseURL = isBrowser ? PROXY_PREFIX : backend?.apiBaseUrl;
-const apiRootBaseURL = isBrowser ? PROXY_ROOT_PREFIX : backend?.rootBaseUrl;
+const serverBackend = isBrowser ? null : resolveBackendUrlsFromEnv(process.env);
 
+const apiBaseURL = isBrowser ? API_BASE_URL : serverBackend?.apiBaseUrl;
+const apiRootBaseURL = isBrowser ? API_ROOT_BASE_URL : serverBackend?.rootBaseUrl;
 
 /**
  * Hard cap on every request the app makes. Axios defaults to no timeout, so a
