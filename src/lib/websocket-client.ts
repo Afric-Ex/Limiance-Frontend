@@ -24,17 +24,6 @@ const IDLE_CLOSE_DELAY_MS = 2000;
 const AUTH_FAILURE_CODES = new Set([1008, 4401, 4403]);
 
 /**
- * Opt out of the same-origin proxy only. Never a way to re-enable URL tokens.
- *
- * The read below is deliberately a literal `process.env.NEXT_PUBLIC_WS_PROXY`
- * rather than `process.env[PROXY_OPT_OUT_ENV]`: Next.js only inlines
- * `NEXT_PUBLIC_*` values it can see written out verbatim in the client bundle, so
- * a computed lookup would resolve to `undefined` in the browser and the opt-out
- * could never be switched on.
- */
-const PROXY_OPT_OUT_ENV = "NEXT_PUBLIC_WS_PROXY";
-
-/**
  * Deterministic JSON serialisation: object keys are sorted recursively so two
  * structurally identical payloads always produce the same string no matter what
  * order the caller built the keys in. JSON.stringify can't be used here — it
@@ -194,27 +183,19 @@ class WebSocketClient {
   }
 
   /**
-   * Same-origin WebSocket endpoint, or `null` when nothing is configured.
-   *
-   * `/ws-proxy` is a Next.js rewrite onto the backend's `/api/v1/ws`, so the
-   * handshake is first-party and the browser attaches the session cookie on its
-   * own. Going direct (`NEXT_PUBLIC_WS_PROXY=false`) is a deployment escape
-   * hatch for hosts that terminate WebSockets outside Next.js — the backend must
-   * then authenticate the upgrade from the request cookie itself, because
-   * nothing is ever appended to that URL either.
+   * Direct WebSocket endpoint from `NEXT_PUBLIC_WS_URL`, or `null` when it is
+   * missing or unusable. The handshake carries no credential in the URL; the
+   * backend authenticates from the cookie the browser attaches for that origin.
    */
   private resolveSocketUrl(): string | null {
-    const useSameOriginProxy = process.env.NEXT_PUBLIC_WS_PROXY !== "false";
     const target = resolveSocketTarget({
       pageProtocol: window.location.protocol,
-      host: window.location.host,
-      useSameOriginProxy,
       directUrl: process.env.NEXT_PUBLIC_WS_URL,
     });
 
-    if (!target && !useSameOriginProxy) {
+    if (!target) {
       console.warn(
-        `[WebSocketClient] ${PROXY_OPT_OUT_ENV}=false but NEXT_PUBLIC_WS_URL is missing or unusable — not connecting`
+        "[WebSocketClient] NEXT_PUBLIC_WS_URL is missing or unusable — not connecting"
       );
     }
     return target;
@@ -233,10 +214,10 @@ class WebSocketClient {
     this.intentionalClose = false;
 
     try {
-      // No credential of any kind is appended: the handshake is a plain
-      // same-origin GET, and the session is whatever cookie the browser already
-      // holds for this origin. Tokens in a URL leak into proxy logs, browser
-      // history and `Sec-WebSocket-Protocol` echoes.
+      // No credential of any kind is appended: the handshake is a plain GET and
+      // the session is whatever cookie the browser already holds for the target
+      // origin. Tokens in a URL leak into proxy logs, browser history and
+      // `Sec-WebSocket-Protocol` echoes.
       const socket = new WebSocket(url);
       this.ws = socket;
 

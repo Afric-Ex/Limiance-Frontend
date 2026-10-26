@@ -15,7 +15,7 @@ import {
 // Authentication is established by the backend session cookie. Nothing here
 // extracts, normalizes, or persists an access token, and no endpoint sends an
 // Authorization header: every call relies on the cookie the browser attaches to
-// same-origin `/proxy` requests.
+// credentialed requests.
 
 export const auth = {
   register: async (data: Register): Promise<ApiResponse<RegisterResponse>> => {

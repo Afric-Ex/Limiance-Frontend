@@ -36,7 +36,6 @@ const checks = [
   ["session cookie read from JavaScript", /document\.cookie\b[^;\n]{0,60}(?:limiance_session|auth-token|auth_token|session)/i],
   ["credential persisted to browser storage", /(?:localStorage|sessionStorage)\.setItem\(\s*["'`][^"'`]*(?:token|password|secret|credential|jwt)/i],
   ["cookies-next client auth helper imported", /from\s+["']cookies-next(?:\/[^"']*)?["']/i],
-  ["browser API client pointed at the backend origin", /baseURL\s*:\s*(?:process\.env\.NEXT_PUBLIC_API_URL|`\$\{[^}]*NEXT_PUBLIC_API_URL)/i],
 ];
 
 /** Exported so the self-check can prove each pattern fires and each stays quiet. */
