@@ -68,7 +68,12 @@ export function SpotPairHeader({
   const icons = useTokenIconMap();
   const names = useTokenNameMap();
 
-  const [base = "", quote = ""] = selectedPair.split("/");
+  const [base = "", quote = ""] = (selectedPair || "").includes("/")
+    ? selectedPair.split("/")
+    : (() => {
+        const m = (selectedPair || "").match(/^([A-Z]+)([A-Z]{3,6})$/i);
+        return m ? [m[1].toUpperCase(), m[2].toUpperCase()] : ["", ""];
+      })();
   const iconUrl = icons[base.toUpperCase()];
   const coinName = names[base.toUpperCase()];
 

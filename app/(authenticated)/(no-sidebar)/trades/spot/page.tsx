@@ -57,7 +57,20 @@ type TradeMode = "spot" | "cross" | "isolated";
 
 function SpotTrades() {
   const searchParams = useSearchParams();
-  const initialPair = searchParams.get("pair")?.replace("_", "/") ?? "BTC/USDT";
+  const initialPair = (() => {
+    const p = searchParams.get("pair");
+    if (!p) return "BTC/USDT";
+    const raw = String(p).replace(/_/g, "-").toUpperCase();
+    if (raw.includes("/")) return raw;
+    if (raw.includes("-")) return raw.replace("-", "/");
+    const quotes = ["USDT", "USDC", "BTC", "ETH", "BNB", "BUSD", "FDUSD", "DAI", "USD"];
+    for (const q of quotes) {
+      if (raw.endsWith(q) && raw.length > q.length) {
+        return `${raw.slice(0, raw.length - q.length)}/${q}`;
+      }
+    }
+    return "BTC/USDT";
+  })();
   const [selectedPair, setSelectedPair] = useState(initialPair);
   const [pairSearch, setPairSearch] = useState("");
   // Mobile and desktop headers are BOTH mounted (one is hidden by CSS), so they
