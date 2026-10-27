@@ -410,32 +410,35 @@ export function OrderBookTabs({
             </>
           )}
           {hasPressureData && (
-            <div className="mt-1 flex shrink-0 items-center gap-2 px-2 pb-1 pt-1">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[3px] border border-[#25AB42]/70 text-[11px] font-semibold text-[#25AB42]">
+            <div
+              className="mt-1 flex shrink-0 items-center gap-2 px-2 pb-1 pt-1"
+              role="img"
+              aria-label={`Buy pressure ${buyPercent}%, sell pressure ${sellPercent}%`}
+            >
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[3px] border border-[#25AB42]/60 text-[10px] font-bold text-[#25AB42]">
                 B
               </span>
-              <span className="w-9 shrink-0 text-xs font-semibold tabular-nums text-[#25AB42]">{buyPercent}%</span>
-              <div className="relative h-6 min-w-0 flex-1 overflow-hidden">
-                {/* Sell side fills the whole bar; the buy side sits on top with a slanted right edge */}
+              <span className="w-8 shrink-0 text-xs font-semibold tabular-nums text-[#25AB42]">{buyPercent}%</span>
+              {/* Two flat blocks split by a slanted gap; width follows the real buy/sell split */}
+              <div className="relative h-5 min-w-0 flex-1 overflow-hidden">
                 <div
-                  className="absolute inset-0"
+                  className="absolute inset-y-0 left-0 bg-[#25AB42]/35 transition-[width] duration-300"
                   style={{
-                    backgroundImage:
-                      "repeating-linear-gradient(135deg, rgba(246,70,93,0.32) 0 2px, rgba(246,70,93,0.14) 2px 5px)",
+                    width: `${buyPercent}%`,
+                    clipPath: "polygon(0 0, 100% 0, calc(100% - 6px) 100%, 0 100%)",
                   }}
                 />
                 <div
-                  className="absolute inset-y-0 left-0"
+                  className="absolute inset-y-0 bg-[#F6465D]/35 transition-[left,width] duration-300"
                   style={{
-                    width: `${buyPercent}%`,
-                    clipPath: "polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%)",
-                    backgroundImage:
-                      "repeating-linear-gradient(135deg, rgba(37,171,66,0.34) 0 2px, rgba(37,171,66,0.16) 2px 5px)",
+                    left: `calc(${buyPercent}% - 6px)`,
+                    width: `calc(${sellPercent}% + 6px)`,
+                    clipPath: "polygon(9px 0, 100% 0, 100% 100%, 3px 100%)",
                   }}
                 />
               </div>
-              <span className="w-9 shrink-0 text-right text-xs font-semibold tabular-nums text-[#F6465D]">{sellPercent}%</span>
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[3px] border border-[#F6465D]/70 text-[11px] font-semibold text-[#F6465D]">
+              <span className="w-8 shrink-0 text-right text-xs font-semibold tabular-nums text-[#F6465D]">{sellPercent}%</span>
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[3px] border border-[#F6465D]/60 text-[10px] font-bold text-[#F6465D]">
                 S
               </span>
             </div>
