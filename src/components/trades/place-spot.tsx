@@ -193,7 +193,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     if (!sellPriceEdited) setSellPrice(marketPrice);
   }, [activeTab, marketPrice, pair, buyPriceEdited, sellPriceEdited]);
 
-  // order book row click — always overrides both price fields and marks as user-set
+  // order book row click â€” always overrides both price fields and marks as user-set
   useEffect(() => {
     if (!clickedPrice) return;
     setBuyPrice(clickedPrice);
@@ -220,7 +220,8 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     });
   }, [tpslEnabled, buyTp, buySl, sellTp, sellSl, onTpslChange]);
 
-  const [base, quote] = pair.split("/");
+  const pairStr = String(pair || "");
+  const [base, quote] = pairStr.includes("/") ? pairStr.split("/") : pairStr.match(/^([A-Z]+)([A-Z]{3,6})$/i)?.slice(1,3) || ["BTC", "USDT"];
 
   const { coins: portfolioResponse, refreshBalances, isRefreshing } = usePortfolioWs({ coins: true });
 
