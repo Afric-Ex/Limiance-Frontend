@@ -263,7 +263,13 @@ export const tradingService = {
         // Fall through to the REST endpoint below.
       }
     }
-    return tradingService.marketOrderHistory("margin", params);
+    const response = await api.get("trading/order_history", { 
+      params: { 
+        ...params,
+        market_type: "margin"
+      } 
+    });
+    return response.data;
   },
 
   marginTradeHistory: async () => {
@@ -271,7 +277,12 @@ export const tradingService = {
   },
 
   fetchMarginOpenOrders: async (params?: { pair?: string }) => {
-    const response = await api.get("trading/margin/orders", { params: { status: "open" } });
+    const response = await api.get("trading/orders", { 
+      params: { 
+        status: "open",
+        market_type: "margin"
+      } 
+    });
     if (!Array.isArray(response.data?.data)) return response.data;
     return { ...response.data, data: filterOrdersByPair(response.data.data, params?.pair) };
   },
@@ -345,12 +356,17 @@ export const tradingService = {
   },
 
   fetchFuturesOpenOrders: async (params?: { pair?: string }) => {
-    const response = await api.get("trading/futures/orders", { params: { status: "open" } });
+    const response = await api.get("trading/orders", { 
+      params: { 
+        status: "open",
+        market_type: "futures"
+      } 
+    });
     if (!Array.isArray(response.data?.data)) return response.data;
     return { ...response.data, data: filterOrdersByPair(response.data.data, params?.pair) };
   },
 
-  futuresOrderHistory: async (params?: { pair?: string; page?: number; limit?: number }) => {
+  futuresOrderHistory: async (params?: { pair?: string; page?: number; limit?: number; status?: OrderHistoryStatus }) => {
     // Primary: one-shot WebSocket query (§5.10); REST is the fallback.
     if (typeof window !== "undefined") {
       try {
@@ -362,7 +378,12 @@ export const tradingService = {
         // Fall through to the REST endpoint below.
       }
     }
-    const response = await api.get("trading/futures/order_history", { params: params?.pair ? { pair: params.pair } : {} });
+    const response = await api.get("trading/order_history", { 
+      params: { 
+        ...params,
+        market_type: "futures"
+      } 
+    });
     if (!Array.isArray(response.data?.data)) return response.data;
     return { ...response.data, data: filterOrdersByPair(response.data.data, params?.pair) };
   },
@@ -407,8 +428,13 @@ export const tradingService = {
 
 
   // ─── Orders & History ────────────────────────────────────────────────────
-  fetchOpenOrders: async (params?: { pair?: string }) => {
-    const response = await api.get("trading/spot/orders", { params: { status: "open" } });
+  fetchOpenOrders: async (params?: { pair?: string; market_type?: TradingMarket }) => {
+    const response = await api.get("trading/orders", { 
+      params: { 
+        status: "open",
+        market_type: params?.market_type || "spot"
+      } 
+    });
     if (!params?.pair || !Array.isArray(response.data?.data)) return response.data;
     return { ...response.data, data: filterOrdersByPair(response.data.data, params.pair) };
   },
@@ -434,7 +460,13 @@ export const tradingService = {
         // Fall through to the REST endpoint below.
       }
     }
-    return tradingService.marketOrderHistory("spot", params);
+    const response = await api.get("trading/order_history", { 
+      params: { 
+        ...params,
+        market_type: "spot"
+      } 
+    });
+    return response.data;
   },
 
   spotTradeHistory: async () => {
