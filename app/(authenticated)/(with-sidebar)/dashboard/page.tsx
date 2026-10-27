@@ -213,10 +213,10 @@ function DashboardInner() {
         // Try to find a market price from the live WS feed
         const marketMatch = displayTokens.find(
           (t: any) =>
-            t.symbol.toUpperCase() === sym &&
-            (t.pair.toUpperCase().endsWith("/USDT") || t.pair.toUpperCase().endsWith("-USDT"))
+            (t.symbol || "").toUpperCase() === sym &&
+            ((t.pair || "").toUpperCase().endsWith("/USDT") || (t.pair || "").toUpperCase().endsWith("-USDT"))
         ) || displayTokens.find(
-          (t: any) => t.symbol.toUpperCase() === sym
+          (t: any) => (t.symbol || "").toUpperCase() === sym
         );
 
         const price = marketMatch
