@@ -119,7 +119,6 @@ function waitForConnection(timeoutMs = CONNECT_TIMEOUT_MS): Promise<void> {
 }
 
 function sendOrderFrame(frame: { type: string; data: Record<string, unknown> }): Promise<any> {
-  const requestId = createRequestId(frame.type);
   return waitForConnection().then(
     () =>
       new Promise<any>((resolve, reject) => {
@@ -136,10 +135,6 @@ function sendOrderFrame(frame: { type: string; data: Record<string, unknown> }):
         const unsubscribe = wsClient.onAnyMessage((data, raw) => {
           const type = String(raw?.type ?? "");
           if (!looksLikeOrderResponse(type)) return;
-          // When the server echoes request_id, ignore replies meant for another
-          // in-flight order. Frames without one still settle (older behaviour).
-          const replyRequestId = raw?.request_id ?? raw?.requestId;
-          if (replyRequestId != null && String(replyRequestId) !== requestId) return;
           const failure = describeFailure(raw);
           settle(() => (failure ? reject(new Error(failure)) : resolve(data ?? raw)));
         });
@@ -150,7 +145,7 @@ function sendOrderFrame(frame: { type: string; data: Record<string, unknown> }):
           );
         }, RESPONSE_TIMEOUT_MS);
 
-        if (!wsClient.send({ ...frame, request_id: requestId })) {
+        if (!wsClient.send(frame)) {
           settle(() => reject(new Error("WebSocket send failed — order was not sent")));
         }
       })
@@ -361,9 +356,6 @@ function queryOrderHistory(
         const unsubscribe = wsClient.onAnyMessage((payload, raw) => {
           const type = String(raw?.type ?? "");
           if (type !== responseType && type !== errorType) return;
-          // When the server echoes request_id, ignore replies meant for another query.
-          const replyRequestId = raw?.request_id ?? raw?.requestId;
-          if (replyRequestId != null && String(replyRequestId) !== requestId) return;
           const failure = describeFailure(raw);
           settle(() => (failure ? reject(new Error(failure)) : resolve(payload ?? raw)));
         });
@@ -378,17 +370,17 @@ function queryOrderHistory(
           );
         }, HISTORY_RESPONSE_TIMEOUT_MS);
 
-        if (!wsClient.send({ type: frameType, request_id: requestId, data })) {
+        if (!wsClient.send({ type: frameType, data })) {
           settle(() => reject(new Error(`WebSocket send failed — ${frameType} not requested`)));
         }
       })
   );
 }
 
-/** get_spot_order_history frame (doc §3.13–3.15). */
+/** get_spot_orders frame (doc §3.13–3.15). */
 export function getSpotOrderHistoryWs(params?: OrderHistoryWsParams): Promise<any> {
   return queryOrderHistory(
-    "get_spot_order_history",
+    "get_spot_orders",
     SPOT_ORDER_HISTORY_RESPONSE,
     SPOT_ORDER_HISTORY_ERROR,
     params
