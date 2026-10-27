@@ -122,6 +122,24 @@ function DashboardInner() {
 
   const feed = useMarketFeed("BTC/USDT");
 
+  // Fetch token logos from listed_tokens API
+  const { data: listedTokensData } = useQuery({
+    queryKey: tradingKeys.listedTokens({ limit: 500 }),
+    queryFn: () => tradingService.listedTokens({ limit: 500 }),
+    staleTime: 10 * 60_000, // Cache for 10 minutes
+  });
+
+  const tokenLogos = useMemo(() => {
+    const logos: Record<string, string> = {};
+    const tokens = listedTokensData?.data || [];
+    tokens.forEach((t: any) => {
+      if (t.symbol && t.logo) {
+        logos[t.symbol.toUpperCase()] = t.logo;
+      }
+    });
+    return logos;
+  }, [listedTokensData]);
+
   // Memoized: the market feed ticks frequently — rebuilding these lists on
   // every unrelated parent render would redo all mapping/filtering each time.
   const marketTokens = useMemo(() => (feed.markets || []).map((m: any) => ({

@@ -10,6 +10,8 @@ import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { MarketsPageSkeleton } from "@/src/components/skeletons/with-sidebar";
+import { useQuery } from "@tanstack/react-query";
+import { tradingKeys, tradingService } from "@/src/services/trading";
 
 type TokenRow = {
   symbol: string;
@@ -152,6 +154,24 @@ function MarketsPageInner() {
   const [trendingIdx, setTrendingIdx] = useState(0);
   const [fadeState, setFadeState] = useState("in");
 
+  // Fetch token logos from listed_tokens API
+  const { data: listedTokensData } = useQuery({
+    queryKey: tradingKeys.listedTokens({ limit: 1000 }),
+    queryFn: () => tradingService.listedTokens({ limit: 1000 }),
+    staleTime: 10 * 60_000, // Cache for 10 minutes
+  });
+
+  const tokenLogos = useMemo(() => {
+    const logos: Record<string, string> = {};
+    const tokens = listedTokensData?.data || [];
+    tokens.forEach((t: any) => {
+      if (t.symbol && t.logo) {
+        logos[t.symbol.toUpperCase()] = t.logo;
+      }
+    });
+    return logos;
+  }, [listedTokensData]);
+
   useEffect(() => {
     const stored = localStorage.getItem("market_favorites");
     if (stored) {
@@ -200,7 +220,7 @@ function MarketsPageInner() {
       category: String(m.category ?? ""),
       leverage: String(m.max_leverage ?? m.leverage ?? ""),
       sparkline: Array.isArray(m.sparkline) ? m.sparkline.map((v: any) => Number(v)).filter(Number.isFinite) : [],
-      image: getCryptoIcon(base) ?? m.image ?? m.logo ?? m.icon,
+      image: tokenLogos[base] ?? getCryptoIcon(base) ?? m.image ?? m.logo ?? m.icon,
     };
   };
 
