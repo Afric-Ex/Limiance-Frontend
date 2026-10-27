@@ -222,7 +222,7 @@ function SpotTrades() {
   const maxAskVol = Math.max(...orderBook.sellOrders.map((o) => o.quantity), 0.001);
   const maxBidVol = Math.max(...orderBook.buyOrders.map((o) => o.quantity), 0.001);
   const selectedMarket = (feed.markets || []).find(
-    (m) => `${m.base}/${m.quote}` === selectedPair || m.symbol.replace("/", "").toUpperCase() === selectedPair.replace("/", "").toUpperCase()
+    (m) => `${m.base}/${m.quote}` === selectedPair || (m.symbol || "").replace("/", "").toUpperCase() === selectedPair.replace("/", "").toUpperCase()
   );
   const bestAsk = orderBook.sellOrders[0]?.price;
   const bestBid = orderBook.buyOrders[0]?.price;
@@ -295,7 +295,7 @@ function SpotTrades() {
       label: "FILL",
       price: placedFill.price,
       color: "fill",
-      detail: `${placedFill.side.toUpperCase()}${placedFill.quantity ? ` ${placedFill.quantity}` : ""}`,
+      detail: `${(placedFill.side || "").toUpperCase()}${placedFill.quantity ? ` ${placedFill.quantity}` : ""}`,
     });
   }
   if (placedFill?.takeProfit && Number.isFinite(placedFill.takeProfit) && placedFill.takeProfit > 0) {
@@ -304,7 +304,7 @@ function SpotTrades() {
       label: "TP",
       price: placedFill.takeProfit,
       color: "tp",
-      detail: `${placedFill.side.toUpperCase()} · placed`,
+      detail: `${(placedFill.side || "").toUpperCase()} · placed`,
     });
   }
   if (placedFill?.stopLoss && Number.isFinite(placedFill.stopLoss) && placedFill.stopLoss > 0) {
@@ -313,7 +313,7 @@ function SpotTrades() {
       label: "SL",
       price: placedFill.stopLoss,
       color: "sl",
-      detail: `${placedFill.side.toUpperCase()} · placed`,
+      detail: `${(placedFill.side || "").toUpperCase()} · placed`,
     });
   }
 
