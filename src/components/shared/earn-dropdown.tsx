@@ -1,46 +1,69 @@
+import Link from "next/link";
+import { GiCoins, GiStairsGoal } from "react-icons/gi";
+import { RiRocketLine, RiSafeLine } from "react-icons/ri";
+import { IoGitCompareOutline } from "react-icons/io5";
+import { BsGraphUpArrow } from "react-icons/bs";
+
 const list = [
   {
-    title: "Simple earn",
-    subtitle: "Effortless earning insights at a glance",
+    title: "Simple Earn",
+    subtitle: "Earn passive income on idle crypto assets",
+    link: "/earn/simple-earn",
+    icon: GiCoins,
   },
   {
     title: "Staking",
-    subtitle: "Fiat-to-crypto and crypto-to-fiat block trades",
+    subtitle: "Stake your tokens to secure networks and earn rewards",
+    link: "/earn/staking",
+    icon: GiStairsGoal,
   },
   {
-    title: "LaunchPad",
-    subtitle: "Get ahead with hot and latest tokens",
+    title: "Launchpad",
+    subtitle: "Get early access to promising new token projects",
+    link: "/earn/launchpad",
+    icon: RiRocketLine,
   },
   {
     title: "Pool Savings",
-    subtitle: "Unlimited time to take your trading to the next level",
+    subtitle: "Flexible and fixed-term savings for steady returns",
+    link: "/earn/pool-savings",
+    icon: RiSafeLine,
   },
   {
     title: "Dual Investment",
-    subtitle: "Track and manage your earnings effortlessly here",
+    subtitle: "Earn high yields with structured investment products",
+    link: "/earn/dual-investment",
+    icon: IoGitCompareOutline,
   },
   {
     title: "Smart Trend",
-    subtitle: "Time the market and enjoy incredible yields",
+    subtitle: "Automated strategies to optimize your earnings",
+    link: "/earn/smart-trend",
+    icon: BsGraphUpArrow,
   },
 ];
 
 export const EarnDropdown = () => {
   return (
-    <div className="bg-gray-17/[97%] px-10px py-3 rounded-lg flex flex-col">
-      {list.map((item) => (
-        <div
-          key={item.title}
-          className="flex cursor-pointer group py-10px px-2 rounded hover:bg-gray-9/40 flex-col gap-1"
-        >
-          <span className="text-10px group-hover:text-primary font-semibold">
-            {item.title}
-          </span>
-          <span className="text-8px font-medium text-white/55">
-            {item.subtitle}
-          </span>
-        </div>
-      ))}
+    <div className="bg-[#181a20] border border-white/[0.06] px-2 py-2 rounded-xl flex flex-col min-w-[320px] shadow-2xl">
+      {list.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Link
+            href={item.link}
+            key={item.title}
+            className="cursor-pointer hover:bg-white/[0.02] flex items-start gap-3 py-2.5 px-2 group rounded-lg transition-colors"
+          >
+            <div className="mt-0.5 text-white/70 group-hover:text-primary transition-colors">
+              <Icon size={18} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-white/90 group-hover:text-white">{item.title}</span>
+              <span className="text-xs text-white/50 leading-snug">{item.subtitle}</span>
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 };

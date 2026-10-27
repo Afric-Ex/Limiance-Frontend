@@ -12,16 +12,25 @@ const LwcCandlestickChart = dynamic(
   { ssr: false }
 );
 
-const QUICK_INTERVALS = ["1s", "1m", "3m", "5m", "15m", "30m", "1h", "4h"] as const;
-const MORE_INTERVALS = [
+const QUICK_INTERVALS = [
+  { value: "1s", label: "1s" },
+  { value: "1m", label: "1m" },
+  { value: "5m", label: "5m" },
+  { value: "15m", label: "15m" },
+  { value: "30m", label: "30m" },
+  { value: "1h", label: "1h" },
+  { value: "4h", label: "4h" },
   { value: "1d", label: "1D" },
   { value: "1w", label: "1W" },
   { value: "1mn", label: "1M" },
+] as const;
+const MORE_INTERVALS = [
+  { value: "3m", label: "3m" },
   { value: "6mh", label: "6M" },
   { value: "1y", label: "1Y" },
 ] as const;
 const _INTERVALS = [
-  ...QUICK_INTERVALS,
+  ...QUICK_INTERVALS.map(({ value }) => value),
   ...MORE_INTERVALS.map(({ value }) => value),
 ] as const;
 type Interval = (typeof _INTERVALS)[number];
@@ -535,76 +544,35 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
       }
       data-market={market}
     >
-      {/* One shared control surface for all three trading products. */}
-      <div className="flex items-center justify-between gap-2 px-2 border-b border-white/[0.06] shrink-0 min-h-10">
-        <div className="flex items-center shrink-0">
+      {/* One shared control surface for all three trading products.
+          Row 1: view tabs + market status + fullscreen. Row 2: interval strip. */}
+      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-white/[0.06] px-2">
+        <div className="flex shrink-0 items-center">
           {(["chart", "depth"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
               aria-pressed={view === v}
-              className={`text-xs font-semibold px-3 h-9 border-b-2 transition-colors capitalize ${
+              className={clsx(
+                "relative h-10 px-3 text-sm font-semibold capitalize transition-colors",
                 view === v
-                  ? "text-white border-white"
-                  : "text-white/40 border-transparent hover:text-white/70"
-              }`}
+                  ? "text-white after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary"
+                  : "text-white/40 hover:text-white/70"
+              )}
             >
               {v === "chart" ? "Chart" : "Depth"}
             </button>
-            ))}
+          ))}
         </div>
 
-        {view === "chart" && (
-          <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
-            <div className="flex items-center justify-end gap-0.5 min-w-max">
-              {QUICK_INTERVALS.map((iv) => (
-                <button
-                  key={iv}
-                  onClick={() => setIntervalVal(iv)}
-                  aria-pressed={interval === iv}
-                  className={`text-[11px] font-semibold px-2 h-7 rounded transition-colors ${
-                    interval === iv
-                      ? "text-white bg-white/10"
-                      : "text-white/40 hover:text-white/60"
-                  }`}
-                >
-                  {iv}
-                </button>
-              ))}
-              <div className="relative flex h-7 items-center">
-                <select
-                  aria-label="More chart intervals"
-                  value={MORE_INTERVALS.some(({ value }) => value === interval) ? interval : ""}
-                  onChange={(event) => {
-                    const value = event.currentTarget.value;
-                    if (MORE_INTERVALS.some((item) => item.value === value)) {
-                      setIntervalVal(value as Interval);
-                    }
-                  }}
-                  className={`h-7 appearance-none rounded bg-white/[0.06] pl-2 pr-6 text-[11px] font-semibold outline-none transition-colors ${
-                    MORE_INTERVALS.some(({ value }) => value === interval)
-                      ? "text-white"
-                      : "text-white/50 hover:text-white/80"
-                  }`}
-                >
-                  <option value="" disabled>More</option>
-                  {MORE_INTERVALS.map(({ value, label }) => (
-                    <option key={value} value={value} className="bg-[#181a20] text-white">
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <FiChevronDown
-                  aria-hidden="true"
-                  className="pointer-events-none absolute right-1.5 text-white/50"
-                  size={12}
-                />
-              </div>
-            </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="hidden items-center gap-2 text-[10px] font-medium text-white/45 sm:flex">
+            <span className="rounded bg-white/[0.06] px-1.5 py-1 text-white/60">{marketLabel}</span>
+            <span className="inline-flex items-center gap-1.5" title="Order book WebSocket status">
+              <span className={clsx("h-1.5 w-1.5 rounded-full", bookLive ? "bg-success-6" : "bg-warning-1")} />
+              {bookLive ? "Live" : "Reconnecting"}
+            </span>
           </div>
-        )}
-
-        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => void (isFullscreen ? exitFullscreen() : enterFullscreen())}
@@ -614,15 +582,58 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
           >
             {isFullscreen ? <FiMinimize2 size={14} /> : <FiMaximize2 size={14} />}
           </button>
-          <div className="hidden sm:flex items-center gap-2 text-[10px] font-medium text-white/45">
-            <span className="rounded bg-white/[0.06] px-1.5 py-1 text-white/60">{marketLabel}</span>
-            <span className="inline-flex items-center gap-1.5" title="Order book WebSocket status">
-              <span className={clsx("h-1.5 w-1.5 rounded-full", bookLive ? "bg-success-6" : "bg-warning-1")} />
-              {bookLive ? "Live" : "Reconnecting"}
-            </span>
-          </div>
         </div>
       </div>
+
+      {view === "chart" && (
+        <div className="shrink-0 overflow-x-auto px-2 [scrollbar-width:none]">
+          <div className="flex h-9 min-w-max items-center gap-0.5">
+            {QUICK_INTERVALS.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setIntervalVal(value)}
+                aria-pressed={interval === value}
+                className={clsx(
+                  "h-7 rounded px-2 text-xs font-semibold transition-colors",
+                  interval === value ? "text-primary" : "text-white/50 hover:text-white"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+            <div className="relative flex h-7 items-center">
+              <select
+                aria-label="More chart intervals"
+                value={MORE_INTERVALS.some(({ value }) => value === interval) ? interval : ""}
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
+                  if (MORE_INTERVALS.some((item) => item.value === value)) {
+                    setIntervalVal(value as Interval);
+                  }
+                }}
+                className={clsx(
+                  "h-7 cursor-pointer appearance-none rounded bg-transparent pl-2 pr-5 text-xs font-semibold outline-none transition-colors",
+                  MORE_INTERVALS.some(({ value }) => value === interval)
+                    ? "text-primary"
+                    : "text-white/50 hover:text-white"
+                )}
+              >
+                <option value="" disabled>More</option>
+                {MORE_INTERVALS.map(({ value, label }) => (
+                  <option key={value} value={value} className="bg-[#181a20] text-white">
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <FiChevronDown
+                aria-hidden="true"
+                className="pointer-events-none absolute right-1 text-white/50"
+                size={12}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Chart views */}
       {view === "chart" ? (

@@ -111,12 +111,14 @@ export const useAuth = () => {
       // empty body: the credential is the Set-Cookie, not the payload. Ask the
       // authenticated `/user_details` endpoint who we are so the app still has an
       // identity to render.
+      useUserStore.getState().setJustLoggedIn(true);
       try {
         await useUserStore.getState().fetchUser();
       } catch {
         // fetchUser already surfaces its own error; the redirect below still
         // lands on a page that will retry.
       }
+      useUserStore.getState().setJustLoggedIn(false);
     }
     clearPendingLogin2FA();
     return true;
@@ -200,7 +202,9 @@ export const useAuth = () => {
       await persistLoginSession(data);
       successNotification("Login successful");
       console.log("Login successful, redirecting to dashboard");
-      window.location.href = "/dashboard";
+      // Use a small delay to ensure the cookie is set before navigating
+      await new Promise(resolve => setTimeout(resolve, 100));
+      push("/dashboard");
     },
     onError: (error: any) => {
       console.error("Login error:", error);
@@ -253,7 +257,7 @@ export const useAuth = () => {
 
       await persistLoginSession(data);
       successNotification("Login successful");
-      window.location.href = "/dashboard";
+      push("/dashboard");
     },
   })();
 

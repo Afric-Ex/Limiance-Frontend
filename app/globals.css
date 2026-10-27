@@ -65,7 +65,7 @@
 
   /* Sizing constants */
   --size-container-desktop: 1440px;
-  --size-header-height: 72px;
+  --size-header-height: 48px;
   --size-header-gutter: 32px;
   --size-sidebar-width: 281px;
   --size-sidebar-inner: 265px;

@@ -9,6 +9,7 @@ import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { useOrderBook } from "@/src/hooks/use-order-book";
 import { useRecentTrades } from "@/src/hooks/use-recent-trades";
 import { OrderBookTabs } from "@/src/components/trades/order-book-tabs";
+import { SpotPairHeader } from "@/src/components/trades/spot-pair-header";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { SpotTradePageSkeleton } from "@/src/components/skeletons/trades";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
@@ -405,129 +406,30 @@ function SpotTrades() {
         }
       />
 
-      {/* Top Header Desktop */}
-      <div className="hidden min-[1150px]:flex bg-[#181a20] py-3 px-4 justify-between items-center border-b border-white/[0.06]">
-        <div className="flex items-center gap-6">
-          <SidebarMenuButton />
-          {/* Pair selector */}
-          <Popover width={360} position="bottom-start" shadow="md" opened={pairMenuDesktopOpen} onChange={setPairMenuDesktopOpen}>
-            <PopoverTarget>
-              <button
-                aria-label="Change trading pair"
-                onClick={() => setPairMenuDesktopOpen((v) => !v)}
-                className="flex items-center gap-2 hover:bg-white/5 py-1 px-2 rounded -ml-2 transition-colors"
-              >
-                <span className="text-xl font-bold text-white">{selectedPair}</span>
-                <MdKeyboardArrowDown className="text-white/50" size={20} />
-              </button>
-            </PopoverTarget>
-            <PopoverDropdown className="!bg-[#181a20] !border-white/[0.06] !p-0">
-              <div className="flex flex-col">
-                <div className="p-3 border-b border-white/[0.06]">
-                  <TextInput
-                    classNames={{
-                      input: "!h-8 !bg-white/5 placeholder:!text-white/30 !border-0 focus:!border focus:!border-primary !rounded text-xs",
-                    }}
-                    placeholder="Search pairs (BTC, ETH…)"
-                    leftSection={<Search className="w-4 h-4" />}
-                    value={pairSearch}
-                    onChange={(e) => setPairSearch(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-                <div className="max-h-[360px] overflow-auto py-1">
-                  {feed.marketsLoading ? (
-                    <Skeleton variant="table-row" count={5} columns={2} className="px-2" />
-                  ) : filteredMarkets.length === 0 ? (
-                    <div className="text-center py-8 text-xs text-white/30">No pairs found</div>
-                  ) : (
-                    filteredMarkets.slice(0, 30).map((m) => (
-                      <button
-                        key={m.symbol}
-                        onClick={() => handleSelectPair(m.base, m.quote)}
-                        className={clsx(
-                          "w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.04] transition-colors text-left",
-                          selectedPair === `${m.base}/${m.quote}` && "bg-white/[0.03]"
-                        )}
-                      >
-                        <div className="flex flex-col gap-0">
-                          <span className="text-xs font-bold text-white/90">
-                            {m.base}<span className="text-white/40">/{m.quote}</span>
-                          </span>
-                          <span className="text-[10px] text-white/30">{m.symbol}</span>
-                        </div>
-                        <span className={clsx("text-xs font-semibold", m.percent_change >= 0 ? "text-success-2" : "text-error-1")}>
-                          {m.percent_change >= 0 ? "+" : ""}{m.percent_change}%
-                        </span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            </PopoverDropdown>
-          </Popover>
-
-          {/* Live stats */}
-          <div className={clsx("flex flex-col gap-0.5 px-2 rounded transition-colors", flashClass)}>
-            {feed.price !== null ? (
-              <span className={`text-lg font-bold ${changeColor}`}>{formatPrice(feed.price)}</span>
-            ) : (
-              <Skeleton variant="text" width="80px" height="24px" />
-            )}
-            <span className="text-xs text-white/50 font-medium">
-              {feed.price !== null ? `₦${(feed.price * 462.5).toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—"}
-            </span>
-          </div>
-
-          <div className="hidden md:flex items-center gap-6">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-white/40 font-medium">24h Change</span>
-              <span className={`flex text-xs font-semibold ${changeColor} items-center gap-1`}>
-                <span>{feed.change24h !== null ? formatPrice(feed.change24h) : "—"}</span>
-                <span>{feed.changePercent24h !== null ? `${feed.changePercent24h >= 0 ? "+" : ""}${feed.changePercent24h}%` : "—"}</span>
-              </span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-white/40 font-medium">24h High</span>
-              <span className="text-xs font-semibold text-white/90">{formatPrice(feed.high24h) ?? "—"}</span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-white/40 font-medium">24h Low</span>
-              <span className="text-xs font-semibold text-white/90">{formatPrice(feed.low24h) ?? "—"}</span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-white/40 font-medium">24h Vol({base})</span>
-              <span className="text-xs font-semibold text-white/90">
-                {feed.volume24h !== null ? feed.volume24h.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—"}
-              </span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-white/40 font-medium">24h Vol({quote})</span>
-              <span className="text-xs font-semibold text-white/90">
-                {feed.volume24h !== null && feed.price !== null
-                  ? (feed.volume24h * feed.price).toLocaleString("en-US", { maximumFractionDigits: 0 })
-                  : "—"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <span className={`text-xs font-semibold flex items-center gap-1.5 ${feed.isConnected ? "text-success-6" : "text-white/40"}`}>
-          <span className={clsx("w-2 h-2 rounded-full", feed.isConnected ? "bg-success-6 animate-pulse-glow" : "bg-white/20")} />
-          {feed.isConnected ? "Live" : "Connecting"}
-        </span>
-      </div>
-
       {/* 3-Column Layout */}
-      <div className="hidden min-[1150px]:grid lg:grid-cols-[1fr_250px_320px] gap-1 px-1 flex-1 pb-0 min-h-0 relative">
+      <div className="hidden min-[1150px]:grid min-[1150px]:grid-cols-[minmax(0,1fr)_305px_305px] min-[1150px]:grid-rows-[auto_max(480px,calc(100vh-164px))_auto] content-start gap-1 px-1 pt-1 flex-1 pb-1 min-h-0 relative">
         
+        {/* Desktop pair bar: sits above chart + order book, beside the trade form */}
+        <SpotPairHeader
+          className="min-[1150px]:col-span-2 min-[1150px]:col-start-1 min-[1150px]:row-start-1"
+          selectedPair={selectedPair}
+          feed={feed}
+          flashClass={flashClass}
+          menuOpen={pairMenuDesktopOpen}
+          onMenuOpenChange={setPairMenuDesktopOpen}
+          pairSearch={pairSearch}
+          onPairSearchChange={setPairSearch}
+          markets={filteredMarkets}
+          onSelectPair={handleSelectPair}
+        />
+
         {/* MOBILE: Floating Order Book Button */}
         <button className="min-[1150px]:hidden fixed bottom-[90px] right-4 z-40 bg-[#1c1e27] border border-white/[0.08] text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg tap-scale flex items-center gap-2" onClick={() => setOrderBookOpen(true)}>
           <span>Order Book</span>
         </button>
 
         {/* Chart Column (Responsive) */}
-        <div className="flex flex-col gap-1 overflow-hidden min-w-0 min-[1150px]:col-start-1">
+        <div className="flex flex-col gap-1 overflow-hidden min-w-0 min-[1150px]:col-start-1 min-[1150px]:row-start-2">
           <div className={clsx("bg-[#181a20] rounded relative flex flex-col transition-all duration-300", chartExpanded ? "h-[950px] shrink-0" : "flex-1 min-[1150px]:min-h-0")}>
             <CandlestickChart
               key={selectedPair}
@@ -548,41 +450,131 @@ function SpotTrades() {
               {chartExpanded ? <IoChevronUp /> : <IoChevronDown />}
             </button>
           </div>
+        </div>
 
-          {/* Desktop Order History Tabs */}
-          <div className="hidden min-[1150px]:flex bg-[#181a20] rounded flex-1 overflow-hidden flex-col h-[50px] min-h-[50px] shrink-0">
-            <Tabs
-              classNames={{
-                tab: "!pb-2 !pt-3 hover:!bg-transparent hover:!border-0 data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50",
-                list: "!flex !items-center border-b border-white/[0.06] px-4 shrink-0",
-                panel: "!flex-1 !overflow-auto !min-h-0",
-                root: "!flex !flex-col !min-h-0",
-              }}
-              defaultValue="open"
-            >
-              <div className="flex items-center justify-between shrink-0">
-                <TabsList>
-                  <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
-                  <TabsTab value="history">Order History</TabsTab>
-                  <TabsTab value="tradeHistory">Trade History</TabsTab>
-                </TabsList>
-                <div className="pr-4">
-                  <Checkbox
-                    classNames={{
-                      label: "!text-[10px] !text-white/40",
-                      input: "!border-white/20 !bg-transparent checked:!bg-primary",
-                    }}
-                    label="Hide Other Pairs"
-                  />
-                </div>
-              </div>
-              <TabsPanel value="open">
-                <Table
+        {/* COL 2: Order Book and live market trades */}
+        <OrderBookTabs
+          className="hidden min-[1150px]:flex min-h-0 min-[1150px]:col-start-2 min-[1150px]:row-start-2"
+          buyOrders={orderBook.buyOrders}
+          sellOrders={orderBook.sellOrders}
+          recentTrades={recentTrades}
+          recentTradesLoading={recentTradesLoading}
+          base={base}
+          quote={quote}
+          currentPrice={chartLastPrice ?? feed.price}
+          dayChangePercent={feed.changePercent24h}
+          buyPercentage={orderBook.buyPercentage}
+          sellPercentage={orderBook.sellPercentage}
+          isConnected={orderBook.isConnected}
+          lastUpdated={orderBook.lastUpdated}
+          onSelectPrice={setClickedPrice}
+        />
+        {/* Desktop Order History Tabs — spans under chart + order book */}
+        <div className="hidden min-[1150px]:flex bg-[#181a20] rounded overflow-hidden flex-col min-h-[260px] max-h-[420px] col-span-2 col-start-1 row-start-3">
+          <Tabs
+            classNames={{
+              tab: "!pb-2 !pt-3 hover:!bg-transparent hover:!border-0 data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50",
+              list: "!flex !items-center border-b border-white/[0.06] px-4 shrink-0",
+              panel: "!flex-1 !overflow-auto !min-h-0",
+              root: "!flex !flex-col !min-h-0 !flex-1",
+            }}
+            defaultValue="open"
+          >
+            <div className="flex items-center justify-between shrink-0">
+              <TabsList>
+                <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
+                <TabsTab value="history">Order History</TabsTab>
+                <TabsTab value="tradeHistory">Trade History</TabsTab>
+              </TabsList>
+              <div className="pr-4">
+                <Checkbox
                   classNames={{
-                    th: "!text-[10px] uppercase !text-white/40 !bg-[#181a20] sticky top-0 z-10 border-b border-white/[0.06]",
-                    tr: "row-hover transition-colors border-b border-transparent",
+                    label: "!text-[10px] !text-white/40",
+                    input: "!border-white/20 !bg-transparent checked:!bg-primary",
                   }}
-                >
+                  label="Hide Other Pairs"
+                />
+              </div>
+            </div>
+            <TabsPanel value="open">
+              <Table
+                classNames={{
+                  th: "!text-[10px] uppercase !text-white/40 !bg-[#181a20] sticky top-0 z-10 border-b border-white/[0.06]",
+                  tr: "row-hover transition-colors border-b border-transparent",
+                }}
+              >
+                <thead>
+                  <TableTr>
+                    <TableTh>Time</TableTh>
+                    <TableTh>Pair</TableTh>
+                    <TableTh>Type</TableTh>
+                    <TableTh>Side</TableTh>
+                    <TableTh>Price</TableTh>
+                    <TableTh>Amount</TableTh>
+                    <TableTh>Total</TableTh>
+                    <TableTh>TP / SL</TableTh>
+                    <TableTh className="text-right">Action</TableTh>
+                  </TableTr>
+                </thead>
+                <tbody>
+                  {openOrders?.map((order: any) => (
+                    <TableTr key={order.id}>
+                      <TableTd><span className="text-xs text-white/70">{formatOrderDate(order.createdAt, true)}</span></TableTd>
+                      <TableTd><span className="text-xs font-semibold">{getOrderPair(order)}</span></TableTd>
+                      <TableTd><span className="text-xs text-white/70 capitalize">{order.type}</span></TableTd>
+                      <TableTd>
+                        <span className={`text-xs font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>
+                          {order.side?.toUpperCase()}
+                        </span>
+                      </TableTd>
+                      <TableTd><span className="text-xs text-white/90">{formatOrderNumber(order.price)}</span></TableTd>
+                      <TableTd><span className="text-xs text-white/90">{order.amount ?? order.quantity}</span></TableTd>
+                      <TableTd><span className="text-xs text-white/90">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></TableTd>
+                      <TableTd>
+                        <span className="text-xs text-white/40">
+                          {order.takeProfit ? <span className="text-success-6">{order.takeProfit}</span> : "—"}
+                          {" / "}
+                          {order.stopLoss ? <span className="text-error-1">{order.stopLoss}</span> : "—"}
+                        </span>
+                      </TableTd>
+                      <TableTd className="text-right">
+                        <button
+                          onClick={() => closeOrder(order.id)}
+                          disabled={closeOrderPending}
+                          className="text-xs font-semibold text-white/40 hover:text-primary transition-colors flex items-center gap-1 ml-auto"
+                        >
+                          {closeOrderPending && <Loader size={10} color="white" />}
+                          Cancel
+                        </button>
+                      </TableTd>
+                    </TableTr>
+                  ))}
+                </tbody>
+              </Table>
+              {openOrdersLoading ? (
+                <div className="p-8 flex justify-center">
+                  <Skeleton variant="table-row" count={3} columns={9} className="w-full" />
+                </div>
+              ) : !openOrders?.length ? (
+                <div className="min-h-[120px] flex flex-col items-center justify-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <p className="text-xs font-medium text-white/30">No open orders</p>
+                </div>
+              ) : null}
+            </TabsPanel>
+            <TabsPanel value="history">
+              {orderHistoryLoading ? (
+                <div className="p-8 flex justify-center"><Skeleton variant="table-row" count={3} columns={9} className="w-full" /></div>
+              ) : !orderHistory?.length ? (
+                <div className="min-h-[120px] flex flex-col items-center justify-center gap-2">
+                  <p className="text-xs font-medium text-white/30">No order history</p>
+                </div>
+              ) : (
+                <Table classNames={{ th: "!text-[10px] uppercase !text-white/40 !bg-[#181a20] sticky top-0 z-10 border-b border-white/[0.06]", tr: "row-hover transition-colors border-b border-transparent" }}>
                   <thead>
                     <TableTr>
                       <TableTh>Time</TableTh>
@@ -592,211 +584,44 @@ function SpotTrades() {
                       <TableTh>Price</TableTh>
                       <TableTh>Amount</TableTh>
                       <TableTh>Total</TableTh>
-                      <TableTh>TP / SL</TableTh>
-                      <TableTh className="text-right">Action</TableTh>
+                      <TableTh>Status</TableTh>
                     </TableTr>
                   </thead>
                   <tbody>
-                    {openOrders?.map((order: any) => (
-                      <TableTr key={order.id}>
-                        <TableTd><span className="text-xs text-white/70">{formatOrderDate(order.createdAt, true)}</span></TableTd>
+                    {orderHistory.map((order: any, idx: number) => (
+                      <TableTr key={order.id ?? idx}>
+                        <TableTd><span className="text-xs text-white/70">{formatOrderDate(order.createdAt)}</span></TableTd>
                         <TableTd><span className="text-xs font-semibold">{getOrderPair(order)}</span></TableTd>
                         <TableTd><span className="text-xs text-white/70 capitalize">{order.type}</span></TableTd>
-                        <TableTd>
-                          <span className={`text-xs font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>
-                            {order.side?.toUpperCase()}
-                          </span>
-                        </TableTd>
+                        <TableTd><span className={`text-xs font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span></TableTd>
                         <TableTd><span className="text-xs text-white/90">{formatOrderNumber(order.price)}</span></TableTd>
                         <TableTd><span className="text-xs text-white/90">{order.amount ?? order.quantity}</span></TableTd>
                         <TableTd><span className="text-xs text-white/90">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></TableTd>
                         <TableTd>
-                          <span className="text-xs text-white/40">
-                            {order.takeProfit ? <span className="text-success-6">{order.takeProfit}</span> : "—"}
-                            {" / "}
-                            {order.stopLoss ? <span className="text-error-1">{order.stopLoss}</span> : "—"}
-                          </span>
-                        </TableTd>
-                        <TableTd className="text-right">
-                          <button
-                            onClick={() => closeOrder(order.id)}
-                            disabled={closeOrderPending}
-                            className="text-xs font-semibold text-white/40 hover:text-primary transition-colors flex items-center gap-1 ml-auto"
-                          >
-                            {closeOrderPending && <Loader size={10} color="white" />}
-                            Cancel
-                          </button>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            order.status === "filled" ? "bg-success-6/15 text-success-6" :
+                            order.status === "cancelled" ? "bg-error-1/15 text-error-1" :
+                            "bg-white/10 text-white/50"
+                          }`}>{order.status}</span>
                         </TableTd>
                       </TableTr>
                     ))}
                   </tbody>
                 </Table>
-                {openOrdersLoading ? (
-                  <div className="p-8 flex justify-center">
-                    <Skeleton variant="table-row" count={3} columns={9} className="w-full" />
-                  </div>
-                ) : !openOrders?.length ? (
-                  <div className="min-h-[120px] flex flex-col items-center justify-center gap-2">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20">
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                    </div>
-                    <p className="text-xs font-medium text-white/30">No open orders</p>
-                  </div>
-                ) : null}
-              </TabsPanel>
-              <TabsPanel value="history">
-                {orderHistoryLoading ? (
-                  <div className="p-8 flex justify-center"><Skeleton variant="table-row" count={3} columns={9} className="w-full" /></div>
-                ) : !orderHistory?.length ? (
-                  <div className="min-h-[120px] flex flex-col items-center justify-center gap-2">
-                    <p className="text-xs font-medium text-white/30">No order history</p>
-                  </div>
-                ) : (
-                  <Table classNames={{ th: "!text-[10px] uppercase !text-white/40 !bg-[#181a20] sticky top-0 z-10 border-b border-white/[0.06]", tr: "row-hover transition-colors border-b border-transparent" }}>
-                    <thead>
-                      <TableTr>
-                        <TableTh>Time</TableTh>
-                        <TableTh>Pair</TableTh>
-                        <TableTh>Type</TableTh>
-                        <TableTh>Side</TableTh>
-                        <TableTh>Price</TableTh>
-                        <TableTh>Amount</TableTh>
-                        <TableTh>Total</TableTh>
-                        <TableTh>Status</TableTh>
-                      </TableTr>
-                    </thead>
-                    <tbody>
-                      {orderHistory.map((order: any, idx: number) => (
-                        <TableTr key={order.id ?? idx}>
-                          <TableTd><span className="text-xs text-white/70">{formatOrderDate(order.createdAt)}</span></TableTd>
-                          <TableTd><span className="text-xs font-semibold">{getOrderPair(order)}</span></TableTd>
-                          <TableTd><span className="text-xs text-white/70 capitalize">{order.type}</span></TableTd>
-                          <TableTd><span className={`text-xs font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span></TableTd>
-                          <TableTd><span className="text-xs text-white/90">{formatOrderNumber(order.price)}</span></TableTd>
-                          <TableTd><span className="text-xs text-white/90">{order.amount ?? order.quantity}</span></TableTd>
-                          <TableTd><span className="text-xs text-white/90">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></TableTd>
-                          <TableTd>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              order.status === "filled" ? "bg-success-6/15 text-success-6" :
-                              order.status === "cancelled" ? "bg-error-1/15 text-error-1" :
-                              "bg-white/10 text-white/50"
-                            }`}>{order.status}</span>
-                          </TableTd>
-                        </TableTr>
-                      ))}
-                    </tbody>
-                  </Table>
-                )}
-              </TabsPanel>
-              <TabsPanel value="tradeHistory">
-                <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
-              </TabsPanel>
-            </Tabs>
-          </div>
-        </div>
-
-        {/* COL 2: Order Book and live market trades */}
-        <OrderBookTabs
-          className="hidden min-[1150px]:flex rounded min-h-0"
-          buyOrders={orderBook.buyOrders}
-          sellOrders={orderBook.sellOrders}
-          recentTrades={recentTrades}
-          recentTradesLoading={recentTradesLoading}
-          base={base}
-          quote={quote}
-          currentPrice={chartLastPrice ?? feed.price}
-          buyPercentage={orderBook.buyPercentage}
-          sellPercentage={orderBook.sellPercentage}
-          isConnected={orderBook.isConnected}
-          lastUpdated={orderBook.lastUpdated}
-          onSelectPrice={setClickedPrice}
-        />
-        <div className="hidden">
-          <div className="px-4 py-3 border-b border-white/[0.06] text-sm text-white/90 font-semibold flex items-center justify-between">
-            <span>Order Book</span>
-            <div className="flex gap-2">
-              <button className="w-5 h-5 rounded bg-white/10 flex flex-col items-center justify-center gap-px">
-                <span className="w-3 h-[2px] bg-error-1" />
-                <span className="w-3 h-[2px] bg-success-6" />
-              </button>
-              <button className="w-5 h-5 rounded flex flex-col items-center justify-center gap-px opacity-40 hover:opacity-80 transition-opacity">
-                <span className="w-3 h-[2px] bg-success-6" />
-                <span className="w-3 h-[2px] bg-success-6" />
-              </button>
-              <button className="w-5 h-5 rounded flex flex-col items-center justify-center gap-px opacity-40 hover:opacity-80 transition-opacity">
-                <span className="w-3 h-[2px] bg-error-1" />
-                <span className="w-3 h-[2px] bg-error-1" />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-col flex-1 overflow-hidden p-1">
-            <div className="grid grid-cols-3 px-3 py-1 mb-1">
-              <span className="text-[10px] text-white/40">Price({quote})</span>
-              <span className="text-[10px] text-white/40 text-right">Qty({base})</span>
-              <span className="text-[10px] text-white/40 text-right">Total</span>
-            </div>
-
-            {orderBook.sellOrders.length === 0 && orderBook.buyOrders.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center">
-                <span className="text-xs text-white/30">No order data</span>
-              </div>
-            ) : (
-              <div className="flex flex-col flex-1">
-                <div className="flex flex-col justify-end flex-1 overflow-hidden gap-[2px]">
-                  {[...orderBook.sellOrders].reverse().map((order, i) => {
-                    const w = Math.min((order.quantity / maxAskVol) * 100, 100);
-                    return (
-                      <div key={`ask-${i}`} onClick={() => setClickedPrice(order.price)} className="grid grid-cols-3 px-3 py-[2px] relative cursor-pointer hover:bg-white/[0.02]">
-                        <div className="absolute top-0 right-0 bottom-0 bg-error-1/[0.08]" style={{ width: `${w}%` }} />
-                        <span className="text-[11px] font-mono tabular-nums font-semibold text-error-1 z-10">{order.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                        <span className="text-[11px] font-mono tabular-nums text-white/80 text-right z-10">{order.quantity.toFixed(4)}</span>
-                        <span className="text-[11px] font-mono tabular-nums text-white/40 text-right z-10">{(order.price * order.quantity).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {orderBook.sellOrders.length > 0 && orderBook.buyOrders.length > 0 && (() => {
-                  const lowestAsk = Math.min(...orderBook.sellOrders.map((o) => o.price));
-                  const highestBid = Math.max(...orderBook.buyOrders.map((o) => o.price));
-                  const spread = +(lowestAsk - highestBid).toFixed(2);
-                  return (
-                    <div className="py-2.5 px-3 flex items-center justify-between border-y border-white/[0.04] my-2">
-                      <span className={clsx("text-base font-bold font-mono tabular-nums", changeColor)}>
-                        {feed.price !== null ? formatPrice(feed.price) : "—"}
-                      </span>
-                      <span className="text-[10px] text-white/40">Spread {spread}</span>
-                    </div>
-                  );
-                })()}
-
-                <div className="flex flex-col flex-1 overflow-hidden gap-[2px]">
-                  {orderBook.buyOrders.map((order, i) => {
-                    const w = Math.min((order.quantity / maxBidVol) * 100, 100);
-                    return (
-                      <div key={`bid-${i}`} onClick={() => setClickedPrice(order.price)} className="grid grid-cols-3 px-3 py-[2px] relative cursor-pointer hover:bg-white/[0.02]">
-                        <div className="absolute top-0 right-0 bottom-0 bg-success-6/[0.08]" style={{ width: `${w}%` }} />
-                        <span className="text-[11px] font-mono tabular-nums font-semibold text-success-6 z-10">{order.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                        <span className="text-[11px] font-mono tabular-nums text-white/80 text-right z-10">{order.quantity.toFixed(4)}</span>
-                        <span className="text-[11px] font-mono tabular-nums text-white/40 text-right z-10">{(order.price * order.quantity).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </TabsPanel>
+            <TabsPanel value="tradeHistory">
+              <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
+            </TabsPanel>
+          </Tabs>
         </div>
 
         {/* COL 3: Trade Form (Responsive) */}
-        <div className="bg-[#181a20] rounded flex flex-col overflow-y-auto max-[1150px]:min-h-[400px]">
+        <div className="bg-[#181a20] flex flex-col overflow-y-auto max-[1150px]:min-h-[400px] min-[1150px]:col-start-3 min-[1150px]:row-start-1 min-[1150px]:row-span-3">
           <Tabs
             classNames={{
-              tab: "!py-3 !px-3 max-[1150px]:!py-4 max-[1150px]:flex-1 hover:!bg-transparent data-[active]:!bg-white/[0.03] data-[active]:!border-t-2 data-[active]:!border-primary data-[active]:!text-primary !border-t-2 !border-transparent !rounded-none font-bold text-xs max-[1150px]:text-sm text-white/50",
-              list: "border-b border-white/[0.06] flex items-center before:!border-0 w-full",
+              tab: "!py-2.5 !px-3 max-[1150px]:!py-4 max-[1150px]:flex-1 hover:!bg-transparent data-[active]:!text-white data-[active]:!border-b-2 data-[active]:!border-primary !border-b-2 !border-transparent !rounded-none font-bold text-xs max-[1150px]:text-sm text-white/50",
+              list: "flex items-center gap-1 px-1 before:!border-0 w-full",
               panel: "!p-4",
             }}
             value={tradeMode}
@@ -807,18 +632,20 @@ function SpotTrades() {
               else if (m === "cross" && leverage > 10) setLeverage(10);
             }}
           >
+            <div className="px-4 pt-3 text-base font-bold text-white">Trade</div>
             <TabsList className="w-full">
-              <TabsTab value="spot" className="flex-1">Spot</TabsTab>
-              <TabsTab value="cross" className="flex-1">Cross {tradeMode === "cross" ? `${leverage}x` : "3x"}</TabsTab>
-              <TabsTab value="isolated" className="flex-1">Isolated {tradeMode === "isolated" ? `${leverage}x` : "10x"}</TabsTab>
+              <TabsTab value="spot">Spot</TabsTab>
+              <TabsTab value="cross">Cross {tradeMode === "cross" ? `${leverage}x` : "3x"}</TabsTab>
+              <TabsTab value="isolated">Isolated {tradeMode === "isolated" ? `${leverage}x` : "10x"}</TabsTab>
             </TabsList>
             <TabsPanel value="spot">
-              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} onTpslChange={setTpslPreview} onFill={setPlacedFill} />
+              <PlaceSpot pair={selectedPair} mode="spot" sideToggle leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} onTpslChange={setTpslPreview} onFill={setPlacedFill} />
             </TabsPanel>
             <TabsPanel value="cross">
               <PlaceSpot
                 pair={selectedPair}
                 mode="cross"
+                sideToggle
                 leverage={leverage}
                 onLeverageChange={setLeverage}
                 marketPrice={effectiveMarketPrice}
@@ -830,6 +657,7 @@ function SpotTrades() {
               <PlaceSpot
                 pair={selectedPair}
                 mode="isolated"
+                sideToggle
                 leverage={leverage}
                 onLeverageChange={setLeverage}
                 marketPrice={effectiveMarketPrice}

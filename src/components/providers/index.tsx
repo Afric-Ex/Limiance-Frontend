@@ -1,36 +1,20 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import React, { ReactNode } from "react";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
-// Lazy-load GoogleOAuthProvider only when client ID is available
-let GoogleOAuthProvider: React.ComponentType<{
-  clientId: string;
-  children: ReactNode;
-}> | null = null;
-
-if (GOOGLE_CLIENT_ID) {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  GoogleOAuthProvider = require("@react-oauth/google").GoogleOAuthProvider;
-}
+// Fallback dummy client_id in dev so Google GSI script doesn't throw "Missing required parameter client_id"
+// when the env variable is not configured yet.
+const GOOGLE_CLIENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+  "000000000000-dummygoogleclientid0000000000.apps.googleusercontent.com";
 
 function Providers({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const isAuthPage = pathname.includes("/auth") || pathname === "/";
-
-  if (!isAuthPage) return <>{children}</>;
-
-  if (GoogleOAuthProvider && GOOGLE_CLIENT_ID) {
-    return (
-      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-        {children}
-      </GoogleOAuthProvider>
-    );
-  }
-
-  return <>{children}</>;
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      {children}
+    </GoogleOAuthProvider>
+  );
 }
 
 export default Providers;
