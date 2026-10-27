@@ -32,10 +32,10 @@ export default function Logo({
         src={LogoImage}
         alt="Limiance"
         width={120}
-        height={40}
+        height={32}
         priority
-        style={{ width: "auto", height: "auto" }}
-        className={clsx(imageClasses ?? "w-[177px] max-sm:w-[130px] mt-2", "object-contain")}
+        style={{ width: "auto", height: 32 }}
+        className={clsx(imageClasses ?? "max-sm:w-[130px]", "object-contain h-8")}
       />
     </Link>
   );

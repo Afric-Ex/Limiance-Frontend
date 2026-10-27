@@ -18,6 +18,7 @@ import {
   type UTCTimestamp,
   type CandlestickData,
   type HistogramData,
+  type LineData,
 } from "lightweight-charts";
 import { useCandleFeed } from "@/src/components/trades/use-candle-feed";
 import { calculateSMA, calculateSingleSMA } from "@/src/components/trades/indicators";
@@ -278,6 +279,27 @@ function toVolumeData(candles: KlineCandle[]): HistogramData[] {
   return out.sort((a, b) => a.t - b.t).map((x) => x.d);
 }
 
+const VOLUME_SMA_PERIOD = 9;
+const VOLUME_SMA_COLOR = "#3B82F6";
+
+// Simple moving average of the volume bars, drawn as a line in the volume pane.
+function toVolumeSmaData(volume: HistogramData[], period = VOLUME_SMA_PERIOD): LineData[] {
+  const out: LineData[] = [];
+  if (volume.length < period) return out;
+  let sum = 0;
+  for (let i = 0; i < volume.length; i++) {
+    sum += volume[i].value;
+    if (i >= period) sum -= volume[i - period].value;
+    if (i >= period - 1) out.push({ time: volume[i].time, value: sum / period });
+  }
+  return out;
+}
+
+const INTERVAL_LABELS: Record<string, string> = { "1d": "1D", "1w": "1W", "1mn": "1M", "6mh": "6M", "1y": "1Y" };
+
+const formatVolume = (value: number) =>
+  value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
 const formatPrice = (value: number) => {
   const abs = Math.abs(value);
   const decimals = abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
@@ -317,6 +339,7 @@ export function LwcCandlestickChart({
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const volumeSmaSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const ma7SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const ma25SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const ma99SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
@@ -356,7 +379,7 @@ export function LwcCandlestickChart({
   // full dataset changed (initial load/refetch), so the incremental last-candle
   // update path is unsafe until setData has installed all of it.
   const appliedHistoryRef = useRef<KlineCandle[] | undefined>(undefined);
-  const [legend, setLegend] = useState<{ o: number; h: number; l: number; c: number; v?: number; ma7?: number; ma25?: number; ma99?: number } | null>(null);
+  const [legend, setLegend] = useState<{ o: number; h: number; l: number; c: number; v?: number; vsma?: number; ma7?: number; ma25?: number; ma99?: number } | null>(null);
   const [drawingsBySymbol, setDrawingsBySymbol] = useState<Record<string, Drawing[]>>(() =>
     readStoredDrawings(market)
   );
@@ -697,14 +720,25 @@ export function LwcCandlestickChart({
     chartRef.current = chart;
     candleSeriesRef.current = candlesSeries;
 
+    // Histogram and its SMA line share one named overlay scale, so they use the
+    // same vertical axis in the bottom volume band.
     const volumeSeries = chart.addSeries(HistogramSeries, {
-      priceScaleId: "",
+      priceScaleId: "volume",
       priceFormat: { type: "volume" },
       lastValueVisible: false,
       priceLineVisible: false,
     });
-    chart.priceScale("").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+    const volumeSmaSeries = chart.addSeries(LineSeries, {
+      priceScaleId: "volume",
+      color: VOLUME_SMA_COLOR,
+      lineWidth: 1,
+      crosshairMarkerVisible: false,
+      priceLineVisible: false,
+      lastValueVisible: false,
+    });
+    chart.priceScale("volume").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
     volumeSeriesRef.current = volumeSeries;
+    volumeSmaSeriesRef.current = volumeSmaSeries;
 
     const ma7Series = chart.addSeries(LineSeries, { color: "#F0B90B", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false });
     const ma25Series = chart.addSeries(LineSeries, { color: "#E040FB", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false });
@@ -746,12 +780,14 @@ export function LwcCandlestickChart({
         return;
       }
       const volBar = param.seriesData.get(volumeSeries) as { value?: number } | undefined;
+      const volSmaBar = param.seriesData.get(volumeSmaSeries) as { value?: number } | undefined;
       const ma7Bar = param.seriesData.get(ma7Series) as { value?: number } | undefined;
       const ma25Bar = param.seriesData.get(ma25Series) as { value?: number } | undefined;
       const ma99Bar = param.seriesData.get(ma99Series) as { value?: number } | undefined;
       setLegend({
         o: bar.open, h: bar.high, l: bar.low, c: bar.close,
         v: volBar?.value,
+        vsma: volSmaBar?.value,
         ma7: ma7Bar?.value,
         ma25: ma25Bar?.value,
         ma99: ma99Bar?.value,
@@ -828,6 +864,7 @@ export function LwcCandlestickChart({
       overDrawingRef.current = false;
       candleSeriesRef.current = null;
       volumeSeriesRef.current = null;
+      volumeSmaSeriesRef.current = null;
       ma7SeriesRef.current = null;
       ma25SeriesRef.current = null;
       ma99SeriesRef.current = null;
@@ -908,6 +945,8 @@ export function LwcCandlestickChart({
       if (ma25Series) ma25Series.setData(calculateSMA(candleData, 25));
       if (ma99Series) ma99Series.setData(calculateSMA(candleData, 99));
     }
+    const volumeSmaSeries = volumeSmaSeriesRef.current;
+    if (volumeSmaSeries) volumeSmaSeries.setData(toVolumeSmaData(toVolumeData(candles)));
     lastCandleRef.current = lastCandle;
     candleDataContextRef.current = key;
     candleDataSeriesRef.current = candlesSeries;
@@ -1228,9 +1267,25 @@ export function LwcCandlestickChart({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [cancelPending, redo, removeDrawing, setSelectedId, undo]);
 
-  const first = candles[0];
   const last = candles[candles.length - 1];
-  const changePct = first && last && first.open ? ((last.close - first.open) / first.open) * 100 : null;
+  const lastVolumeSma = useMemo(() => {
+    const points = toVolumeSmaData(toVolumeData(candles));
+    return points.length ? points[points.length - 1].value : undefined;
+  }, [candles]);
+
+  // Bybit-style legend: shows the hovered bar, or the latest bar when idle.
+  const lastBar =
+    last && [last.open, last.high, last.low, last.close].every((v) => Number.isFinite(v))
+      ? { o: last.open, h: last.high, l: last.low, c: last.close, v: Number.isFinite(last.volume) ? last.volume : undefined }
+      : null;
+  const shown = legend ?? lastBar;
+  const shownVolumeSma = legend ? legend.vsma : lastVolumeSma;
+  const barChange = shown ? shown.c - shown.o : 0;
+  const barChangePct = shown && shown.o ? (barChange / shown.o) * 100 : 0;
+  const barTone = barChange >= 0 ? "text-[#25AB42]" : "text-[#F6465D]";
+  const barSign = barChange >= 0 ? "+" : "";
+  const marketName = market === "futures" ? "Futures" : market === "margin" ? "Margin" : "Spot";
+  const legendTitle = `${symbol.replace(/[/\-_\s]/g, "")} ${marketName} · ${INTERVAL_LABELS[interval] ?? interval} · Limiance`;
 
   const waitingForInitialData = !historyFetched && wsPending;
   const showSpinner = !hasChartData && (isLoading || waitingForInitialData);
@@ -1243,32 +1298,56 @@ export function LwcCandlestickChart({
   const drawing = tool !== "pointer";
 
   return (
-    <div className="relative w-full h-full select-none">
+    <div className="relative w-full h-full select-none min-[1150px]:flex">
+      {/* Desktop: the toolbar is a docked flex column on the left; below 1150px it
+          stays an absolute overlay (see drawing-toolbar.tsx). */}
+      <DrawingToolbar
+        tool={tool}
+        onSelectTool={selectTool}
+        canDelete={selectedId !== null}
+        onDelete={() => selectedIdRef.current && removeDrawing(selectedIdRef.current)}
+        pending={pending !== null}
+        pendingHint={pending ? "Click anchor " + (pending.points.length + 1) + " of " + CLICKS_REQUIRED[pending.tool] : undefined}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
+      />
+
+      {/* Canvas area: every overlay below positions itself against this box. */}
+      <div className="relative w-full h-full min-[1150px]:min-w-0 min-[1150px]:flex-1">
       {/* The library removes its inline cursor when nothing is hovered, so this
           covers the crosshair feedback for the empty parts of the pane. */}
       <div ref={containerRef} className={`absolute inset-0 ${drawing ? "cursor-crosshair" : ""}`} />
 
-      {(legend || changePct !== null) && (
+      {shown && (
         <div className="pointer-events-none absolute top-1 left-2 z-10 flex flex-wrap items-center gap-x-2 text-[10px] font-mono">
-          <span className="font-bold text-white/90">{symbol}</span>
-          {changePct !== null && (
-            <span className={changePct >= 0 ? "text-[#25AB42]" : "text-[#F6465D]"}>
-              {changePct >= 0 ? "+" : ""}
-              {changePct.toFixed(2)}%
+          <span className="font-bold text-white/90">{legendTitle}</span>
+          <span className="flex flex-wrap gap-x-2 text-white/50">
+            <span>O <span className={barTone}>{formatPrice(shown.o)}</span></span>
+            <span>H <span className={barTone}>{formatPrice(shown.h)}</span></span>
+            <span>L <span className={barTone}>{formatPrice(shown.l)}</span></span>
+            <span>C <span className={barTone}>{formatPrice(shown.c)}</span></span>
+            <span className={barTone}>
+              {barSign}{formatPrice(barChange)} ({barSign}{barChangePct.toFixed(2)}%)
             </span>
-          )}
-          {legend && (
-            <span className="flex gap-2 text-white/50 flex-wrap">
-              <span>O <span className="text-white/80">{formatPrice(legend.o)}</span></span>
-              <span>H <span className="text-white/80">{formatPrice(legend.h)}</span></span>
-              <span>L <span className="text-white/80">{formatPrice(legend.l)}</span></span>
-              <span>C <span className="text-white/80">{formatPrice(legend.c)}</span></span>
-              {legend.v !== undefined && <span>V <span className="text-white/80">{legend.v.toLocaleString("en-US")}</span></span>}
-              {legend.ma7 !== undefined && <span style={{ color: "#F0B90B" }}>MA(7) <span className="text-white/80">{formatPrice(legend.ma7)}</span></span>}
-              {legend.ma25 !== undefined && <span style={{ color: "#E040FB" }}>MA(25) <span className="text-white/80">{formatPrice(legend.ma25)}</span></span>}
-              {legend.ma99 !== undefined && <span style={{ color: "#00BCD4" }}>MA(99) <span className="text-white/80">{formatPrice(legend.ma99)}</span></span>}
-            </span>
-          )}
+            {legend?.ma7 !== undefined && <span style={{ color: "#F0B90B" }}>MA(7) <span className="text-white/80">{formatPrice(legend.ma7)}</span></span>}
+            {legend?.ma25 !== undefined && <span style={{ color: "#E040FB" }}>MA(25) <span className="text-white/80">{formatPrice(legend.ma25)}</span></span>}
+            {legend?.ma99 !== undefined && <span style={{ color: "#00BCD4" }}>MA(99) <span className="text-white/80">{formatPrice(legend.ma99)}</span></span>}
+          </span>
+        </div>
+      )}
+
+      {/* Volume band label. The band is the bottom 20% of the plot area (above the
+          ~26px time axis), so the label sits at 80% of that height. */}
+      {shown && (
+        <div
+          className="pointer-events-none absolute left-2 z-10 flex items-center gap-2 text-[10px] font-mono text-white/50"
+          style={{ top: "calc((100% - 26px) * 0.8 + 2px)" }}
+        >
+          <span>Volume SMA {VOLUME_SMA_PERIOD}</span>
+          {shown.v !== undefined && <span className={barTone}>{formatVolume(shown.v)}</span>}
+          {shownVolumeSma !== undefined && <span style={{ color: VOLUME_SMA_COLOR }}>{formatVolume(shownVolumeSma)}</span>}
         </div>
       )}
 
@@ -1381,18 +1460,7 @@ export function LwcCandlestickChart({
         </>
       )}
 
-      <DrawingToolbar
-        tool={tool}
-        onSelectTool={selectTool}
-        canDelete={selectedId !== null}
-        onDelete={() => selectedIdRef.current && removeDrawing(selectedIdRef.current)}
-        pending={pending !== null}
-        pendingHint={pending ? "Click anchor " + (pending.points.length + 1) + " of " + CLICKS_REQUIRED[pending.tool] : undefined}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onUndo={undo}
-        onRedo={redo}
-      />
+      </div>
     </div>
   );
 }

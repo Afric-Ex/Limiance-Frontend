@@ -30,6 +30,8 @@ interface Props {
   marketPrice?: number | null;
   clickedPrice?: number | null;
   compactSide?: "buy" | "sell";
+  // Bybit-style desktop form: one Buy/Sell toggle and a single stacked form.
+  sideToggle?: boolean;
   onLeverageChangeEnd?: (val: number) => void;
   onTpslChange?: (preview: TpslPreview) => void;
   onFill?: (fill: {
@@ -49,6 +51,32 @@ const PERCENT_MARKS = [
   { value: 100, label: "100%" },
 ];
 
+// Stacked (Bybit-style) slider: dots every 25%, labels only at the two ends.
+const STACKED_MARKS = [
+  { value: 0, label: "0" },
+  { value: 25 },
+  { value: 50 },
+  { value: 75 },
+  { value: 100, label: "100%" },
+];
+
+// Full class strings (not built with template literals) so Tailwind can see them.
+const STACKED_SLIDER = {
+  buy: {
+    bar: "!bg-success-6",
+    thumb: "!border-2 !border-success-6 !bg-[#181a20] !w-3 !h-3",
+    mark: "!w-2 !h-2 !rounded-full !border-2 !border-success-6/40 !bg-[#181a20] !-mt-[3px]",
+  },
+  sell: {
+    bar: "!bg-error-1",
+    thumb: "!border-2 !border-error-1 !bg-[#181a20] !w-3 !h-3",
+    mark: "!w-2 !h-2 !rounded-full !border-2 !border-error-1/40 !bg-[#181a20] !-mt-[3px]",
+  },
+} as const;
+
+const formatAmount = (value: number) =>
+  Number.isFinite(value) ? value.toLocaleString("en-US", { maximumFractionDigits: 8 }) : "0";
+
 const LEVERAGE_PRESETS = [1, 3, 5, 10, 20, 50, 100];
 
 function FieldRow({
@@ -60,6 +88,7 @@ function FieldRow({
   color,
   showMax,
   onMax,
+  floating,
 }: {
   label: string;
   value: number | string;
@@ -69,8 +98,32 @@ function FieldRow({
   color?: "buy" | "sell";
   showMax?: boolean;
   onMax?: () => void;
+  floating?: boolean;
 }) {
   const focusBorder = color === "buy" ? "focus-within:border-success-6" : color === "sell" ? "focus-within:border-error-1" : "";
+  if (floating) {
+    // Bybit-style field: small label on top, value below, unit on the right.
+    return (
+      <div className={clsx("flex h-11 items-center rounded-lg border border-transparent bg-white/[0.05] px-3 transition-colors", !readOnly && focusBorder, readOnly && "opacity-80")}>
+        <div className="flex min-w-0 flex-1 flex-col justify-center">
+          <span className="text-[10px] leading-none text-white/40">{label}</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            readOnly={readOnly}
+            value={value !== undefined && value !== null ? value : ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "" || /^\d*\.?\d*$/.test(val)) onChange?.(val);
+            }}
+            className="mt-1 h-5 w-full min-w-0 border-none bg-transparent p-0 font-mono text-sm font-semibold tabular-nums text-white outline-none placeholder-white/20 focus:ring-0"
+            placeholder="0.00"
+          />
+        </div>
+        <span className="ml-2 shrink-0 text-xs font-semibold text-white/50">{unit}</span>
+      </div>
+    );
+  }
   return (
     <div className={clsx("flex items-center bg-white/[0.03] border border-white/[0.06] rounded-lg px-2 h-10 transition-colors", !readOnly && focusBorder, readOnly && "opacity-70")}>
       <span className="text-xs text-white/40 w-10 shrink-0">{label}</span>
@@ -102,7 +155,7 @@ function FieldRow({
   );
 }
 
-export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLeverageChange, marketPrice, clickedPrice, compactSide, onLeverageChangeEnd, onTpslChange, onFill }: Props) => {
+export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLeverageChange, marketPrice, clickedPrice, compactSide, sideToggle = false, onLeverageChangeEnd, onTpslChange, onFill }: Props) => {
   const [activeTab, setActiveTab] = useState("limit");
   const [buyPrice, setBuyPrice] = useState<number | string>("");
   const [buyAmount, setBuyAmount] = useState<number | string>("");
@@ -372,8 +425,152 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     });
   };
 
+  const [activeSide, setActiveSide] = useState<"buy" | "sell">("buy");
+
+  // One side of the form, stacked Bybit-style. Uses the same state, payloads
+  // and mutations as the split layout — only the presentation differs.
+  const renderStackedSide = (side: "buy" | "sell") => {
+    const isBuy = side === "buy";
+    const tone = isBuy ? "buy" : "sell";
+    const price = isBuy ? buyPrice : sellPrice;
+    const amount = isBuy ? buyAmount : sellAmount;
+    const pct = isBuy ? buyPct : sellPct;
+    const total = isBuy ? buyTotal : sellTotal;
+    const loading = isBuy ? buyLoading : sellLoading;
+    const rawAvail = isBuy ? rawQuote : rawBase;
+    const refPrice = parseNum(price || marketPrice || 0);
+    const maxAmount = isBuy ? (refPrice ? rawQuote / refPrice : 0) : rawBase;
+    const sliderStyle = STACKED_SLIDER[tone];
+
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-white/50">Available Balance</span>
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-white/90">
+            {isBuy ? availQuote : availBase} {isBuy ? quote : base}
+            <button
+              type="button"
+              onClick={refreshBalances}
+              aria-label="Refresh available balance"
+              title="Refresh balance"
+              className="text-white/40 transition-colors hover:text-white"
+            >
+              <MdRefresh size={14} className={isRefreshing ? "animate-spin" : ""} />
+            </button>
+          </span>
+        </div>
+
+        {activeTab === "oco" ? (
+          <>
+            <FieldRow floating label="Price" value={isBuy ? buyOcoPrice : sellOcoPrice} onChange={isBuy ? setBuyOcoPrice : setSellOcoPrice} unit={quote} color={tone} />
+            <FieldRow floating label="Stop" value={isBuy ? buyOcoStop : sellOcoStop} onChange={isBuy ? setBuyOcoStop : setSellOcoStop} unit={quote} color={tone} />
+            <FieldRow floating label="Limit" value={isBuy ? buyOcoLimit : sellOcoLimit} onChange={isBuy ? setBuyOcoLimit : setSellOcoLimit} unit={quote} color={tone} />
+          </>
+        ) : activeTab !== "market" ? (
+          <FieldRow
+            floating
+            label="Price"
+            value={price}
+            onChange={(v) => {
+              if (isBuy) { setBuyPriceEdited(true); setBuyPrice(v); }
+              else { setSellPriceEdited(true); setSellPrice(v); }
+            }}
+            unit={quote}
+            color={tone}
+          />
+        ) : null}
+
+        <FieldRow floating label="Quantity" value={amount} onChange={isBuy ? setBuyAmount : setSellAmount} unit={base} color={tone} />
+
+        <div className="px-1.5 pb-5 pt-1">
+          <Slider
+            min={0}
+            max={100}
+            step={1}
+            label={(v) => `${v}%`}
+            value={pct}
+            onChange={(v) => {
+              if (isBuy) {
+                setBuyPct(v);
+                if (refPrice) setBuyAmount(+(((rawQuote || 0) * v / 100) / refPrice).toFixed(8));
+              } else {
+                setSellPct(v);
+                setSellAmount(+(((rawBase || 0) * v / 100).toFixed(8)));
+              }
+            }}
+            classNames={{
+              track: "!h-1 before:!h-1 before:!bg-white/10",
+              bar: sliderStyle.bar,
+              thumb: sliderStyle.thumb,
+              mark: sliderStyle.mark,
+              markLabel: "!text-[10px] !text-white/40 !mt-2",
+            }}
+            marks={STACKED_MARKS}
+          />
+        </div>
+
+        <FieldRow floating label="Order Value" value={total || ""} unit={quote} readOnly />
+
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-white/50">{isBuy ? "Max. buying amount" : "Max. selling amount"}</span>
+          <span className="font-semibold text-white/90">{formatAmount(maxAmount)} {base}</span>
+        </div>
+
+        <label className="flex cursor-pointer items-center gap-2 self-start text-xs font-semibold text-white/70">
+          <input
+            type="checkbox"
+            checked={tpslEnabled}
+            onChange={() => setTpslEnabled((v) => !v)}
+            className="h-3.5 w-3.5 cursor-pointer accent-primary"
+          />
+          TP/SL
+        </label>
+        {tpslEnabled && (
+          <>
+            <FieldRow floating label="Take Profit" value={isBuy ? buyTp : sellTp} onChange={isBuy ? setBuyTp : setSellTp} unit={quote} color={tone} />
+            <FieldRow floating label="Stop Loss" value={isBuy ? buySl : sellSl} onChange={isBuy ? setBuySl : setSellSl} unit={quote} color={tone} />
+          </>
+        )}
+
+        <button
+          onClick={() => (isBuy ? placeBuy() : placeSell())}
+          disabled={loading || !amount || rawAvail === 0}
+          className={clsx(
+            "flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-50",
+            isBuy ? "bg-buy hover:bg-buy/90" : "bg-sell hover:bg-sell/90"
+          )}
+        >
+          {loading && <Loader size={13} color="white" />}
+          {isBuy ? "Buy" : "Sell"} {base}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col gap-3">
+      {/* Buy / Sell toggle (stacked layout only) */}
+      {sideToggle && (
+        <div className="grid grid-cols-2 gap-1 rounded-lg bg-white/[0.05] p-1">
+          {(["buy", "sell"] as const).map((side) => (
+            <button
+              key={side}
+              type="button"
+              onClick={() => setActiveSide(side)}
+              aria-pressed={activeSide === side}
+              className={clsx(
+                "h-9 rounded-md text-sm font-bold capitalize transition-colors",
+                activeSide === side
+                  ? side === "buy" ? "bg-buy text-white" : "bg-sell text-white"
+                  : "text-white/50 hover:text-white/80"
+              )}
+            >
+              {side}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Order type tabs */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto custom-scrollbar pb-1">
         <Tabs
@@ -456,6 +653,9 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         </div>
       )}
 
+      {sideToggle ? (
+        renderStackedSide(activeSide)
+      ) : (
       <div className={clsx("grid gap-x-4 gap-y-0", compactSide ? "grid-cols-1" : "grid-cols-2")}>
         {/* BUY COLUMN */}
         {(!compactSide || compactSide === "buy") && (
@@ -601,15 +801,18 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         </div>
         )}
       </div>
+      )}
 
-      {/* TP/SL toggle */}
-      <button
-        onClick={() => setTpslEnabled((v) => !v)}
-        className="flex items-center gap-1.5 text-xs font-semibold text-white/40 hover:text-white/70 transition-colors mt-1 self-start"
-      >
-        <MdExpandMore className={clsx("transition-transform", tpslEnabled ? "rotate-180" : "")} size={16} />
-        TP/SL
-      </button>
+      {/* TP/SL toggle (split layout; the stacked layout has its own checkbox) */}
+      {!sideToggle && (
+        <button
+          onClick={() => setTpslEnabled((v) => !v)}
+          className="flex items-center gap-1.5 text-xs font-semibold text-white/40 hover:text-white/70 transition-colors mt-1 self-start"
+        >
+          <MdExpandMore className={clsx("transition-transform", tpslEnabled ? "rotate-180" : "")} size={16} />
+          TP/SL
+        </button>
+      )}
     </div>
   );
 };

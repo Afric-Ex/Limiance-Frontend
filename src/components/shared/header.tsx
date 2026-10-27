@@ -7,7 +7,6 @@ import { IoIosArrowDown } from "react-icons/io";
 import { FiDownload } from "react-icons/fi";
 import { CiMenuBurger, CiSearch } from "react-icons/ci";
 import { PiBellFill } from "react-icons/pi";
-import { Wallet } from "../icons/wallet";
 import { FaGlobe } from "react-icons/fa";
 import { usePathname } from "next/navigation";
 import { PopoverWrapper } from "./popover-wrapper";
@@ -19,9 +18,7 @@ import { useAssets } from "@/src/hooks/use-assets";
 import { BuyCryptoDropdown } from "./buy-crypto-dropdown";
 import { EarnDropdown } from "./earn-dropdown";
 import { MoreDropdown } from "./more-dropdown";
-import { SettingsIcon } from "../icons/settings-icon";
 import { UserAvatar } from "./user-avatar";
-import { WalletDropdown } from "./wallet-dropdown";
 import { LanguageDropdown } from "./language-dropdown";
 import { NotificationsDropdown, NotificationDetailModal, useNotificationCount } from "./notifications-dropdown";
 import { ProfileDropdown } from "./profile-dropdown";
@@ -32,6 +29,7 @@ const navList = [
   {
     name: "Buy crypto",
     children: <BuyCryptoDropdown />,
+    hover: true,
   },
   {
     name: "Markets",
@@ -40,26 +38,25 @@ const navList = [
   {
     name: "Trades",
     children: <MarketDropdown />,
+    hover: true,
   },
   {
     name: "Earn",
     children: <EarnDropdown />,
+    hover: true,
   },
   {
     name: "More",
     children: <MoreDropdown />,
+    hover: true,
   },
 ];
 const headerActionClasses = "cursor-pointer duration-300 hover:text-primary transition-all hover:scale-110 active:scale-95 text-white/90";
 
 const headerIconActionsGroup1 = [
   {
-    target: <UserAvatar className={headerActionClasses} />,
+    target: <UserAvatar className={headerActionClasses} size={28} />,
     children: <ProfileDropdown />,
-  },
-  {
-    target: <Wallet className={headerActionClasses} />,
-    children: <WalletDropdown />,
   },
 ];
 
@@ -118,7 +115,7 @@ export default function Header() {
             !pathname.includes("auth")
             ? ""
             : "mb-5",
-          "h-[var(--size-header-height)] md:px-8 px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-[100] backdrop-blur-xl bg-[#181a20]/90",
+          "h-[var(--size-header-height)] md:px-8 px-4 py-1.5 flex items-center justify-between gap-2 sticky top-0 z-[100] backdrop-blur-xl bg-[#181a20]/90",
           authHydrated && user
             ? "border-b border-white/[0.06]"
             : ""
@@ -135,9 +132,10 @@ export default function Header() {
               <li key={item.name}>
                 {item.children ? (
                   <PopoverWrapper
+                    openOnHover={(item as any).hover}
                     target={({ toggle }) => (
                       <span
-                        onClick={toggle}
+                        onClick={(item as any).hover ? undefined : toggle}
                         className="flex cursor-pointer items-center gap-6px"
                       >
                         <span>{item.name}</span>
@@ -159,86 +157,88 @@ export default function Header() {
           </ul>
         ) : null}
       </div>
-      <div className="flex max-[1150px]:hidden items-center gap-6">
-        {!authHydrated ? null : !user ? (
-          isPublicRoute ? (
-            <div className="flex items-center gap-6px">
-              <Link href="/auth/login">
-                <button className="font-medium py-3 px-5 bg-muted rounded-lg">
-                  Login
-                </button>
-              </Link>
-              <Link href="/auth/signup">
-                <button className="font-medium py-3 px-4 bg-primary rounded-lg">
-                  Sign Up
-                </button>
-              </Link>
-            </div>
-          ) : !userHydrated || userLoading ? (
-            <div className="flex items-center gap-3" aria-label="Loading account">
-              <Skeleton height={26} width={26} circle />
-              <Skeleton height={12} width={80} />
-            </div>
+        <div className="flex max-[1150px]:hidden items-center gap-4">
+          {!authHydrated ? null : !user ? (
+            isPublicRoute ? (
+              <div className="flex items-center gap-2">
+                <Link href="/auth/login">
+                  <button className="font-medium h-8 px-4 bg-muted rounded-lg text-sm">
+                    Log In
+                  </button>
+                </Link>
+                <Link href="/auth/signup">
+                  <button className="font-medium h-8 px-4 bg-primary rounded-lg text-sm">
+                    Sign Up
+                  </button>
+                </Link>
+              </div>
+            ) : !userHydrated || userLoading ? (
+              <div className="flex items-center gap-2" aria-label="Loading account">
+                <Skeleton height={28} width={28} circle />
+                <Skeleton height={10} width={70} />
+              </div>
+            ) : (
+              <button
+                onClick={() => void fetchUser()}
+                className="text-xs font-medium text-white/60 hover:text-white transition-colors"
+              >
+                Retry account
+              </button>
+            )
           ) : (
-            <button
-              onClick={() => void fetchUser()}
-              className="text-xs font-medium text-white/60 hover:text-white transition-colors"
-            >
-              Retry account
-            </button>
-          )
-        ) : (
-          <div className="flex items-center gap-8">
-            <CiSearch className={headerActionClasses} size={22} />
-            <button
-              onClick={handleOpenDepositModal}
-              className={clsx(
-                headerActionClasses,
-                "bg-primary py-2 px-4 rounded-lg"
-              )}
-            >
-              <span className="flex items-center gap-10px">
-                <FiDownload size={18} />
-                <span className="font-medium">Deposit</span>
-              </span>
-            </button>
-            <div className="flex items-center gap-6">
-              {headerIconActionsGroup1.map((item, idx) => (
-                <PopoverWrapper
-                  key={idx}
-                  target={({ toggle }) => (
-                    <span onClick={toggle}>{item.target}</span>
-                  )}
-                >
-                  {item.children}
-                </PopoverWrapper>
-              ))}
-              <PopoverWrapper
-                target={({ toggle }) => (
-                  <span onClick={toggle}>
-                    <NotificationBell />
-                  </span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 h-8 rounded-lg bg-white/[0.02] border border-white/[0.06]">
+                <CiSearch className="text-white/60" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search"
+                  className="bg-transparent text-sm text-white/80 placeholder:text-white/40 outline-none w-[200px]"
+                />
+              </div>
+              <button
+                onClick={handleOpenDepositModal}
+                className={clsx(
+                  "bg-primary h-8 px-4 rounded-lg text-sm"
                 )}
               >
-                <NotificationsDropdown />
-              </PopoverWrapper>
+                <span className="flex items-center gap-2">
+                  <FiDownload size={16} />
+                  <span className="font-medium">Deposit</span>
+                </span>
+              </button>
+              <div className="flex items-center gap-4">
+                {headerIconActionsGroup1.map((item, idx) => (
+                  <PopoverWrapper
+                    key={idx}
+                    target={({ toggle }) => (
+                      <span onClick={toggle}>{item.target}</span>
+                    )}
+                  >
+                    {item.children}
+                  </PopoverWrapper>
+                ))}
+                <PopoverWrapper
+                  target={({ toggle }) => (
+                    <span onClick={toggle}>
+                      <NotificationBell />
+                    </span>
+                  )}
+                >
+                  <NotificationsDropdown />
+                </PopoverWrapper>
+              </div>
             </div>
-          </div>
-        )}
-        <PopoverWrapper
-          target={({ toggle }) => (
-            <span onClick={toggle}>
-              <FaGlobe size={21} className={headerActionClasses} />
-            </span>
           )}
-        >
-          <LanguageDropdown />
-        </PopoverWrapper>
-
-        <Link href="/settings">
-          <SettingsIcon className={headerActionClasses} />
-        </Link>
-      </div>
+          <PopoverWrapper
+            target={({ toggle }) => (
+              <span onClick={toggle}>
+                <FaGlobe size={18} className={headerActionClasses} />
+              </span>
+            )}
+          >
+            <LanguageDropdown />
+          </PopoverWrapper>
+        </div>
       
       <div className="hidden max-[1150px]:flex items-center gap-3">
         {authHydrated && user && (
@@ -254,7 +254,7 @@ export default function Header() {
             <PopoverWrapper
               target={({ toggle }) => (
                 <span onClick={toggle}>
-                  <UserAvatar className="h-7 w-7 cursor-pointer" />
+                  <UserAvatar className="cursor-pointer" size={28} />
                 </span>
               )}
             >

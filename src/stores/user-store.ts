@@ -15,6 +15,8 @@ interface UserState {
   selectedCoinsHistory: string[];
   setSelectedCoinsHistory: (value: string[]) => void;
   reset: () => void;
+  justLoggedIn: boolean;
+  setJustLoggedIn: (value: boolean) => void;
 }
 
 let fetchUserPromise: Promise<void> | null = null;
@@ -26,11 +28,13 @@ export const useUserStore = create<UserState>()((set) => ({
       loading: false,
       hydrated: false,
       error: null,
+      justLoggedIn: false,
       setUser: (value) =>
         set({ user: value, hydrated: true, loading: false, error: null }),
       setHideBalance: (value) => set({ hideBalance: value }),
       setSelectedCoinsHistory: (value) => set({ selectedCoinsHistory: value }),
-      reset: () => set({ user: null, hideBalance: false, selectedCoinsHistory: [], loading: false, hydrated: true, error: null }),
+      setJustLoggedIn: (value) => set({ justLoggedIn: value }),
+      reset: () => set({ user: null, hideBalance: false, selectedCoinsHistory: [], loading: false, hydrated: true, error: null, justLoggedIn: false }),
 
       fetchUser: () => {
         if (fetchUserPromise) return fetchUserPromise;
@@ -54,6 +58,12 @@ export const useUserStore = create<UserState>()((set) => ({
             // Gracefully suppress the 500 Unimplemented error until the live backend is updated
             if (error?.response?.status === 500 && error?.response?.data?.error?.includes("Unimplemented")) {
               console.warn("Suppressing unimplemented /user_details backend error");
+            } else if (error?.response?.status === 401 && useUserStore.getState().justLoggedIn) {
+              // Just logged in but /user_details returned 401. This can happen with timing issues.
+              // Don't trigger logout — just suppress the error and let the redirect to dashboard proceed.
+              // The user will retry fetching on subsequent mounts.
+              console.warn("Suppressing 401 on /user_details immediately after login");
+              set({ justLoggedIn: false });
             } else {
               errorMessageHandler(error as any);
             }
