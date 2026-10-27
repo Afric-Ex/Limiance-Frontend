@@ -4,6 +4,8 @@ import dynamic from "next/dynamic";
 import { FiArrowUp, FiArrowDown, FiChevronDown, FiMaximize2, FiMinimize2 } from "react-icons/fi";
 import clsx from "clsx";
 import type { OrderBookEntry } from "@/src/hooks/use-order-book";
+import { TokenOverview } from "@/src/components/trades/token-overview";
+import { TradeFlowPanel } from "@/src/components/trades/trade-flow-panel";
 
 // Lightweight Charts is the only renderer. Kept code-split with ssr:false
 // because the library touches the DOM at module scope.
@@ -34,7 +36,7 @@ const _INTERVALS = [
   ...MORE_INTERVALS.map(({ value }) => value),
 ] as const;
 type Interval = (typeof _INTERVALS)[number];
-type View = "chart" | "depth";
+type View = "chart" | "depth" | "overview" | "data";
 
 interface Props {
   symbol?: string;
@@ -44,6 +46,10 @@ interface Props {
   priceRange?: { min: number | null; max: number | null };
   lastPrice?: number | null;
   onLastPriceChange?: (price: number | null) => void;
+  // Bybit-style desktop header: Chart / Overview / Data tabs, with Depth as a
+  // checkbox on the chart tab. Off = the original Chart / Depth tabs.
+  insightTabs?: boolean;
+  recentTrades?: readonly Record<string, unknown>[];
 }
 
 export type { ChartMarket } from "@/src/components/trades/use-candle-feed";
@@ -396,9 +402,13 @@ const DepthPanel = memo(function DepthPanel({
 // Lightweight Charts is the only renderer. `priceRange` is kept on the public
 // props because all three trade pages pass it, but no renderer consumes it now
 // that the canvas engine (which drew the 24h band) is gone.
-export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot", orderBook, orderLevels = [], lastPrice = null, onLastPriceChange }: Props) {
+export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot", orderBook, orderLevels = [], lastPrice = null, onLastPriceChange, insightTabs = false, recentTrades = [] }: Props) {
   const [interval, setIntervalVal] = useState<Interval>("15m");
   const [view, setView] = useState<View>("chart");
+  const [showDepth, setShowDepth] = useState(false);
+  const [base = "", quote = ""] = symbol.split("/");
+  const tabs: readonly View[] = insightTabs ? ["chart", "overview", "data"] : ["chart", "depth"];
+  const TAB_LABELS: Record<View, string> = { chart: "Chart", depth: "Depth", overview: "Overview", data: "Data" };
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [usesFullscreenFallback, setUsesFullscreenFallback] = useState(false);
   const chartRootRef = useRef<HTMLDivElement>(null);
@@ -548,7 +558,7 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
           Row 1: view tabs + market status + fullscreen. Row 2: interval strip. */}
       <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-white/[0.06] px-2">
         <div className="flex shrink-0 items-center">
-          {(["chart", "depth"] as const).map((v) => (
+          {tabs.map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -560,7 +570,7 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
                   : "text-white/40 hover:text-white/70"
               )}
             >
-              {v === "chart" ? "Chart" : "Depth"}
+              {TAB_LABELS[v]}
             </button>
           ))}
         </div>
@@ -573,6 +583,18 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
               {bookLive ? "Live" : "Reconnecting"}
             </span>
           </div>
+          {insightTabs && view === "chart" && (
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-white/60 transition-colors hover:text-white">
+              <input
+                type="checkbox"
+                checked={showDepth}
+                onChange={() => setShowDepth((v) => !v)}
+                className="h-3.5 w-3.5 cursor-pointer accent-primary"
+              />
+              Depth
+            </label>
+          )}
+          {(!insightTabs || view === "chart" || isFullscreen) && (
           <button
             type="button"
             onClick={() => void (isFullscreen ? exitFullscreen() : enterFullscreen())}
@@ -582,6 +604,7 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
           >
             {isFullscreen ? <FiMinimize2 size={14} /> : <FiMaximize2 size={14} />}
           </button>
+          )}
         </div>
       </div>
 
@@ -637,15 +660,32 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
 
       {/* Chart views */}
       {view === "chart" ? (
-        <div className="relative flex-1 min-h-0 overflow-hidden">
-          <LwcCandlestickChart
-            symbol={symbol}
-            interval={interval}
-            market={market}
-            orderLevels={orderLevels}
-            onLastPriceChange={onLastPriceChange}
-          />
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <div className="relative h-full min-w-0 flex-1 overflow-hidden">
+            <LwcCandlestickChart
+              symbol={symbol}
+              interval={interval}
+              market={market}
+              orderLevels={orderLevels}
+              onLastPriceChange={onLastPriceChange}
+            />
+          </div>
+          {insightTabs && showDepth && (
+            <div className="flex w-[340px] shrink-0 border-l border-white/[0.06]">
+              <DepthPanel
+                symbol={symbol}
+                buyOrders={bids}
+                sellOrders={asks}
+                isConnected={orderBook?.isConnected ?? false}
+                lastPrice={lastPrice}
+              />
+            </div>
+          )}
         </div>
+      ) : view === "overview" ? (
+        <TokenOverview base={base} />
+      ) : view === "data" ? (
+        <TradeFlowPanel trades={recentTrades} base={base} quote={quote} />
       ) : (
         <div className="flex-1 min-h-0 flex">
           <DepthPanel

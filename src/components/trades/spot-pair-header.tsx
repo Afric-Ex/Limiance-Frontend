@@ -4,7 +4,6 @@ import clsx from "clsx";
 import type { ReactNode } from "react";
 import { Popover, PopoverDropdown, PopoverTarget, TextInput } from "@mantine/core";
 import { MdKeyboardArrowDown } from "react-icons/md";
-import { IoEllipsisHorizontal } from "react-icons/io5";
 import { Search } from "@/src/components/icons/search";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { SidebarMenuButton } from "@/src/components/shared/sidebar-menu";
@@ -85,7 +84,7 @@ export function SpotPairHeader({
   const showUsd = price !== null && USD_PEGGED.has(quote.toUpperCase());
 
   return (
-    <div className={clsx("hidden h-12 shrink-0 items-center justify-between bg-[#181a20] px-4 min-[1150px]:flex", className)}>
+    <div className={clsx("hidden h-16 shrink-0 items-center justify-between bg-[#181a20] px-4 min-[1150px]:flex", className)}>
       <div className="flex items-center gap-6">
         <SidebarMenuButton />
 
@@ -197,27 +196,8 @@ export function SpotPairHeader({
           <Stat label="24H High">{fmt(high)}</Stat>
           <Stat label="24H Low">{fmt(low)}</Stat>
 
-          {/* Volumes sit behind the "···" menu, as on Bybit */}
-          <Popover width={220} position="bottom-start" shadow="md">
-            <PopoverTarget>
-              <button
-                aria-label="More 24H stats"
-                className="flex h-6 w-6 items-center justify-center rounded text-white/50 transition-colors hover:bg-white/5 hover:text-white"
-              >
-                <IoEllipsisHorizontal size={16} />
-              </button>
-            </PopoverTarget>
-            <PopoverDropdown className="!bg-[#181a20] !border-white/[0.06] !p-3">
-              <div className="flex flex-col gap-3">
-                <Stat label={`24H Volume (${base})`}>
-                  {volBase === null ? "—" : volBase.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                </Stat>
-                <Stat label={`24H Volume (${quote})`}>
-                  {volQuote === null ? "—" : volQuote.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                </Stat>
-              </div>
-            </PopoverDropdown>
-          </Popover>
+          <Stat label={`24H Volume(${base})`}>{fmt(volBase)}</Stat>
+          <Stat label={`24H Turnover(${quote})`}>{fmt(volQuote)}</Stat>
         </div>
       </div>
 

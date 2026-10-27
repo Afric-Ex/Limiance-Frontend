@@ -440,6 +440,8 @@ function SpotTrades() {
               priceRange={{ min: feed.low24h, max: feed.high24h }}
               lastPrice={lastTradedPrice}
               onLastPriceChange={setChartLastPrice}
+              insightTabs
+              recentTrades={recentTrades}
             />
             
             {/* Mobile chart expand toggle */}
