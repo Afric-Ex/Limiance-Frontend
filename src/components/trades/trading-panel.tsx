@@ -3,11 +3,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tradingKeys, tradingService, type TradingMarket } from "@/src/services/trading";
-import { cancelSpotOrderWs } from "@/src/lib/order-ws";
+import { cancelSpotOrderWs, closeFuturesPositionWs } from "@/src/lib/order-ws";
 import { readList } from "@/src/lib/api-response";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { PositionsTable, buildPositionRows } from "@/src/components/trades/positions-table";
 import { Loader, Checkbox, Popover, PopoverTarget, PopoverDropdown, TextInput } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
@@ -62,17 +63,24 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
     retry: false,
   });
 
-  // Positions (futures/margin)
-  const { data: positions = [], isLoading: positionsLoading } = useQuery({
-    queryKey: ["positions", market],
-    queryFn: () => market === "margin" ? tradingService.marginPositions() : Promise.resolve([]),
-    enabled: market !== "spot",
+  // Positions: live futures positions (portfolio WebSocket) + margin positions (REST).
+  // Shown on every page, like Bybit's unified account.
+  const { futuresPositions, refreshBalances: refreshPositions } = usePortfolioWs({ futures: true });
+  const { data: marginPositionList = [], isLoading: marginPositionsLoading } = useQuery({
+    queryKey: ["margin-positions"],
+    queryFn: () => tradingService.marginPositions(),
     select: (res: any) => {
       const raw = res?.data ?? res ?? [];
       return Array.isArray(raw) ? raw : [];
     },
     retry: false,
+    throwOnError: false,
+    refetchInterval: 5000,
   });
+  const allPositions = useMemo(
+    () => buildPositionRows(futuresPositions, marginPositionList),
+    [futuresPositions, marginPositionList]
+  );
 
   // Borrowings (margin only)
   const { data: borrowings = [], isLoading: borrowingsLoading } = useQuery({
@@ -95,6 +103,50 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
       successNotification("Order cancelled");
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
       refreshBalances();
+    },
+    onError: (e) => errorMessageHandler(e),
+  });
+
+  // Position actions (futures). Margin positions have no close endpoint yet.
+  const [closingPositionIds, setClosingPositionIds] = useState<Set<string>>(new Set());
+  const { mutate: closePosition } = useMutation({
+    mutationFn: (positionId: string) => closeFuturesPositionWs(positionId),
+    onSuccess: () => {
+      successNotification("Position closed");
+      refreshPositions();
+      refreshBalances();
+    },
+    onError: (e) => errorMessageHandler(e),
+    onSettled: (_data, _error, positionId) =>
+      setClosingPositionIds((current) => {
+        const next = new Set(current);
+        next.delete(positionId);
+        return next;
+      }),
+  });
+  const handleClosePosition = (positionId: string) => {
+    if (!positionId) return;
+    setClosingPositionIds((current) => new Set(current).add(positionId));
+    closePosition(positionId);
+  };
+  const { mutate: partialClosePosition } = useMutation({
+    mutationFn: (data: { positionId: string; close_quantity: string }) =>
+      tradingService.partialCloseFuturesPosition(data),
+    onSuccess: () => {
+      successNotification("Partial close executed");
+      refreshPositions();
+      refreshBalances();
+      modals.closeAll();
+    },
+    onError: (e) => errorMessageHandler(e),
+  });
+  const { mutate: updatePositionTpsl } = useMutation({
+    mutationFn: (data: { positionId: string; take_profit_price?: string; stop_loss_price?: string }) =>
+      tradingService.updateFuturesPositionTPSL(data),
+    onSuccess: () => {
+      successNotification("TP/SL updated");
+      refreshPositions();
+      modals.closeAll();
     },
     onError: (e) => errorMessageHandler(e),
   });
@@ -150,7 +202,19 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
   }, [openOrders, hideOtherPairs, selectedPair, selectedInstrument]);
 
   const openOrderCount = filteredOrders?.length ?? 0;
-  const positionCount = positions?.length ?? 0;
+  const filteredPositions = useMemo(() => {
+    const normalize = (value: string) => value.replace(/[/\\\-_\s]/g, "").toUpperCase();
+    let rows = allPositions;
+    // "All Markets" off = only the market of the page you're on
+    if (selectedMarket !== "all") rows = rows.filter((row) => row.market === market);
+    if (hideOtherPairs && selectedPair) {
+      const current = normalize(selectedPair);
+      rows = rows.filter((row) => normalize(row.pair) === current);
+    }
+    if (selectedInstrument !== "all") rows = rows.filter((row) => row.pair.includes(selectedInstrument));
+    return rows;
+  }, [allPositions, selectedMarket, market, hideOtherPairs, selectedPair, selectedInstrument]);
+  const positionCount = filteredPositions.length;
   const borrowingCount = borrowings?.length ?? 0;
 
   const handleCalculator = () => {
@@ -288,7 +352,7 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
       )}
 
       {/* Filters Bar */}
-      {activeMainTab === "open_orders" && (
+      {(activeMainTab === "open_orders" || activeMainTab === "positions") && (
         <div className="flex items-center gap-3 px-4 py-2 border-b border-white/[0.06] shrink-0">
           <Checkbox
             classNames={{
@@ -335,7 +399,19 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
       {/* Content Area */}
       <div className="flex-1 overflow-auto min-h-0">
         {activeMainTab === "open_orders" && <OpenOrdersTable orders={filteredOrders} loading={openOrdersLoading} onCancel={closeOrder} cancelling={closeOrderPending} orderType={activeOrderTypeTab} />}
-        {activeMainTab === "positions" && <PositionsTable positions={positions} loading={positionsLoading} market={market} />}
+        {activeMainTab === "positions" && (
+          <PositionsTable
+            rows={filteredPositions}
+            loading={marginPositionsLoading}
+            emptyState={<EmptyState />}
+            closingIds={closingPositionIds}
+            onClose={handleClosePosition}
+            onPartialClose={(positionId, close_quantity) => partialClosePosition({ positionId, close_quantity })}
+            onUpdateTpsl={(positionId, take_profit_price, stop_loss_price) =>
+              updatePositionTpsl({ positionId, take_profit_price, stop_loss_price })
+            }
+          />
+        )}
         {activeMainTab === "order_history" && <OrderHistoryTable orders={orderHistory} loading={orderHistoryLoading} />}
         {activeMainTab === "trade_history" && <TradeHistoryTable trades={tradeHistory} loading={tradeHistoryLoading} />}
         {activeMainTab === "assets" && <AssetsTable assets={portfolioResponse} />}
@@ -494,74 +570,6 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType }: a
               </td>
             </tr>
           ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function PositionsTable({ positions, loading, market }: any) {
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader size="sm" color="gray" />
-      </div>
-    );
-  }
-
-  if (market === "spot") {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 gap-2">
-        <MdInfo size={32} className="text-white/20" />
-        <p className="text-xs text-white/40">Positions are not available for spot trading</p>
-      </div>
-    );
-  }
-
-  if (!positions || positions.length === 0) {
-    return <EmptyState />;
-  }
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
-        <thead className="sticky top-0 bg-[#181a20] z-10">
-          <tr className="border-b border-white/[0.06]">
-            <TableHeader>Symbol</TableHeader>
-            <TableHeader>Size</TableHeader>
-            <TableHeader>Entry Price</TableHeader>
-            <TableHeader>Mark Price</TableHeader>
-            <TableHeader>Liq. Price</TableHeader>
-            <TableHeader>Margin</TableHeader>
-            <TableHeader>PnL</TableHeader>
-            <TableHeader>PnL%</TableHeader>
-            <TableHeader align="right">Action</TableHeader>
-          </tr>
-        </thead>
-        <tbody>
-          {positions.map((pos: any, idx: number) => {
-            const pnl = Number(pos.unrealizedPnl ?? pos.pnl ?? 0);
-            const pnlPercent = Number(pos.pnlPercent ?? pos.roi ?? 0);
-            return (
-              <tr key={pos.id ?? idx} className="border-b border-white/[0.02] hover:bg-white/[0.02]">
-                <td className="px-3 py-2.5 font-semibold">{pos.symbol || pos.pair}</td>
-                <td className="px-3 py-2.5 font-mono">{Number(pos.size ?? pos.quantity).toLocaleString()}</td>
-                <td className="px-3 py-2.5 font-mono">{Number(pos.entryPrice).toLocaleString()}</td>
-                <td className="px-3 py-2.5 font-mono">{Number(pos.markPrice ?? pos.currentPrice).toLocaleString()}</td>
-                <td className="px-3 py-2.5 font-mono">{Number(pos.liquidationPrice ?? 0).toLocaleString()}</td>
-                <td className="px-3 py-2.5 font-mono">{Number(pos.margin ?? pos.marginUsed).toLocaleString()}</td>
-                <td className={clsx("px-3 py-2.5 font-mono font-semibold", pnl >= 0 ? "text-success-6" : "text-error-1")}>
-                  {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)}
-                </td>
-                <td className={clsx("px-3 py-2.5 font-mono font-semibold", pnlPercent >= 0 ? "text-success-6" : "text-error-1")}>
-                  {pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(2)}%
-                </td>
-                <td className="px-3 py-2.5 text-right">
-                  <button className="text-xs font-semibold text-white/40 hover:text-primary">Close</button>
-                </td>
-              </tr>
-            );
-          })}
         </tbody>
       </table>
     </div>
