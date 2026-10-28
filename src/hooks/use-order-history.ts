@@ -1,76 +1,103 @@
-"use client";
-
-import { useMemo } from "react";
-import { useQueries } from "@tanstack/react-query";
-import { tradingService } from "@/src/services/trading";
+import { useQuery } from "@tanstack/react-query";
 import { readList } from "@/src/lib/api-response";
-import type { OrderHistoryStatus } from "@/src/lib/order-ws";
+import { tradingService } from "@/src/services/trading";
 
 export type HistoryMarket = "spot" | "margin" | "futures";
-export const ORDER_HISTORY_PAGE_SIZE = 20;
-export const ORDER_HISTORY_QUERY_KEY = "order-history-panel";
+
+export interface OrderHistoryRawRow {
+  id: string;
+  market_type?: HistoryMarket;
+  pair?: string;
+  symbol?: string;
+  base?: string;
+  quote?: string;
+  type: string;
+  side: string;
+  status: string;
+  price?: string;
+  quantity?: string;
+  avgPrice?: string;
+  filledQuantity?: string;
+  createdAt: string;
+  takeProfitPrice?: string;
+  stopLossPrice?: string;
+  orderValue?: string;
+  filledValue?: string;
+}
 
 export interface MarketHistoryPage {
   market: HistoryMarket;
-  rows: Record<string, any>[];
+  rows: OrderHistoryRawRow[];
+  currentPage: number;
   totalPages: number;
 }
 
-// One request per market. Spot and margin accept a status filter on the server;
-// futures history has none (the page filters it locally).
-const fetchMarketHistory = (market: HistoryMarket, page: number, status?: OrderHistoryStatus) => {
-  const common = { page, limit: ORDER_HISTORY_PAGE_SIZE };
-  if (market === "spot") return tradingService.spotOrderHistory({ ...common, status });
-  if (market === "margin") return tradingService.marginOrderHistory({ ...common, status });
-  return tradingService.futuresOrderHistory(common);
-};
-
-const readTotalPages = (res: any): number => {
-  const raw = res?.totalPages ?? res?.total_pages ?? res?.data?.totalPages ?? res?.pagination?.totalPages;
-  const pages = Number(raw);
-  return Number.isFinite(pages) && pages >= 1 ? Math.floor(pages) : 1;
-};
-
-/**
- * Order history for one or several markets. Today this is up to three separate
- * requests merged on the client — see the backend note in the PR/summary about a
- * single unified history endpoint.
- */
-export function useOrderHistory({
-  enabled,
-  markets,
-  page,
-  status,
-}: {
-  enabled: boolean;
-  markets: readonly HistoryMarket[];
+export interface UseOrderHistoryParams {
+  enabled?: boolean;
+  marketType: HistoryMarket | "all";
   page: number;
-  status?: OrderHistoryStatus;
-}) {
-  const results = useQueries({
-    queries: markets.map((market) => ({
-      queryKey: [ORDER_HISTORY_QUERY_KEY, market, status ?? "all", page],
-      queryFn: () => fetchMarketHistory(market, page, status),
-      select: (res: unknown): MarketHistoryPage => ({
-        market,
-        rows: readList<Record<string, any>>(res),
-        totalPages: readTotalPages(res),
-      }),
-      enabled,
-      retry: false,
-      throwOnError: false,
-      staleTime: 10_000,
-      refetchInterval: enabled ? 15_000 : (false as const),
-    })),
-  });
-
-  const updatedKey = results.map((r) => r.dataUpdatedAt).join("|");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const pages = useMemo(() => results.map((r) => r.data).filter((d): d is MarketHistoryPage => Boolean(d)), [updatedKey]);
-
-  return {
-    pages,
-    // only "loading" while nothing has arrived yet
-    isLoading: enabled && pages.length === 0 && results.some((r) => r.isLoading),
-  };
+  status?: string;
+  orderType?: string;
+  side?: string;
+  pair?: string;
+  from?: string;
+  to?: string;
 }
+
+const QUERY_KEY = "ORDER_HISTORY_QUERY_KEY";
+
+export function useOrderHistory({
+  enabled = true,
+  marketType = "all",
+  page = 1,
+  status,
+  orderType,
+  side,
+  pair,
+  from,
+  to,
+}: UseOrderHistoryParams) {
+  return useQuery({
+    queryKey: [QUERY_KEY, marketType, page, status, orderType, side, pair, from, to],
+    queryFn: async () => {
+      const params: Record<string, any> = {
+        market_type: marketType,
+        page,
+        limit: 20,
+      };
+      if (status) params.status = status;
+      if (orderType) params.order_type = orderType;
+      if (side) params.side = side;
+      if (pair) params.pair = pair;
+      if (from) params.from = from;
+      if (to) params.to = to;
+
+      const res = await tradingService.getOrderHistory(params);
+      const data = readList<OrderHistoryRawRow>(res);
+
+      // Normalize the unified endpoint response back into MarketHistoryPage[] format
+      // The unified endpoint may return records from multiple markets with market_type on each
+      const pagesByMarket = new Map<HistoryMarket, OrderHistoryRawRow[]>();
+      (data || []).forEach((row) => {
+        const mkt = (row.market_type || "spot") as HistoryMarket;
+        if (!pagesByMarket.has(mkt)) pagesByMarket.set(mkt, []);
+        pagesByMarket.get(mkt)!.push(row);
+      });
+
+      // Return as array of MarketHistoryPage for buildOrderHistoryRows compatibility
+      const pages: MarketHistoryPage[] = Array.from(pagesByMarket.entries()).map(([market, rows]) => ({
+        market,
+        rows,
+        currentPage: res?.data?.currentPage ?? page,
+        totalPages: res?.data?.totalPages ?? 1,
+      }));
+
+      return pages;
+    },
+    enabled,
+    staleTime: 0,
+    refetchInterval: 15000,
+  });
+}
+
+export const ORDER_HISTORY_QUERY_KEY = QUERY_KEY;

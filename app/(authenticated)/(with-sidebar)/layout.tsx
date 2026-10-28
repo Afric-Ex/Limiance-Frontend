@@ -11,7 +11,7 @@ function DashboardLayout({ children }: { children: ReactNode }) {
       <FCMInitializer />
 
       <Sidebar />
-      <div className="overflow-auto px-8 py-7 max-[728px]:px-4 min-h-0">
+      <div className="overflow-auto px-4 py-4 max-[728px]:px-3 min-h-0">
         {children}
       </div>
       <MobileBottomNav />

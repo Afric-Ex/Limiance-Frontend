@@ -25,6 +25,8 @@ export const tradingKeys = {
   orderBooks: ["order-books"],
   openOrders: (pair?: string) => ["open-orders", pair],
   orderHistory: (market?: TradingMarket, pair?: string) => ["order-history", market, pair],
+  // In tradingKeys:
+  unifiedOrderHistory: (marketType?: string, page?: number) => ["unified-order-history", marketType, page],
   tradeHistory: (market?: TradingMarket, pair?: string) => ["trade-history", market, pair],
   spotRecentTrades: (symbol?: string) => ["spot-recent-trades", symbol],
   klineData: (symbol: string, interval: string, market?: string) => ["kline", symbol, interval, market],
@@ -563,5 +565,30 @@ export const tradingService = {
   }) => {
     const response = await api.get("trading/payment/history", { params });
     return response.data;
+  },
+
+  getOrderHistory: async (params?: {
+    market_type?: "spot" | "margin" | "futures" | "all";
+    page?: number;
+    limit?: number;
+    status?: OrderHistoryStatus;
+    order_type?: string;
+    side?: string;
+    pair?: string;
+    from?: string;
+    to?: string;
+  }) => {
+    const response = await api.get("trading/order_history", { params: {
+      market_type: params?.market_type ?? "all",
+      page: params?.page ?? 1,
+      limit: params?.limit ?? 20,
+      ...(params?.status && { status: params.status }),
+      ...(params?.order_type && { order_type: params.order_type }),
+      ...(params?.side && { side: params.side }),
+      ...(params?.pair && { pair: params.pair }),
+      ...(params?.from && { from: params.from }),
+      ...(params?.to && { to: params.to }),
+    }});
+    return response;
   },
 };
