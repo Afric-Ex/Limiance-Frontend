@@ -184,7 +184,7 @@ export const WalletCard = ({
   ];
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border border-white/[0.05] bg-gradient-to-br from-surface via-elevated to-black animate-fade-up max-[1150px]:rounded-xl">
+    <div className="relative rounded-card overflow-hidden border border-white/[0.05] bg-gradient-to-br from-surface via-elevated to-black animate-fade-up">
       {/* Glow blobs */}
       <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-primary/20 blur-[100px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-blue-600/10 blur-[80px] pointer-events-none" />

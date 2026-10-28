@@ -9,14 +9,14 @@ import { Skeleton } from "@/src/components/shared/skeleton";
  */
 
 const cardClass =
-  "rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:p-4 max-[1150px]:rounded-xl w-full";
+  "rounded-card border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:p-4 w-full";
 
 /** Full-width page wrapper mirroring the pages' <main> scaffolding. */
 export const SkeletonShell: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ children, className = "" }) => (
-  <div className={`flex flex-col gap-6 w-full animate-fade-in page-enter ${className}`}>
+  <div className={`flex flex-col gap-card w-full animate-fade-in page-enter ${className}`}>
     {children}
   </div>
 );

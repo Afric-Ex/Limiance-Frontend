@@ -9,6 +9,14 @@ import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { PositionsTable, buildPositionRows } from "@/src/components/trades/positions-table";
+import {
+  OrderHistoryTable,
+  buildOrderHistoryRows,
+  filterOrderHistoryRows,
+  DATE_RANGES,
+  type StatusFilter,
+} from "@/src/components/trades/order-history-table";
+import { useOrderHistory, ORDER_HISTORY_QUERY_KEY, type HistoryMarket } from "@/src/hooks/use-order-history";
 import { Loader, Checkbox, Popover, PopoverTarget, PopoverDropdown, TextInput } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
@@ -27,6 +35,9 @@ type OrderTypeTab = "limit_market" | "conditional" | "tpsl" | "trailing_stop" | 
 
 export function TradingPanel({ selectedPair, market = "spot", className }: TradingPanelProps) {
   const [activeMainTab, setActiveMainTab] = useState<MainTab>("open_orders");
+  const [historyDays, setHistoryDays] = useState<number>(7);
+  const [historyStatus, setHistoryStatus] = useState<StatusFilter>("all");
+  const [historyPage, setHistoryPage] = useState(1);
   const [activeOrderTypeTab, setActiveOrderTypeTab] = useState<OrderTypeTab>("limit_market");
   const [hideOtherPairs, setHideOtherPairs] = useState(false);
   const [selectedInstrument, setSelectedInstrument] = useState("all");
@@ -44,16 +55,16 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
     refetchInterval: 5000,
   });
 
-  // Order History
-  const { data: orderHistory, isLoading: orderHistoryLoading } = useQuery({
-    queryKey: tradingKeys.orderHistory(market),
-    queryFn: () => tradingService.spotOrderHistory(),
-    select: (res: any) => {
-      const raw = res?.data ?? res ?? [];
-      return Array.isArray(raw) ? raw : [];
-    },
-    retry: false,
+  // Order History: this page's market, or spot + margin + futures when "All Markets" is on.
+  const historyMarkets: HistoryMarket[] = selectedMarket === "all" ? ["spot", "margin", "futures"] : [market];
+  const { pages: historyPages, isLoading: orderHistoryLoading } = useOrderHistory({
+    enabled: activeMainTab === "order_history",
+    markets: historyMarkets,
+    page: historyPage,
+    status: historyStatus === "all" ? undefined : historyStatus,
   });
+  const allHistoryRows = useMemo(() => buildOrderHistoryRows(historyPages), [historyPages]);
+  const historyTotalPages = historyPages.reduce((max, p) => Math.max(max, p.totalPages), 1);
 
   // Trade History
   const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
@@ -62,6 +73,13 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
     select: (res: unknown) => readList<Record<string, unknown>>(res),
     retry: false,
   });
+
+  const selectMainTab = (tab: MainTab) => {
+    setActiveMainTab(tab);
+    setActiveOrderTypeTab("limit_market");
+    setSelectedInstrument("all");
+    setHistoryPage(1);
+  };
 
   // Positions: live futures positions (portfolio WebSocket) + margin positions (REST).
   // Shown on every page, like Bybit's unified account.
@@ -102,6 +120,7 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
     onSuccess: () => {
       successNotification("Order cancelled");
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
+      queryClient.invalidateQueries({ queryKey: [ORDER_HISTORY_QUERY_KEY] });
       refreshBalances();
     },
     onError: (e) => errorMessageHandler(e),
@@ -215,6 +234,30 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
     return rows;
   }, [allPositions, selectedMarket, market, hideOtherPairs, selectedPair, selectedInstrument]);
   const positionCount = filteredPositions.length;
+
+  const filteredHistory = useMemo(
+    () =>
+      filterOrderHistoryRows(allHistoryRows, {
+        orderType: activeOrderTypeTab,
+        days: historyDays,
+        instrument: selectedInstrument,
+        hideOtherPairs,
+        selectedPair,
+        status: historyStatus,
+      }),
+    [allHistoryRows, activeOrderTypeTab, historyDays, selectedInstrument, hideOtherPairs, selectedPair, historyStatus]
+  );
+
+  // Instrument choices come from the pairs actually present in the current tab.
+  const instrumentOptions = useMemo(() => {
+    const pairs = new Set<string>();
+    if (activeMainTab === "positions") allPositions.forEach((row) => pairs.add(row.pair));
+    else if (activeMainTab === "order_history") allHistoryRows.forEach((row) => pairs.add(row.pair));
+    else (openOrders ?? []).forEach((order: any) => pairs.add(getOrderPair(order)));
+    pairs.delete("—");
+    if (selectedInstrument !== "all") pairs.add(selectedInstrument);
+    return Array.from(pairs).sort();
+  }, [activeMainTab, allPositions, allHistoryRows, openOrders, selectedInstrument]);
   const borrowingCount = borrowings?.length ?? 0;
 
   const handleCalculator = () => {
@@ -293,37 +336,37 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
       {/* Main Tabs */}
       <div className="flex items-center border-b border-white/[0.06] shrink-0">
         <div className="flex items-center gap-1 px-4 overflow-x-auto scrollbar-none">
-          <Tab active={activeMainTab === "open_orders"} onClick={() => setActiveMainTab("open_orders")}>
+          <Tab active={activeMainTab === "open_orders"} onClick={() => selectMainTab("open_orders")}>
             Open Orders <span className="text-white/40">({openOrderCount})</span>
           </Tab>
-          <Tab active={activeMainTab === "positions"} onClick={() => setActiveMainTab("positions")}>
+          <Tab active={activeMainTab === "positions"} onClick={() => selectMainTab("positions")}>
             Positions <span className="text-white/40">({positionCount})</span>
           </Tab>
-          <Tab active={activeMainTab === "order_history"} onClick={() => setActiveMainTab("order_history")}>
+          <Tab active={activeMainTab === "order_history"} onClick={() => selectMainTab("order_history")}>
             Order History
           </Tab>
-          <Tab active={activeMainTab === "trade_history"} onClick={() => setActiveMainTab("trade_history")}>
+          <Tab active={activeMainTab === "trade_history"} onClick={() => selectMainTab("trade_history")}>
             Trade History
           </Tab>
-          <Tab active={activeMainTab === "assets"} onClick={() => setActiveMainTab("assets")}>
+          <Tab active={activeMainTab === "assets"} onClick={() => selectMainTab("assets")}>
             Assets
           </Tab>
           {market === "margin" && (
-            <Tab active={activeMainTab === "borrowings"} onClick={() => setActiveMainTab("borrowings")}>
+            <Tab active={activeMainTab === "borrowings"} onClick={() => selectMainTab("borrowings")}>
               Borrowings <span className="text-white/40">({borrowingCount})</span>
             </Tab>
           )}
-          <Tab active={activeMainTab === "tools"} onClick={() => setActiveMainTab("tools")}>
+          <Tab active={activeMainTab === "tools"} onClick={() => selectMainTab("tools")}>
             Tools <span className="text-white/40">(0)</span>
           </Tab>
-          <Tab active={activeMainTab === "pnl"} onClick={() => setActiveMainTab("pnl")}>
+          <Tab active={activeMainTab === "pnl"} onClick={() => selectMainTab("pnl")}>
             P&amp;L
           </Tab>
         </div>
       </div>
 
-      {/* Order Type Sub-Tabs (only for open_orders) */}
-      {activeMainTab === "open_orders" && (
+      {/* Order Type Sub-Tabs (open orders + order history) */}
+      {(activeMainTab === "open_orders" || activeMainTab === "order_history") && (
         <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.06] shrink-0">
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
             <SubTab active={activeOrderTypeTab === "limit_market"} onClick={() => setActiveOrderTypeTab("limit_market")}>
@@ -348,11 +391,29 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
               Spread Trading
             </SubTab>
           </div>
+          {activeMainTab === "order_history" && (
+            <div className="ml-3 flex shrink-0 items-center gap-1">
+              {DATE_RANGES.map((range) => (
+                <button
+                  key={range.days}
+                  type="button"
+                  onClick={() => setHistoryDays(range.days)}
+                  aria-pressed={historyDays === range.days}
+                  className={clsx(
+                    "whitespace-nowrap rounded px-2 py-1 text-xs font-semibold transition-colors",
+                    historyDays === range.days ? "text-white" : "text-white/40 hover:text-white/80"
+                  )}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Filters Bar */}
-      {(activeMainTab === "open_orders" || activeMainTab === "positions") && (
+      {(activeMainTab === "open_orders" || activeMainTab === "positions" || activeMainTab === "order_history") && (
         <div className="flex items-center gap-3 px-4 py-2 border-b border-white/[0.06] shrink-0">
           <Checkbox
             classNames={{
@@ -361,7 +422,10 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
             }}
             label="All Markets"
             checked={selectedMarket === "all"}
-            onChange={(e) => setSelectedMarket(e.target.checked ? "all" : "spot")}
+            onChange={(e) => {
+              setSelectedMarket(e.target.checked ? "all" : "spot");
+              setHistoryPage(1);
+            }}
           />
           
           <select
@@ -370,14 +434,33 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
             className="h-6 px-2 text-xs bg-white/[0.05] border border-white/10 rounded text-white/80 outline-none"
           >
             <option value="all">All Instruments</option>
-            <option value="BTC">BTC Pairs</option>
-            <option value="ETH">ETH Pairs</option>
-            <option value="USDT">USDT Pairs</option>
+            {instrumentOptions.map((pair) => (
+              <option key={pair} value={pair}>
+                {pair}
+              </option>
+            ))}
           </select>
+
+          {activeMainTab === "order_history" && (
+            <select
+              value={historyStatus}
+              onChange={(e) => {
+                setHistoryStatus(e.target.value as StatusFilter);
+                setHistoryPage(1);
+              }}
+              aria-label="Order status"
+              className="ml-auto h-6 rounded border border-white/10 bg-white/[0.05] px-2 text-xs font-semibold text-primary outline-none"
+            >
+              <option value="all">All Orders</option>
+              <option value="FILLED">Filled</option>
+              <option value="CANCELLED">Cancelled</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          )}
 
           <Popover width={200} position="bottom-end">
             <PopoverTarget>
-              <button className="ml-auto text-white/40 hover:text-white">
+              <button className={clsx("text-white/40 hover:text-white", activeMainTab !== "order_history" && "ml-auto")}>
                 <MdMoreVert size={18} />
               </button>
             </PopoverTarget>
@@ -412,7 +495,16 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
             }
           />
         )}
-        {activeMainTab === "order_history" && <OrderHistoryTable orders={orderHistory} loading={orderHistoryLoading} />}
+        {activeMainTab === "order_history" && (
+          <OrderHistoryTable
+            rows={filteredHistory}
+            loading={orderHistoryLoading}
+            emptyState={<EmptyState />}
+            page={historyPage}
+            totalPages={historyTotalPages}
+            onPage={setHistoryPage}
+          />
+        )}
         {activeMainTab === "trade_history" && <TradeHistoryTable trades={tradeHistory} loading={tradeHistoryLoading} />}
         {activeMainTab === "assets" && <AssetsTable assets={portfolioResponse} />}
         {activeMainTab === "borrowings" && <BorrowingsTable borrowings={borrowings} loading={borrowingsLoading} />}
@@ -567,93 +659,6 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType }: a
                 >
                   Cancel
                 </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function OrderHistoryTable({ orders, loading }: any) {
-  const formatOrderNumber = (value: unknown) => {
-    const numberValue = Number(value);
-    return Number.isFinite(numberValue) ? numberValue.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "—";
-  };
-
-  const formatOrderDate = (value: unknown) => {
-    if (!value) return "—";
-    const date = new Date(String(value));
-    return !Number.isNaN(date.getTime()) ? date.toLocaleString() : String(value);
-  };
-
-  const getOrderPair = (order: any) =>
-    order?.pair || (order?.base && order?.quote ? `${order.base}/${order.quote}` : order?.symbol || "—");
-
-  const getOrderTotal = (order: any) => {
-    const total = Number(order?.total);
-    if (Number.isFinite(total) && total >= 0) return total;
-    const price = Number(order?.price);
-    const qty = Number(order?.quantity ?? order?.amount);
-    return Number.isFinite(price) && Number.isFinite(qty) ? price * qty : null;
-  };
-
-  const isBuySide = (side: unknown) => String(side ?? "").toUpperCase() === "BUY";
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader size="sm" color="gray" />
-      </div>
-    );
-  }
-
-  if (!orders || orders.length === 0) {
-    return <EmptyState message="No order history" />;
-  }
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
-        <thead className="sticky top-0 bg-[#181a20] z-10">
-          <tr className="border-b border-white/[0.06]">
-            <TableHeader>Time</TableHeader>
-            <TableHeader>Pair</TableHeader>
-            <TableHeader>Type</TableHeader>
-            <TableHeader>Direction</TableHeader>
-            <TableHeader>Price</TableHeader>
-            <TableHeader>Amount</TableHeader>
-            <TableHeader>Total</TableHeader>
-            <TableHeader>Status</TableHeader>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((order: any, idx: number) => (
-            <tr key={order.id ?? idx} className="border-b border-white/[0.02] hover:bg-white/[0.02]">
-              <td className="px-3 py-2.5 text-white/70 font-mono">{formatOrderDate(order.createdAt)}</td>
-              <td className="px-3 py-2.5 font-semibold text-white/90">{getOrderPair(order)}</td>
-              <td className="px-3 py-2.5 text-white/70 capitalize">{order.type || "—"}</td>
-              <td className="px-3 py-2.5">
-                <span className={clsx("font-bold", isBuySide(order.side) ? "text-success-5" : "text-error-1")}>
-                  {String(order.side || "").toUpperCase()}
-                </span>
-              </td>
-              <td className="px-3 py-2.5 text-white/90 font-mono">{formatOrderNumber(order.price)}</td>
-              <td className="px-3 py-2.5 text-white/90 font-mono">{formatOrderNumber(order.quantity ?? order.amount)}</td>
-              <td className="px-3 py-2.5 text-white/90 font-mono">
-                {getOrderTotal(order)?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}
-              </td>
-              <td className="px-3 py-2.5">
-                <span className={clsx(
-                  "text-xs px-2 py-0.5 rounded",
-                  order.status === "FILLED" ? "bg-success-6/20 text-success-6" :
-                  order.status === "CANCELLED" ? "bg-white/10 text-white/40" :
-                  order.status === "REJECTED" ? "bg-error-1/20 text-error-1" :
-                  "bg-white/10 text-white/60"
-                )}>
-                  {order.status || "—"}
-                </span>
               </td>
             </tr>
           ))}

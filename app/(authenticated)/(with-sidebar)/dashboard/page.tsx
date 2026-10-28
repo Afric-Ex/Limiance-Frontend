@@ -313,10 +313,10 @@ function DashboardInner() {
   if (!mounted) return <DashboardSkeleton />;
 
   return (
-    <main className="flex flex-col gap-6 w-full page-enter">
+    <main className="flex flex-col gap-card w-full page-enter">
       <DepositAlertProvider />
       {/* Top Bar - Flat design */}
-      <div className="animate-fade-up px-5 max-[1150px]:px-4 flex items-center justify-between py-4 bg-[#181a20] border border-white/[0.06] rounded-2xl w-full max-[1150px]:rounded-xl">
+      <div className="animate-fade-up px-5 max-[1150px]:px-4 flex items-center justify-between py-4 bg-[#181a20] border border-white/[0.06] rounded-card w-full">
         <div className="flex gap-4 items-center">
           <UserAvatar size={48} className="ring-1 ring-white/10" />
           <div className="flex flex-col gap-1">
@@ -419,7 +419,7 @@ function DashboardInner() {
       </div>
 
       {/* Markets Section */}
-      <div className="animate-fade-up stagger-3 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 flex flex-col gap-4">
+      <div className="animate-fade-up stagger-3 rounded-card border border-white/[0.06] bg-[#181a20] p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold text-white/90">Markets</span>
           <Link href="/markets" className="flex items-center gap-1 text-xs font-medium text-white/50 hover:text-white transition-colors">
