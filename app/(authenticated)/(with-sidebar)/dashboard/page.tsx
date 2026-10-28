@@ -314,7 +314,7 @@ function DashboardInner() {
 
   return (
     <main className="flex flex-col gap-card w-full page-enter">
-      <DepositAlertProvider />
+      <DepositAlertProvider /> 
       {/* Top Bar - Flat design */}
       <div className="animate-fade-up px-5 max-[1150px]:px-4 flex items-center justify-between py-4 bg-[#181a20] border border-white/[0.06] rounded-card w-full">
         <div className="flex gap-4 items-center">

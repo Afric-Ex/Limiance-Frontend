@@ -55,16 +55,16 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
     refetchInterval: 5000,
   });
 
-  // Order History: this page's market, or spot + margin + futures when "All Markets" is on.
-  const historyMarkets: HistoryMarket[] = selectedMarket === "all" ? ["spot", "margin", "futures"] : [market];
-  const { pages: historyPages, isLoading: orderHistoryLoading } = useOrderHistory({
+  // Order History: unified endpoint returns all markets or just this market based on the filter.
+  const historyMarketType = selectedMarket === "all" ? "all" : (market as "spot" | "margin" | "futures");
+  const { data: historyPages = [], isLoading: orderHistoryLoading } = useOrderHistory({
     enabled: activeMainTab === "order_history",
-    markets: historyMarkets,
+    marketType: historyMarketType,
     page: historyPage,
     status: historyStatus === "all" ? undefined : historyStatus,
   });
   const allHistoryRows = useMemo(() => buildOrderHistoryRows(historyPages), [historyPages]);
-  const historyTotalPages = historyPages.reduce((max, p) => Math.max(max, p.totalPages), 1);
+  const historyTotalPages = historyPages[0]?.totalPages ?? 1;
 
   // Trade History
   const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({

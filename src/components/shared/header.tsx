@@ -114,7 +114,7 @@ export default function Header() {
           noMarginBottomInnerPages.some((each) => pathname.includes(each)) ||
             !pathname.includes("auth")
             ? ""
-            : "mb-5",
+            : "mb-2",
           "h-[var(--size-header-height)] md:px-8 px-4 py-1.5 flex items-center justify-between gap-2 sticky top-0 z-[100] backdrop-blur-xl bg-[#181a20]/90",
           authHydrated && user
             ? "border-b border-white/[0.06]"
