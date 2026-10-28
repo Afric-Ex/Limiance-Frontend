@@ -37,7 +37,7 @@ export const KickstartJourney: React.FC<KickstartJourneyProps> = ({
       </h3>
 
       {/* Stepper Header */}
-      <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-5 items-center">
+      <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-3 lg:gap-4 items-center">
         {/* Step 1 indicator */}
         <div className="md:col-span-6 flex items-center">
           <div className="flex items-center gap-3 w-full">
@@ -78,9 +78,9 @@ export const KickstartJourney: React.FC<KickstartJourneyProps> = ({
       </div>
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-5 items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 lg:gap-4 items-stretch">
         {/* Card 1: Verify your Identity */}
-        <div className="md:col-span-6 relative overflow-hidden rounded-2xl border border-[#2f66f6]/40 bg-gradient-to-br from-[#10192e] via-[#0d1424] to-[#0a0f1b] p-5 sm:p-6 flex justify-between items-center transition-all duration-300 hover:border-[#2f66f6]/70 shadow-[0_8px_30px_rgba(0,0,0,0.35)] min-h-[160px]">
+        <div className="md:col-span-6 relative overflow-hidden rounded-card border border-[#2f66f6]/40 bg-gradient-to-br from-[#10192e] via-[#0d1424] to-[#0a0f1b] p-5 sm:p-6 flex justify-between items-center transition-all duration-300 hover:border-[#2f66f6]/70 shadow-[0_8px_30px_rgba(0,0,0,0.35)] min-h-[160px]">
           {/* Background decorative glow */}
           <div className="absolute top-0 right-1/4 w-32 h-32 bg-[#2f66f6]/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -154,7 +154,7 @@ export const KickstartJourney: React.FC<KickstartJourneyProps> = ({
         {/* Card 2: Deposit */}
         <Link
           href="/transactions/deposit"
-          className="md:col-span-3 rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 sm:p-6 flex flex-col justify-between min-h-[140px] md:min-h-[160px] transition-all hover:bg-white/[0.03] hover:border-white/10 group cursor-pointer"
+          className="md:col-span-3 rounded-card border border-white/[0.06] bg-[#181a20] p-5 sm:p-6 flex flex-col justify-between min-h-[140px] md:min-h-[160px] transition-all hover:bg-white/[0.03] hover:border-white/10 group cursor-pointer"
         >
           <div>
             <h4 className="text-base sm:text-lg font-semibold text-white/70 group-hover:text-white transition-colors">
@@ -170,7 +170,7 @@ export const KickstartJourney: React.FC<KickstartJourneyProps> = ({
         {/* Card 3: Trade */}
         <Link
           href="/trades/spot"
-          className="md:col-span-3 rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 sm:p-6 flex flex-col justify-between min-h-[140px] md:min-h-[160px] transition-all hover:bg-white/[0.03] hover:border-white/10 group cursor-pointer"
+          className="md:col-span-3 rounded-card border border-white/[0.06] bg-[#181a20] p-5 sm:p-6 flex flex-col justify-between min-h-[140px] md:min-h-[160px] transition-all hover:bg-white/[0.03] hover:border-white/10 group cursor-pointer"
         >
           <div>
             <h4 className="text-base sm:text-lg font-semibold text-white/70 group-hover:text-white transition-colors">

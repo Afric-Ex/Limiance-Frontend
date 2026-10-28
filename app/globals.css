@@ -63,6 +63,9 @@
   --spacing-8: 32px;
   --spacing-10: 40px;
 
+  /* Card layout rhythm */
+  --card-gap: 20px;
+
   /* Sizing constants */
   --size-container-desktop: 1440px;
   --size-header-height: 48px;
@@ -93,6 +96,7 @@
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-full: 9999px;
+  --radius-card: 12px;
 
   /* ── Mobile Design System Tokens ── */
   --bg-deep: #0a0b0f;
@@ -105,7 +109,6 @@
   --text-1: #f1f5f9;
   --text-2: rgba(255, 255, 255, 0.5);
   --text-3: rgba(255, 255, 255, 0.25);
-  --radius-card: 16px;
   --radius-btn: 12px;
 }
 
@@ -224,13 +227,12 @@ button {
 .account-card {
   background: #181a20;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   padding: 32px;
 }
 
 @media (max-width: 1149px) {
   .account-card {
-    border-radius: 12px;
     padding: 16px;
   }
 }

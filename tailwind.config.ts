@@ -277,6 +277,8 @@ export default {
         "200px": "200px",
       },
       borderRadius: {
+        card: "var(--radius-card)",
+        "2xl": "var(--radius-card)",
         "6px": "6px",
         "15px": "15px",
         "20px": "20px",
@@ -288,6 +290,7 @@ export default {
         "8px": "8px",
       },
       gap: {
+        card: "var(--card-gap)",
         "2px": "2px",
         "6px": "6px",
         "10px": "10px",

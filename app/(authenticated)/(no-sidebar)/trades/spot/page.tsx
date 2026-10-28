@@ -10,6 +10,7 @@ import { useOrderBook } from "@/src/hooks/use-order-book";
 import { useRecentTrades } from "@/src/hooks/use-recent-trades";
 import { OrderBookTabs } from "@/src/components/trades/order-book-tabs";
 import { SpotPairHeader } from "@/src/components/trades/spot-pair-header";
+import { TradingPanel } from "@/src/components/trades/trading-panel";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { SpotTradePageSkeleton } from "@/src/components/skeletons/trades";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
@@ -57,20 +58,7 @@ type TradeMode = "spot" | "cross" | "isolated";
 
 function SpotTrades() {
   const searchParams = useSearchParams();
-  const initialPair = (() => {
-    const p = searchParams.get("pair");
-    if (!p) return "BTC/USDT";
-    const raw = String(p).replace(/_/g, "-").toUpperCase();
-    if (raw.includes("/")) return raw;
-    if (raw.includes("-")) return raw.replace("-", "/");
-    const quotes = ["USDT", "USDC", "BTC", "ETH", "BNB", "BUSD", "FDUSD", "DAI", "USD"];
-    for (const q of quotes) {
-      if (raw.endsWith(q) && raw.length > q.length) {
-        return `${raw.slice(0, raw.length - q.length)}/${q}`;
-      }
-    }
-    return "BTC/USDT";
-  })();
+  const initialPair = searchParams.get("pair")?.replace("_", "/") ?? "BTC/USDT";
   const [selectedPair, setSelectedPair] = useState(initialPair);
   const [pairSearch, setPairSearch] = useState("");
   // Mobile and desktop headers are BOTH mounted (one is hidden by CSS), so they
@@ -484,151 +472,9 @@ function SpotTrades() {
           lastUpdated={orderBook.lastUpdated}
           onSelectPrice={setClickedPrice}
         />
-        {/* Desktop Order History Tabs — spans under chart + order book */}
-        <div className="hidden min-[1150px]:flex bg-[#181a20] rounded overflow-hidden flex-col min-h-[260px] max-h-[420px] col-span-2 col-start-1 row-start-3">
-          <Tabs
-            classNames={{
-              tab: "!pb-2 !pt-3 hover:!bg-transparent hover:!border-0 data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50",
-              list: "!flex !items-center border-b border-white/[0.06] px-4 shrink-0",
-              panel: "!flex-1 !overflow-auto !min-h-0",
-              root: "!flex !flex-col !min-h-0 !flex-1",
-            }}
-            defaultValue="open"
-          >
-            <div className="flex items-center justify-between shrink-0">
-              <TabsList>
-                <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
-                <TabsTab value="history">Order History</TabsTab>
-                <TabsTab value="tradeHistory">Trade History</TabsTab>
-              </TabsList>
-              <div className="pr-4">
-                <Checkbox
-                  classNames={{
-                    label: "!text-[10px] !text-white/40",
-                    input: "!border-white/20 !bg-transparent checked:!bg-primary",
-                  }}
-                  label="Hide Other Pairs"
-                />
-              </div>
-            </div>
-            <TabsPanel value="open">
-              <Table
-                classNames={{
-                  th: "!text-[10px] uppercase !text-white/40 !bg-[#181a20] sticky top-0 z-10 border-b border-white/[0.06]",
-                  tr: "row-hover transition-colors border-b border-transparent",
-                }}
-              >
-                <thead>
-                  <TableTr>
-                    <TableTh>Time</TableTh>
-                    <TableTh>Pair</TableTh>
-                    <TableTh>Type</TableTh>
-                    <TableTh>Side</TableTh>
-                    <TableTh>Price</TableTh>
-                    <TableTh>Amount</TableTh>
-                    <TableTh>Total</TableTh>
-                    <TableTh>TP / SL</TableTh>
-                    <TableTh className="text-right">Action</TableTh>
-                  </TableTr>
-                </thead>
-                <tbody>
-                  {openOrders?.map((order: any) => (
-                    <TableTr key={order.id}>
-                      <TableTd><span className="text-xs text-white/70">{formatOrderDate(order.createdAt, true)}</span></TableTd>
-                      <TableTd><span className="text-xs font-semibold">{getOrderPair(order)}</span></TableTd>
-                      <TableTd><span className="text-xs text-white/70 capitalize">{order.type}</span></TableTd>
-                      <TableTd>
-                        <span className={`text-xs font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>
-                          {order.side?.toUpperCase()}
-                        </span>
-                      </TableTd>
-                      <TableTd><span className="text-xs text-white/90">{formatOrderNumber(order.price)}</span></TableTd>
-                      <TableTd><span className="text-xs text-white/90">{order.amount ?? order.quantity}</span></TableTd>
-                      <TableTd><span className="text-xs text-white/90">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></TableTd>
-                      <TableTd>
-                        <span className="text-xs text-white/40">
-                          {order.takeProfit ? <span className="text-success-6">{order.takeProfit}</span> : "—"}
-                          {" / "}
-                          {order.stopLoss ? <span className="text-error-1">{order.stopLoss}</span> : "—"}
-                        </span>
-                      </TableTd>
-                      <TableTd className="text-right">
-                        <button
-                          onClick={() => closeOrder(order.id)}
-                          disabled={closeOrderPending}
-                          className="text-xs font-semibold text-white/40 hover:text-primary transition-colors flex items-center gap-1 ml-auto"
-                        >
-                          {closeOrderPending && <Loader size={10} color="white" />}
-                          Cancel
-                        </button>
-                      </TableTd>
-                    </TableTr>
-                  ))}
-                </tbody>
-              </Table>
-              {openOrdersLoading ? (
-                <div className="p-8 flex justify-center">
-                  <Skeleton variant="table-row" count={3} columns={9} className="w-full" />
-                </div>
-              ) : !openOrders?.length ? (
-                <div className="min-h-[120px] flex flex-col items-center justify-center gap-2">
-                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20">
-                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                  </div>
-                  <p className="text-xs font-medium text-white/30">No open orders</p>
-                </div>
-              ) : null}
-            </TabsPanel>
-            <TabsPanel value="history">
-              {orderHistoryLoading ? (
-                <div className="p-8 flex justify-center"><Skeleton variant="table-row" count={3} columns={9} className="w-full" /></div>
-              ) : !orderHistory?.length ? (
-                <div className="min-h-[120px] flex flex-col items-center justify-center gap-2">
-                  <p className="text-xs font-medium text-white/30">No order history</p>
-                </div>
-              ) : (
-                <Table classNames={{ th: "!text-[10px] uppercase !text-white/40 !bg-[#181a20] sticky top-0 z-10 border-b border-white/[0.06]", tr: "row-hover transition-colors border-b border-transparent" }}>
-                  <thead>
-                    <TableTr>
-                      <TableTh>Time</TableTh>
-                      <TableTh>Pair</TableTh>
-                      <TableTh>Type</TableTh>
-                      <TableTh>Side</TableTh>
-                      <TableTh>Price</TableTh>
-                      <TableTh>Amount</TableTh>
-                      <TableTh>Total</TableTh>
-                      <TableTh>Status</TableTh>
-                    </TableTr>
-                  </thead>
-                  <tbody>
-                    {orderHistory.map((order: any, idx: number) => (
-                      <TableTr key={order.id ?? idx}>
-                        <TableTd><span className="text-xs text-white/70">{formatOrderDate(order.createdAt)}</span></TableTd>
-                        <TableTd><span className="text-xs font-semibold">{getOrderPair(order)}</span></TableTd>
-                        <TableTd><span className="text-xs text-white/70 capitalize">{order.type}</span></TableTd>
-                        <TableTd><span className={`text-xs font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span></TableTd>
-                        <TableTd><span className="text-xs text-white/90">{formatOrderNumber(order.price)}</span></TableTd>
-                        <TableTd><span className="text-xs text-white/90">{order.amount ?? order.quantity}</span></TableTd>
-                        <TableTd><span className="text-xs text-white/90">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></TableTd>
-                        <TableTd>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            order.status === "filled" ? "bg-success-6/15 text-success-6" :
-                            order.status === "cancelled" ? "bg-error-1/15 text-error-1" :
-                            "bg-white/10 text-white/50"
-                          }`}>{order.status}</span>
-                        </TableTd>
-                      </TableTr>
-                    ))}
-                  </tbody>
-                </Table>
-              )}
-            </TabsPanel>
-            <TabsPanel value="tradeHistory">
-              <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
-            </TabsPanel>
-          </Tabs>
+        {/* Desktop trading panel: Open Orders / Positions / Order History / ... (spans under chart + order book) */}
+        <div className="hidden min-[1150px]:flex flex-col min-w-0 min-h-[260px] max-h-[420px] col-span-2 col-start-1 row-start-3">
+          <TradingPanel selectedPair={selectedPair} market="spot" className="flex-1 min-h-0" />
         </div>
 
         {/* COL 3: Trade Form (Responsive) */}

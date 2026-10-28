@@ -26,7 +26,7 @@ export function Card({
   return (
     <div
       className={clsx(
-        "bg-elevated border border-line rounded-xl shadow-card flex flex-col min-w-0",
+        "bg-elevated border border-line rounded-card shadow-card flex flex-col min-w-0",
         paddings[padding],
         className
       )}
