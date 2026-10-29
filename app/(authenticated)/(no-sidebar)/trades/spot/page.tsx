@@ -661,8 +661,8 @@ function SpotTrades() {
           </div>
         ) : (
           // --- TRADE VIEW ---
-          <div className="flex flex-col flex-1 overflow-auto custom-scrollbar">
-            <div className="flex bg-[#181a20] flex-1">
+          <div className="flex flex-col flex-1 overflow-auto custom-scrollbar pb-[65px]">
+            <div className="flex bg-[#181a20] shrink-0">
               {/* Left Side: Trade Form */}
               <div className="w-full">
                 <Tabs
@@ -749,83 +749,8 @@ function SpotTrades() {
               onSelectPrice={setClickedPrice}
             />
 
-            {/* Open Orders / History / Trades */}
-            <div className="bg-[#181a20] rounded flex flex-col mt-2">
-               <Tabs
-                 defaultValue="open"
-                 classNames={{
-                   tab: "!py-3 !px-3 flex-1 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50",
-                   list: "border-b border-white/[0.06] flex items-center before:!border-0 w-full px-2",
-                   panel: "!p-4",
-                 }}
-               >
-                 <TabsList>
-                   <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
-                   <TabsTab value="history">Order History</TabsTab>
-                   <TabsTab value="tradeHistory">Trade History</TabsTab>
-                 </TabsList>
-                 <TabsPanel value="open">
-                 {openOrdersLoading ? (
-                   <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={3} columns={1} className="w-full" /></div>
-                 ) : !openOrders?.length ? (
-                   <div className="min-h-[100px] flex flex-col items-center justify-center gap-2">
-                     <p className="text-[10px] font-medium text-white/30">No open orders</p>
-                   </div>
-                 ) : (
-                   <div className="flex flex-col gap-3">
-                     {openOrders.map((order: any) => (
-                       <div key={order.id} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2 relative">
-                         <div className="flex justify-between items-center">
-                           <div className="flex items-center gap-2 min-w-0">
-                             <span className="text-sm font-bold">{getOrderPair(order)}</span>
-                             <span className={`text-xs uppercase font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span>
-                           </div>
-                           <button onClick={() => closeOrder(order.id)} disabled={closeOrderPending} className="text-[10px] font-semibold text-white/40 hover:text-primary shrink-0">Cancel</button>
-                         </div>
-                         <div className="grid grid-cols-2 gap-2 text-xs">
-                           <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white text-right">{formatOrderDate(order.createdAt)}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Type</span><span className="text-white capitalize">{order.type}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{formatOrderNumber(order.price)}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Total</span><span className="text-white">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></div>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 )}
-                 </TabsPanel>
-                 <TabsPanel value="history">
-                 {orderHistoryLoading ? (
-                   <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={3} columns={1} className="w-full" /></div>
-                 ) : !orderHistory?.length ? (
-                   <div className="min-h-[100px] flex flex-col items-center justify-center gap-2">
-                     <p className="text-[10px] font-medium text-white/30">No order history</p>
-                   </div>
-                 ) : (
-                   <div className="flex flex-col gap-3">
-                     {orderHistory.map((order: any, idx: number) => (
-                       <div key={order.id ?? idx} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
-                         <div className="flex justify-between items-center gap-2">
-                           <span className="text-sm font-bold truncate">{getOrderPair(order)} <span className={`ml-2 text-xs uppercase font-bold ${isBuySide(order.side) ? "text-success-5" : "text-error-1"}`}>{order.side?.toUpperCase()}</span></span>
-                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${order.status === "filled" ? "bg-success-6/15 text-success-6" : order.status === "cancelled" ? "bg-error-1/15 text-error-1" : "bg-white/10 text-white/50"}`}>{order.status}</span>
-                         </div>
-                         <div className="grid grid-cols-2 gap-2 text-xs">
-                           <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white text-right">{formatOrderDate(order.createdAt)}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Type</span><span className="text-white capitalize">{order.type}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white">{formatOrderNumber(order.price)}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Amount</span><span className="text-white">{order.amount ?? order.quantity}</span></div>
-                           <div className="flex justify-between"><span className="text-white/40">Total</span><span className="text-white">{getOrderTotal(order)?.toLocaleString("en-US", { maximumFractionDigits: 2 }) ?? "—"}</span></div>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 )}
-                 </TabsPanel>
-                 <TabsPanel value="tradeHistory">
-                   <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
-                 </TabsPanel>
-               </Tabs>
-            </div>
+            {/* Mobile trading panel */}
+            <TradingPanel selectedPair={selectedPair} market="spot" mobile className="rounded mt-2 min-h-[420px]" />
           </div>
         )}
       </div>

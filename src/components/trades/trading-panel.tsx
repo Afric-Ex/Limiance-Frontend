@@ -21,19 +21,20 @@ import { Loader, Checkbox, Popover, PopoverTarget, PopoverDropdown, TextInput } 
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import clsx from "clsx";
-import { MdMoreVert, MdCalculate, MdKeyboardArrowDown, MdInfo } from "react-icons/md";
+import { MdMoreVert, MdCalculate, MdKeyboardArrowDown, MdInfo, MdContentCopy } from "react-icons/md";
 import { IoEyeOff } from "react-icons/io5";
 
 interface TradingPanelProps {
   selectedPair: string;
   market?: TradingMarket;
   className?: string;
+  mobile?: boolean;
 }
 
 type MainTab = "open_orders" | "positions" | "order_history" | "trade_history" | "assets" | "borrowings" | "tools" | "pnl";
 type OrderTypeTab = "limit_market" | "conditional" | "tpsl" | "trailing_stop" | "oco" | "mmr_close" | "spread_trading";
 
-export function TradingPanel({ selectedPair, market = "spot", className }: TradingPanelProps) {
+export function TradingPanel({ selectedPair, market = "spot", className, mobile = false }: TradingPanelProps) {
   const [activeMainTab, setActiveMainTab] = useState<MainTab>("open_orders");
   const [historyDays, setHistoryDays] = useState<number>(7);
   const [historyStatus, setHistoryStatus] = useState<StatusFilter>("all");
@@ -42,6 +43,10 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
   const [hideOtherPairs, setHideOtherPairs] = useState(false);
   const [selectedInstrument, setSelectedInstrument] = useState("all");
   const [selectedMarket, setSelectedMarket] = useState("all");
+  // Trade History specific filters
+  const [tradeHistoryDays, setTradeHistoryDays] = useState<number>(7);
+  const [tradeHistoryAllMarkets, setTradeHistoryAllMarkets] = useState(true);
+  const [tradeHistoryInstrument, setTradeHistoryInstrument] = useState("all");
   
   const queryClient = useQueryClient();
   const { refreshBalances } = usePortfolioWs({});
@@ -479,9 +484,59 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
         </div>
       )}
 
+      {/* Trade History filter bar */}
+      {activeMainTab === "trade_history" && (
+        <div className="flex flex-col border-b border-white/[0.06] shrink-0">
+          {/* Date chips row */}
+          <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.04]">
+            <div className="flex items-center gap-1">
+              {DATE_RANGES.map((range) => (
+                <button
+                  key={range.days}
+                  type="button"
+                  onClick={() => setTradeHistoryDays(range.days)}
+                  className={clsx(
+                    "whitespace-nowrap rounded px-2 py-1 text-xs font-semibold transition-colors",
+                    tradeHistoryDays === range.days ? "text-white" : "text-white/40 hover:text-white/80"
+                  )}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors font-semibold shrink-0"
+              onClick={() => {/* Trading Performance modal - stub */}}
+            >
+              Trading Performance <MdInfo size={13} className="opacity-60" />
+            </button>
+          </div>
+          {/* Filters row */}
+          <div className="flex items-center gap-3 px-4 py-2">
+            <Checkbox
+              classNames={{ label: "!text-xs !text-white/60", input: "!border-white/20 !bg-transparent checked:!bg-primary" }}
+              label="All Markets"
+              checked={tradeHistoryAllMarkets}
+              onChange={(e) => setTradeHistoryAllMarkets(e.target.checked)}
+            />
+            <select
+              value={tradeHistoryInstrument}
+              onChange={(e) => setTradeHistoryInstrument(e.target.value)}
+              className="h-6 px-2 text-xs bg-white/[0.05] border border-white/10 rounded text-white/80 outline-none"
+            >
+              <option value="all">All Instruments</option>
+              {Array.from(new Set((tradeHistory ?? []).map((t: any) => t.pair ?? t.symbol ?? "").filter(Boolean))).sort().map((pair) => (
+                <option key={String(pair)} value={String(pair)}>{String(pair)}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
       {/* Content Area */}
       <div className="flex-1 overflow-auto min-h-0">
-        {activeMainTab === "open_orders" && <OpenOrdersTable orders={filteredOrders} loading={openOrdersLoading} onCancel={closeOrder} cancelling={closeOrderPending} orderType={activeOrderTypeTab} />}
+        {activeMainTab === "open_orders" && <OpenOrdersTable orders={filteredOrders} loading={openOrdersLoading} onCancel={closeOrder} cancelling={closeOrderPending} orderType={activeOrderTypeTab} mobile={mobile} />}
         {activeMainTab === "positions" && (
           <PositionsTable
             rows={filteredPositions}
@@ -493,6 +548,7 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
             onUpdateTpsl={(positionId, take_profit_price, stop_loss_price) =>
               updatePositionTpsl({ positionId, take_profit_price, stop_loss_price })
             }
+            mobile={mobile}
           />
         )}
         {activeMainTab === "order_history" && (
@@ -503,11 +559,22 @@ export function TradingPanel({ selectedPair, market = "spot", className }: Tradi
             page={historyPage}
             totalPages={historyTotalPages}
             onPage={setHistoryPage}
+            mobile={mobile}
           />
         )}
-        {activeMainTab === "trade_history" && <TradeHistoryTable trades={tradeHistory} loading={tradeHistoryLoading} />}
-        {activeMainTab === "assets" && <AssetsTable assets={portfolioResponse} />}
-        {activeMainTab === "borrowings" && <BorrowingsTable borrowings={borrowings} loading={borrowingsLoading} />}
+        {activeMainTab === "trade_history" && (
+          <TradeHistoryTable
+            trades={tradeHistory}
+            loading={tradeHistoryLoading}
+            mobile={mobile}
+            days={tradeHistoryDays}
+            allMarkets={tradeHistoryAllMarkets}
+            instrument={tradeHistoryInstrument}
+            selectedPair={selectedPair}
+          />
+        )}
+        {activeMainTab === "assets" && <AssetsTable assets={portfolioResponse} mobile={mobile} />}
+        {activeMainTab === "borrowings" && <BorrowingsTable borrowings={borrowings} loading={borrowingsLoading} mobile={mobile} />}
         {activeMainTab === "tools" && <ToolsPanel />}
         {activeMainTab === "pnl" && <PnLPanel />}
       </div>
@@ -548,8 +615,18 @@ function SubTab({ active, onClick, children, disabled }: any) {
   );
 }
 
+// ─── Mobile card helpers ───────────────────────────────────────────────
+function MobileRow({ label, value, valueClass }: { label: string; value: React.ReactNode; valueClass?: string }) {
+  return (
+    <div className="flex justify-between items-center text-xs">
+      <span className="text-white/40 shrink-0">{label}</span>
+      <span className={clsx("text-right truncate ml-2", valueClass || "text-white/90")}>{value}</span>
+    </div>
+  );
+}
+
 // Table Components
-function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType }: any) {
+function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mobile }: any) {
   const formatOrderNumber = (value: unknown) => {
     const numberValue = Number(value);
     return Number.isFinite(numberValue) ? numberValue.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "—";
@@ -602,6 +679,36 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType }: a
 
   if (!filteredOrders || filteredOrders.length === 0) {
     return <EmptyState />;
+  }
+
+  if (mobile) {
+    return (
+      <div className="flex flex-col divide-y divide-white/[0.04]">
+        {filteredOrders.map((order: any, idx: number) => (
+          <div key={order.id ?? idx} className="px-4 py-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-white">{getOrderPair(order)}</span>
+                <span className={clsx("text-xs font-bold uppercase", isBuySide(order.side) ? "text-success-5" : "text-error-1")}>{order.side}</span>
+                <span className="text-[10px] text-white/40 capitalize bg-white/[0.06] px-1.5 py-0.5 rounded">{order.type}</span>
+              </div>
+              <button onClick={() => onCancel(order.id)} disabled={cancelling} className="text-xs font-semibold text-white/40 active:text-primary transition-colors">Cancel</button>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+              <MobileRow label="Price" value={formatOrderNumber(order.price)} />
+              <MobileRow label="Amount" value={`${formatOrderNumber(order.filledQuantity ?? 0)} / ${formatOrderNumber(order.quantity ?? order.amount)}`} />
+              <MobileRow label="Total" value={getOrderTotal(order)?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"} />
+              <MobileRow label="Time" value={formatOrderDate(order.createdAt)} />
+              {(order.takeProfit || order.stopLoss) && (
+                <MobileRow label="TP/SL" value={
+                  <span>{order.takeProfit ? <span className="text-success-6">{formatOrderNumber(order.takeProfit)}</span> : "—"} / {order.stopLoss ? <span className="text-error-1">{formatOrderNumber(order.stopLoss)}</span> : "—"}</span>
+                } />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (
@@ -668,66 +775,152 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType }: a
   );
 }
 
-function TradeHistoryTable({ trades, loading }: any) {
-  const formatOrderNumber = (value: unknown) => {
-    const numberValue = Number(value);
-    return Number.isFinite(numberValue) ? numberValue.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "—";
+function TradeHistoryTable({ trades, loading, mobile, days, allMarkets, instrument, selectedPair }: any) {
+  const fmt = (value: unknown, decimals = 8) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: decimals }) : "—";
   };
-
-  const formatOrderDate = (value: unknown) => {
+  const fmtDate = (value: unknown) => {
     if (!value) return "—";
-    const date = new Date(String(value));
-    return !Number.isNaN(date.getTime()) ? date.toLocaleString() : String(value);
+    const d = new Date(String(value));
+    return !Number.isNaN(d.getTime()) ? d.toLocaleString() : String(value);
   };
+  const first = (trade: any, keys: string[]) => keys.map((k) => trade[k]).find((v) => v !== undefined && v !== null && v !== "");
+  const getPair = (t: any) => t.pair ?? (t.base && t.quote ? `${t.base}/${t.quote}` : t.symbol ?? "");
 
-  const isBuySide = (side: unknown) => String(side ?? "").toUpperCase() === "BUY";
+  if (loading) return <div className="flex items-center justify-center py-12"><Loader size="sm" color="gray" /></div>;
 
-  if (loading) {
+  // Apply filters
+  const cutoff = Date.now() - (days ?? 7) * 864e5;
+  const filtered = (trades ?? []).filter((t: any) => {
+    const timeStr = first(t, ["createdAt", "created_at", "executedAt", "timestamp", "time"]);
+    const timeMs = timeStr ? new Date(String(timeStr)).getTime() : 0;
+    if (timeMs && timeMs < cutoff) return false;
+    if (instrument && instrument !== "all") {
+      if (!getPair(t).includes(instrument)) return false;
+    }
+    return true;
+  }).sort((a: any, b: any) => {
+    const ta = new Date(String(first(a, ["createdAt","created_at","executedAt","timestamp","time"]) ?? 0)).getTime();
+    const tb = new Date(String(first(b, ["createdAt","created_at","executedAt","timestamp","time"]) ?? 0)).getTime();
+    return (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta);
+  });
+
+  if (!filtered.length) return <EmptyState message="No trade history" />;
+
+  if (mobile) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader size="sm" color="gray" />
+      <div className="flex flex-col divide-y divide-white/[0.04]">
+        {filtered.map((trade: any, idx: number) => {
+          const pair = getPair(trade);
+          const side = String(first(trade, ["side","orderSide","direction"]) ?? "").toUpperCase();
+          const isBuy = side === "BUY";
+          const filledPrice = Number(first(trade, ["filledPrice","fill_price","avgPrice","avg_price","price","executionPrice"]));
+          const filledQty = Number(first(trade, ["filledQuantity","filled_quantity","executedQuantity","qty","quantity","amount","size"]));
+          const filledValue = Number(first(trade, ["filledValue","filled_value","total"])) || (filledPrice * filledQty);
+          const fee = Number(first(trade, ["fee","commission","tradingFee","trading_fee"]));
+          const feeAsset = String(first(trade, ["feeAsset","fee_asset","commissionAsset"]) ?? "");
+          const txId = String(first(trade, ["id","tradeId","trade_id","transactionId","transaction_id","fillId"]) ?? "");
+          const time = first(trade, ["createdAt","created_at","executedAt","timestamp","time"]);
+          const orderType = String(first(trade, ["orderType","order_type","type"]) ?? "Limit");
+          return (
+            <div key={txId || idx} className="px-4 py-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm text-white">{pair || "—"}</span>
+                  <span className={clsx("text-xs font-bold", isBuy ? "text-[#25AB42]" : "text-[#F6465D]")}>{side || "—"}</span>
+                  <span className="text-[10px] bg-white/[0.06] px-1.5 py-0.5 rounded text-white/50 capitalize">{orderType}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                <MobileRow label="Filled Price" value={fmt(filledPrice, 6)} />
+                <MobileRow label="Filled Qty" value={fmt(filledQty, 6)} />
+                <MobileRow label="Filled Value" value={fmt(filledValue, 2)} />
+                {Number.isFinite(fee) && fee !== 0 && <MobileRow label="Trading Fee" value={`${fmt(fee, 8)} ${feeAsset}`} />}
+                <MobileRow label="Time" value={fmtDate(time)} />
+                {txId && (
+                  <div className="col-span-2 flex items-center gap-1 text-[10px] text-white/30">
+                    <span>ID: {txId.length > 12 ? txId.slice(0, 12) + "…" : txId}</span>
+                    <button type="button" onClick={() => navigator.clipboard?.writeText(txId).catch(() => {})}><MdContentCopy size={10} /></button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   }
 
-  if (!trades || trades.length === 0) {
-    return <EmptyState message="No trade history" />;
-  }
-
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-xs">
+      <table className="w-full min-w-[1100px] text-xs">
         <thead className="sticky top-0 bg-[#181a20] z-10">
           <tr className="border-b border-white/[0.06]">
-            <TableHeader>Time</TableHeader>
-            <TableHeader>Symbol</TableHeader>
-            <TableHeader>Side</TableHeader>
-            <TableHeader>Price</TableHeader>
-            <TableHeader>Quantity</TableHeader>
-            <TableHeader>Fee</TableHeader>
-            <TableHeader>Total</TableHeader>
+            <TableHeader>Market</TableHeader>
+            <TableHeader>Instrument</TableHeader>
+            <TableHeader>Order Type</TableHeader>
+            <TableHeader>Direction</TableHeader>
+            <TableHeader>Filled Value</TableHeader>
+            <TableHeader>Filled Price</TableHeader>
+            <TableHeader>Filled Qty</TableHeader>
+            <TableHeader>Filled Type</TableHeader>
+            <TableHeader>Trading Fees</TableHeader>
+            <TableHeader>Transaction Time</TableHeader>
+            <TableHeader>Transaction ID</TableHeader>
           </tr>
         </thead>
         <tbody>
-          {trades.map((trade: any, idx: number) => {
-            const price = Number(trade.price ?? trade.executedPrice);
-            const qty = Number(trade.quantity ?? trade.filledQuantity ?? trade.amount);
-            const fee = Number(trade.fee ?? trade.commission ?? 0);
-            const total = price * qty;
-
+          {filtered.map((trade: any, idx: number) => {
+            const pair = getPair(trade);
+            const mkt = String(first(trade, ["market","market_type"]) ?? "Spot");
+            const side = String(first(trade, ["side","orderSide","direction"]) ?? "").toUpperCase();
+            const isBuy = side === "BUY" || side === "LONG";
+            const orderType = String(first(trade, ["orderType","order_type","type"]) ?? "Limit");
+            const filledType = String(first(trade, ["filledType","filled_type","execType","exec_type","tradeType"]) ?? "Normal");
+            const filledPrice = Number(first(trade, ["filledPrice","fill_price","avgPrice","avg_price","price","executionPrice"]));
+            const filledQty = Number(first(trade, ["filledQuantity","filled_quantity","executedQuantity","qty","quantity","amount","size"]));
+            const filledValue = Number(first(trade, ["filledValue","filled_value","total"])) || (filledPrice * filledQty);
+            const fee = Number(first(trade, ["fee","commission","tradingFee","trading_fee"]));
+            const feeAsset = String(first(trade, ["feeAsset","fee_asset","commissionAsset"]) ?? "");
+            const txId = String(first(trade, ["id","tradeId","trade_id","transactionId","transaction_id","fillId"]) ?? "");
+            const time = first(trade, ["createdAt","created_at","executedAt","timestamp","time"]);
+            const [base, quote] = pair.includes("/") ? pair.split("/") : ["", ""];
             return (
-              <tr key={trade.id ?? idx} className="border-b border-white/[0.02] hover:bg-white/[0.02]">
-                <td className="px-3 py-2.5 text-white/70 font-mono">{formatOrderDate(trade.createdAt ?? trade.timestamp)}</td>
-                <td className="px-3 py-2.5 font-semibold text-white/90">{trade.symbol ?? trade.pair}</td>
+              <tr key={txId || idx} className="border-b border-white/[0.02] hover:bg-white/[0.02]">
+                <td className="px-3 py-2.5 text-white/70 capitalize">{mkt}</td>
+                <td className="px-3 py-2.5 font-semibold text-white/90">{pair || "—"}</td>
+                <td className="px-3 py-2.5 text-white/70 capitalize">{orderType}</td>
                 <td className="px-3 py-2.5">
-                  <span className={clsx("font-bold", isBuySide(trade.side) ? "text-success-5" : "text-error-1")}>
-                    {String(trade.side || "").toUpperCase()}
-                  </span>
+                  <span className={clsx("font-bold", isBuy ? "text-[#25AB42]" : "text-[#F6465D]")}>{side || "—"}</span>
                 </td>
-                <td className="px-3 py-2.5 text-white/90 font-mono">{formatOrderNumber(price)}</td>
-                <td className="px-3 py-2.5 text-white/90 font-mono">{formatOrderNumber(qty)}</td>
-                <td className="px-3 py-2.5 text-white/70 font-mono">{formatOrderNumber(fee)}</td>
-                <td className="px-3 py-2.5 text-white/90 font-mono">{total.toFixed(2)}</td>
+                <td className="px-3 py-2.5 font-mono text-white/90">
+                  {Number.isFinite(filledValue) && filledValue > 0 ? fmt(filledValue, 4) : "—"}
+                  {quote && <span className="ml-1 text-white/40">{quote}</span>}
+                </td>
+                <td className="px-3 py-2.5 font-mono text-white/90">{Number.isFinite(filledPrice) && filledPrice > 0 ? fmt(filledPrice, 6) : "—"}</td>
+                <td className="px-3 py-2.5 font-mono text-white/90">
+                  {Number.isFinite(filledQty) && filledQty > 0 ? fmt(filledQty, 6) : "—"}
+                  {base && <span className="ml-1 text-white/40">{base}</span>}
+                </td>
+                <td className="px-3 py-2.5 text-white/70 capitalize">{filledType}</td>
+                <td className="px-3 py-2.5 font-mono text-white/70">
+                  {Number.isFinite(fee) && fee !== 0 ? <>{fmt(fee, 8)}{feeAsset && <span className="ml-1 text-white/40">{feeAsset}</span>}</> : "—"}
+                </td>
+                <td className="px-3 py-2.5 font-mono text-white/70 whitespace-nowrap">{fmtDate(time)}</td>
+                <td className="px-3 py-2.5">
+                  {txId ? (
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard?.writeText(txId).catch(() => {})}
+                      title={`${txId} (click to copy)`}
+                      className="inline-flex items-center gap-1 font-mono text-white/60 hover:text-white transition-colors"
+                    >
+                      {txId.length > 12 ? txId.slice(0, 12) + "…" : txId}
+                      <MdContentCopy size={11} className="text-white/30" />
+                    </button>
+                  ) : "—"}
+                </td>
               </tr>
             );
           })}
@@ -737,9 +930,36 @@ function TradeHistoryTable({ trades, loading }: any) {
   );
 }
 
-function AssetsTable({ assets }: any) {
+function AssetsTable({ assets, mobile }: any) {
   if (!assets || assets.length === 0) {
     return <EmptyState message="No assets found" />;
+  }
+
+  if (mobile) {
+    return (
+      <div className="flex flex-col divide-y divide-white/[0.04]">
+        {assets.map((asset: any, idx: number) => {
+          const spot = Number(asset.spotBalance ?? asset.free ?? 0);
+          const margin = Number(asset.marginBalance ?? 0);
+          const locked = Number(asset.locked ?? 0);
+          const available = spot - locked;
+          const usdValue = Number(asset.usdValue ?? 0);
+          if (spot === 0 && margin === 0 && locked === 0) return null;
+          return (
+            <div key={asset.symbol ?? idx} className="px-4 py-3 flex flex-col gap-2">
+              <span className="font-bold text-sm text-white">{asset.symbol}</span>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                <MobileRow label="Spot" value={spot.toLocaleString(undefined, { maximumFractionDigits: 6 })} />
+                <MobileRow label="Available" value={available.toLocaleString(undefined, { maximumFractionDigits: 6 })} />
+                <MobileRow label="In Order" value={locked.toLocaleString(undefined, { maximumFractionDigits: 6 })} />
+                <MobileRow label="USD Value" value={`$${usdValue.toFixed(2)}`} />
+                {margin > 0 && <MobileRow label="Margin" value={margin.toLocaleString(undefined, { maximumFractionDigits: 6 })} />}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
   return (
@@ -782,7 +1002,7 @@ function AssetsTable({ assets }: any) {
   );
 }
 
-function BorrowingsTable({ borrowings, loading }: any) {
+function BorrowingsTable({ borrowings, loading, mobile }: any) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -793,6 +1013,27 @@ function BorrowingsTable({ borrowings, loading }: any) {
 
   if (!borrowings || borrowings.length === 0) {
     return <EmptyState message="No borrowings" />;
+  }
+
+  if (mobile) {
+    return (
+      <div className="flex flex-col divide-y divide-white/[0.04]">
+        {borrowings.map((borrow: any, idx: number) => (
+          <div key={borrow.id ?? idx} className="px-4 py-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-sm text-white">{borrow.asset ?? borrow.symbol}</span>
+              <button className="text-xs font-semibold text-primary">Repay</button>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+              <MobileRow label="Borrowed" value={Number(borrow.amount ?? borrow.borrowed).toLocaleString()} />
+              <MobileRow label="Interest" value={Number(borrow.interest ?? 0).toLocaleString()} />
+              <MobileRow label="Total Debt" value={Number(borrow.totalDebt ?? borrow.amount).toLocaleString()} />
+              <MobileRow label="Time" value={borrow.createdAt ? new Date(borrow.createdAt).toLocaleDateString() : "—"} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (
