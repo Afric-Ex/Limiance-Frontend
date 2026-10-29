@@ -229,6 +229,7 @@ interface PositionsTableProps {
   onClose: (positionId: string) => void;
   onPartialClose: (positionId: string, quantity: string) => void;
   onUpdateTpsl: (positionId: string, takeProfit: string, stopLoss: string) => void;
+  mobile?: boolean;
 }
 
 export function PositionsTable({
@@ -239,6 +240,7 @@ export function PositionsTable({
   onClose,
   onPartialClose,
   onUpdateTpsl,
+  mobile = false,
 }: PositionsTableProps) {
   if (loading && rows.length === 0) {
     return (
@@ -283,6 +285,68 @@ export function PositionsTable({
       title: <span className="text-base font-bold text-white">TP/SL · {row.pair}</span>,
       children: <TpslForm row={row} onSubmit={(tp, sl) => onUpdateTpsl(row.id, tp, sl)} />,
     });
+
+  if (mobile) {
+    return (
+      <div className="flex flex-col divide-y divide-white/[0.04]">
+        {rows.map((row) => {
+          const pnlTone = (row.pnl ?? 0) >= 0 ? "text-[#25AB42]" : "text-[#F6465D]";
+          const sign = (row.pnl ?? 0) >= 0 ? "+" : "";
+          const closing = closingIds.has(row.id);
+          const canManage = row.market === "futures" && row.id !== "";
+          return (
+            <div key={row.key} className="px-4 py-3 flex flex-col gap-2.5">
+              {/* Header row */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={clsx("h-full w-0.5 rounded-full self-stretch min-h-[20px]", row.isLong ? "bg-[#25AB42]" : "bg-[#F6465D]")} />
+                  <div>
+                    <span className="font-bold text-sm text-white">{row.pair}</span>
+                    <span className={clsx("ml-2 text-xs font-semibold", row.isLong ? "text-[#25AB42]" : "text-[#F6465D]")}>{row.isLong ? "Long" : "Short"}</span>
+                    <span className="ml-1 text-[10px] text-white/40">{row.leverage}x</span>
+                  </div>
+                </div>
+                {row.pnl !== null && (
+                  <div className={clsx("text-right font-semibold text-sm", pnlTone)}>
+                    <div>{sign}{fmtMoney(row.pnl)} {row.quote}</div>
+                    <div className="text-[10px]">{row.roe === null ? "" : `${sign}${row.roe.toFixed(2)}%`}</div>
+                  </div>
+                )}
+              </div>
+              {/* Data grid */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                <div className="flex justify-between"><span className="text-white/40">Size</span><span className="text-white/90 font-mono">{fmt(row.size)} {row.base}</span></div>
+                <div className="flex justify-between"><span className="text-white/40">Value</span><span className="text-white/90 font-mono">{fmtMoney(row.value)} {row.quote}</span></div>
+                <div className="flex justify-between"><span className="text-white/40">Entry</span><span className="text-white/90 font-mono">{fmtPrice(row.entryPrice)}</span></div>
+                <div className="flex justify-between"><span className="text-white/40">Mark</span><span className="text-white/90 font-mono">{fmtPrice(row.markPrice)}</span></div>
+                <div className="flex justify-between"><span className="text-white/40">Liq.</span><span className="text-white/90 font-mono">{fmtPrice(row.liqPrice)}</span></div>
+                <div className="flex justify-between items-center">
+                  <span className="text-white/40">TP/SL</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[#25AB42] text-xs">{row.takeProfit !== null ? fmtPrice(row.takeProfit) : "—"}</span>
+                    <span className="text-white/30">/</span>
+                    <span className="text-[#F6465D] text-xs">{row.stopLoss !== null ? fmtPrice(row.stopLoss) : "—"}</span>
+                    {canManage && <button onClick={() => openTpsl(row)} className="text-white/30 ml-1"><MdEdit size={12} /></button>}
+                  </div>
+                </div>
+              </div>
+              {/* Actions */}
+              {canManage && (
+                <div className="flex gap-2 pt-1">
+                  <button disabled={closing} onClick={() => confirmClose(row)} className="flex-1 py-1.5 rounded-lg bg-[#F6465D]/10 text-[#F6465D] text-xs font-semibold active:opacity-70 disabled:opacity-50">
+                    {closing ? "Closing…" : "Market Close"}
+                  </button>
+                  <button disabled={closing} onClick={() => openPartialClose(row)} className="flex-1 py-1.5 rounded-lg bg-white/[0.06] text-white/80 text-xs font-semibold active:opacity-70 disabled:opacity-50">
+                    Partial Close
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-x-auto">

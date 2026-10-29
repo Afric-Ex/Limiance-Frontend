@@ -208,9 +208,10 @@ interface OrderHistoryTableProps {
   page: number;
   totalPages: number;
   onPage: (page: number) => void;
+  mobile?: boolean;
 }
 
-export function OrderHistoryTable({ rows, loading, emptyState, page, totalPages, onPage }: OrderHistoryTableProps) {
+export function OrderHistoryTable({ rows, loading, emptyState, page, totalPages, onPage, mobile = false }: OrderHistoryTableProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -227,6 +228,45 @@ export function OrderHistoryTable({ rows, loading, emptyState, page, totalPages,
       /* clipboard unavailable — nothing to do */
     }
   };
+
+  if (mobile) {
+    return (
+      <div className="flex flex-col min-h-0 flex-1">
+        {rows.length === 0 ? emptyState : (
+          <div className="flex flex-col divide-y divide-white/[0.04]">
+            {rows.map((row) => (
+              <div key={row.key} className="px-4 py-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-white">{row.pair}</span>
+                    <span className={clsx("text-xs font-bold", row.isBuy ? "text-[#25AB42]" : "text-[#F6465D]")}>{row.direction}</span>
+                    <span className="text-[10px] bg-white/[0.06] px-1.5 py-0.5 rounded text-white/50">{typeLabel(row.type)}</span>
+                  </div>
+                  <span className={clsx("text-[11px] font-semibold px-2 py-0.5 rounded", STATUS_STYLE[row.status] ?? "bg-white/10 text-white/60")}>
+                    {row.status ? row.status.charAt(0) + row.status.slice(1).toLowerCase().replace(/_/g, " ") : "—"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                  <div className="flex justify-between"><span className="text-white/40">Avg Price</span><span className="text-white/90 font-mono">{fmtPrice(row.avgPrice)}</span></div>
+                  <div className="flex justify-between"><span className="text-white/40">Order Price</span><span className="text-white/90 font-mono">{row.price ? fmtPrice(row.price) : row.type.includes("market") ? "Market" : "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-white/40">Filled</span><span className="text-white/90 font-mono">{fmt(row.filledQuantity)} {row.base}</span></div>
+                  <div className="flex justify-between"><span className="text-white/40">Total</span><span className="text-white/90 font-mono">{fmt(row.quantity)} {row.base}</span></div>
+                  <div className="flex justify-between"><span className="text-white/40">Value</span><span className="text-white/90 font-mono">{fmtMoney(row.filledValue)} {row.quote}</span></div>
+                  <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white/70 font-mono">{row.timeMs !== null ? new Date(row.timeMs).toLocaleString() : "—"}</span></div>
+                </div>
+                {row.id && (
+                  <button type="button" onClick={() => void copyId(row.id)} className="flex items-center gap-1 text-[10px] text-white/30 self-start">
+                    ID: {shortId(row.id)} <MdContentCopy size={10} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {(totalPages > 1 || page > 1) && <Pagination page={page} totalPages={totalPages} onPage={onPage} />}
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
