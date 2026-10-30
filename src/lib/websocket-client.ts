@@ -4,6 +4,7 @@ import { redactDiagnostic } from "./pii-policy";
 import { resolveSocketTarget } from "./ws-url";
 import { handleLogout } from "./handle-logout";
 import { sessionCoordinator } from "./session-coordinator";
+import { isInLoginGrace } from "./login-grace";
 
 export type WsMessageHandler = (data: any, rawMessage: any) => void;
 export type WsStatusHandler = (connected: boolean) => void;
@@ -284,6 +285,17 @@ class WebSocketClient {
         // local state), so the latch is set *after* it — otherwise the
         // coordinator's own reset would immediately re-enable reconnecting.
         if (AUTH_FAILURE_CODES.has(event.code)) {
+          // The handshake right after login can be rejected before the browser
+          // has attached the new session cookie. Retry instead of logging the
+          // user out of a session that was just created; a genuinely rejected
+          // session still tears down once the grace window ends.
+          if (isInLoginGrace()) {
+            console.warn(
+              "[WebSocketClient] session rejected during login grace; retrying"
+            );
+            this.scheduleReconnect();
+            return;
+          }
           console.warn(
             "[WebSocketClient] session rejected (close code " +
               event.code +
