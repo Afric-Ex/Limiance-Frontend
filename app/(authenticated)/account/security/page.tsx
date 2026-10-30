@@ -15,6 +15,7 @@ import { BiCheck } from "react-icons/bi";
 import { CopyButton } from "@/src/components/shared/copy-button";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountSecuritySkeleton } from "@/src/components/skeletons/account";
+import QRCode from "react-qr-code";
 
 type TwoFASetupData = {
   secret: string;
@@ -183,9 +184,8 @@ function SecurityPageInner() {
   const qrSetupUri = qrData?.secret
     ? `otpauth://totp/Limiance:${user?.email || "User"}?secret=${qrData.secret}&issuer=Limiance`
     : "";
-  const qrImageSrc = qrData?.qrCodeUrl || (qrSetupUri
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrSetupUri)}`
-    : "");
+  const qrCodeUrl = qrData?.qrCodeUrl || "";
+  const hasQrCode = Boolean(qrCodeUrl || qrSetupUri);
 
   const { mutate: verify2FA, isPending: verifyLoading } = useMutation({
     mutationFn: (code: string) => userService.verify2FA({ code }),
@@ -616,14 +616,22 @@ function SecurityPageInner() {
                     Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.).
                   </p>
                   
-                  {qrImageSrc ? (
+                  {hasQrCode ? (
                     <div className="bg-white p-3 rounded-xl shadow-md">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={qrImageSrc}
-                        alt="2FA QR Code"
-                        className="w-48 h-48"
-                      />
+                      {qrCodeUrl ? (
+                        <img
+                          src={qrCodeUrl}
+                          alt="2FA QR Code"
+                          className="w-48 h-48"
+                        />
+                      ) : (
+                        <QRCode
+                          value={qrSetupUri}
+                          size={192}
+                          aria-label="2FA QR Code"
+                          className="w-48 h-48"
+                        />
+                      )}
                     </div>
                   ) : (
                     <div className="w-full rounded-xl border border-warning-1/30 bg-warning-1/10 p-4 text-center">

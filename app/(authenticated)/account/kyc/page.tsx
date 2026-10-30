@@ -122,8 +122,21 @@ function KycPageInner() {
     );
   }
 
-  const accessTokenExpirationHandler = () => {
-    return Promise.resolve(activeToken || "");
+  const accessTokenExpirationHandler = async () => {
+    try {
+      const freshToken = getKycAccessToken((await userService.upgradeKyc()) as any);
+      if (!freshToken || typeof freshToken !== "string") {
+        throw new Error("Unable to refresh verification session");
+      }
+      setActiveToken(freshToken);
+      return freshToken;
+    } catch {
+      setActiveToken(null);
+      errorMessageHandler(
+        new Error("Verification session expired. Please restart verification.")
+      );
+      return "";
+    }
   };
 
   const sumsubMessage = (type: string) => {

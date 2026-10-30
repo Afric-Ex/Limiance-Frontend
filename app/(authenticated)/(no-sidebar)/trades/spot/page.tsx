@@ -2,9 +2,7 @@
 
 import { Search } from "@/src/components/icons/search";
 import { PlaceSpot, type TpslPreview } from "@/src/components/trades/place-spot";
-import { TradeRecordsList } from "@/src/components/trades/trade-records-list";
 import { tradingKeys, tradingService } from "@/src/services/trading";
-import { cancelSpotOrderWs } from "@/src/lib/order-ws";
 import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { useOrderBook } from "@/src/hooks/use-order-book";
 import { useRecentTrades } from "@/src/hooks/use-recent-trades";
@@ -14,17 +12,9 @@ import { TradingPanel } from "@/src/components/trades/trading-panel";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { SpotTradePageSkeleton } from "@/src/components/skeletons/trades";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
-import { successNotification } from "@/src/lib/notification-handler";
-import { errorMessageHandler } from "@/src/lib/error-handler";
 import { readList } from "@/src/lib/api-response";
 import { getLatestTradePrice } from "@/src/lib/recent-trades";
 import {
-  Checkbox,
-  Loader,
-  Table,
-  TableTd,
-  TableTh,
-  TableTr,
   Tabs,
   TabsList,
   TabsPanel,
@@ -34,7 +24,7 @@ import {
   PopoverTarget,
   PopoverDropdown,
 } from "@mantine/core";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import clsx from "clsx";
@@ -92,12 +82,11 @@ function SpotTrades() {
 
   const feed = useMarketFeed(selectedPair);
   const orderBook = useOrderBook(selectedPair, "spot");
-  const queryClient = useQueryClient();
   // Refresh-only: the order form below owns the portfolio subscription for this
-  // screen, so this page just needs a way to nudge it after a trade fills.
-  const { refreshBalances } = usePortfolioWs({});
+  // screen, so this page just needs to keep the portfolio subscription alive.
+  usePortfolioWs({});
 
-  const { data: openOrders, isLoading: openOrdersLoading } = useQuery({
+  const { data: openOrders } = useQuery({
     queryKey: tradingKeys.openOrders(selectedPair),
     queryFn: () => tradingService.fetchOpenOrders({ pair: selectedPair }),
     select: (res: unknown) => readList<Record<string, any>>(res),
@@ -105,40 +94,8 @@ function SpotTrades() {
     throwOnError: false,
   });
 
-  const { data: orderHistory, isLoading: orderHistoryLoading } = useQuery({
-    queryKey: tradingKeys.orderHistory("spot"),
-    queryFn: () => tradingService.spotOrderHistory(),
-    select: (res: any) => {
-      const raw = res?.data ?? res ?? [];
-      return Array.isArray(raw) ? raw : [];
-    },
-    retry: false,
-    throwOnError: false,
-  });
-
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "spot");
   const lastTradedPrice = getLatestTradePrice(recentTrades) ?? feed.price ?? null;
-
-  const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
-    queryKey: tradingKeys.tradeHistory("spot"),
-    queryFn: () => tradingService.tradeHistory("spot"),
-    select: (res: unknown) => readList<Record<string, unknown>>(res),
-    retry: false,
-    throwOnError: false,
-  });
-
-  const { mutate: closeOrder, isPending: closeOrderPending } = useMutation({
-    mutationFn: (orderId: string) =>
-      cancelSpotOrderWs(orderId),
-    onSuccess: () => {
-      successNotification("Order cancelled");
-      queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
-      queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders(selectedPair) });
-      queryClient.invalidateQueries({ queryKey: ["order-history"] });
-      refreshBalances();
-    },
-    onError: (e) => errorMessageHandler(e),
-  });
 
   // Price flash effect
   const [flashClass, setFlashClass] = useState("");
@@ -154,10 +111,6 @@ function SpotTrades() {
 
   const formatPrice = (val: number | null) =>
     val !== null ? val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : null;
-  const formatOrderNumber = (value: unknown) => {
-    const numberValue = Number(value);
-    return Number.isFinite(numberValue) ? numberValue.toLocaleString() : "—";
-  };
   const formatOrderDate = (value: unknown, timeOnly = false) => {
     if (!value) return "—";
     const raw = String(value);
@@ -165,16 +118,6 @@ function SpotTrades() {
     if (!Number.isNaN(date.getTime())) return timeOnly ? date.toLocaleTimeString() : date.toLocaleString();
     return timeOnly ? (raw.split(/\s+/).pop() ?? raw) : raw;
   };
-  const getOrderPair = (order: any) =>
-    order?.pair || (order?.base && order?.quote ? `${order.base}/${order.quote}` : "—");
-  const getOrderTotal = (order: any) => {
-    const total = Number(order?.total);
-    if (Number.isFinite(total) && total >= 0) return total;
-    const price = Number(order?.price);
-    const qty = Number(order?.quantity ?? order?.amount);
-    return Number.isFinite(price) && Number.isFinite(qty) ? price * qty : null;
-  };
-  const isBuySide = (side: unknown) => String(side ?? "").toUpperCase() === "BUY";
 
   // Shared renderer for recent market trades (desktop + mobile)
   const renderRecentTrades = (limit = 20) => (

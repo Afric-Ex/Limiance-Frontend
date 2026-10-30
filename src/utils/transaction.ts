@@ -19,7 +19,7 @@ export function formatTransactionAmount(value: unknown): string {
 
 export function formatTransactionAsset(
   asset: string | null | undefined,
-  chain?: string | null
+  _chain?: string | null
 ): string {
   const a = (asset ?? "").trim();
   if (!a) return "";

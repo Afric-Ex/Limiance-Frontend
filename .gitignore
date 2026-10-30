@@ -6,10 +6,11 @@ UX-REVIEW.md
 UX-REVIEW-*.md
 node_modules
 
+Limiance Frontend — Audit Fix Tasks.md
+Backend Handover — Audit Fixes.md
 .next
 .scratch
 .env
-audit-tokens.mjs
 tsconfig.tsbuildinfo
 SPEC.md
 SKELETON.md

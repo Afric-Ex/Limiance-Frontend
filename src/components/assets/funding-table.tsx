@@ -3,7 +3,6 @@
 import { Table, TableTd, TableTh, TableTr, TextInput } from "@mantine/core";
 import { useState } from "react";
 import { IoSearchOutline } from "react-icons/io5";
-import { MdSwapHoriz } from "react-icons/md";
 import { useAssets } from "@/src/hooks/use-assets";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { Skeleton } from "../shared/skeleton";

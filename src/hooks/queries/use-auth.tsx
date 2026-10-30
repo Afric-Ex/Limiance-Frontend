@@ -16,8 +16,6 @@ import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { modals } from "@mantine/modals";
 import { errorNotification, successNotification } from "@/src/lib/notification-handler";
 import { useUserStore } from "@/src/stores/user-store";
-import { sessionCoordinator } from "@/src/lib/session-coordinator";
-import { revokeBackendSession } from "@/src/lib/handle-logout";
 
 type OtpFormValues = {
   otp: string;
@@ -122,19 +120,6 @@ export const useAuth = () => {
     }
     clearPendingLogin2FA();
     return true;
-  };
-
-  /**
-   * Signing in while a session cookie is still around would otherwise leave the
-   * previous session valid on the backend. Revoke it first so an account switch
-   * cannot leave the old account reachable.
-   */
-  const clearStoredAuthToken = async () => {
-    // Revoke the old backend session so an account switch can't leave it valid.
-    // Do NOT call sessionCoordinator.logout() here — that bumps the generation
-    // counter, which would cause the response interceptor to reject the
-    // upcoming login response as "stale session" (ERR_SESSION_STALE).
-    await revokeBackendSession();
   };
 
   // FORM FIELDS

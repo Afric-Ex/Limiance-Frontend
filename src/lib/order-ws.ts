@@ -78,9 +78,20 @@ function describeFailure(raw: any): string | null {
   return null;
 }
 
+/** Server-push topics that must never settle a pending order request. */
+const PUSH_UPDATE_TYPES = new Set([
+  "spot_order_updated",
+  "order_updated",
+  "order_update",
+  "user_order_update",
+  "position_updated",
+  "position_update",
+]);
+
 function looksLikeOrderResponse(type: string): boolean {
   if (!type || /book/i.test(type)) return false;
   const normalized = type.toLowerCase();
+  if (PUSH_UPDATE_TYPES.has(normalized) || /update/i.test(normalized)) return false;
   return (
     ORDER_RESPONSE_TYPES.has(normalized) ||
     ORDER_RESPONSE_RE.test(type) ||
@@ -118,7 +129,61 @@ function waitForConnection(timeoutMs = CONNECT_TIMEOUT_MS): Promise<void> {
   });
 }
 
+/** Reads a request id from either the frame root or its payload. */
+function readRequestId(raw: any): string | undefined {
+  const rootId = raw?.requestId ?? raw?.request_id;
+  if (typeof rootId === "string" && rootId) return rootId;
+  const data = raw?.data && typeof raw.data === "object" ? raw.data : null;
+  const dataId = data?.requestId ?? data?.request_id;
+  if (typeof dataId === "string" && dataId) return dataId;
+  return undefined;
+}
+
+/**
+ * Serializes order submissions per market. While the backend does not echo
+ * `requestId`, this guarantees only one request per market is awaiting a reply,
+ * so a reply can never settle the wrong request.
+ */
+const orderQueues = new Map<string, Promise<unknown>>();
+
+function orderQueueKey(frame: { type: string; data: Record<string, unknown> }): string {
+  const market = frame.data?.symbol ?? frame.data?.pair ?? frame.data?.base;
+  return market ? String(market).toUpperCase() : frame.type;
+}
+
+/** Best-effort check that a reply without a requestId belongs to this market. */
+function replyMatchesMarket(
+  frame: { type: string; data: Record<string, unknown> },
+  raw: any
+): boolean {
+  const frameMarket = frame.data?.symbol ?? frame.data?.pair;
+  if (!frameMarket) return true;
+  const data = raw?.data && typeof raw.data === "object" ? raw.data : raw;
+  const replyMarket = data?.symbol ?? data?.pair ?? raw?.symbol ?? raw?.pair;
+  if (!replyMarket) return true;
+  return String(replyMarket).toUpperCase() === String(frameMarket).toUpperCase();
+}
+
+function enqueueOrderFrame<T>(key: string, task: () => Promise<T>): Promise<T> {
+  const previous = orderQueues.get(key) ?? Promise.resolve();
+  const run = previous.catch(() => undefined).then(task);
+  const tracked = run.catch(() => undefined);
+  orderQueues.set(key, tracked);
+  tracked.finally(() => {
+    if (orderQueues.get(key) === tracked) orderQueues.delete(key);
+  });
+  return run;
+}
+
 function sendOrderFrame(frame: { type: string; data: Record<string, unknown> }): Promise<any> {
+  const requestId = createRequestId(frame.type);
+  return enqueueOrderFrame(orderQueueKey(frame), () => sendOrderFrameOnce(frame, requestId));
+}
+
+function sendOrderFrameOnce(
+  frame: { type: string; data: Record<string, unknown> },
+  requestId: string
+): Promise<any> {
   return waitForConnection().then(
     () =>
       new Promise<any>((resolve, reject) => {
@@ -135,6 +200,11 @@ function sendOrderFrame(frame: { type: string; data: Record<string, unknown> }):
         const unsubscribe = wsClient.onAnyMessage((data, raw) => {
           const type = String(raw?.type ?? "");
           if (!looksLikeOrderResponse(type)) return;
+
+          const incomingRequestId = readRequestId(raw);
+          if (incomingRequestId && incomingRequestId !== requestId) return;
+          if (!incomingRequestId && !replyMatchesMarket(frame, raw)) return;
+
           const failure = describeFailure(raw);
           settle(() => (failure ? reject(new Error(failure)) : resolve(data ?? raw)));
         });
@@ -145,7 +215,7 @@ function sendOrderFrame(frame: { type: string; data: Record<string, unknown> }):
           );
         }, RESPONSE_TIMEOUT_MS);
 
-        if (!wsClient.send(frame)) {
+        if (!wsClient.send({ ...frame, requestId })) {
           settle(() => reject(new Error("WebSocket send failed — order was not sent")));
         }
       })
@@ -171,13 +241,22 @@ export function placeSpotOrderWs(input: {
   takeProfit?: number;
   stopLoss?: number;
 }): Promise<any> {
+  const quantity = Number(input.quantity);
+  const price = Number(input.price);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    throw new Error("Quantity must be greater than zero");
+  }
+  if (input.type === "limit" && (!Number.isFinite(price) || price <= 0)) {
+    throw new Error("Price must be greater than zero");
+  }
+
   const payload: Record<string, unknown> = {
     symbol: input.symbol.toUpperCase(),
     side: input.side.toUpperCase(),
     type: input.type,
-    quantity: Number(input.quantity),
+    quantity,
   };
-  if (input.type === "limit") payload.price = Number(input.price);
+  if (input.type === "limit") payload.price = price;
   if (input.type === "market" && Number(input.price) > 0) payload.price = Number(input.price);
   if (input.type === "stop") {
     const trigger = Number(input.stopPrice ?? input.price);
@@ -259,14 +338,26 @@ export function placeMarginOrderWs(data: {
 }): Promise<any> {
   const kind =
     data.type === "market" ? "market" : data.type.endsWith("_limit") ? "limit" : "stop";
+  const quantity = Number(data.quantity);
+  const price = Number(data.price);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    throw new Error("Quantity must be greater than zero");
+  }
+  if (kind !== "market" && (!Number.isFinite(price) || price <= 0)) {
+    throw new Error("Price must be greater than zero");
+  }
+  if (kind === "stop" && !(Number(data.stopPrice) > 0)) {
+    throw new Error("Stop price must be greater than zero");
+  }
+
   const payload: Record<string, unknown> = {
     symbol: `${data.base}/${data.quote}`.toUpperCase(),
     side: data.side.toUpperCase(),
     type: kind,
-    quantity: Number(data.quantity),
+    quantity,
     leverage: data.leverage,
   };
-  if (kind === "limit") payload.price = Number(data.price);
+  if (kind === "limit") payload.price = price;
   if (kind === "market" && Number(data.price) > 0) payload.price = Number(data.price);
   if (kind === "stop") payload.stopPrice = Number(data.stopPrice);
   if (Number(data.takeProfit) > 0) payload.takeProfit = Number(data.takeProfit);
@@ -284,6 +375,12 @@ export function placeMarginOcoOrderWs(data: {
   tp_limit_price: string;
   sl_limit_price: string;
 }): Promise<any> {
+  if (!(Number(data.quantity) > 0)) {
+    throw new Error("Quantity must be greater than zero");
+  }
+  if (!(Number(data.tp_trigger_price) > 0) || !(Number(data.sl_trigger_price) > 0)) {
+    throw new Error("Trigger prices must be greater than zero");
+  }
   return sendOrderFrame({
     type: "place_margin_oco",
     data: { ...data, symbol: data.symbol.toUpperCase() },
@@ -339,41 +436,50 @@ function queryOrderHistory(
   if (params?.limit !== undefined) data.limit = String(params.limit);
 
   const requestId = createRequestId(frameType);
+  const payloadData = { ...data, requestId };
 
-  return waitForConnection().then(
-    () =>
-      new Promise<any>((resolve, reject) => {
-        let settled = false;
+  // Serialize same-type history queries so a reply without a requestId can
+  // never be claimed by more than one pending query.
+  return enqueueOrderFrame(`history:${frameType}`, () =>
+    waitForConnection().then(
+      () =>
+        new Promise<any>((resolve, reject) => {
+          let settled = false;
 
-        const settle = (action: () => void) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          unsubscribe();
-          action();
-        };
+          const settle = (action: () => void) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            unsubscribe();
+            action();
+          };
 
-        const unsubscribe = wsClient.onAnyMessage((payload, raw) => {
-          const type = String(raw?.type ?? "");
-          if (type !== responseType && type !== errorType) return;
-          const failure = describeFailure(raw);
-          settle(() => (failure ? reject(new Error(failure)) : resolve(payload ?? raw)));
-        });
+          const unsubscribe = wsClient.onAnyMessage((payload, raw) => {
+            const type = String(raw?.type ?? "");
+            if (type !== responseType && type !== errorType) return;
 
-        const timer = setTimeout(() => {
-          settle(() =>
-            reject(
-              new Error(
-                `No response to ${frameType} within ${HISTORY_RESPONSE_TIMEOUT_MS / 1000}s`
+            const incomingRequestId = readRequestId(raw);
+            if (incomingRequestId && incomingRequestId !== requestId) return;
+
+            const failure = describeFailure(raw);
+            settle(() => (failure ? reject(new Error(failure)) : resolve(payload ?? raw)));
+          });
+
+          const timer = setTimeout(() => {
+            settle(() =>
+              reject(
+                new Error(
+                  `No response to ${frameType} within ${HISTORY_RESPONSE_TIMEOUT_MS / 1000}s`
+                )
               )
-            )
-          );
-        }, HISTORY_RESPONSE_TIMEOUT_MS);
+            );
+          }, HISTORY_RESPONSE_TIMEOUT_MS);
 
-        if (!wsClient.send({ type: frameType, data })) {
-          settle(() => reject(new Error(`WebSocket send failed — ${frameType} not requested`)));
-        }
-      })
+          if (!wsClient.send({ type: frameType, data: payloadData })) {
+            settle(() => reject(new Error(`WebSocket send failed — ${frameType} not requested`)));
+          }
+        })
+    )
   );
 }
 

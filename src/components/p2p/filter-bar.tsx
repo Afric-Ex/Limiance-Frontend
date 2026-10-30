@@ -136,15 +136,18 @@ export const FilterBar = () => {
     retry: false,
   });
 
-  const banksByFiat: Record<string, string[]> = {};
-  if (banksData?.banks) {
-    for (const bank of banksData.banks) {
-      const currency = (bank as any).currency || (bank as any).fiat;
-      if (!currency) continue;
-      if (!banksByFiat[currency]) banksByFiat[currency] = [];
-      banksByFiat[currency].push(bank.name);
+  const banksByFiat = useMemo(() => {
+    const byFiat: Record<string, string[]> = {};
+    if (banksData?.banks) {
+      for (const bank of banksData.banks) {
+        const currency = (bank as any).currency || (bank as any).fiat;
+        if (!currency) continue;
+        if (!byFiat[currency]) byFiat[currency] = [];
+        byFiat[currency].push(bank.name);
+      }
     }
-  }
+    return byFiat;
+  }, [banksData]);
 
   const paymentMethodOptions = useMemo(
     () => ["All", ...(banksByFiat[adFilters.fiat] || [])],

@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "next dev --turbopack",
+    "prebuild": "npm run audit:pii && npm run audit:tokens",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -42,6 +43,7 @@
     "react-geetest-v4": "^1.2.0",
     "react-hot-toast": "^2.5.1",
     "react-icons": "^5.4.0",
+    "react-qr-code": "^2.2.0",
     "ws": "^8.18.0",
     "zod": "^3.24.1",
     "zustand": "^5.0.3"

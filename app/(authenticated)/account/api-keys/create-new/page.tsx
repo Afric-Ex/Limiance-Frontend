@@ -9,6 +9,7 @@ import { useForm } from "@mantine/form";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import { userKeys, userService } from "@/src/services/user";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -19,6 +20,17 @@ const inputStyles = {
   input: "!h-50px !bg-transparent !rounded",
   label: "!text-sm",
 };
+
+const ipSchema = z.string().ip();
+
+const parseIpAllowlist = (value: string): string[] =>
+  value
+    .split(/[\n,]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+const findInvalidIp = (value: string): string[] =>
+  parseIpAllowlist(value).filter((entry) => !ipSchema.safeParse(entry).success);
 
 function CreateApiKeyInner() {
   const queryClient = useQueryClient();
@@ -33,11 +45,22 @@ function CreateApiKeyInner() {
       purpose: "purpose",
       ipAllowlist: "",
     },
+    validate: {
+      label: (value) => (value.trim() ? null : "API name is required"),
+      ipAllowlist: (value) => {
+        const invalid = findInvalidIp(value);
+        return invalid.length > 0 ? `Invalid IP address: ${invalid.join(", ")}` : null;
+      },
+    },
   });
 
   const { mutate: createKey, isPending } = useMutation({
     mutationFn: (): Promise<any> =>
-      userService.createApiKey({ label: form.values.label, permissions }),
+      userService.createApiKey({
+        label: form.values.label.trim(),
+        permissions,
+        ipAllowlist: parseIpAllowlist(form.values.ipAllowlist),
+      }),
     onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: userKeys.apiKeys });
       if (res.data?.fullKey) {
@@ -55,6 +78,12 @@ function CreateApiKeyInner() {
     setPermissions((prev) =>
       prev.includes(perm) ? prev.filter((p) => p !== perm) : [...prev, perm]
     );
+  };
+
+  const handleCreate = () => {
+    const result = form.validate();
+    if (result.hasErrors) return;
+    createKey();
   };
 
   return (
@@ -101,7 +130,7 @@ function CreateApiKeyInner() {
             </p>
           </div>
           <button
-            onClick={() => form.values.label && createKey()}
+            onClick={handleCreate}
             disabled={isPending || !form.values.label}
             className="flex font-medium py-4 px-18px rounded-3xl bg-primary items-center justify-center gap-6px disabled:opacity-50"
           >
@@ -162,7 +191,7 @@ function CreateApiKeyInner() {
               Add another
             </div>
             <button
-              onClick={() => form.values.label && createKey()}
+              onClick={handleCreate}
               disabled={isPending || !form.values.label}
               className="bg-primary rounded-xl py-18px text-base font-medium disabled:opacity-50 flex items-center justify-center gap-2"
             >

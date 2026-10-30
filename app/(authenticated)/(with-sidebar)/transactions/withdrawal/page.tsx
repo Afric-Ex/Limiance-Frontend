@@ -250,11 +250,15 @@ function WithdrawalInner() {
       address.toLowerCase() === form.values.address.toLowerCase()
   );
 
-  const addressError =
-    form.values.address && selectedNetwork?.symbol
+  const trimmedAddress = form.values.address.trim();
+  const addressError = !trimmedAddress
+    ? "Recipient address is required"
+    : selectedNetwork?.symbol
       ? pendingEntry
         ? "This address is still within its activation window"
-        : validateWhitelistAddress(form.values.address, selectedNetwork.symbol)
+        : isZeroAddress(trimmedAddress)
+          ? "Recipient address is invalid"
+          : validateWhitelistAddress(trimmedAddress, selectedNetwork.symbol)
       : null;
 
   const amountError =
@@ -606,6 +610,7 @@ function WithdrawalInner() {
               disabled={
                 withdrawalWalletLoading ||
                 !resolvedWalletId ||
+                !form.values.address.trim() ||
                 withdrawableAmountAfterNetworkFee <= 0 ||
                 !!addressError ||
                 +form.values.amount > assetBalance ||

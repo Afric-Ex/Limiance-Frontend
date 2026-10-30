@@ -73,9 +73,11 @@ export default function WhitelistedWalletsPage() {
     select: (response) => toChainList(response),
   });
 
+  const chainsData = chainsQuery.data;
+
   const networks = useMemo(() => {
-    const unique = new Map<string, (typeof chainsQuery.data)[number]>();
-    for (const network of chainsQuery.data ?? []) {
+    const unique = new Map<string, NonNullable<typeof chainsData>[number]>();
+    for (const network of chainsData ?? []) {
       const chain = network.blockchain || network.symbol;
       if (chain && !unique.has(chain)) unique.set(chain, network);
     }
@@ -84,7 +86,7 @@ export default function WhitelistedWalletsPage() {
       symbol: network.symbol,
       label: `${network.name || network.symbol} (${chain})`,
     }));
-  }, [chainsQuery.data]);
+  }, [chainsData]);
 
   useEffect(() => {
     if (!selectedChain && networks.length) setSelectedChain(networks[0].chain);

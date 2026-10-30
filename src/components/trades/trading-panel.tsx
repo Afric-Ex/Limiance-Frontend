@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tradingKeys, tradingService, type TradingMarket } from "@/src/services/trading";
 import { cancelSpotOrderWs, closeFuturesPositionWs } from "@/src/lib/order-ws";
@@ -16,13 +16,12 @@ import {
   DATE_RANGES,
   type StatusFilter,
 } from "@/src/components/trades/order-history-table";
-import { useOrderHistory, ORDER_HISTORY_QUERY_KEY, type HistoryMarket } from "@/src/hooks/use-order-history";
-import { Loader, Checkbox, Popover, PopoverTarget, PopoverDropdown, TextInput } from "@mantine/core";
+import { useOrderHistory, ORDER_HISTORY_QUERY_KEY } from "@/src/hooks/use-order-history";
+import { Loader, Checkbox, Popover, PopoverTarget, PopoverDropdown } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import clsx from "clsx";
-import { MdMoreVert, MdCalculate, MdKeyboardArrowDown, MdInfo, MdContentCopy } from "react-icons/md";
-import { IoEyeOff } from "react-icons/io5";
+import { MdMoreVert, MdCalculate, MdInfo, MdContentCopy } from "react-icons/md";
 
 interface TradingPanelProps {
   selectedPair: string;
@@ -175,33 +174,8 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
     onError: (e) => errorMessageHandler(e),
   });
 
-  const formatOrderDate = (value: unknown, timeOnly = false) => {
-    if (!value) return "—";
-    const raw = String(value);
-    const date = new Date(raw);
-    if (!Number.isNaN(date.getTime())) {
-      return timeOnly ? date.toLocaleTimeString() : date.toLocaleString();
-    }
-    return timeOnly ? (raw.split(/\s+/).pop() ?? raw) : raw;
-  };
-
-  const formatOrderNumber = (value: unknown) => {
-    const numberValue = Number(value);
-    return Number.isFinite(numberValue) ? numberValue.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "—";
-  };
-
   const getOrderPair = (order: any) =>
     order?.pair || (order?.base && order?.quote ? `${order.base}/${order.quote}` : order?.symbol || "—");
-
-  const getOrderTotal = (order: any) => {
-    const total = Number(order?.total);
-    if (Number.isFinite(total) && total >= 0) return total;
-    const price = Number(order?.price);
-    const qty = Number(order?.quantity ?? order?.amount);
-    return Number.isFinite(price) && Number.isFinite(qty) ? price * qty : null;
-  };
-
-  const isBuySide = (side: unknown) => String(side ?? "").toUpperCase() === "BUY";
 
   const filteredOrders = useMemo(() => {
     if (!openOrders) return [];
@@ -273,19 +247,6 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
         <div className="p-4 text-white/80 text-sm">
           <p>Order value, fees, and profit/loss calculations.</p>
           <p className="mt-2 text-white/40 text-xs">Calculator functionality coming soon.</p>
-        </div>
-      ),
-    });
-  };
-
-  const handleMarginTransfer = () => {
-    modals.open({
-      ...DEFAULT_MODAL_SETTINGS,
-      title: "Transfer Collateral",
-      children: (
-        <div className="p-4 text-white/80 text-sm">
-          <p>Transfer assets between Spot and Margin accounts.</p>
-          <p className="mt-2 text-white/40 text-xs">Transfer functionality available in account settings.</p>
         </div>
       ),
     });
@@ -775,7 +736,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
   );
 }
 
-function TradeHistoryTable({ trades, loading, mobile, days, allMarkets, instrument, selectedPair }: any) {
+function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
   const fmt = (value: unknown, decimals = 8) => {
     const n = Number(value);
     return Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: decimals }) : "—";

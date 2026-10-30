@@ -197,6 +197,11 @@ export const useWithdrawal = () => {
 
   const handleWithdrawal = () => {
     try {
+      if (!form.values.address.trim()) {
+        errorMessageHandler(new Error("Recipient address is required"));
+        return;
+      }
+
       if (!resolvedWalletId) {
         errorMessageHandler(new Error("Withdrawal wallet is still being prepared. Please try again in a moment."));
         return;

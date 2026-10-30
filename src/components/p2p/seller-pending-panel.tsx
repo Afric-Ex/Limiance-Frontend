@@ -6,10 +6,25 @@ import { MdHourglassEmpty, MdContentCopy } from "react-icons/md";
 
 interface SellerPendingPanelProps {
   setCancelModalOpen: (val: boolean) => void;
+  fiatAmount: number;
+  fiat: string;
+  paymentMethod?: {
+    method?: string;
+    data?: {
+      bankName?: string;
+      accountName?: string;
+      accountNumber?: string;
+    };
+  };
+  copyToClipboard?: (text: string) => void;
 }
 
 export function SellerPendingPanel({
   setCancelModalOpen,
+  fiatAmount,
+  fiat,
+  paymentMethod,
+  copyToClipboard,
 }: SellerPendingPanelProps) {
   return (
     <>
@@ -44,7 +59,7 @@ export function SellerPendingPanel({
                 <span className="text-white font-mono font-medium">{paymentMethod?.data?.accountNumber ?? "—"}</span>
                 {paymentMethod?.data?.accountNumber && (
                   <button
-                    onClick={() => copyToClipboard(paymentMethod.data.accountNumber)}
+                    onClick={() => copyToClipboard?.(paymentMethod.data?.accountNumber ?? "")}
                     className="text-primary hover:text-primary/80 transition-colors p-1"
                     title="Copy Account Number"
                   >
