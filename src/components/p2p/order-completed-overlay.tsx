@@ -130,7 +130,13 @@ export const OrderCompletedOverlay = ({
 
         <div className="w-full h-px bg-white/[0.06]" />
 
-        {!submitted ? (
+        {!canReview || isSelfReview ? (
+          <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-lg text-center text-white/60 text-xs">
+            {isSelfReview
+              ? "You can't review your own trade."
+              : "Feedback is unavailable for this trade."}
+          </div>
+        ) : !submitted ? (
           <div className="bg-white/[0.02] border border-white/[0.06] p-4 rounded-lg">
             <h3 className="text-xs font-semibold text-white/80 text-center mb-3">
               How was your experience with {counterparty}?

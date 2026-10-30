@@ -14,6 +14,10 @@ const eslintConfig = [
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+      // Token logos, avatars and KYC documents are dynamic remote URLs whose
+      // hosts are not known at build time. next/image would require overly
+      // broad remotePatterns and does not add value for these small assets.
+      "@next/next/no-img-element": "off",
       "@typescript-eslint/no-unused-vars": [
         "error",
         {

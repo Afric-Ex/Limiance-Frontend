@@ -406,7 +406,10 @@ function FuturesTradesInner() {
     setStopLoss('');
     setStopLimitPrice('');
     priceUserEditedRef.current = false; // reset when pair or order type changes
-  }, [selectedPair, orderType]); // intentionally exclude feed.price
+    // Intentionally depend only on pair/type so live price ticks do not reset
+    // the user's entered amounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPair, orderType]);
 
   useEffect(() => {
     if (feed.price !== null && prevPrice !== null && feed.price !== prevPrice) {

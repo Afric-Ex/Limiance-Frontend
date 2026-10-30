@@ -185,6 +185,9 @@ function MarginTrades() {
       return () => clearTimeout(t);
     }
     setPrevPrice(feed.price);
+    // prevPrice is compared above and updated here; adding it would re-run the
+    // flash effect unnecessarily on every price tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feed.price]);
 
   const formatPrice = (val: number | null) =>

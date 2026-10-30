@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { ImageLightbox } from "./image-lightbox";
 import { MdDoneAll } from "react-icons/md";
-import { formatChatTime } from "@/src/lib/chat-date";
 
 interface ChatMessageProps {
   message: {

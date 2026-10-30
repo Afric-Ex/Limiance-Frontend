@@ -283,6 +283,18 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
   const placeOrder = async (side: "buy" | "sell") => {
     const payload = buildPayload(side);
 
+    if (!Number.isFinite(Number(payload.quantity)) || Number(payload.quantity) <= 0) {
+      errorMessageHandler(new Error("Quantity must be greater than zero"));
+      return;
+    }
+    if (
+      activeTab !== "market" &&
+      (!Number.isFinite(Number(payload.price)) || Number(payload.price) <= 0)
+    ) {
+      errorMessageHandler(new Error("Price must be greater than zero"));
+      return;
+    }
+
     // Spot orders go over the trading WebSocket (place_spot_order frame,
     // symbol like BTC/USDT, no request_id / timeInForce).
     if (mode === "spot") {
@@ -723,7 +735,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           <button
             onClick={() => placeBuy()}
-            disabled={buyLoading || !buyAmount || rawQuote === 0}
+            disabled={buyLoading || !(Number(buyAmount) > 0) || rawQuote === 0}
             className="mt-0.5 bg-buy hover:bg-buy/90 disabled:opacity-50 transition-all text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(37,171,66,0.3)] active:scale-95"
           >
             {buyLoading && <Loader size={13} color="white" />}
@@ -793,7 +805,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           <button
             onClick={() => placeSell()}
-            disabled={sellLoading || !sellAmount || rawBase === 0}
+            disabled={sellLoading || !(Number(sellAmount) > 0) || rawBase === 0}
             className="mt-0.5 bg-sell hover:bg-sell/90 disabled:opacity-50 transition-all text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(246,70,93,0.3)] active:scale-95"
           >
             {sellLoading && <Loader size={13} color="white" />}

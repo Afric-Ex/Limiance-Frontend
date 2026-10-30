@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import Image from "next/image";
 import Wordmark from "@/public/limiance-wordmark.png";
 import { HeroSignup } from "./hero-signup";

@@ -50,7 +50,7 @@ export const EditProfile = () => {
   useEffect(() => {
     if (!user) return;
     form.setFieldValue("username", user?.username as string);
-  }, [user]);
+  }, [user, form]);
 
   const [file, setFile] = useState<File | null>(null);
 

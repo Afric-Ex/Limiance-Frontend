@@ -6,7 +6,6 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { Verify2FAPageSkeleton } from "@/src/components/skeletons/auth";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 import { AuthMobileBrand } from "@/src/components/shared/auth-mobile-brand";
 

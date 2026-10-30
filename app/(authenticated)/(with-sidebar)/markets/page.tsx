@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { IoSearchOutline, IoChevronBackOutline, IoChevronForwardOutline, IoRocketOutline } from "react-icons/io5";
@@ -204,7 +204,7 @@ function MarketsPageInner() {
     });
   };
 
-  const normaliseRow = (m: any): TokenRow => {
+  const normaliseRow = useCallback((m: any): TokenRow => {
     const rawPair = (m.symbol || m.pair || `${m.base || ""}/${m.quote || "USDT"}`).replace("-", "/").toUpperCase();
     const parts = rawPair.split("/");
     const base = m.base?.toUpperCase() || parts[0] || "";
@@ -222,7 +222,7 @@ function MarketsPageInner() {
       sparkline: Array.isArray(m.sparkline) ? m.sparkline.map((v: any) => Number(v)).filter(Number.isFinite) : [],
       image: tokenLogos[base] ?? getCryptoIcon(base) ?? m.image ?? m.logo ?? m.icon,
     };
-  };
+  }, [tokenLogos]);
 
   const isValidPair = (pair: string): boolean => {
     const [base, quote] = pair.split("/");
@@ -237,7 +237,7 @@ function MarketsPageInner() {
       if (row.pair && isValidPair(row.pair)) list.push(row);
     });
     return list;
-  }, [feed.markets]);
+  }, [feed.markets, normaliseRow]);
 
   // Main navigation tab filtering
   const activeRows = useMemo(() => {

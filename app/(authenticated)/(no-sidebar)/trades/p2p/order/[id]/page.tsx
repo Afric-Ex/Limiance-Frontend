@@ -128,15 +128,6 @@ function OrderRoomPageInner() {
   // A BUY ad has the advertiser as buyer and the matcher as seller; a SELL ad
   // is the reverse. Only use the name belonging to the counterparty's side so
   // the review prompt can never show the signed-in user's own name.
-  const personName = (person: any, flatName?: string) =>
-    flatName ||
-    [person?.firstName, person?.lastName].filter(Boolean).join(" ") ||
-    person?.username ||
-    "";
-  const sellerName = personName(order?.seller, order?.sellerName);
-  const buyerName = personName(order?.buyer, order?.buyerName);
-  const advertiserName = personName(order?.advertiser, order?.advertiserName);
-  const matcherName = personName(order?.matcher, order?.matcherName);
   const counterpartyName = isAdvertiser
     ? order?.matcherName || order?.buyerName || order?.sellerName || "Trader"
     : order?.advertiserName || order?.sellerName || order?.buyerName || "Advertiser";
@@ -368,6 +359,11 @@ function OrderRoomPageInner() {
     label: status,
     color: "text-white/40 bg-white/[0.05] border-white/[0.07]",
   };
+
+  const isSelfReview = Boolean(
+    currentUserId && counterpartyId && String(counterpartyId) === currentUserId
+  );
+  const canReview = Boolean(counterpartyId) && !isSelfReview;
 
   return (
     <P2PLayout>

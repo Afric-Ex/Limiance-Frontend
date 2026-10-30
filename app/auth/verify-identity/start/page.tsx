@@ -39,8 +39,20 @@ function StartInner() {
     }
   };
 
-  const accessTokenExpirationHandler = () => {
-    return Promise.resolve(activeToken || "");
+  const accessTokenExpirationHandler = async () => {
+    try {
+      const res = await auth.startKyc();
+      const freshToken = getKycAccessToken(res as any);
+      if (!freshToken || typeof freshToken !== "string") {
+        throw new Error("Unable to refresh verification session");
+      }
+      setActiveToken(freshToken);
+      return freshToken;
+    } catch {
+      setActiveToken(null);
+      setError("Verification session expired. Please start again.");
+      return "";
+    }
   };
 
   const sumsubMessage = (type: string) => {

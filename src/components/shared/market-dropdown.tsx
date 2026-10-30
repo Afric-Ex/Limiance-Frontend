@@ -82,7 +82,6 @@ const getPairsForCategory = (markets: any[], category: string) => {
   if (category === "spot") {
     const filtered = markets.filter((m: any) => {
       const type = (m.type || m.market_type || m.contractType || "").toString().toLowerCase();
-      const symbol = (m.symbol || m.pair || "").toString().toUpperCase();
       if (type.includes("perp") || type.includes("future") || type.includes("margin")) return false;
       if (m.isMargin || m.margin) return false;
       return true;

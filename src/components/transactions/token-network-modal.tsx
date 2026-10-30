@@ -126,7 +126,10 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
 
   // A token is listed once per chain, each with its own `blockchain`. Offer the
   // network step every chain that token actually has a row for, matched exactly.
-  const coinBlockchains = (pendingCoin?.blockchains ?? []).map(normalize).filter(Boolean);
+  const coinBlockchains = useMemo(
+    () => (pendingCoin?.blockchains ?? []).map(normalize).filter(Boolean),
+    [pendingCoin]
+  );
 
   const matchingChains = useMemo(() => {
     if (!pendingCoin) return supportedChains ?? [];
@@ -146,7 +149,7 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
         .filter(Boolean)
         .some((value) => coinBlockchains.includes(normalize(value)))
     );
-  }, [pendingCoin, supportedChains, coinBlockchains.join("|")]);
+  }, [pendingCoin, supportedChains, coinBlockchains]);
 
   // listed_networks also returns one row per chain PER TOKEN STANDARD, so a single
   // chain arrives several times. The network step only needs the chain itself, so

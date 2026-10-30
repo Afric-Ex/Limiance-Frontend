@@ -110,8 +110,12 @@ export const userService = {
   createApiKey: async (data: {
     label: string;
     permissions: string[];
+    ipAllowlist?: string[];
   }): Promise<ApiResponse<any>> => {
-    const response = await api.post("users/api_keys", data);
+    const response = await api.post("users/api_keys", {
+      ...data,
+      ip_allowlist: data.ipAllowlist ?? [],
+    });
     return response.data;
   },
   deleteApiKey: async (keyId: string): Promise<ApiResponse<any>> => {
