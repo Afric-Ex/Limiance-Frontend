@@ -2,6 +2,8 @@ import { sessionCoordinator } from "./session-coordinator";
 import { useAuthStore } from "../stores/auth-store";
 import { useUserStore } from "../stores/user-store";
 import { auth } from "../services/auth";
+import { authDebug } from "./auth-debug";
+import { isInLoginGrace } from "./login-grace";
 
 /**
  * True for the duration of a backend revocation call.
@@ -70,6 +72,18 @@ export const handleLogout = async (error?: any) => {
       errorMsg.toLowerCase().includes("identity verification") ||
       errorMsg.toLowerCase().includes("kyc")
     ) {
+      return;
+    }
+
+    // A 401 arriving seconds after a successful login is usually the cookie
+    // store racing the first dashboard request, not a rejected session. Let the
+    // caller retry instead of tearing the just-created session down.
+    if (isInLoginGrace()) {
+      authDebug("logout-suppressed", {
+        reason: "login-grace",
+        url: error?.config?.url,
+        status: error?.response?.status,
+      });
       return;
     }
 

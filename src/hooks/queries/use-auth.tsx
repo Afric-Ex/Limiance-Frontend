@@ -16,6 +16,7 @@ import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { modals } from "@mantine/modals";
 import { errorNotification, successNotification } from "@/src/lib/notification-handler";
 import { useUserStore } from "@/src/stores/user-store";
+import { markLoginGrace } from "@/src/lib/login-grace";
 
 type OtpFormValues = {
   otp: string;
@@ -96,6 +97,10 @@ export const useAuth = () => {
   };
 
   const persistLoginSession = async (payload: any) => {
+    // The first dashboard requests can beat the browser's cookie store. Keep
+    // 401s from tearing the fresh session down for a short window; see
+    // login-grace.ts.
+    markLoginGrace();
     authDebug("persist-session", {
       payload: describeAuthPayload(payload),
       credentialMode: "http-only-cookie",

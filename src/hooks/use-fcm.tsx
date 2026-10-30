@@ -49,10 +49,15 @@ export function useFCM() {
         const fcmMessaging = await messaging();
         if (!fcmMessaging) return;
 
-        // 4. Register the service worker explicitly so Firebase can find it
+        // 4. Register the Firebase service worker explicitly so Firebase can find it.
+        // `updateViaCache: "none"` keeps a stale worker from a previous deploy
+        // alive; an old worker intercepting navigations is a known cause of
+        // login redirect loops that appear in one browser but not another.
         const registration = await navigator.serviceWorker.register(
-          "/firebase-messaging-sw.js"
+          "/firebase-messaging-sw.js",
+          { updateViaCache: "none" }
         );
+        await registration.update().catch(() => undefined);
 
         // 5. Generate the FCM token
         const token = await getToken(fcmMessaging, {

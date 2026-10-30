@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { userService } from "../services/user";
 import { errorMessageHandler } from "../lib/error-handler";
+import { isInLoginGrace } from "../lib/login-grace";
 import { LoginResponse } from "../types/auth";
 
 interface UserState {
@@ -20,6 +21,28 @@ interface UserState {
 }
 
 let fetchUserPromise: Promise<void> | null = null;
+
+/**
+ * A 401 immediately after login is usually the newly-set session cookie not
+ * being attached yet (the cookie store and the first dashboard request race,
+ * which mobile browsers lose more often). Retry once before deciding the
+ * session is really gone. The global interceptor already leaves the session
+ * alone during the login grace window, so this retry is what turns a timing
+ * blip into a normal page load.
+ */
+const loadUserDetails = async () => {
+  try {
+    return await userService.getUser();
+  } catch (error: any) {
+    const status = error?.response?.status;
+    const { justLoggedIn } = useUserStore.getState();
+    if (status === 401 && (justLoggedIn || isInLoginGrace())) {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      return await userService.getUser();
+    }
+    throw error;
+  }
+};
 
 export const useUserStore = create<UserState>()((set) => ({
       user: null,
@@ -42,7 +65,7 @@ export const useUserStore = create<UserState>()((set) => ({
         fetchUserPromise = (async () => {
           set({ loading: true, error: null });
           try {
-            const userDetails = await userService.getUser();
+            const userDetails = await loadUserDetails();
             const data = userDetails?.data;
             if (data && typeof data === "object" && !Array.isArray(data)) {
               set((state) => ({
