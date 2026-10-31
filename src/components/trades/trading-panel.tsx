@@ -51,12 +51,15 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const { refreshBalances } = usePortfolioWs({});
 
   // Open Orders
+  // Fetched on mount/pair change and refreshed AFTER an order is placed or
+  // cancelled (see invalidations below). Do not poll on a timer: this panel is
+  // mounted twice (desktop + mobile), so a 5s interval turned into a constant
+  // stream of `GET trading/order_history?status=OPEN` requests.
   const { data: openOrders, isLoading: openOrdersLoading } = useQuery({
     queryKey: tradingKeys.openOrders(hideOtherPairs ? selectedPair : undefined),
     queryFn: () => tradingService.fetchOpenOrders({ pair: hideOtherPairs ? selectedPair : undefined }),
     select: (res: unknown) => readList<Record<string, any>>(res),
     retry: false,
-    refetchInterval: 5000,
   });
 
   // Order History: unified endpoint returns all markets or just this market based on the filter.
