@@ -227,8 +227,9 @@ export const tradingService = {
   },
 
   marginPositions: async () => {
-    const response = await api.get("trading/margin/positions");
-    return response.data;
+    // Disabled: the backend does not serve this endpoint yet, so polling it only
+    // produced failing requests. Callers get an empty list until it exists.
+    return { data: [] as any[] };
   },
 
   setMarginLeverage: async (max_leverage: number) => {
@@ -431,11 +432,12 @@ export const tradingService = {
 
   // ─── Orders & History ────────────────────────────────────────────────────
   fetchOpenOrders: async (params?: { pair?: string; market_type?: TradingMarket }) => {
-    const response = await api.get("trading/orders", { 
-      params: { 
-        status: "open",
-        market_type: params?.market_type || "spot"
-      } 
+    const response = await api.get("trading/order_history", {
+      params: {
+        status: "OPEN",
+        market_type: params?.market_type || "spot",
+        ...(params?.pair ? { pair: params.pair } : {}),
+      },
     });
     if (!params?.pair || !Array.isArray(response.data?.data)) return response.data;
     return { ...response.data, data: filterOrdersByPair(response.data.data, params.pair) };
