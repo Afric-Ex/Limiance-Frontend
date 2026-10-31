@@ -54,7 +54,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   // Fetched on mount/pair change and refreshed AFTER an order is placed or
   // cancelled (see invalidations below). Do not poll on a timer: this panel is
   // mounted twice (desktop + mobile), so a 5s interval turned into a constant
-  // stream of `GET trading/order_history?status=OPEN` requests.
+  // stream of `GET trading/order_history?status=open` requests.
   const { data: openOrders, isLoading: openOrdersLoading } = useQuery({
     queryKey: tradingKeys.openOrders(hideOtherPairs ? selectedPair : undefined),
     queryFn: () => tradingService.fetchOpenOrders({ pair: hideOtherPairs ? selectedPair : undefined }),
