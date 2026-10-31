@@ -434,7 +434,7 @@ export const tradingService = {
   fetchOpenOrders: async (params?: { pair?: string; market_type?: TradingMarket }) => {
     const response = await api.get("trading/order_history", {
       params: {
-        status: "OPEN",
+        status: "open",
         market_type: params?.market_type || "spot",
         ...(params?.pair ? { pair: params.pair } : {}),
       },
