@@ -293,7 +293,7 @@ export function OrderBookTabs({
     shownDir === "up" ? "text-success-6" : shownDir === "down" ? "text-error-1" : "text-white";
   const sideNote =
     lastTradedPrice !== null && quote && USD_PEGGED.has(String(quote).toUpperCase())
-      ? `â‰ˆ${formatPrice(lastTradedPrice)} USD`
+      ? `≈${formatPrice(lastTradedPrice)} USD`
       : spread === null
         ? "Last Price"
         : `Spread ${formatPrice(spread)}`;

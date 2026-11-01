@@ -626,13 +626,31 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
   };
 
   const getOrderPair = (order: any) =>
-    order?.pair || (order?.base && order?.quote ? `${order.base}/${order.quote}` : order?.symbol || "—");
+    order?.pair ||
+    (order?.base && order?.quote ? `${order.base}/${order.quote}` : order?.symbol || "—");
+
+  const getOrderType = (order: any) =>
+    String(order?.type ?? order?.orderType ?? order?.order_type ?? "").toLowerCase();
+
+  const getOrderPrice = (order: any) =>
+    order?.price ?? order?.orderPrice ?? order?.order_price ?? order?.avgPrice ?? order?.fillPrice;
+
+  const getOrderQuantity = (order: any) => {
+    const direct = order?.quantity ?? order?.amount ?? order?.size ?? order?.origQty;
+    if (direct !== undefined && direct !== null && direct !== "") return direct;
+    const executed = Number(order?.cumExecQty);
+    const leaves = Number(order?.leavesQty);
+    return Number.isFinite(executed) && Number.isFinite(leaves) ? executed + leaves : undefined;
+  };
+
+  const getFilledQuantity = (order: any) =>
+    order?.filledQuantity ?? order?.filled ?? order?.cumExecQty ?? order?.executedQty ?? 0;
 
   const getOrderTotal = (order: any) => {
     const total = Number(order?.total);
     if (Number.isFinite(total) && total >= 0) return total;
-    const price = Number(order?.price);
-    const qty = Number(order?.quantity ?? order?.amount);
+    const price = Number(getOrderPrice(order));
+    const qty = Number(getOrderQuantity(order));
     return Number.isFinite(price) && Number.isFinite(qty) ? price * qty : null;
   };
 
@@ -643,7 +661,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
     if (!orders) return [];
     if (orderType === "limit_market") {
       return orders.filter((o: any) => {
-        const type = String(o.type || "").toLowerCase();
+        const type = getOrderType(o);
         return type === "limit" || type === "market" || type.includes("limit") || type.includes("market");
       });
     }
@@ -651,7 +669,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
       return orders.filter((o: any) => o.takeProfit || o.stopLoss || o.tp_trigger_price || o.sl_trigger_price);
     }
     if (orderType === "oco") {
-      return orders.filter((o: any) => o.orderType === "oco" || o.type === "oco");
+      return orders.filter((o: any) => getOrderType(o) === "oco");
     }
     return orders;
   }, [orders, orderType]);
@@ -677,13 +695,13 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm text-white">{getOrderPair(order)}</span>
                 <span className={clsx("text-xs font-bold uppercase", isBuySide(order.side) ? "text-success-5" : "text-error-1")}>{order.side}</span>
-                <span className="text-[10px] text-white/40 capitalize bg-white/[0.06] px-1.5 py-0.5 rounded">{order.type}</span>
+                <span className="text-[10px] text-white/40 capitalize bg-white/[0.06] px-1.5 py-0.5 rounded">{getOrderType(order)}</span>
               </div>
               <button onClick={() => onCancel(order.id)} disabled={cancelling} className="text-xs font-semibold text-white/40 active:text-primary transition-colors">Cancel</button>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-              <MobileRow label="Price" value={formatOrderNumber(order.price)} />
-              <MobileRow label="Amount" value={`${formatOrderNumber(order.filledQuantity ?? 0)} / ${formatOrderNumber(order.quantity ?? order.amount)}`} />
+              <MobileRow label="Price" value={formatOrderNumber(getOrderPrice(order))} />
+              <MobileRow label="Amount" value={`${formatOrderNumber(getFilledQuantity(order))} / ${formatOrderNumber(getOrderQuantity(order))}`} />
               <MobileRow label="Total" value={getOrderTotal(order)?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"} />
               <MobileRow label="Time" value={formatOrderDate(order.createdAt)} />
               {(order.takeProfit || order.stopLoss) && (
@@ -722,15 +740,15 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
             <tr key={order.id ?? idx} className="border-b border-white/[0.02] hover:bg-white/[0.02]">
               <td className="px-3 py-2.5 text-white/70">Spot</td>
               <td className="px-3 py-2.5 font-semibold text-white/90">{getOrderPair(order)}</td>
-              <td className="px-3 py-2.5 text-white/70 capitalize">{order.type || "—"}</td>
+              <td className="px-3 py-2.5 text-white/70 capitalize">{getOrderType(order) || "—"}</td>
               <td className="px-3 py-2.5">
                 <span className={clsx("font-bold", isBuySide(order.side) ? "text-success-5" : "text-error-1")}>
                   {String(order.side || "").toUpperCase()}
                 </span>
               </td>
-              <td className="px-3 py-2.5 text-white/90 font-mono">{formatOrderNumber(order.price)}</td>
+              <td className="px-3 py-2.5 text-white/90 font-mono">{formatOrderNumber(getOrderPrice(order))}</td>
               <td className="px-3 py-2.5 text-white/90 font-mono">
-                {formatOrderNumber(order.filledQuantity ?? order.filled ?? 0)} / {formatOrderNumber(order.quantity ?? order.amount)}
+                {formatOrderNumber(getFilledQuantity(order))} / {formatOrderNumber(getOrderQuantity(order))}
               </td>
               <td className="px-3 py-2.5 text-white/90 font-mono">
                 {getOrderTotal(order)?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}
