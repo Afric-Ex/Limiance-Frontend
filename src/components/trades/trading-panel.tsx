@@ -133,6 +133,17 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
     onError: (e) => errorMessageHandler(e),
   });
 
+  const { mutate: cancelAllOrders, isPending: cancelAllPending } = useMutation({
+    mutationFn: () => tradingService.cancelAllSpotOrders(hideOtherPairs ? selectedPair : undefined),
+    onSuccess: () => {
+      successNotification("All open orders cancelled");
+      queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
+      queryClient.invalidateQueries({ queryKey: [ORDER_HISTORY_QUERY_KEY] });
+      refreshBalances();
+    },
+    onError: (e) => errorMessageHandler(e),
+  });
+
   // Position actions (futures). Margin positions have no close endpoint yet.
   const [closingPositionIds, setClosingPositionIds] = useState<Set<string>>(new Set());
   const { mutate: closePosition } = useMutation({
@@ -350,7 +361,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
             <SubTab active={activeOrderTypeTab === "trailing_stop"} onClick={() => setActiveOrderTypeTab("trailing_stop")} disabled>
               Trailing Stop
             </SubTab>
-            <SubTab active={activeOrderTypeTab === "oco"} onClick={() => setActiveOrderTypeTab("oco")} disabled={market !== "margin"}>
+            <SubTab active={activeOrderTypeTab === "oco"} onClick={() => setActiveOrderTypeTab("oco")}>
               OCO
             </SubTab>
             <SubTab active={activeOrderTypeTab === "mmr_close"} onClick={() => setActiveOrderTypeTab("mmr_close")} disabled>
@@ -427,9 +438,21 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
             </select>
           )}
 
+          {activeMainTab === "open_orders" && openOrderCount > 0 && (
+            <button
+              type="button"
+              onClick={() => cancelAllOrders()}
+              disabled={cancelAllPending}
+              className="ml-auto flex items-center gap-1.5 rounded border border-error-1/40 bg-error-1/10 px-2.5 py-1 text-xs font-semibold text-error-1 transition-colors hover:bg-error-1/20 disabled:opacity-50"
+            >
+              {cancelAllPending && <Loader size={11} color="red" />}
+              Cancel All
+            </button>
+          )}
+
           <Popover width={200} position="bottom-end">
             <PopoverTarget>
-              <button className={clsx("text-white/40 hover:text-white", activeMainTab !== "order_history" && "ml-auto")}>
+              <button className={clsx("text-white/40 hover:text-white", activeMainTab !== "order_history" && openOrderCount === 0 && "ml-auto")}>
                 <MdMoreVert size={18} />
               </button>
             </PopoverTarget>
@@ -540,7 +563,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
         {activeMainTab === "assets" && <AssetsTable assets={portfolioResponse} mobile={mobile} />}
         {activeMainTab === "borrowings" && <BorrowingsTable borrowings={borrowings} loading={borrowingsLoading} mobile={mobile} />}
         {activeMainTab === "tools" && <ToolsPanel />}
-        {activeMainTab === "pnl" && <PnLPanel />}
+        {activeMainTab === "pnl" && <PnLPanel selectedPair={hideOtherPairs ? selectedPair : undefined} />}
       </div>
     </div>
   );
@@ -1046,14 +1069,71 @@ function ToolsPanel() {
   );
 }
 
-function PnLPanel() {
+function PnLPanel({ selectedPair }: { selectedPair?: string }) {
+  const { data: pnlData = [], isLoading } = useQuery({
+    queryKey: tradingKeys.spotPnlHistory(selectedPair),
+    queryFn: () => tradingService.spotPnlHistory({ symbol: selectedPair }),
+    select: (res: any) => {
+      const rows = res?.data ?? res ?? [];
+      return Array.isArray(rows) ? rows : [];
+    },
+    retry: false,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader size="sm" color="yellow" />
+      </div>
+    );
+  }
+
+  if (!pnlData.length) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-3">
+        <MdInfo size={32} className="text-white/20" />
+        <p className="text-xs text-white/40">No Spot PnL records</p>
+        <p className="text-xs text-white/30 max-w-md text-center">
+          Realized profit and loss will be displayed here as your spot orders are executed.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-12 gap-3">
-      <MdInfo size={32} className="text-white/20" />
-      <p className="text-xs text-white/40">Profit & Loss tracking</p>
-      <p className="text-xs text-white/30 max-w-md text-center">
-        Your realized and unrealized P&L will be calculated and displayed here based on your trading activity.
-      </p>
+    <div className="overflow-x-auto">
+      <table className="w-full text-left text-xs">
+        <thead className="border-b border-white/[0.06] bg-white/[0.02]">
+          <tr>
+            <TableHeader>Date</TableHeader>
+            <TableHeader>Pair</TableHeader>
+            <TableHeader>Side</TableHeader>
+            <TableHeader align="right">Price</TableHeader>
+            <TableHeader align="right">Quantity</TableHeader>
+            <TableHeader align="right">Realized PnL</TableHeader>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-white/[0.04]">
+          {pnlData.map((row: any, i: number) => {
+            const pnl = Number(row.pnl ?? row.realizedPnl ?? row.profit ?? 0);
+            const isProfit = pnl >= 0;
+            return (
+              <tr key={row.id ?? i} className="hover:bg-white/[0.02]">
+                <td className="px-3 py-2 text-white/50">{row.time || row.createdAt || "—"}</td>
+                <td className="px-3 py-2 text-white font-medium">{row.pair || row.symbol}</td>
+                <td className={clsx("px-3 py-2 font-bold", String(row.side).toUpperCase() === "BUY" ? "text-buy" : "text-sell")}>
+                  {String(row.side).toUpperCase()}
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-white/90">{row.price}</td>
+                <td className="px-3 py-2 text-right font-mono text-white/90">{row.quantity || row.amount}</td>
+                <td className={clsx("px-3 py-2 text-right font-mono font-bold", isProfit ? "text-buy" : "text-sell")}>
+                  {isProfit ? `+${pnl}` : pnl}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

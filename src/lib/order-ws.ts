@@ -240,6 +240,8 @@ export function placeSpotOrderWs(input: {
   stopPrice?: number;
   takeProfit?: number;
   stopLoss?: number;
+  postOnly?: boolean;
+  timeInForce?: "GTC" | "IOC" | "FOK" | string;
 }): Promise<any> {
   const quantity = Number(input.quantity);
   const price = Number(input.price);
@@ -259,12 +261,13 @@ export function placeSpotOrderWs(input: {
   if (input.type === "limit") payload.price = price;
   if (input.type === "market" && Number(input.price) > 0) payload.price = Number(input.price);
   if (input.type === "stop") {
-    const trigger = Number(input.stopPrice ?? input.price);
-    payload.price = trigger;
-    payload.stopPrice = trigger;
+    payload.price = price;
+    payload.stopPrice = Number(input.stopPrice ?? price);
   }
   if (Number(input.takeProfit) > 0) payload.takeProfit = Number(input.takeProfit);
   if (Number(input.stopLoss) > 0) payload.stopLoss = Number(input.stopLoss);
+  if (input.postOnly) payload.postOnly = true;
+  if (input.timeInForce) payload.timeInForce = input.timeInForce;
   return sendOrderFrame({ type: "place_spot_order", data: payload });
 }
 

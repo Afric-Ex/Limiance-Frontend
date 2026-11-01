@@ -32,6 +32,8 @@ export const tradingKeys = {
   klineData: (symbol: string, interval: string, market?: string) => ["kline", symbol, interval, market],
   gainersLosers: ["gainers-losers"],
   spotPrice: (symbol: string) => ["spot-price", symbol],
+  spotOcos: (status?: string) => ["spot-ocos", status],
+  spotPnlHistory: (symbol?: string) => ["spot-pnl-history", symbol],
   marginOrderHistory: ["margin-order-history"],
   marginOpenOrders: ["margin-open-orders"],
   marginBorrowHistory: ["margin-borrow-history"],
@@ -257,15 +259,6 @@ export const tradingService = {
     page?: number;
     limit?: number;
   }) => {
-    // Primary: one-shot WebSocket query (§4.10–4.11); REST is the fallback.
-    if (typeof window !== "undefined") {
-      try {
-        const { getMarginOrderHistoryWs } = await import("../lib/order-ws");
-        return await getMarginOrderHistoryWs(params);
-      } catch {
-        // Fall through to the REST endpoint below.
-      }
-    }
     const response = await api.get("trading/order_history", { 
       params: { 
         ...params,
@@ -370,17 +363,6 @@ export const tradingService = {
   },
 
   futuresOrderHistory: async (params?: { pair?: string; page?: number; limit?: number; status?: OrderHistoryStatus }) => {
-    // Primary: one-shot WebSocket query (§5.10); REST is the fallback.
-    if (typeof window !== "undefined") {
-      try {
-        const { getFuturesOrderHistoryWs } = await import("../lib/order-ws");
-        const result = await getFuturesOrderHistoryWs(params);
-        if (!params?.pair || !Array.isArray(result?.data)) return result;
-        return { ...result, data: filterOrdersByPair(result.data, params.pair) };
-      } catch {
-        // Fall through to the REST endpoint below.
-      }
-    }
     const response = await api.get("trading/order_history", { 
       params: { 
         ...params,
@@ -444,7 +426,39 @@ export const tradingService = {
   },
 
   cancelSpotOrder: async (orderId: string) => {
-    const response = await api.delete(`trading/spot/order/${orderId}`);
+    const response = await api.delete(`trading/spot/orders/${orderId}`);
+    return response.data;
+  },
+
+  cancelAllSpotOrders: async (symbol?: string) => {
+    const response = await api.post("trading/spot/cancel_all", null, {
+      params: symbol ? { symbol } : {},
+    });
+    return response.data;
+  },
+
+  placeSpotOCOOrder: async (data: {
+    pair: string;
+    quantity: string;
+    takeProfit?: string;
+    stopLoss?: string;
+  }) => {
+    const response = await api.post("trading/spot/ocos", data);
+    return response.data;
+  },
+
+  fetchSpotOCOs: async (params?: { page?: number; limit?: number; status?: string }) => {
+    const response = await api.get("trading/spot/ocos", { params });
+    return response.data;
+  },
+
+  cancelSpotOCO: async (ocoId: string) => {
+    const response = await api.delete(`trading/spot/ocos/${ocoId}`);
+    return response.data;
+  },
+
+  spotPnlHistory: async (params?: { symbol?: string; page?: number; limit?: number }) => {
+    const response = await api.get("trading/spot/pnl_history", { params });
     return response.data;
   },
 
@@ -453,17 +467,6 @@ export const tradingService = {
     page?: number;
     limit?: number;
   }) => {
-    // Primary: one-shot query over the trading WebSocket (WEBSOCKET_MESSAGES.md
-    // §3.13–3.15). Fall back to REST only when the socket is unavailable, the
-    // request times out, or the server replies with an error.
-    if (typeof window !== "undefined") {
-      try {
-        const { getSpotOrderHistoryWs } = await import("../lib/order-ws");
-        return await getSpotOrderHistoryWs(params);
-      } catch {
-        // Fall through to the REST endpoint below.
-      }
-    }
     const response = await api.get("trading/order_history", { 
       params: { 
         ...params,

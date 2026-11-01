@@ -8,12 +8,33 @@ import clsx from "clsx";
 import { MdSwapVert } from "react-icons/md";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
-export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: () => void }) => {
+export type WalletType = "funding" | "spot" | "margin" | "futures";
+
+const WALLET_OPTIONS: { value: WalletType; label: string }[] = [
+  { value: "funding", label: "Funding Wallet" },
+  { value: "spot", label: "Spot Wallet" },
+  { value: "margin", label: "Margin Wallet" },
+  { value: "futures", label: "Futures Wallet" },
+];
+
+export const MarginTransferModal = ({
+  pair,
+  initialMode = "spot",
+  onClose,
+}: {
+  pair: string;
+  initialMode?: "spot" | "cross" | "isolated";
+  onClose: () => void;
+}) => {
   const delimiter = pair.includes("/") ? "/" : "_";
   const [pairBase, pairQuote] = pair.split(delimiter);
 
-  // Directions: true = Spot -> Margin, false = Margin -> Spot
-  const [isSpotToMargin, setIsSpotToMargin] = useState(true);
+  const [fromWallet, setFromWallet] = useState<WalletType>(
+    initialMode === "spot" ? "funding" : "spot"
+  );
+  const [toWallet, setToWallet] = useState<WalletType>(
+    initialMode === "spot" ? "spot" : "margin"
+  );
   const [amount, setAmount] = useState<number | string>("");
 
   useQueryClient();
@@ -22,21 +43,28 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
 
   const parseNum = (val: any) => {
     if (!val) return 0;
-    const num = parseFloat(String(val).replace(/,/g, ''));
+    const num = parseFloat(String(val).replace(/,/g, ""));
     return isNaN(num) ? 0 : num;
   };
 
-  // Dynamic asset list — only tokens the user actually holds (spot or margin balance > 0)
+  const getWalletBalance = (coin: any, wallet: WalletType) => {
+    if (!coin) return 0;
+    if (wallet === "spot") return parseNum(coin.spotBalance);
+    if (wallet === "margin") return parseNum(coin.marginBalance);
+    if (wallet === "futures") return parseNum(coin.futuresBalance);
+    return parseNum(coin.fundingBalance ?? coin.funding_balance ?? coin.mainBalance ?? 0);
+  };
+
+  // Dynamic asset list — tokens the user holds in source or destination wallet, plus current pair currencies
   const availableAssets = (portfolioResponse ?? [])
     .map((c: any) => ({
       symbol: c.symbol,
-      spot: parseNum(c.spotBalance),
-      margin: parseNum(c.marginBalance),
+      fromBal: getWalletBalance(c, fromWallet),
+      toBal: getWalletBalance(c, toWallet),
     }))
-    .filter((a: any) => a.spot > 0 || a.margin > 0)
-    .sort((x: any, y: any) => y.spot + y.margin - (x.spot + x.margin));
+    .filter((a: any) => a.fromBal > 0 || a.toBal > 0 || a.symbol === pairQuote || a.symbol === pairBase)
+    .sort((x: any, y: any) => y.fromBal - x.fromBal);
 
-  // Keep the previously-defaulted token if the user still holds it, otherwise pick the largest balance
   const defaultAsset =
     availableAssets.find((a: any) => a.symbol === pairQuote)?.symbol ||
     availableAssets.find((a: any) => a.symbol === pairBase)?.symbol ||
@@ -47,32 +75,36 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
 
   const [selectedAsset, setSelectedAsset] = useState<string>(defaultAsset);
 
-  // Once balances load, steer the selection to an asset the user actually holds
   useEffect(() => {
     if (availableAssets.length === 0) return;
     setSelectedAsset((current) => {
       if (current && availableAssets.some((a: any) => a.symbol === current)) return current;
-      return availableAssets[0].symbol;
+      return availableAssets[0]?.symbol || defaultAsset;
     });
   }, [availableAssets]);
 
   const selectedAssetData = portfolioResponse?.find((a: any) => a.symbol === selectedAsset);
-
-  const spotBalance = selectedAssetData ? parseNum(selectedAssetData.spotBalance) : 0;
-  const marginBalance = selectedAssetData ? parseNum(selectedAssetData.marginBalance) : 0;
-
-  const availableBalance = isSpotToMargin ? spotBalance : marginBalance;
+  const availableBalance = getWalletBalance(selectedAssetData, fromWallet);
 
   const fmtBalance = (v: number) =>
     v === 0 ? "0" : v.toLocaleString("en-US", { maximumFractionDigits: 6 });
 
+  const handleSwapWallets = () => {
+    const prevFrom = fromWallet;
+    const prevTo = toWallet;
+    setFromWallet(prevTo);
+    setToWallet(prevFrom);
+    setAmount("");
+  };
+
   const { mutate: handleTransfer, isPending: transferLoading } = useMutation({
-    mutationFn: () => asset.internalTransfer({
-      symbol: selectedAsset,
-      fromBalance: isSpotToMargin ? "spot" : "margin",
-      toBalance: isSpotToMargin ? "margin" : "spot",
-      amount: String(amount),
-    }),
+    mutationFn: () =>
+      asset.internalTransfer({
+        symbol: selectedAsset,
+        fromBalance: fromWallet,
+        toBalance: toWallet,
+        amount: String(amount),
+      }),
     onSuccess: () => {
       successNotification(`Successfully transferred ${amount} ${selectedAsset}`);
       refreshBalances();
@@ -83,28 +115,54 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
 
   return (
     <div className="flex flex-col gap-4">
-
-      {/* Direction Toggle */}
+      {/* Direction Selectors with Swap Button */}
       <div className="flex flex-col items-center gap-2 relative">
         <div className="w-full flex items-center justify-between bg-white/[0.03] border border-white/[0.06] rounded-lg p-3">
-          <span className="text-xs text-white/50">From</span>
-          <span className="text-sm font-semibold text-white">
-            {isSpotToMargin ? "Spot Wallet" : "Margin Wallet"}
-          </span>
+          <span className="text-xs text-white/50 w-12 shrink-0">From</span>
+          <select
+            value={fromWallet}
+            onChange={(e) => {
+              const val = e.target.value as WalletType;
+              if (val === toWallet) setToWallet(fromWallet);
+              setFromWallet(val);
+              setAmount("");
+            }}
+            className="bg-transparent text-sm font-semibold text-white outline-none cursor-pointer border-none text-right"
+          >
+            {WALLET_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value} className="bg-[#181a20] text-white">
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <button
-          onClick={() => setIsSpotToMargin(!isSpotToMargin)}
+          type="button"
+          onClick={handleSwapWallets}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#181a20] border border-white/[0.08] flex items-center justify-center hover:bg-white/5 transition-colors z-10 text-primary"
         >
           <MdSwapVert size={18} />
         </button>
 
         <div className="w-full flex items-center justify-between bg-white/[0.03] border border-white/[0.06] rounded-lg p-3">
-          <span className="text-xs text-white/50">To</span>
-          <span className="text-sm font-semibold text-white">
-            {!isSpotToMargin ? "Spot Wallet" : "Margin Wallet"}
-          </span>
+          <span className="text-xs text-white/50 w-12 shrink-0">To</span>
+          <select
+            value={toWallet}
+            onChange={(e) => {
+              const val = e.target.value as WalletType;
+              if (val === fromWallet) setFromWallet(toWallet);
+              setToWallet(val);
+              setAmount("");
+            }}
+            className="bg-transparent text-sm font-semibold text-white outline-none cursor-pointer border-none text-right"
+          >
+            {WALLET_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value} className="bg-[#181a20] text-white">
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -122,7 +180,10 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
               return (
                 <button
                   key={a.symbol}
-                  onClick={() => { setSelectedAsset(a.symbol); setAmount(""); }}
+                  onClick={() => {
+                    setSelectedAsset(a.symbol);
+                    setAmount("");
+                  }}
                   className={clsx(
                     "px-3 py-2 rounded-lg text-sm font-semibold transition-all border flex flex-col items-start leading-tight",
                     active
@@ -132,7 +193,7 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
                 >
                   {a.symbol}
                   <span className={clsx("text-[10px] font-medium", active ? "text-primary/80" : "text-white/30")}>
-                    {fmtBalance(isSpotToMargin ? a.spot : a.margin)}
+                    {fmtBalance(a.fromBal)}
                   </span>
                 </button>
               );
@@ -157,7 +218,8 @@ export const MarginTransferModal = ({ pair, onClose }: { pair: string; onClose: 
             hideControls
             min={0}
             classNames={{
-              input: "!bg-white/[0.03] !border-white/[0.06] !text-white !font-mono !text-sm !h-12 !pr-16 focus:!border-primary/50",
+              input:
+                "!bg-white/[0.03] !border-white/[0.06] !text-white !font-mono !text-sm !h-12 !pr-16 focus:!border-primary/50",
             }}
           />
           <button
