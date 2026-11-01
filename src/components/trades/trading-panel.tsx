@@ -629,8 +629,28 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
     order?.pair ||
     (order?.base && order?.quote ? `${order.base}/${order.quote}` : order?.symbol || "—");
 
-  const getOrderType = (order: any) =>
-    String(order?.type ?? order?.orderType ?? order?.order_type ?? "").toLowerCase();
+  // The API overloads `type` with the market ("spot"/"futures"), not the order
+  // type, so ignore those values and keep only a real order type when present.
+  const MARKET_TYPES = new Set(["spot", "futures", "margin", "cross", "isolated"]);
+  const getOrderType = (order: any) => {
+    const raw = String(order?.orderType ?? order?.order_type ?? order?.type ?? "").toLowerCase();
+    return MARKET_TYPES.has(raw) ? "" : raw;
+  };
+  const hasConditional = (order: any) =>
+    Number(order?.takeProfit) > 0 ||
+    Number(order?.stopLoss) > 0 ||
+    Number(order?.tp_trigger_price) > 0 ||
+    Number(order?.sl_trigger_price) > 0;
+  const getOrderTypeLabel = (order: any) => {
+    const type = getOrderType(order);
+    if (type) return type;
+    if (hasConditional(order)) return "TP/SL";
+    return Number(order?.price) > 0 ? "Limit" : "Market";
+  };
+  const getOrderMarket = (order: any) => {
+    const market = String(order?.type ?? order?.marketType ?? order?.market_type ?? "").toLowerCase();
+    return MARKET_TYPES.has(market) ? market : "spot";
+  };
 
   const getOrderPrice = (order: any) =>
     order?.price ?? order?.orderPrice ?? order?.order_price ?? order?.avgPrice ?? order?.fillPrice;
@@ -654,7 +674,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
     return Number.isFinite(price) && Number.isFinite(qty) ? price * qty : null;
   };
 
-  const isBuySide = (side: unknown) => String(side ?? "").toUpperCase() === "BUY";
+  const isBuySide = (side: unknown) => ["BUY", "LONG"].includes(String(side ?? "").toUpperCase());
 
   // Filter by order type tab
   const filteredOrders = useMemo(() => {
@@ -662,11 +682,13 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
     if (orderType === "limit_market") {
       return orders.filter((o: any) => {
         const type = getOrderType(o);
-        return type === "limit" || type === "market" || type.includes("limit") || type.includes("market");
+        // Unknown order type (the API doesn't send one) is a plain order, not
+        // something to hide; only drop orders known to be conditional.
+        return !type || type.includes("limit") || type.includes("market");
       });
     }
     if (orderType === "tpsl") {
-      return orders.filter((o: any) => o.takeProfit || o.stopLoss || o.tp_trigger_price || o.sl_trigger_price);
+      return orders.filter((o: any) => hasConditional(o));
     }
     if (orderType === "oco") {
       return orders.filter((o: any) => getOrderType(o) === "oco");
@@ -695,7 +717,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm text-white">{getOrderPair(order)}</span>
                 <span className={clsx("text-xs font-bold uppercase", isBuySide(order.side) ? "text-success-5" : "text-error-1")}>{order.side}</span>
-                <span className="text-[10px] text-white/40 capitalize bg-white/[0.06] px-1.5 py-0.5 rounded">{getOrderType(order)}</span>
+                <span className="text-[10px] text-white/40 capitalize bg-white/[0.06] px-1.5 py-0.5 rounded">{getOrderTypeLabel(order)}</span>
               </div>
               <button onClick={() => onCancel(order.id)} disabled={cancelling} className="text-xs font-semibold text-white/40 active:text-primary transition-colors">Cancel</button>
             </div>
@@ -738,9 +760,9 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
         <tbody>
           {filteredOrders.map((order: any, idx: number) => (
             <tr key={order.id ?? idx} className="border-b border-white/[0.02] hover:bg-white/[0.02]">
-              <td className="px-3 py-2.5 text-white/70">Spot</td>
+              <td className="px-3 py-2.5 text-white/70 capitalize">{getOrderMarket(order)}</td>
               <td className="px-3 py-2.5 font-semibold text-white/90">{getOrderPair(order)}</td>
-              <td className="px-3 py-2.5 text-white/70 capitalize">{getOrderType(order) || "—"}</td>
+              <td className="px-3 py-2.5 text-white/70 capitalize">{getOrderTypeLabel(order)}</td>
               <td className="px-3 py-2.5">
                 <span className={clsx("font-bold", isBuySide(order.side) ? "text-success-5" : "text-error-1")}>
                   {String(order.side || "").toUpperCase()}
