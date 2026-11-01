@@ -13,6 +13,19 @@ const apiOrigin = originOf(process.env.NEXT_PUBLIC_API_URL);
 const wsOrigin = originOf(process.env.NEXT_PUBLIC_WS_URL);
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    const backendUrl =
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      "https://kpalimiance.duckdns.org";
+    const origin = backendUrl.replace(/\/api\/v1\/?$/, "").replace(/\/+$/, "");
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${origin}/api/:path*`,
+      },
+    ];
+  },
   async headers() {
     const csp = [
       "default-src 'self'",

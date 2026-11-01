@@ -53,7 +53,20 @@ const isSafeOrigin = (value: string): boolean => {
  */
 export const resolveBackendUrls = (raw: string | undefined): BackendUrls | null => {
   if (!raw) return null;
-  const base = stripTrailingSlash(raw.trim());
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // Relative path (e.g., "/api/v1" or "/api") for same-origin proxy
+  if (trimmed.startsWith("/")) {
+    const withoutSlash = stripTrailingSlash(trimmed);
+    const hasApiV1 = /\/api\/v1$/.test(withoutSlash);
+    return {
+      apiBaseUrl: hasApiV1 ? withoutSlash : `${withoutSlash}/api/v1`,
+      rootBaseUrl: hasApiV1 ? withoutSlash.replace(/\/api\/v1$/, "") : withoutSlash,
+    };
+  }
+
+  const base = stripTrailingSlash(trimmed);
   if (!base || !isSafeOrigin(base)) return null;
 
   const parsed = new URL(base);
