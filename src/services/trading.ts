@@ -5,6 +5,7 @@ import { OrderBooksResponse } from "../types/trading";
 
 export type OrderSide = "buy" | "sell";
 export type TradingMarket = "spot" | "margin" | "futures";
+export type TradingMarketFilter = TradingMarket | "all";
 export type SpotOrderType = "buy_limit" | "sell_limit" | "buy_stop" | "sell_stop" | "market";
 
 const compactSymbol = (base: string, quote: string) => `${base}${quote}`.toUpperCase();
@@ -23,7 +24,8 @@ const filterOrdersByPair = (orders: any[], pair?: string) => {
 
 export const tradingKeys = {
   orderBooks: ["order-books"],
-  openOrders: (pair?: string) => ["open-orders", pair],
+  openOrders: (pair?: string, market?: TradingMarketFilter) =>
+    market ? ["open-orders", pair, market] : ["open-orders", pair],
   orderHistory: (market?: TradingMarket, pair?: string) => ["order-history", market, pair],
   // In tradingKeys:
   unifiedOrderHistory: (marketType?: string, page?: number) => ["unified-order-history", marketType, page],
@@ -423,7 +425,7 @@ export const tradingService = {
 
 
   // ─── Orders & History ────────────────────────────────────────────────────
-  fetchOpenOrders: async (params?: { pair?: string; market_type?: TradingMarket }) => {
+  fetchOpenOrders: async (params?: { pair?: string; market_type?: TradingMarketFilter }) => {
     const response = await api.get("trading/order_history", {
       params: {
         status: "open",
