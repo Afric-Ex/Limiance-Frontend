@@ -452,6 +452,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
               className="ml-auto h-6 rounded border border-white/10 bg-white/[0.05] px-2 text-xs font-semibold text-primary outline-none"
             >
               <option value="all">All Orders</option>
+              <option value="closed">Closed (All)</option>
               <option value="FILLED">Filled</option>
               <option value="CANCELLED">Cancelled</option>
               <option value="REJECTED">Rejected</option>

@@ -16,7 +16,7 @@ import type { HistoryMarket, MarketHistoryPage } from "@/src/hooks/use-order-his
  * show "—" — never an invented figure.
  * ──────────────────────────────────────────────────────────────────────────── */
 
-export type StatusFilter = "all" | "FILLED" | "CANCELLED" | "REJECTED";
+export type StatusFilter = "all" | "closed" | "FILLED" | "CANCELLED" | "REJECTED";
 export const DATE_RANGES = [
   { days: 7, label: "Last 7D" },
   { days: 30, label: "Last 30D" },
@@ -143,7 +143,13 @@ export function filterOrderHistoryRows(rows: readonly OrderHistoryRow[], f: Orde
     if (f.orderType === "limit_market" && !(row.type.includes("limit") || row.type.includes("market"))) return false;
     if (f.orderType === "tpsl" && !row.hasTpsl) return false;
     if (f.orderType === "oco" && !row.type.includes("oco")) return false;
-    if (f.status !== "all" && row.status !== f.status) return false;
+    if (f.status !== "all") {
+      if (f.status === "closed") {
+        if (!["FILLED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED", "CLOSED"].includes(row.status)) return false;
+      } else if (row.status !== f.status) {
+        return false;
+      }
+    }
     if (row.timeMs !== null && row.timeMs < cutoff) return false;
     if (f.instrument !== "all" && !row.pair.includes(f.instrument)) return false;
     if (f.hideOtherPairs && current && normalizePair(row.pair) !== current) return false;

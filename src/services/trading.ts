@@ -601,7 +601,7 @@ export const tradingService = {
     market_type?: "spot" | "margin" | "futures" | "all";
     page?: number;
     limit?: number;
-    status?: OrderHistoryStatus;
+    status?: OrderHistoryStatus | string;
     order_type?: string;
     side?: string;
     pair?: string;
@@ -610,9 +610,10 @@ export const tradingService = {
   }) => {
     const response = await api.get("trading/order_history", { params: {
       market_type: params?.market_type ?? "all",
+      type: params?.market_type ?? "all",
       page: params?.page ?? 1,
       limit: params?.limit ?? 20,
-      ...(params?.status && { status: params.status }),
+      ...(params?.status && { status: String(params.status).toLowerCase() }),
       ...(params?.order_type && { order_type: params.order_type }),
       ...(params?.side && { side: params.side }),
       ...(params?.pair && { pair: params.pair }),
