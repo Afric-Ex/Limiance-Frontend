@@ -439,10 +439,12 @@ export const tradingService = {
 
   // ─── Orders & History ────────────────────────────────────────────────────
   fetchOpenOrders: async (params?: { pair?: string; market_type?: TradingMarketFilter }) => {
+    const m = params?.market_type || "spot";
     const response = await api.get("trading/order_history", {
       params: {
         status: "open",
-        market_type: params?.market_type || "spot",
+        market_type: m,
+        type: m,
         ...(params?.pair ? { pair: params.pair } : {}),
       },
     });

@@ -79,7 +79,8 @@ export function useOrderHistory({
       // The unified endpoint may return records from multiple markets with market_type on each
       const pagesByMarket = new Map<HistoryMarket, OrderHistoryRawRow[]>();
       (data || []).forEach((row) => {
-        const mkt = (row.market_type || "spot") as HistoryMarket;
+        const rawMkt = (row.market_type || (row as any).marketType || (row as any).market || "").toLowerCase();
+        const mkt = (["spot", "margin", "futures"].includes(rawMkt) ? rawMkt : marketType !== "all" ? marketType : "spot") as HistoryMarket;
         if (!pagesByMarket.has(mkt)) pagesByMarket.set(mkt, []);
         pagesByMarket.get(mkt)!.push(row);
       });

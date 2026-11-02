@@ -150,9 +150,15 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const { mutate: cancelAllOrders, isPending: cancelAllPending } = useMutation({
     mutationFn: () => {
       const sym = hideOtherPairs ? selectedPair : undefined;
-      if (market === "futures") return tradingService.cancelAllFuturesOrders(sym);
-      if (market === "margin") return tradingService.cancelAllMarginOrders(sym);
-      return tradingService.cancelAllSpotOrders(sym);
+      const targetMarket = selectedMarket !== "all" ? selectedMarket : market;
+      if (targetMarket === "futures") return tradingService.cancelAllFuturesOrders(sym);
+      if (targetMarket === "margin") return tradingService.cancelAllMarginOrders(sym);
+      if (targetMarket === "spot") return tradingService.cancelAllSpotOrders(sym);
+      return Promise.allSettled([
+        tradingService.cancelAllSpotOrders(sym),
+        tradingService.cancelAllMarginOrders(sym),
+        tradingService.cancelAllFuturesOrders(sym),
+      ]);
     },
     onSuccess: () => {
       successNotification("All open orders cancelled");
@@ -213,7 +219,14 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const filteredOrders = useMemo(() => {
     if (!openOrders) return [];
     let filtered = [...openOrders];
-    
+
+    if (selectedMarket !== "all") {
+      filtered = filtered.filter((order: any) => {
+        const m = String(order.market_type || order.marketType || order.market || "").toLowerCase();
+        return m === selectedMarket;
+      });
+    }
+
     if (hideOtherPairs && selectedPair) {
       const normalized = selectedPair.replace("/", "").toUpperCase();
       filtered = filtered.filter((order: any) => {
@@ -221,16 +234,16 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
         return orderPair === normalized;
       });
     }
-    
+
     if (selectedInstrument !== "all") {
       filtered = filtered.filter((order: any) => {
         const orderPair = getOrderPair(order);
         return orderPair.includes(selectedInstrument);
       });
     }
-    
+
     return filtered;
-  }, [openOrders, hideOtherPairs, selectedPair, selectedInstrument]);
+  }, [openOrders, selectedMarket, hideOtherPairs, selectedPair, selectedInstrument]);
 
   const openOrderCount = filteredOrders?.length ?? 0;
   const filteredPositions = useMemo(() => {
@@ -653,8 +666,10 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
   // type, so ignore those values and keep only a real order type when present.
   const MARKET_TYPES = new Set(["spot", "futures", "margin", "cross", "isolated"]);
   const getOrderType = (order: any) => {
-    const raw = String(order?.orderType ?? order?.order_type ?? order?.type ?? "").toLowerCase();
-    return MARKET_TYPES.has(raw) ? "" : raw;
+    const raw = String(order?.orderType ?? order?.order_type ?? "").toLowerCase();
+    if (raw && !MARKET_TYPES.has(raw)) return raw;
+    const t = String(order?.type ?? "").toLowerCase();
+    return MARKET_TYPES.has(t) ? "" : t;
   };
   const hasConditional = (order: any) =>
     Number(order?.takeProfit) > 0 ||
@@ -663,25 +678,35 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
     Number(order?.sl_trigger_price) > 0;
   const getOrderTypeLabel = (order: any) => {
     const type = getOrderType(order);
-    if (type) return type;
+    if (type) return type.replace(/^(buy|sell|long|short)_/, "");
     if (hasConditional(order)) return "TP/SL";
     return Number(order?.price) > 0 ? "Limit" : "Market";
   };
   const getOrderMarket = (order: any) => {
-    const market = String(order?.type ?? order?.marketType ?? order?.market_type ?? "").toLowerCase();
+    const market = String(order?.market_type ?? order?.marketType ?? order?.market ?? order?.type ?? "").toLowerCase();
     return MARKET_TYPES.has(market) ? market : "spot";
   };
 
   const getOrderPrice = (order: any) =>
     order?.price ?? order?.orderPrice ?? order?.order_price ?? order?.avgPrice ?? order?.fillPrice;
 
-  const getAvgPrice = (order: any) =>
-    order?.avgPrice ?? order?.avg_price ?? order?.averagePrice ?? order?.fillPrice;
+  const getAvgPrice = (order: any) => {
+    const val = order?.avgPrice ?? order?.avg_price ?? order?.averagePrice ?? order?.fillPrice;
+    if (val === "0" || val === 0 || !val) return null;
+    return val;
+  };
 
-  const getFilledValue = (order: any) =>
-    order?.cumExecValue ?? order?.filledValue ?? order?.executedValue;
+  const getFilledValue = (order: any) => {
+    const val = order?.cumExecValue ?? order?.filledValue ?? order?.executedValue;
+    if (val === "0" || val === 0 || !val) return null;
+    return val;
+  };
 
-  const getFee = (order: any) => order?.cumExecFee ?? order?.fee;
+  const getFee = (order: any) => {
+    const val = order?.cumExecFee ?? order?.fee;
+    if (val === "0" || val === 0 || !val) return null;
+    return val;
+  };
 
   const getOrderStatus = (order: any) => order?.orderStatus ?? order?.status ?? order?.state;
 
