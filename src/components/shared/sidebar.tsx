@@ -74,7 +74,7 @@ const mainNavLinks: NavItem[] = [
   { name: "Futures", link: "/trades/futures", icon: IoFlashOutline, badge: "PRO" },
   { name: "Margin", link: "/trades/margin", icon: RiBarChartFill },
   { name: "P2P Trading", link: "/trades/p2p", icon: RiExchangeFundsLine },
-  { name: "Rewards Hub", link: "/rewards-hub", icon: IoIosGift },
+  { name: "Rewards Hub", link: "/assets/earn", icon: IoIosGift },
   {
     name: "Account",
     routeIdentifier: "account",

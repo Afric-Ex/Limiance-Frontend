@@ -19,13 +19,13 @@ const list = [
     icon: BsArrowRepeat,
     title: "Recurring Buy",
     subtitle: "Set up automated, recurring crypto purchases on a schedule (Auto-Invest) to build your portfolio over time.",
-    link: "/assets/recurring-buy",
+    link: "/buy-crypto",
   },
   {
     icon: IoSwapHorizontal,
     title: "Convert",
     subtitle: "Instantly swap one cryptocurrency or fiat asset for another with zero fees and no slippage.",
-    link: "/trades/convert",
+    link: "/trades/spot",
   },
   {
     icon: P2pTrading,
@@ -43,7 +43,7 @@ const list = [
     icon: FiatOtc,
     title: "Crypto Deposit",
     subtitle: "Transfer existing cryptocurrency assets from an external wallet or exchange into your Bybit account.",
-    link: "/assets/deposit",
+    link: "/transactions/deposit",
   },
 ];
 

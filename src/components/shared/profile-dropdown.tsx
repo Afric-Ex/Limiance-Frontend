@@ -29,7 +29,7 @@ const list = [
   },
   {
     name: "Rewards Hub",
-    link: "/rewards-hub",
+    link: "/assets/earn",
     icon: IoGiftOutline,
   },
   {

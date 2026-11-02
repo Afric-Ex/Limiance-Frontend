@@ -8,37 +8,37 @@ const list = [
   {
     title: "Simple Earn",
     subtitle: "Earn passive income on idle crypto assets",
-    link: "/earn/simple-earn",
+    link: "/assets/earn",
     icon: GiCoins,
   },
   {
     title: "Staking",
     subtitle: "Stake your tokens to secure networks and earn rewards",
-    link: "/earn/staking",
+    link: "/assets/earn",
     icon: GiStairsGoal,
   },
   {
     title: "Launchpad",
     subtitle: "Get early access to promising new token projects",
-    link: "/earn/launchpad",
+    link: "/assets/earn",
     icon: RiRocketLine,
   },
   {
     title: "Pool Savings",
     subtitle: "Flexible and fixed-term savings for steady returns",
-    link: "/earn/pool-savings",
+    link: "/assets/earn",
     icon: RiSafeLine,
   },
   {
     title: "Dual Investment",
     subtitle: "Earn high yields with structured investment products",
-    link: "/earn/dual-investment",
+    link: "/assets/earn",
     icon: IoGitCompareOutline,
   },
   {
     title: "Smart Trend",
     subtitle: "Automated strategies to optimize your earnings",
-    link: "/earn/smart-trend",
+    link: "/assets/earn",
     icon: BsGraphUpArrow,
   },
 ];
