@@ -522,18 +522,22 @@ export const tradingService = {
     symbol: string;
     interval: string;
     limit?: number;
-    startTime?: string;
-    endTime?: string;
+    startTime?: string | number;
+    endTime?: string | number;
     market?: string;
   }) => {
     const response = await api.get("trading/kline/historical", {
       params: {
         symbol: params.symbol,
-        ...(params.startTime ? { "start-time": params.startTime } : {}),
-        ...(params.endTime ? { "end-time": params.endTime } : {}),
+        ...(params.startTime !== undefined && params.startTime !== ""
+          ? { "start-time": String(params.startTime), startTime: String(params.startTime) }
+          : {}),
+        ...(params.endTime !== undefined && params.endTime !== ""
+          ? { "end-time": String(params.endTime), endTime: String(params.endTime) }
+          : {}),
         interval: params.interval,
         limit: params.limit || 500,
-        ...(params.market ? { market: params.market } : {}),
+        ...(params.market ? { market: params.market, marketType: params.market } : {}),
       },
     });
     return response.data;

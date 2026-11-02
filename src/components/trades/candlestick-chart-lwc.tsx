@@ -22,6 +22,7 @@ import {
   type CandlestickData,
   type HistogramData,
   type LineData,
+  type LogicalRange,
 } from "lightweight-charts";
 import { useCandleFeed } from "@/src/components/trades/use-candle-feed";
 import { calculateSMA, calculateSingleSMA } from "@/src/components/trades/indicators";
@@ -426,6 +427,10 @@ export function LwcCandlestickChart({
   // full dataset changed (initial load/refetch), so the incremental last-candle
   // update path is unsafe until setData has installed all of it.
   const appliedHistoryRef = useRef<KlineCandle[] | undefined>(undefined);
+  const prevBarCountRef = useRef<number>(0);
+  const loadingMoreRef = useRef(false);
+  const hasMoreHistoryRef = useRef(true);
+  const loadMoreHistoryRef = useRef<(() => Promise<number>) | undefined>(undefined);
   const [legend, setLegend] = useState<{ o: number; h: number; l: number; c: number; v?: number; vsma?: number; ma7?: number; ma25?: number; ma99?: number } | null>(null);
   const [drawingsBySymbol, setDrawingsBySymbol] = useState<Record<string, Drawing[]>>(() =>
     readStoredDrawings(market)
@@ -654,7 +659,19 @@ export function LwcCandlestickChart({
     drawingsRef.current = drawingsBySymbol;
   }, [drawingsBySymbol]);
 
-  const { candles, historyCandles, isLoading, isError, historyFetched, wsPending } = useCandleFeed(symbol, interval, market);
+  const {
+    candles,
+    historyCandles,
+    isLoading,
+    isError,
+    historyFetched,
+    wsPending,
+    isLoadingMoreHistory,
+    hasMoreHistory,
+    loadMoreHistory,
+  } = useCandleFeed(symbol, interval, market);
+  hasMoreHistoryRef.current = hasMoreHistory ?? false;
+  loadMoreHistoryRef.current = loadMoreHistory;
   const n = candles.length;
   const hasChartData = useMemo(() => toCandleData(candles).length > 0, [candles]);
 
@@ -1074,6 +1091,7 @@ export function LwcCandlestickChart({
         if (pt) ma99Series.update(pt);
       }
     } else {
+      const prevTotal = prevBarCountRef.current;
       candlesSeries.setData(mainData);
       const volumeSeries = volumeSeriesRef.current;
       if (volumeSeries) volumeSeries.setData(indicators.showVolume ? toVolumeData(candles) : []);
@@ -1089,6 +1107,18 @@ export function LwcCandlestickChart({
       }
       if (ma99Series) {
         ma99Series.setData(indicators.showMa99 ? calculateSMA(candleData, indicators.ma99Period) : []);
+      }
+
+      // If older bars were prepended, shift the visible logical range so the chart view stays pinned
+      if (prevTotal > 0 && candleData.length > prevTotal && fittedRef.current === key) {
+        const addedBars = candleData.length - prevTotal;
+        const currentRange = chart.timeScale().getVisibleLogicalRange();
+        if (currentRange && currentRange.from < 50) {
+          chart.timeScale().setVisibleLogicalRange({
+            from: currentRange.from + addedBars,
+            to: currentRange.to + addedBars,
+          });
+        }
       }
     }
     const volumeSmaSeries = volumeSmaSeriesRef.current;
@@ -1112,6 +1142,7 @@ export function LwcCandlestickChart({
         to: total + 4,
       });
     }
+    prevBarCountRef.current = candleData.length;
   }, [candles, historyCandles, symbol, interval, chartType, indicators]);
 
   // Keep the latest levels in a ref so an interval/pair chart rebuild can
@@ -1165,16 +1196,30 @@ export function LwcCandlestickChart({
     //  - the visible logical range covers wheel and pinch zoom;
     //  - the container observer covers a resize (IChartApi has no size
     //    subscription, and timeScale().subscribeSizeChange misses height only).
-    const onChange = () => positionLabel();
-    const observer = new ResizeObserver(onChange);
+    const onRangeChange = (newRange?: LogicalRange | null) => {
+      positionLabel();
+      if (!newRange || !hasMoreHistoryRef.current || loadingMoreRef.current) return;
+      if (typeof newRange.from === "number" && newRange.from < 25) {
+        const fetchMore = loadMoreHistoryRef.current;
+        if (!fetchMore) return;
+        loadingMoreRef.current = true;
+        fetchMore()
+          .catch(() => {})
+          .finally(() => {
+            loadingMoreRef.current = false;
+          });
+      }
+    };
+    const onResizeOrMove = () => positionLabel();
+    const observer = new ResizeObserver(onResizeOrMove);
     observer.observe(container);
     const timeScale = chartRef.current?.timeScale();
-    timeScale?.subscribeVisibleLogicalRangeChange(onChange);
-    window.addEventListener("mousemove", onChange);
+    timeScale?.subscribeVisibleLogicalRangeChange(onRangeChange);
+    window.addEventListener("mousemove", onResizeOrMove);
     return () => {
       observer.disconnect();
-      timeScale?.unsubscribeVisibleLogicalRangeChange(onChange);
-      window.removeEventListener("mousemove", onChange);
+      timeScale?.unsubscribeVisibleLogicalRangeChange(onRangeChange);
+      window.removeEventListener("mousemove", onResizeOrMove);
     };
   }, [interval, positionLabel, symbol]);
 
