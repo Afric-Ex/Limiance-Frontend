@@ -47,7 +47,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const [activeOrderTypeTab, setActiveOrderTypeTab] = useState<OrderTypeTab>("limit_market");
   const [hideOtherPairs, setHideOtherPairs] = useState(false);
   const [selectedInstrument, setSelectedInstrument] = useState("all");
-  const [selectedMarket, setSelectedMarket] = useState<TradingMarketFilter>("all");
+  const [selectedMarket, setSelectedMarket] = useState<TradingMarketFilter>(market || "all");
   // Trade History specific filters
   const [tradeHistoryDays, setTradeHistoryDays] = useState<number>(7);
   const [tradeHistoryAllMarkets, setTradeHistoryAllMarkets] = useState(true);
@@ -133,10 +133,14 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const { coins: portfolioResponse } = usePortfolioWs({ coins: true });
 
   const { mutate: closeOrder, isPending: closeOrderPending } = useMutation({
-    mutationFn: (orderId: string) => cancelSpotOrderWs(orderId),
+    mutationFn: (orderId: string) => {
+      if (market === "futures") return tradingService.cancelFuturesOrder(orderId);
+      if (market === "margin") return tradingService.closeMarginOrder(orderId);
+      return cancelSpotOrderWs(orderId);
+    },
     onSuccess: () => {
       successNotification("Order cancelled");
-      queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
+      queryClient.invalidateQueries({ queryKey: ["open-orders"] });
       queryClient.invalidateQueries({ queryKey: [ORDER_HISTORY_QUERY_KEY] });
       refreshBalances();
     },
@@ -144,10 +148,15 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   });
 
   const { mutate: cancelAllOrders, isPending: cancelAllPending } = useMutation({
-    mutationFn: () => tradingService.cancelAllSpotOrders(hideOtherPairs ? selectedPair : undefined),
+    mutationFn: () => {
+      const sym = hideOtherPairs ? selectedPair : undefined;
+      if (market === "futures") return tradingService.cancelAllFuturesOrders(sym);
+      if (market === "margin") return tradingService.cancelAllMarginOrders(sym);
+      return tradingService.cancelAllSpotOrders(sym);
+    },
     onSuccess: () => {
       successNotification("All open orders cancelled");
-      queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
+      queryClient.invalidateQueries({ queryKey: ["open-orders"] });
       queryClient.invalidateQueries({ queryKey: [ORDER_HISTORY_QUERY_KEY] });
       refreshBalances();
     },
@@ -574,7 +583,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
         {activeMainTab === "assets" && <AssetsTable assets={portfolioResponse} mobile={mobile} />}
         {activeMainTab === "borrowings" && <BorrowingsTable borrowings={borrowings} loading={borrowingsLoading} mobile={mobile} />}
         {activeMainTab === "tools" && <ToolsPanel />}
-        {activeMainTab === "pnl" && <PnLPanel selectedPair={hideOtherPairs ? selectedPair : undefined} />}
+        {activeMainTab === "pnl" && <PnLPanel selectedPair={hideOtherPairs ? selectedPair : undefined} market={market} />}
       </div>
     </div>
   );
@@ -1150,10 +1159,19 @@ function ToolsPanel() {
   );
 }
 
-function PnLPanel({ selectedPair }: { selectedPair?: string }) {
+function PnLPanel({ selectedPair, market = "spot" }: { selectedPair?: string; market?: TradingMarket }) {
   const { data: pnlData = [], isLoading } = useQuery({
-    queryKey: tradingKeys.spotPnlHistory(selectedPair),
-    queryFn: () => tradingService.spotPnlHistory({ symbol: selectedPair }),
+    queryKey:
+      market === "futures"
+        ? tradingKeys.futuresPnlHistory(selectedPair)
+        : market === "margin"
+        ? tradingKeys.marginPnlHistory(selectedPair)
+        : tradingKeys.spotPnlHistory(selectedPair),
+    queryFn: () => {
+      if (market === "futures") return tradingService.futuresPnlHistory({ symbol: selectedPair });
+      if (market === "margin") return tradingService.marginPnlHistory({ symbol: selectedPair });
+      return tradingService.spotPnlHistory({ symbol: selectedPair });
+    },
     select: (res: any) => {
       const rows = res?.data ?? res ?? [];
       return Array.isArray(rows) ? rows : [];
@@ -1169,13 +1187,15 @@ function PnLPanel({ selectedPair }: { selectedPair?: string }) {
     );
   }
 
+  const marketTitle = market === "futures" ? "Futures" : market === "margin" ? "Margin" : "Spot";
+
   if (!pnlData.length) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <MdInfo size={32} className="text-white/20" />
-        <p className="text-xs text-white/40">No Spot PnL records</p>
+        <p className="text-xs text-white/40">No {marketTitle} PnL records</p>
         <p className="text-xs text-white/30 max-w-md text-center">
-          Realized profit and loss will be displayed here as your spot orders are executed.
+          Realized profit and loss will be displayed here as your {market} orders are executed.
         </p>
       </div>
     );

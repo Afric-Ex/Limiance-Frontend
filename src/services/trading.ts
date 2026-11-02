@@ -41,6 +41,7 @@ export const tradingKeys = {
   marginBorrowHistory: ["margin-borrow-history"],
   marginLiquidationHistory: ["margin-liquidation-history"],
   marginPnlHistory: (symbol?: string) => ["margin-pnl-history", symbol],
+  futuresPnlHistory: (symbol?: string) => ["futures-pnl-history", symbol],
   convertHistory: ["convert-history"],
   fiatOrderHistory: ["fiat-order-history"],
   paymentHistory: ["payment-history"],
@@ -413,13 +414,25 @@ export const tradingService = {
   },
 
   cancelFuturesOrder: async (orderId: string) => {
-    const response = await api.delete(`trading/futures/order/${orderId}`);
+    const response = await api.delete(`trading/futures/orders/${orderId}`);
     return response.data;
   },
 
   editFuturesOrder: async (data: { orderId: string; price?: string; quantity?: string }) => {
     const { orderId, ...body } = data;
-    const response = await api.patch(`trading/futures/order/${orderId}`, body);
+    const response = await api.patch(`trading/futures/orders/${orderId}`, body);
+    return response.data;
+  },
+
+  cancelAllFuturesOrders: async (symbol?: string) => {
+    const response = await api.post("trading/futures/cancel_all", null, {
+      params: symbol ? { symbol } : {},
+    });
+    return response.data;
+  },
+
+  futuresPnlHistory: async (params?: { symbol?: string; page?: number; limit?: number }) => {
+    const response = await api.get("trading/futures/pnl_history", { params });
     return response.data;
   },
 

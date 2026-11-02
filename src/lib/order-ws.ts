@@ -297,6 +297,9 @@ export function placeFuturesOrderWs(data: {
   marginMode?: "cross" | "isolated";
   takeProfit?: number;
   stopLoss?: number;
+  postOnly?: boolean;
+  reduceOnly?: boolean;
+  timeInForce?: "GTC" | "IOC" | "FOK" | string;
 }): Promise<any> {
   const normalizedType =
     data.type === "market" ? "market" : data.type === "limit" ? "limit" : "stop";
@@ -309,9 +312,19 @@ export function placeFuturesOrderWs(data: {
     marginMode: (data.marginMode ?? "cross").toUpperCase(),
   };
   if (normalizedType === "limit" && typeof data.price === "number") payload.price = data.price;
-  if (normalizedType === "stop" && typeof data.stopPrice === "number") payload.price = data.stopPrice;
+  if (normalizedType === "stop") {
+    if (typeof data.price === "number") payload.price = data.price;
+    if (typeof data.stopPrice === "number") {
+      payload.triggerPrice = data.stopPrice;
+      payload.stopPrice = data.stopPrice;
+      if (!payload.price) payload.price = data.stopPrice;
+    }
+  }
   if (Number(data.takeProfit) > 0) payload.takeProfit = Number(data.takeProfit);
   if (Number(data.stopLoss) > 0) payload.stopLoss = Number(data.stopLoss);
+  if (data.postOnly) payload.postOnly = true;
+  if (data.reduceOnly) payload.reduceOnly = true;
+  if (data.timeInForce) payload.timeInForce = data.timeInForce;
   return sendOrderFrame({ type: "place_futures_order", data: payload });
 }
 
