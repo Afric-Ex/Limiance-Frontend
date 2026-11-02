@@ -77,6 +77,9 @@ class WebSocketClient {
   private idleCloseTimeout: NodeJS.Timeout | null = null;
   /** Set on auth-rejection close codes to prevent futile reconnect loops. */
   private authFailed = false;
+  /** In-memory ephemeral handshake ticket for cross-origin WS deployments (never persisted to storage). */
+  private wsTicket: string | null = null;
+  private connectedWithTicket = false;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -90,9 +93,36 @@ class WebSocketClient {
       // Logout, session expiry, or a logout broadcast from another tab. Reset
       // the auth-failure latch so the next login can open a fresh socket.
       sessionCoordinator.subscribe(() => {
+        this.wsTicket = null;
+        this.connectedWithTicket = false;
         this.authFailed = false;
         this.disconnect();
       });
+    }
+  }
+
+  /**
+   * Sets the in-memory WebSocket handshake ticket returned by `/users/login` or
+   * `/user_details`. On same-site production domains the browser's HttpOnly cookie
+   * takes precedence in `WebsocketMiddleware`; on cross-origin proxy setups
+   * (e.g. Netlify -> direct WS host) this authenticates the handshake via
+   * `Sec-WebSocket-Protocol` without putting anything in URLs or Web Storage.
+   */
+  public setAuthTicket(ticket: string | null | undefined) {
+    const normalized = typeof ticket === "string" && ticket.trim().length > 0 ? ticket.trim() : null;
+    if (!normalized) return;
+    const changed = this.wsTicket !== normalized;
+    this.wsTicket = normalized;
+    this.authFailed = false;
+
+    // If the socket already connected as an unauthenticated guest viewer before
+    // login / user hydration completed, reconnect immediately to upgrade it.
+    if ((this.isConnected || this.isConnecting) && (!this.connectedWithTicket || changed)) {
+      const hadSubs = this.subscriptions.size > 0;
+      this.disconnect();
+      if (hadSubs) {
+        this.connect();
+      }
     }
   }
 
@@ -215,11 +245,14 @@ class WebSocketClient {
     this.intentionalClose = false;
 
     try {
-      // No credential of any kind is appended: the handshake is a plain GET and
-      // the session is whatever cookie the browser already holds for the target
-      // origin. Tokens in a URL leak into proxy logs, browser history and
-      // `Sec-WebSocket-Protocol` echoes.
-      const socket = new WebSocket(url);
+      // No credential is ever appended to the URL. On same-site domains the
+      // browser attaches the HttpOnly session cookie automatically; on proxied
+      // cross-origin setups an in-memory ticket is passed via Sec-WebSocket-Protocol.
+      const hasTicket = Boolean(this.wsTicket);
+      this.connectedWithTicket = hasTicket;
+      const socket = this.wsTicket
+        ? new WebSocket(url, ["bearer", this.wsTicket])
+        : new WebSocket(url);
       this.ws = socket;
 
       socket.onopen = () => {

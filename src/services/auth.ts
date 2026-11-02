@@ -2,6 +2,7 @@ import { api } from "../lib/axios";
 import { normalizeUser } from "../lib/normalize-user";
 import { normalizeKycStatus } from "../lib/normalize-kyc-status";
 import { authDebug, describeAuthPayload } from "../lib/auth-debug";
+import { wsClient } from "../lib/websocket-client";
 import { ApiResponse } from "../types/api";
 import {
   Login,
@@ -49,6 +50,9 @@ export const auth = {
       headers: Object.keys(response.headers ?? {}),
       payload: describeAuthPayload(response.data),
     });
+    if (typeof response?.data?.wsToken === "string" && response.data.wsToken) {
+      wsClient.setAuthTicket(response.data.wsToken);
+    }
     if (response?.data?.data) {
       response.data.data = normalizeUser(response.data.data);
     }
@@ -124,6 +128,9 @@ export const auth = {
           ? Object.keys(response.data)
           : [],
     });
+    if (typeof response?.data?.wsToken === "string" && response.data.wsToken) {
+      wsClient.setAuthTicket(response.data.wsToken);
+    }
     if (response?.data?.data) {
       response.data.data = normalizeUser(response.data.data);
     }

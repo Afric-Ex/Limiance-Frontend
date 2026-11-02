@@ -1,6 +1,7 @@
 import { api } from "../lib/axios";
 import { normalizeUser } from "../lib/normalize-user";
 import { normalizeKycStatus } from "../lib/normalize-kyc-status";
+import { wsClient } from "../lib/websocket-client";
 import { ApiResponse } from "../types/api";
 
 export const userKeys = {
@@ -19,6 +20,9 @@ export const userService = {
     const body = response?.data;
     if (!body || typeof body !== "object") {
       return { data: null } as ApiResponse<any>;
+    }
+    if (typeof body.wsToken === "string" && body.wsToken) {
+      wsClient.setAuthTicket(body.wsToken);
     }
 
     const payload = Object.prototype.hasOwnProperty.call(body, "data")
