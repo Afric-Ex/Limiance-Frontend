@@ -2,7 +2,13 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { tradingKeys, tradingService, type TradingMarket } from "@/src/services/trading";
+import {
+  tradingKeys,
+  tradingService,
+  type TradingMarket,
+  type TradingMarketFilter,
+} from "@/src/services/trading";
+import { parseDate } from "@/src/lib/parse-date";
 import { cancelSpotOrderWs, closeFuturesPositionWs } from "@/src/lib/order-ws";
 import { readList } from "@/src/lib/api-response";
 import { successNotification } from "@/src/lib/notification-handler";
@@ -41,7 +47,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const [activeOrderTypeTab, setActiveOrderTypeTab] = useState<OrderTypeTab>("limit_market");
   const [hideOtherPairs, setHideOtherPairs] = useState(false);
   const [selectedInstrument, setSelectedInstrument] = useState("all");
-  const [selectedMarket, setSelectedMarket] = useState("all");
+  const [selectedMarket, setSelectedMarket] = useState<TradingMarketFilter>("all");
   // Trade History specific filters
   const [tradeHistoryDays, setTradeHistoryDays] = useState<number>(7);
   const [tradeHistoryAllMarkets, setTradeHistoryAllMarkets] = useState(true);
@@ -56,14 +62,18 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   // mounted twice (desktop + mobile), so a 5s interval turned into a constant
   // stream of `GET trading/order_history?status=open` requests.
   const { data: openOrders, isLoading: openOrdersLoading } = useQuery({
-    queryKey: tradingKeys.openOrders(hideOtherPairs ? selectedPair : undefined),
-    queryFn: () => tradingService.fetchOpenOrders({ pair: hideOtherPairs ? selectedPair : undefined }),
+    queryKey: tradingKeys.openOrders(hideOtherPairs ? selectedPair : undefined, selectedMarket),
+    queryFn: () =>
+      tradingService.fetchOpenOrders({
+        pair: hideOtherPairs ? selectedPair : undefined,
+        market_type: selectedMarket,
+      }),
     select: (res: unknown) => readList<Record<string, any>>(res),
     retry: false,
   });
 
   // Order History: unified endpoint returns all markets or just this market based on the filter.
-  const historyMarketType = selectedMarket === "all" ? "all" : (market as "spot" | "margin" | "futures");
+  const historyMarketType = selectedMarket;
   const { data: historyPages = [], isLoading: orderHistoryLoading } = useOrderHistory({
     enabled: activeMainTab === "order_history",
     marketType: historyMarketType,
@@ -217,15 +227,14 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const filteredPositions = useMemo(() => {
     const normalize = (value: string) => value.replace(/[/\\\-_\s]/g, "").toUpperCase();
     let rows = allPositions;
-    // "All Markets" off = only the market of the page you're on
-    if (selectedMarket !== "all") rows = rows.filter((row) => row.market === market);
+    if (selectedMarket !== "all") rows = rows.filter((row) => row.market === selectedMarket);
     if (hideOtherPairs && selectedPair) {
       const current = normalize(selectedPair);
       rows = rows.filter((row) => normalize(row.pair) === current);
     }
     if (selectedInstrument !== "all") rows = rows.filter((row) => row.pair.includes(selectedInstrument));
     return rows;
-  }, [allPositions, selectedMarket, market, hideOtherPairs, selectedPair, selectedInstrument]);
+  }, [allPositions, selectedMarket, hideOtherPairs, selectedPair, selectedInstrument]);
   const positionCount = filteredPositions.length;
 
   const filteredHistory = useMemo(
@@ -395,19 +404,21 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
       {/* Filters Bar */}
       {(activeMainTab === "open_orders" || activeMainTab === "positions" || activeMainTab === "order_history") && (
         <div className="flex items-center gap-3 px-4 py-2 border-b border-white/[0.06] shrink-0">
-          <Checkbox
-            classNames={{
-              label: "!text-xs !text-white/60",
-              input: "!border-white/20 !bg-transparent checked:!bg-primary",
-            }}
-            label="All Markets"
-            checked={selectedMarket === "all"}
+          <select
+            value={selectedMarket}
             onChange={(e) => {
-              setSelectedMarket(e.target.checked ? "all" : "spot");
+              setSelectedMarket(e.target.value as TradingMarketFilter);
               setHistoryPage(1);
             }}
-          />
-          
+            aria-label="Market"
+            className="h-6 px-2 text-xs bg-white/[0.05] border border-white/10 rounded text-white/80 outline-none"
+          >
+            <option value="all">All Markets</option>
+            <option value="spot">Spot</option>
+            <option value="margin">Margin</option>
+            <option value="futures">Futures</option>
+          </select>
+
           <select
             value={selectedInstrument}
             onChange={(e) => setSelectedInstrument(e.target.value)}
@@ -620,9 +631,8 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
   };
 
   const formatOrderDate = (value: unknown) => {
-    if (!value) return "—";
-    const date = new Date(String(value));
-    return !Number.isNaN(date.getTime()) ? date.toLocaleString() : String(value);
+    const date = parseDate(value);
+    return date ? date.toLocaleString() : "—";
   };
 
   const getOrderPair = (order: any) =>
@@ -654,6 +664,21 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
 
   const getOrderPrice = (order: any) =>
     order?.price ?? order?.orderPrice ?? order?.order_price ?? order?.avgPrice ?? order?.fillPrice;
+
+  const getAvgPrice = (order: any) =>
+    order?.avgPrice ?? order?.avg_price ?? order?.averagePrice ?? order?.fillPrice;
+
+  const getFilledValue = (order: any) =>
+    order?.cumExecValue ?? order?.filledValue ?? order?.executedValue;
+
+  const getFee = (order: any) => order?.cumExecFee ?? order?.fee;
+
+  const getOrderStatus = (order: any) => order?.orderStatus ?? order?.status ?? order?.state;
+
+  const formatStatus = (value: unknown) => {
+    const status = String(value ?? "").replace(/[_-]+/g, " ").trim().toLowerCase();
+    return status ? status.replace(/\b\w/g, (char) => char.toUpperCase()) : "—";
+  };
 
   const getOrderQuantity = (order: any) => {
     const direct = order?.quantity ?? order?.amount ?? order?.size ?? order?.origQty;
@@ -723,8 +748,11 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
               <MobileRow label="Price" value={formatOrderNumber(getOrderPrice(order))} />
+              <MobileRow label="Avg Fill" value={formatOrderNumber(getAvgPrice(order))} />
               <MobileRow label="Amount" value={`${formatOrderNumber(getFilledQuantity(order))} / ${formatOrderNumber(getOrderQuantity(order))}`} />
               <MobileRow label="Total" value={getOrderTotal(order)?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"} />
+              <MobileRow label="Fee" value={getFee(order) ? `${formatOrderNumber(getFee(order))} ${order.feeCurrency ?? ""}`.trim() : "—"} />
+              <MobileRow label="Status" value={formatStatus(getOrderStatus(order))} />
               <MobileRow label="Time" value={formatOrderDate(order.createdAt)} />
               {(order.takeProfit || order.stopLoss) && (
                 <MobileRow label="TP/SL" value={
@@ -751,7 +779,8 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
             <TableHeader>Filled/Order Quantity</TableHeader>
             <TableHeader>Order Value</TableHeader>
             <TableHeader>TP/SL</TableHeader>
-            <TableHeader>Trade Type</TableHeader>
+            <TableHeader>Fee</TableHeader>
+            <TableHeader>Status</TableHeader>
             <TableHeader>Order Time</TableHeader>
             <TableHeader>Order ID</TableHeader>
             <TableHeader align="right">Action</TableHeader>
@@ -768,19 +797,32 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
                   {String(order.side || "").toUpperCase()}
                 </span>
               </td>
-              <td className="px-3 py-2.5 text-white/90 font-mono">{formatOrderNumber(getOrderPrice(order))}</td>
+              <td className="px-3 py-2.5 text-white/90 font-mono">
+                <div>{formatOrderNumber(getOrderPrice(order))}</div>
+                {getAvgPrice(order) && String(getAvgPrice(order)) !== String(getOrderPrice(order)) && (
+                  <div className="text-[10px] text-white/40">Avg {formatOrderNumber(getAvgPrice(order))}</div>
+                )}
+              </td>
               <td className="px-3 py-2.5 text-white/90 font-mono">
                 {formatOrderNumber(getFilledQuantity(order))} / {formatOrderNumber(getOrderQuantity(order))}
               </td>
               <td className="px-3 py-2.5 text-white/90 font-mono">
-                {getOrderTotal(order)?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}
+                <div>{getOrderTotal(order)?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}</div>
+                {getFilledValue(order) && (
+                  <div className="text-[10px] text-white/40">
+                    Filled {formatOrderNumber(getFilledValue(order))}
+                  </div>
+                )}
               </td>
               <td className="px-3 py-2.5 text-white/70">
                 {order.takeProfit ? <span className="text-success-6">{formatOrderNumber(order.takeProfit)}</span> : "—"}
                 {" / "}
                 {order.stopLoss ? <span className="text-error-1">{formatOrderNumber(order.stopLoss)}</span> : "—"}
               </td>
-              <td className="px-3 py-2.5 text-white/70">{order.tradeType || "Normal"}</td>
+              <td className="px-3 py-2.5 text-white/70 font-mono">
+                {getFee(order) ? `${formatOrderNumber(getFee(order))} ${order.feeCurrency ?? ""}`.trim() : "—"}
+              </td>
+              <td className="px-3 py-2.5 text-white/70">{formatStatus(getOrderStatus(order))}</td>
               <td className="px-3 py-2.5 text-white/70 font-mono">{formatOrderDate(order.createdAt)}</td>
               <td className="px-3 py-2.5 text-white/50 font-mono text-[10px]">
                 {order.id ? String(order.id).slice(0, 8) + "..." : "—"}
@@ -808,9 +850,8 @@ function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
     return Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: decimals }) : "—";
   };
   const fmtDate = (value: unknown) => {
-    if (!value) return "—";
-    const d = new Date(String(value));
-    return !Number.isNaN(d.getTime()) ? d.toLocaleString() : String(value);
+    const date = parseDate(value);
+    return date ? date.toLocaleString() : "—";
   };
   const first = (trade: any, keys: string[]) => keys.map((k) => trade[k]).find((v) => v !== undefined && v !== null && v !== "");
   const getPair = (t: any) => t.pair ?? (t.base && t.quote ? `${t.base}/${t.quote}` : t.symbol ?? "");
@@ -821,16 +862,16 @@ function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
   const cutoff = Date.now() - (days ?? 7) * 864e5;
   const filtered = (trades ?? []).filter((t: any) => {
     const timeStr = first(t, ["createdAt", "created_at", "executedAt", "timestamp", "time"]);
-    const timeMs = timeStr ? new Date(String(timeStr)).getTime() : 0;
+    const timeMs = parseDate(timeStr)?.getTime() ?? 0;
     if (timeMs && timeMs < cutoff) return false;
     if (instrument && instrument !== "all") {
       if (!getPair(t).includes(instrument)) return false;
     }
     return true;
   }).sort((a: any, b: any) => {
-    const ta = new Date(String(first(a, ["createdAt","created_at","executedAt","timestamp","time"]) ?? 0)).getTime();
-    const tb = new Date(String(first(b, ["createdAt","created_at","executedAt","timestamp","time"]) ?? 0)).getTime();
-    return (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta);
+    const ta = parseDate(first(a, ["createdAt","created_at","executedAt","timestamp","time"]))?.getTime() ?? 0;
+    const tb = parseDate(first(b, ["createdAt","created_at","executedAt","timestamp","time"]))?.getTime() ?? 0;
+    return tb - ta;
   });
 
   if (!filtered.length) return <EmptyState message="No trade history" />;

@@ -38,7 +38,7 @@ export const MobileNavbar = ({
     },
     {
       name: "Markets",
-      link: "",
+      link: "/markets",
     },
     {
       name: "Trades",
@@ -73,7 +73,7 @@ export const MobileNavbar = ({
     const navLinks = [
       {
         name: "Rewards Hub",
-        link: "/rewards-hub",
+        link: "/assets/earn",
         icon: IoIosGift,
       },
       // {

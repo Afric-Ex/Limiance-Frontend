@@ -40,7 +40,7 @@ const marketItems = [
     key: "convert",
     title: "Convert",
     desc: "Quick conversion with zero fees",
-    link: "/trades/convert",
+    link: "/trades/spot",
     icon: LuRepeat2,
     showPairs: false,
   },
