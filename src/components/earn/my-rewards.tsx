@@ -149,7 +149,7 @@ export function MyRewards() {
                     </span>
                     {reward.apy > 0 && (
                       <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
-                        {reward.apy}% APY
+                        {(reward.apy <= 1 ? reward.apy * 100 : reward.apy).toFixed(2)}% APY
                       </span>
                     )}
                   </div>

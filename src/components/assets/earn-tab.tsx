@@ -27,7 +27,7 @@ const productTabs = [
   "Simple Earn",
   "Staking",
   "Launchpad",
-  "Pool savings",
+  "Pool Savings",
   "Dual Investment",
   "Auto Invest",
   "Smart Trend",
@@ -37,6 +37,7 @@ const headings: { [k: string]: string[] } = {
   "Simple Earn": ["Coin", "Amount", "APR", "Cumulative Total reward", "Action"],
   Staking: ["Coin", "Redemption Date", "Redemption Amount", "Receive Amount", "Est. Arrival Date", "Action"],
   Launchpad: ["Project name", "Asset", "Amount", "Action"],
+  "Pool Savings": ["Coin", "Total Balance", "Cummulative Interest", "Action"],
   "Pool savings": ["Coin", "Total Balance", "Cummulative Interest", "Action"],
   "Dual Investment": ["Product", "Subscription Date", "Subscription Amount", "Target Price", "Settlement Date", "APR", "Status", "Action"],
   "Auto Invest": ["Plan Name", "Auto-Investment Schedule", "Total Invested", "Purchased Amount", "Average Price", "Action"],
@@ -44,6 +45,13 @@ const headings: { [k: string]: string[] } = {
 };
 
 const mainTabs = ["Products", "My Positions"];
+
+function formatApyPercent(raw: unknown): number {
+  const val = Number(raw ?? 0);
+  if (!Number.isFinite(val) || val <= 0) return 0;
+  const pct = val <= 1 ? val * 100 : val;
+  return Number(pct.toFixed(2));
+}
 
 interface NormalizedProduct {
   id: string;
@@ -157,9 +165,24 @@ function StakeModal({
   );
 }
 
-export const EarnTab = () => {
+export const EarnTab = ({
+  activeProductTab,
+  onProductTabChange,
+}: {
+  activeProductTab?: string;
+  onProductTabChange?: (tab: string) => void;
+} = {}) => {
   const [mainTab, setMainTab] = useState("Products");
-  const [productTab, setProductTab] = useState(productTabs[0]);
+  const [internalProductTab, setInternalProductTab] = useState(productTabs[0]);
+  const productTab =
+    activeProductTab && productTabs.includes(activeProductTab)
+      ? activeProductTab
+      : internalProductTab;
+  const handleProductTabChange = (val: string | null) => {
+    const next = val ?? productTabs[0];
+    setInternalProductTab(next);
+    onProductTabChange?.(next);
+  };
   const [selectedProduct, setSelectedProduct] = useState<NormalizedProduct | null>(null);
   const [stakeOpen, { open: openStake, close: closeStake }] = useDisclosure(false);
   const queryClient = useQueryClient();
@@ -194,32 +217,42 @@ export const EarnTab = () => {
     onError: (e: any) => errorMessageHandler(e),
   });
 
-  const products: NormalizedProduct[] = (rawProducts || []).map((p) => ({
-    id: p.id,
-    asset: p.symbol || p.asset || "CRYPTO",
-    name: p.name || `${p.symbol || "Crypto"} Earn`,
-    image: p.image,
-    apy: Number(p.apy ?? 0),
-    minAmount: String(p.minAmount ?? "0"),
-    lockDays: Number(p.lockPeriodDays ?? p.lockDays ?? 0),
-    isFlexible: Boolean(p.isFlexible ?? (p.lockPeriodDays === 0)),
-    isActive: p.isActive ?? true,
-  }));
+  const products: NormalizedProduct[] = (rawProducts || []).map((p) => {
+    const lockDays = Number(p.lockPeriodDays ?? p.lockDays ?? 0);
+    return {
+      id: p.id,
+      asset: p.symbol || p.asset || "CRYPTO",
+      name: p.name || `${p.symbol || "Crypto"} Earn`,
+      image: p.image,
+      apy: formatApyPercent(p.apy),
+      minAmount: String(p.minAmount ?? "0"),
+      lockDays,
+      isFlexible: lockDays <= 0,
+      isActive: p.isActive ?? true,
+    };
+  });
 
-  const positions: NormalizedPosition[] = (rawPositions || []).map((pos) => ({
-    id: pos.id,
-    productId: pos.productId,
-    asset: pos.asset || pos.product?.symbol || "CRYPTO",
-    image: pos.image,
-    amount: pos.amount ?? 0,
-    earned: pos.accruedRewards ?? pos.earned ?? 0,
-    apy: Number(pos.product?.apy ?? pos.apy ?? 0),
-    lockDays: Number(pos.product?.lockPeriodDays ?? pos.lockDays ?? 0),
-    isFlexible: Boolean(pos.product?.isFlexible ?? (pos.product?.lockPeriodDays === 0)),
-    status: pos.status || "ACTIVE",
-    startDate: pos.startDate,
-    endDate: pos.endDate,
-  }));
+  const tabProducts = products.filter((p) =>
+    productTab === "Staking" ? p.lockDays > 0 : p.lockDays <= 0
+  );
+
+  const positions: NormalizedPosition[] = (rawPositions || []).map((pos) => {
+    const lockDays = Number(pos.product?.lockPeriodDays ?? pos.lockDays ?? 0);
+    return {
+      id: pos.id,
+      productId: pos.productId,
+      asset: pos.asset || pos.product?.symbol || "CRYPTO",
+      image: pos.image,
+      amount: pos.amount ?? 0,
+      earned: pos.accruedRewards ?? pos.earned ?? 0,
+      apy: formatApyPercent(pos.product?.apy ?? pos.apy),
+      lockDays,
+      isFlexible: lockDays <= 0,
+      status: pos.status || "ACTIVE",
+      startDate: pos.startDate,
+      endDate: pos.endDate,
+    };
+  });
 
   return (
     <>
@@ -254,7 +287,7 @@ export const EarnTab = () => {
         <Tabs
           classNames={classes}
           value={productTab}
-          onChange={(val) => setProductTab(val ?? productTabs[0])}
+          onChange={handleProductTabChange}
         >
           <TabsList>
             {productTabs.map((item) => (
@@ -270,11 +303,9 @@ export const EarnTab = () => {
           {(productTab === "Simple Earn" || productTab === "Staking") && (
             <TabsPanel value={productTab}>
               <div className="py-5 min-h-[292px] border border-gray-9 rounded-32px bg-gray-7 px-7 pb-9">
-                {products && products.length > 0 ? (
+                {tabProducts.length > 0 ? (
                   <div className="grid grid-cols-1 gap-4">
-                    {products
-                      .filter((p) => (productTab === "Staking" ? p.lockDays > 0 : p.isFlexible || p.lockDays === 0))
-                      .map((product) => (
+                    {tabProducts.map((product) => (
                         <div
                           key={product.id}
                           className="flex items-center justify-between p-4 bg-gray-15/10 rounded-xl border border-white/10"
@@ -300,7 +331,7 @@ export const EarnTab = () => {
                               }}
                               className="bg-primary hover:bg-primary/90 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors"
                             >
-                              Stake
+                              {product.lockDays > 0 ? "Stake" : "Subscribe"}
                             </button>
                           </div>
                         </div>
@@ -310,7 +341,11 @@ export const EarnTab = () => {
                   <div className="h-full flex items-center justify-center py-10">
                     <div className="flex flex-col items-center gap-4">
                       <EmptyTable />
-                      <span className="text-xs font-medium text-gray-9">No Earn Products Available</span>
+                      <span className="text-xs font-medium text-gray-9">
+                        {productTab === "Staking"
+                          ? "No Fixed Staking Products Available"
+                          : "No Flexible Savings Products Available"}
+                      </span>
                     </div>
                   </div>
                 )}

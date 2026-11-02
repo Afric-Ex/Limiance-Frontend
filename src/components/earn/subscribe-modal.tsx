@@ -27,7 +27,8 @@ export const SubscribeModal = ({ product }: { product: Product }) => {
 
   const asset = product.asset || product.symbol || "CRYPTO";
   const lockDays = Number(product.lockDays ?? product.lockPeriodDays ?? 0);
-  const apy = Number(product.apy ?? 0);
+  const rawApy = Number(product.apy ?? 0);
+  const apy = rawApy > 0 && rawApy <= 1 ? rawApy * 100 : rawApy;
   const minAmount = String(product.minAmount ?? "0");
   const isFixed = lockDays > 0 || product.type === "fixed";
 

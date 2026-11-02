@@ -45,9 +45,15 @@ export function WaysToEarn({
                 >
                   <Icon size={16} />
                 </span>
-                <span className="shrink-0 rounded-full border border-amber-400/20 bg-amber-400/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-400">
-                  Coming soon
-                </span>
+                {product.isLive ? (
+                  <span className="shrink-0 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+                    Live
+                  </span>
+                ) : (
+                  <span className="shrink-0 rounded-full border border-amber-400/20 bg-amber-400/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-400">
+                    Coming soon
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-col gap-1">

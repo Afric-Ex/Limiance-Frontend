@@ -23,6 +23,7 @@ export interface EarnProduct {
   description: string;
   features: readonly string[];
   icon: IconType;
+  isLive?: boolean;
   /** Three headline facts shown in the preview card. No invented numbers —
    *  rate figures stay "shared at launch" until operations confirms them. */
   preview: readonly EarnProductPreviewStat[];
@@ -36,8 +37,9 @@ export const EARN_PRODUCTS: EarnProduct[] = [
       "Earn daily rewards on your idle assets with flexible savings — no lock-in, redeem whenever you want.",
     features: ["Flexible", "No lock-in", "Daily rewards"],
     icon: FaPiggyBank,
+    isLive: true,
     preview: [
-      { label: "APY estimate", value: "Shared at launch" },
+      { label: "APY yield", value: "Live variable APY" },
       { label: "Lock period", value: "None — flexible" },
       { label: "Redemption", value: "Anytime" },
     ],
@@ -48,9 +50,10 @@ export const EARN_PRODUCTS: EarnProduct[] = [
       "Lock your assets for a fixed term and earn higher, predictable returns with transparent terms.",
     features: ["Fixed terms", "Predictable APY", "On-chain staking"],
     icon: FaLock,
+    isLive: true,
     preview: [
       { label: "Return type", value: "Fixed APY" },
-      { label: "Lock period", value: "Fixed term" },
+      { label: "Lock period", value: "15 / 30 / 60 / 90 days" },
       { label: "Redemption", value: "At maturity" },
     ],
   },
@@ -122,6 +125,12 @@ const ComingSoonBadge = () => (
   </span>
 );
 
+const LiveBadge = () => (
+  <span className="shrink-0 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+    Live
+  </span>
+);
+
 /**
  * Preview card for one earn product. Deliberately richer than a bare
  * "coming soon" state: the product story (description + feature badges) and
@@ -149,11 +158,11 @@ const ProductPreview = ({ product }: { product: EarnProduct }) => {
               {product.name}
             </h3>
             <p className="text-[var(--text-micro)] text-[var(--color-text-secondary)]">
-              Launching on Limiance Earn
+              {product.isLive ? "Available now on Limiance Earn" : "Launching on Limiance Earn"}
             </p>
           </div>
         </div>
-        <ComingSoonBadge />
+        {product.isLive ? <LiveBadge /> : <ComingSoonBadge />}
       </div>
 
       <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">

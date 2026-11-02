@@ -45,7 +45,10 @@ function EarnInner() {
         activeProduct={selectedProduct}
         onProductChange={setSelectedProduct}
       />
-      <EarnTab />
+      <EarnTab
+        activeProductTab={selectedProduct}
+        onProductTabChange={setSelectedProduct}
+      />
       <MyRewards />
     </main>
   );
