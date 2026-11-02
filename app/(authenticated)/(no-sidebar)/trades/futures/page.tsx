@@ -3,19 +3,20 @@
 import { Search } from '@/src/components/icons/search';
 import { Skeleton } from '@/src/components/shared/skeleton';
 import { OpenFuturesModal } from '@/src/components/trades/open-futures-modal';
-import { TradeRecordsList } from '@/src/components/trades/trade-records-list';
 import { useMarketFeed } from '@/src/hooks/use-market-feed';
 import { useOrderBook } from '@/src/hooks/use-order-book';
 import { useRecentTrades } from '@/src/hooks/use-recent-trades';
 import { OrderBookTabs } from '@/src/components/trades/order-book-tabs';
+import { SpotPairHeader } from '@/src/components/trades/spot-pair-header';
+import { TradingPanel } from '@/src/components/trades/trading-panel';
 import { usePortfolioWs } from '@/src/hooks/use-portfolio-ws';
 import { readList } from '@/src/lib/api-response';
 import { getLatestTradePrice } from '@/src/lib/recent-trades';
 import { errorMessageHandler } from '@/src/lib/error-handler';
 import { successNotification } from '@/src/lib/notification-handler';
 import { useUserStore } from '@/src/stores/user-store';
-import { tradingService, tradingKeys } from '@/src/services/trading';
-import { placeFuturesOrderWs, closeFuturesPositionWs } from '@/src/lib/order-ws';
+import { tradingService } from '@/src/services/trading';
+import { placeFuturesOrderWs } from '@/src/lib/order-ws';
 import { DEFAULT_MODAL_SETTINGS } from '@/src/utils/constants';
 import {
   Checkbox,
@@ -25,10 +26,6 @@ import {
   PopoverDropdown,
   PopoverTarget,
   Slider,
-  Table,
-  TableTh,
-  TableTr,
-  TableTd,
   Tabs,
   TabsList,
   TabsPanel,
@@ -58,112 +55,6 @@ const CandlestickChart = dynamic(
 
 const LEVERAGE_PRESETS = [1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100];
 const PERCENT_MARKS = [{ value: 25 }, { value: 50 }, { value: 75 }];
-
-const POSITION_MODAL_STYLES = {
-  content: {
-    backgroundColor: '#13151c',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    borderRadius: '16px',
-  },
-  header: {
-    backgroundColor: 'transparent',
-    padding: '16px 20px',
-  },
-  body: {
-    padding: '0 20px 20px',
-  },
-};
-
-// Resolve a futures position. Prefers the live fields streamed by the
-// `futures_positions` WS channel (markPrice, unrealizedPnl, initialMargin,
-// takeProfitPrice/stopLossPrice) and only falls back to the markets feed or
-// local math when the payload omits them (e.g. the HTTP fallback shape).
-const resolveFuturesPosition = (pos: any, feed: any, selectedPair: string) => {
-  const pair = pos.pair || pos.symbol || `${pos.base || ''}/${pos.quote || 'USDT'}`;
-  const isLong = /^(long|buy)$/i.test(String(pos.side ?? ''));
-  const size = Number(pos.quantity ?? pos.size ?? 0);
-  const entryPrice = Number(pos.entryPrice ?? pos.entry_price ?? pos.price ?? pos.entry ?? 0);
-  const leverage = Number(pos.leverage || 1);
-
-  const symbolRaw = pair.replace('/', '').toUpperCase();
-  const market = (feed.markets || []).find(
-    (m: any) =>
-      (m.symbol || m.pair || '').replace('/', '').replace('-', '').toUpperCase() ===
-      symbolRaw.replace('-', '')
-  );
-  const liveFeedMark = Number(market?.last_price || market?.lastPrice || market?.price || 0);
-  const liveSelectedMark = pair.replace('/', '') === selectedPair.replace('/', '') ? feed.price : null;
-  const payloadMark = Number(pos.markPrice ?? pos.mark_price ?? 0);
-  // Live ticker mark first (moves with price), then the positions-WS snapshot mark,
-  // then entry price as last resort.
-  const markPrice = liveFeedMark || liveSelectedMark || payloadMark || entryPrice;
-
-  const rawMargin = pos.initialMargin ?? pos.initial_margin ?? pos.margin ?? pos.marginUsed ?? pos.margin_used;
-  const margin = rawMargin ? Number(rawMargin) : (size * entryPrice) / leverage;
-
-  const livePriced = Boolean(liveFeedMark || liveSelectedMark);
-  const hasPayloadPnl =
-    pos.unrealizedPnl !== undefined && pos.unrealizedPnl !== null && !isNaN(Number(pos.unrealizedPnl));
-  const pnl =
-    !livePriced && hasPayloadPnl
-      ? Number(pos.unrealizedPnl)
-      : isLong
-        ? size * (markPrice - entryPrice)
-        : size * (entryPrice - markPrice);
-  const roe = margin > 0 ? (pnl / margin) * 100 : 0;
-
-  const tpRaw = pos.takeProfitPrice ?? pos.take_profit_price ?? pos.takeProfit ?? pos.take_profit ?? null;
-  const slRaw = pos.stopLossPrice ?? pos.stop_loss_price ?? pos.stopLoss ?? pos.stop_loss ?? null;
-  const pickTpSl = (v: any) => (v !== null && Number(v) !== 0 ? v : null);
-
-  return { pair, isLong, size, entryPrice, markPrice, leverage, margin, pnl, roe, tp: pickTpSl(tpRaw), sl: pickTpSl(slRaw) };
-};
-
-const getFuturesPositionId = (position: any) =>
-  String(position.id ?? position._id ?? position.position_id ?? "");
-
-const renderFuturesPositionDetails = (position: any) => {
-  const fields: [string, unknown][] = [
-    ["Position ID", position.id],
-    ["User ID", position.userId],
-    ["Symbol", position.symbol],
-    ["Side", position.side],
-    ["Base", position.base],
-    ["Quote", position.quote],
-    ["Size", position.size],
-    ["Entry Price", position.entryPrice],
-    ["Mark Price", position.markPrice],
-    ["Leverage", position.leverage],
-    ["Margin Mode", position.marginMode],
-    ["Isolated Margin", position.isolatedMarginAmt],
-    ["Initial Margin", position.initialMargin],
-    ["Maintenance Margin", position.maintenanceMargin],
-    ["Unrealized PnL", position.unrealizedPnl],
-    ["Unrealized PnL %", position.unrealizedPnlPct],
-    ["Liquidation Price", position.liquidationPrice],
-    ["Bankruptcy Price", position.bankruptcyPrice],
-    ["Take Profit Price", position.takeProfitPrice],
-    ["Stop Loss Price", position.stopLossPrice],
-    ["Created At", position.createdAt],
-    ["Updated At", position.updatedAt],
-  ];
-
-  return (
-    <details className="mt-2 border-t border-white/[0.06] pt-2">
-      <summary className="cursor-pointer text-[11px] font-semibold text-white/50 hover:text-white/80">
-        Position details
-      </summary>
-      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
-        {fields.map(([label, value]) => (
-          <div key={label} className="flex min-w-0 justify-between gap-2">
-            <span className="shrink-0 text-white/40">{label}</span>
-            <span className="truncate text-right text-white/80">{value === undefined || value === null || value === "" ? "—" : String(value)}</span>
-          </div>
-        ))}
-      </div>
-    </details>
-  );
-};
 
 type OrderType = 'limit' | 'market' | 'stop';
 type TradeSide = 'buy' | 'sell';
@@ -213,7 +104,6 @@ function FuturesTradesInner() {
     setPlacedFill(null);
   }, [selectedPair]);
   const [quickOrderOpen, setQuickOrderOpen] = useState(false);
-  const [closingPositionIds, setClosingPositionIds] = useState<Set<string>>(() => new Set());
   // Live funding countdown
   const [fundingCountdown, setFundingCountdown] = useState('--:--:--');
 
@@ -229,21 +119,10 @@ function FuturesTradesInner() {
   });
   const futuresBalance = balances["futures"];
 
-  const { data: futuresOpenOrders, refetch: refetchOpenOrders } = useQuery({
+  const { refetch: refetchOpenOrders } = useQuery({
     queryKey: ['futures-open-orders', selectedPair],
     queryFn: () => tradingService.fetchFuturesOpenOrders({ pair: selectedPair }),
     select: (res: unknown) => readList<Record<string, any>>(res),
-    retry: false,
-    throwOnError: false,
-  });
-
-  const { data: futuresOrderHistory, isLoading: _futuresOrderHistoryLoading } = useQuery({
-    queryKey: tradingKeys.orderHistory("futures"),
-    queryFn: () => tradingService.futuresOrderHistory(),
-    select: (res: any) => {
-      const raw = res?.data ?? res ?? [];
-      return Array.isArray(raw) ? raw : [];
-    },
     retry: false,
     throwOnError: false,
   });
@@ -252,67 +131,6 @@ function FuturesTradesInner() {
   // The spot/margin feed does not carry futures prices, so only use actual
   // futures trades here; the depth panel falls back to the futures mid.
   const lastTradedPrice = getLatestTradePrice(recentTrades);
-
-  const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
-    queryKey: tradingKeys.tradeHistory("futures"),
-    queryFn: () => tradingService.tradeHistory("futures"),
-    select: (res: unknown) => readList<Record<string, unknown>>(res),
-    retry: false,
-    throwOnError: false,
-  });
-
-  const { mutate: closePosition } = useMutation({
-    mutationFn: (positionId: string) => closeFuturesPositionWs(positionId),
-    onSuccess: () => {
-      successNotification('Position closed successfully');
-      refreshBalances(); // re-requests WS portfolio + positions
-      refetchOpenOrders();
-    },
-    onError: (err: any) => errorMessageHandler(err),
-    onSettled: (_data, _error, positionId) => {
-      setClosingPositionIds((current) => {
-        const next = new Set(current);
-        next.delete(positionId);
-        return next;
-      });
-    },
-  });
-
-  const closePositionById = (positionId: string) => {
-    setClosingPositionIds((current) => new Set(current).add(positionId));
-    closePosition(positionId);
-  };
-
-  const { mutate: partialClosePosition } = useMutation({
-    mutationFn: (data: { positionId: string; close_quantity: string }) =>
-      tradingService.partialCloseFuturesPosition(data),
-    onSuccess: () => {
-      successNotification('Partial close executed successfully');
-      refreshBalances();
-      modals.closeAll();
-    },
-    onError: (err: any) => errorMessageHandler(err),
-  });
-
-  const { mutate: updateTPSL } = useMutation({
-    mutationFn: (data: { positionId: string; take_profit_price?: string; stop_loss_price?: string }) => 
-      tradingService.updateFuturesPositionTPSL(data),
-    onSuccess: () => {
-      successNotification('TP/SL updated successfully');
-      modals.closeAll();
-    },
-    onError: (err: any) => errorMessageHandler(err),
-  });
-
-  const { mutate: cancelOrder } = useMutation({
-    mutationFn: (orderId: string) => tradingService.cancelFuturesOrder(orderId),
-    onSuccess: () => {
-      successNotification('Order cancelled');
-      refetchOpenOrders();
-      refreshBalances(); // keep positions panel in sync after cancel
-    },
-    onError: (err: any) => errorMessageHandler(err),
-  });
 
   const { mutate: handleSetFuturesMode } = useMutation({
     mutationFn: (mode: MarginMode) => tradingService.setFuturesMode(mode),
@@ -562,57 +380,8 @@ function FuturesTradesInner() {
       ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       : null;
 
-  const formatTime = (value: unknown) => {
-    if (!value) return '—';
-    const date = new Date(String(value));
-    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleTimeString();
-  };
-
-  // Shared renderer for recent market trades (desktop + mobile) — mirrors margin
-  const renderRecentTrades = (limit = 20) => (
-    <div className="w-full">
-      {recentTradesLoading ? (
-        <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={5} columns={3} className="w-full" /></div>
-      ) : !recentTrades?.length ? (
-        <div className="p-4 text-center text-xs text-white/40">No recent trades</div>
-      ) : (
-        <div className="flex flex-col">
-          <div className="grid grid-cols-4 px-3 py-1.5 text-[10px] text-white/40">
-            <span>Time</span><span className="text-center">Direction</span><span className="text-right">Price</span><span className="text-right">Qty</span>
-          </div>
-          <div className="flex flex-col divide-y divide-white/[0.04]">
-            {[...recentTrades]
-              .sort((a: any, b: any) => {
-                const ta = new Date(a?.createdAt ?? a?.time ?? a?.ts ?? 0).getTime();
-                const tb = new Date(b?.createdAt ?? b?.time ?? b?.ts ?? 0).getTime();
-                return (Number.isNaN(tb) ? 0 : tb) - (Number.isNaN(ta) ? 0 : ta);
-              })
-              .slice(0, limit)
-              .map((t: any, i: number) => {
-              const side = String(t.side ?? '').toUpperCase();
-              const isBuy = side === 'BUY';
-              const priceColor = isBuy ? 'text-success-6' : side === 'SELL' ? 'text-error-1' : 'text-white/80';
-              return (
-                <div key={t.id ?? t.tradeId ?? i} className="grid grid-cols-4 px-3 py-1.5 text-[11px] font-mono tabular-nums items-center">
-                  <span className="text-white/40">{formatTime(t.createdAt ?? t.time ?? t.ts)}</span>
-                  <span className="text-center">
-                    <span className={isBuy ? 'text-success-6' : 'text-error-1'}>{isBuy ? 'BUY' : side === 'SELL' ? 'SELL' : '—'}</span>
-                  </span>
-                  <span className={'text-right ' + priceColor}>{Number(t.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span>
-                  <span className="text-right text-white/80">{Number(t.quantity ?? t.qty ?? t.filled).toLocaleString()}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
   const isPositive = (feed.changePercent24h ?? 0) >= 0;
   const changeColor = isPositive ? 'text-success-6' : 'text-error-1';
-  const maxAskVol = Math.max(...orderBook.sellOrders.map((o) => o.quantity), 0.001);
-  const maxBidVol = Math.max(...orderBook.buyOrders.map((o) => o.quantity), 0.001);
 
   const validateTpsl = (side: TradeSide) => {
     if (!tpslEnabled) return;
@@ -949,7 +718,6 @@ function FuturesTradesInner() {
         }
         rightElement={
           <div className="flex items-center gap-2">
-            
             <div className="flex items-center bg-white/[0.06] rounded-lg p-0.5 gap-0.5 min-[1150px]:hidden">
               <button onClick={() => setMobileMode("chart")} className={`p-1.5 rounded-md transition-all ${mobileMode === "chart" ? "bg-white/15 text-white" : "text-white/40"}`}><IoBarChartOutline size={15} /></button>
               <button onClick={() => setMobileMode("trade")} className={`p-1.5 rounded-md transition-all ${mobileMode === "trade" ? "bg-white/15 text-white" : "text-white/40"}`}><IoListOutline size={15} /></button>
@@ -967,489 +735,57 @@ function FuturesTradesInner() {
         }
       />
 
-      <div className="hidden min-[1150px]:flex bg-[#181a20] py-3 px-4 justify-between items-center border-b border-white/[0.06]">
-        <div className="flex items-center gap-8">
-          <SidebarMenuButton />
-          <Popover width={350} position="bottom-start" shadow="md" opened={pairMenuDesktopOpen} onChange={setPairMenuDesktopOpen}>
-            <PopoverTarget>
-              <button
-                aria-label="Change trading pair"
-                onClick={() => setPairMenuDesktopOpen((v) => !v)}
-                className="flex items-center gap-2 hover:bg-white/5 py-1 px-2 rounded -ml-2 transition-colors"
-              >
-                <span className="text-xl font-bold text-white">
-                  {selectedPair} <span className="text-primary text-[10px] ml-1 align-top bg-primary/10 px-1 rounded">Perp</span>
-                </span>
-                <MdKeyboardArrowDown className="text-white/50" size={20} />
-              </button>
-            </PopoverTarget>
-            <PopoverDropdown className="!bg-[#181a20] !border-white/[0.06] !p-0">
-              <div className="max-h-[400px] overflow-auto flex flex-col p-2">
-                <TextInput
-                  value={pairSearch}
-                  onChange={(event) => setPairSearch(event.currentTarget.value)}
-                  classNames={{
-                    input: '!h-8 !bg-white/5 placeholder:!text-white/30 !border-0 focus:!border focus:!border-primary !rounded mb-2 text-xs',
-                  }}
-                  placeholder="Search pairs..."
-                  leftSection={<Search className="w-4 h-4" />}
-                />
-                {filteredMarkets.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-white/30">No pairs found</div>
-                ) : (
-                  filteredMarkets.slice(0, 25).map((market) => {
-                    const symbol = `${market.base}/${market.quote}`;
-                    return (
-                      <button
-                        key={market.symbol}
-                        onClick={() => handleSelectPair(market.base, market.quote)}
-                        className={clsx(
-                          'flex items-center justify-between p-2 hover:bg-white/5 rounded transition-colors text-left',
-                          selectedPair === symbol && 'bg-white/5'
-                        )}
-                      >
-                        <span className="text-xs font-bold">
-                          {market.base}<span className="text-white/40">/{market.quote} Perp</span>
-                        </span>
-                        <span className={clsx('text-xs font-semibold', market.percent_change >= 0 ? 'text-success-2' : 'text-error-1')}>
-                          {market.percent_change >= 0 ? '+' : ''}{market.percent_change}%
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </PopoverDropdown>
-          </Popover>
+      {/* 3-Column Layout */}
+      <div className="hidden min-[1150px]:grid min-[1150px]:grid-cols-[minmax(0,1fr)_305px_305px] min-[1150px]:grid-rows-[auto_max(480px,calc(100vh-164px))_auto] content-start gap-1 px-1 pt-1 flex-1 pb-1 min-h-0 relative">
 
-          <div className={clsx('flex flex-col gap-0.5 px-2 rounded transition-colors', flashClass)}>
-            {feed.price !== null ? (
-              <span className={`text-lg font-bold ${changeColor}`}>{formatPrice(feed.price)}</span>
-            ) : (
-              <Skeleton variant="text" width="80px" height="24px" />
-            )}
-            <span className="text-xs text-white/50 font-medium flex items-center gap-2">
-              {feed.price !== null ? `₦${(feed.price * 462.5).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—'}
-              <span className="underline decoration-dashed decoration-white/20 underline-offset-2">
-                Index: {feed.price !== null ? formatPrice(feed.price * 0.9998) : '—'}
-              </span>
-            </span>
-          </div>
-          <div className="flex items-center gap-6 hidden md:flex">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-white/40 font-medium">24h Change</span>
-              <span className={`flex text-xs font-semibold ${changeColor} items-center gap-1`}>
-                <span>{feed.change24h !== null ? formatPrice(feed.change24h) : '—'}</span>
-                <span>{feed.changePercent24h !== null ? `${feed.changePercent24h >= 0 ? '+' : ''}${feed.changePercent24h}%` : '—'}</span>
-              </span>
-            </div>
-            <div className="flex text-xs flex-col gap-0.5">
-              <span className="text-[10px] text-white/40 font-medium">24h High</span>
-              <span className="font-semibold text-white/90">{formatPrice(feed.high24h) ?? '—'}</span>
-            </div>
-            <div className="flex text-xs flex-col gap-0.5">
-              <span className="text-[10px] text-white/40 font-medium">24h Low</span>
-              <span className="font-semibold text-white/90">{formatPrice(feed.low24h) ?? '—'}</span>
-            </div>
-            <div className="flex text-xs flex-col gap-0.5">
-              <span className="text-[10px] text-white/40 font-medium underline decoration-dashed decoration-white/20">Funding/Countdown</span>
-              <span className="font-semibold text-primary">
-                {feed.fundingRate !== null ? `${(feed.fundingRate * 100).toFixed(4)}%` : '0.0100%'}
-                {' / '}{fundingCountdown}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-5">
-          <span className={`text-xs font-semibold flex items-center gap-1.5 ${feed.isConnected ? 'text-success-6' : 'text-white/40'}`}>
-            <span className={clsx('w-2 h-2 rounded-full', feed.isConnected ? 'bg-success-6 animate-pulse-glow' : 'bg-white/20')} />
-            {feed.isConnected ? 'Live' : 'Connecting'}
-          </span>
-        </div>
-      </div>
+        {/* Desktop pair bar: sits above chart + order book, beside the trade form */}
+        <SpotPairHeader
+          className="min-[1150px]:col-span-2 min-[1150px]:col-start-1 min-[1150px]:row-start-1"
+          selectedPair={selectedPair}
+          feed={feed}
+          flashClass={flashClass}
+          menuOpen={pairMenuDesktopOpen}
+          onMenuOpenChange={setPairMenuDesktopOpen}
+          pairSearch={pairSearch}
+          onPairSearchChange={setPairSearch}
+          markets={filteredMarkets}
+          onSelectPair={handleSelectPair}
+        />
 
-            <div className="hidden min-[1150px]:grid lg:grid-cols-[1fr_250px_320px] gap-1 px-1 flex-1 pr-1 pb-0 min-h-0 relative">
         {/* MOBILE: Floating Order Book Button */}
         <button className="min-[1150px]:hidden fixed bottom-[90px] right-4 z-40 bg-[#1c1e27] border border-white/[0.08] text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg tap-scale flex items-center gap-2" onClick={() => setOrderBookOpen(true)}>
           <span>Order Book</span>
         </button>
-        <div className="flex flex-col gap-1 overflow-hidden min-w-0 min-[1150px]:col-start-1">
-          <div className={clsx("bg-[#181a20] rounded relative flex flex-col transition-all duration-300", chartExpanded ? "h-[450px]" : "h-[280px] min-[1150px]:min-h-[500px]")}>
+
+        {/* Chart Column (Responsive) */}
+        <div className="flex flex-col gap-1 overflow-hidden min-w-0 min-[1150px]:col-start-1 min-[1150px]:row-start-2">
+          <div className={clsx("bg-[#181a20] rounded relative flex flex-col transition-all duration-300", chartExpanded ? "h-[950px] shrink-0" : "flex-1 min-[1150px]:min-h-0")}>
             <CandlestickChart
+              key={selectedPair}
               symbol={selectedPair}
               market="futures"
+              orderBook={orderBook}
               orderLevels={chartOrderLevels}
               priceRange={{ min: feed.low24h, max: feed.high24h }}
-              orderBook={orderBook}
               lastPrice={lastTradedPrice}
               onLastPriceChange={setChartLastPrice}
+              insightTabs
+              recentTrades={recentTrades}
             />
-            <button 
+
+            {/* Mobile chart expand toggle */}
+            <button
               onClick={() => setChartExpanded(!chartExpanded)}
               className="min-[1150px]:hidden absolute bottom-2 right-2 w-8 h-8 bg-black/50 backdrop-blur border border-white/10 rounded-lg flex items-center justify-center text-white/60 hover:text-white"
             >
               {chartExpanded ? <IoChevronUp /> : <IoChevronDown />}
             </button>
           </div>
-
-          <div className="hidden min-[1150px]:flex bg-[#181a20] rounded overflow-hidden flex-col h-[360px]">
-            <Tabs
-              classNames={{
-                tab: '!pb-2 !pt-3 hover:!bg-transparent hover:!border-0 data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50',
-                list: '!flex !items-center border-b border-white/[0.06] px-4 shrink-0',
-                panel: 'flex-1 flex flex-col min-h-0 overflow-hidden',
-                root: '!flex !flex-col !min-h-0 !h-full',
-              }}
-              defaultValue="positions"
-            >
-              <div className="flex items-center justify-between shrink-0">
-                <TabsList>
-                  <TabsTab value="positions">Positions({futuresPositions.length})</TabsTab>
-                  <TabsTab value="open">Open Orders({futuresOpenOrders?.length ?? 0})</TabsTab>
-                  <TabsTab value="orders">Order History</TabsTab>
-                  <TabsTab value="tradeHistory">Trade History</TabsTab>
-                </TabsList>
-                <div className="pr-4">
-                  <Checkbox
-                    classNames={{
-                      label: '!text-[10px] !text-white/40',
-                      input: '!border-white/20 !bg-transparent checked:!bg-primary',
-                    }}
-                    label="Hide Other Pairs"
-                  />
-                </div>
-              </div>
-              <TabsPanel value="positions">
-                {!futuresPositions || futuresPositions.length === 0 ? (
-                  <div className="flex-1 min-h-[150px] flex flex-col items-center justify-center gap-2">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20">
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                    </div>
-                    <p className="text-xs font-medium text-white/30">You have no open positions.</p>
-                  </div>
-                ) : (
-                  <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
-                    <Table classNames={{
-                      table: "min-w-[1100px] w-full",
-                      th: "!text-[10px] uppercase tracking-wide !text-white/40 !border-b !border-white/[0.05] !py-3 !font-medium whitespace-nowrap",
-                      td: "!text-sm !text-white/80 !border-b !border-white/[0.03] !py-3 whitespace-nowrap",
-                      tr: "hover:!bg-white/[0.02] transition-colors"
-                    }}>
-                      <thead>
-                        <TableTr>
-                          <TableTh className="!pl-4">Pair</TableTh>
-                          <TableTh>Side</TableTh>
-                          <TableTh>Size</TableTh>
-                          <TableTh>Entry Price</TableTh>
-                          <TableTh>Mark Price</TableTh>
-                          <TableTh>Margin</TableTh>
-                          <TableTh>Unrealized PNL (ROE%)</TableTh>
-                          <TableTh>TP / SL</TableTh>
-                          <TableTh>Details</TableTh>
-                          <TableTh className="!pr-4 !text-right">Action</TableTh>
-                        </TableTr>
-                      </thead>
-                      <tbody>
-                        {[...futuresPositions]
-                          .sort((a: any, b: any) => {
-                            // Fully stable sort: pair → side → leverage → entryPrice → size → id
-                            const pairA = a.pair || '';
-                            const pairB = b.pair || '';
-                            if (pairA !== pairB) return pairA.localeCompare(pairB);
-                            // Sort side: long before short
-                            const sideA = (a.side || '').toLowerCase();
-                            const sideB = (b.side || '').toLowerCase();
-                            if (sideA !== sideB) return sideA.localeCompare(sideB);
-                            // Then by leverage
-                            if ((a.leverage || 0) !== (b.leverage || 0)) return (a.leverage || 0) - (b.leverage || 0);
-                            // Then by entry price
-                            const epA = Number(a.price || a.entryPrice || a.entry_price || 0);
-                            const epB = Number(b.price || b.entryPrice || b.entry_price || 0);
-                            if (epA !== epB) return epA - epB;
-                            // Then by size
-                            const szA = Number(a.quantity ?? a.size ?? 0);
-                            const szB = Number(b.quantity ?? b.size ?? 0);
-                            if (szA !== szB) return szA - szB;
-                            // Final tiebreaker: id string
-                            return String(a.id || a._id || '').localeCompare(String(b.id || b._id || ''));
-                          })
-                          .map((pos: any, idx: number) => {
-                          const {
-                            pair, isLong, size, entryPrice, markPrice, leverage, margin, pnl, roe, tp, sl,
-                          } = resolveFuturesPosition(pos, feed, selectedPair);
-                          const positionId = getFuturesPositionId(pos);
-
-                          // Create a stable key combining available unique fields
-                          const stableKey = pos.id || pos._id || pos.position_id || `${pair}-${pos.side}-${size}-${entryPrice}-${leverage}-${idx}`;
-                          const pnlColor = pnl >= 0 ? "text-emerald-400" : "text-red-400";
-                          const pnlSign = pnl >= 0 ? "+" : "";
-
-                          return (
-                            <TableTr key={stableKey}>
-                              <TableTd className="!pl-4 font-bold text-white">{pair}</TableTd>
-                              <TableTd>
-                                <span className={clsx("text-xs font-bold uppercase px-1.5 py-0.5 rounded", isLong ? "bg-emerald-400/10 text-emerald-400" : "bg-red-400/10 text-red-400")}>
-                                  {pos.side} <span className="text-white/40 ml-1">{leverage}x</span>
-                                </span>
-                              </TableTd>
-                              <TableTd className="font-mono">{size.toLocaleString()}</TableTd>
-                              <TableTd className="font-mono">${entryPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</TableTd>
-                              <TableTd className="font-mono">${markPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</TableTd>
-                              <TableTd className="font-mono">{margin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableTd>
-                              <TableTd className="font-mono">
-                                <div className="flex flex-col gap-0.5">
-                                  <span className={clsx("font-bold text-[13px]", pnlColor)}>{pnlSign}{pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                  <span className={clsx("text-[10px]", pnlColor)}>{pnlSign}{roe.toFixed(2)}%</span>
-                                </div>
-                              </TableTd>
-                              <TableTd className="font-mono">
-                                <div className="flex flex-col gap-1 text-[11px]">
-                                  <span className="text-emerald-400">TP: {tp ?? '—'}</span>
-                                  <span className="text-red-400">SL: {sl ?? '—'}</span>
-                                </div>
-                              </TableTd>
-                              <TableTd className="whitespace-normal">{renderFuturesPositionDetails(pos)}</TableTd>
-                              <TableTd className="!pr-4 !text-right">
-                                <div className="flex justify-end gap-1.5">
-                                   <button
-                                    onClick={() => {
-                                      let qty = '';
-                                      modals.open({
-                                        ...DEFAULT_MODAL_SETTINGS,
-                                        size: 'lg',
-                                        title: <span className="text-white font-bold text-base">Partial Close</span>,
-                                        styles: POSITION_MODAL_STYLES,
-                                        children: (
-                                          <div className="flex flex-col gap-4">
-<p className="text-xs text-white/50">Current size: <span className="text-white font-semibold">{size} {pair.split('/')[0]}</span></p>
-                                            <TextInput
-                                              label="Close Quantity"
-                                              placeholder={`Max ${size}`}
-                                              onChange={(e) => { qty = e.currentTarget.value; }}
-                                            />
-                                            <button
-                                              className="w-full h-10 mt-1 rounded bg-amber-500/80 hover:bg-amber-500 text-white text-sm font-semibold transition-colors"
-                                              onClick={() => {
-                                                if (!qty || isNaN(Number(qty)) || Number(qty) <= 0) return;
-                                                partialClosePosition({ positionId, close_quantity: qty });
-                                              }}
-                                            >
-                                              Confirm Partial Close
-                                            </button>
-                                          </div>
-                                        ),
-                                      });
-                                    }}
-                                    className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 px-2 py-1 bg-amber-400/10 hover:bg-amber-400/20 rounded transition-colors"
-                                  >
-                                    Partial
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      let tp = pos.takeProfitPrice ?? pos.take_profit_price ?? pos.takeProfit ?? pos.take_profit ?? '';
-                                      let sl = pos.stopLossPrice ?? pos.stop_loss_price ?? pos.stopLoss ?? pos.stop_loss ?? '';
-                                      modals.open({
-                                        ...DEFAULT_MODAL_SETTINGS,
-                                        size: 'lg',
-                                        title: <span className="text-white font-bold text-base">Update TP/SL</span>,
-                                        styles: POSITION_MODAL_STYLES,
-                                        children: (
-                                          <div className="flex flex-col gap-4">
-                                            <TextInput
-                                              label="Take Profit Price"
-                                              placeholder="Enter target price"
-                                              defaultValue={tp}
-                                              onChange={(e) => { tp = e.currentTarget.value; }}
-                                            />
-                                            <TextInput
-                                              label="Stop Loss Price"
-                                              placeholder="Enter trigger price"
-                                              defaultValue={sl}
-                                              onChange={(e) => { sl = e.currentTarget.value; }}
-                                            />
-                                            <button
-                                              className="w-full h-10 mt-2 rounded bg-primary text-white text-sm font-semibold"
-                                              onClick={() => updateTPSL({ positionId, take_profit_price: tp, stop_loss_price: sl })}
-                                            >
-                                              Confirm Update
-                                            </button>
-                                          </div>
-                                        ),
-                                      });
-                                    }}
-                                    className="text-[11px] font-semibold text-white/60 hover:text-white px-2 py-1 bg-white/5 rounded"
-                                  >
-                                    TP/SL
-                                  </button>
-                                  <button
-                                    onClick={() => positionId && closePositionById(positionId)}
-                                    disabled={!positionId || closingPositionIds.has(positionId)}
-                                    className="text-[11px] font-semibold text-primary hover:underline px-2 py-1 bg-primary/10 rounded disabled:opacity-50"
-                                  >
-                                    {closingPositionIds.has(positionId) ? "Closing..." : "Close"}
-                                  </button>
-                                </div>
-                              </TableTd>
-                            </TableTr>
-                          );
-                        })}
-                      </tbody>
-                    </Table>
-                    {/* uPNL Summary Footer */}
-                    {futuresPositions.length > 0 && (() => {
-                      const totalPnl = futuresPositions.reduce((sum: number, pos: any) => {
-                        return sum + resolveFuturesPosition(pos, feed, selectedPair).pnl;
-                      }, 0);
-                      const totalMargin = futuresPositions.reduce((sum: number, pos: any) => {
-                        return sum + resolveFuturesPosition(pos, feed, selectedPair).margin;
-                      }, 0);
-                      const equity = walletBalanceUsd + totalPnl;
-                      const pnlColor = totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400';
-                      const pnlSign = totalPnl >= 0 ? '+' : '';
-                      return (
-                        <div className="border-t border-white/[0.06] px-4 py-3 flex items-center justify-between bg-white/[0.01]">
-                          <div className="flex items-center gap-6 text-xs">
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] text-white/40 uppercase tracking-wide" title="Unrealised PnL: profit/loss on open positions at current mark price">Total uPNL</span>
-                              <span className={`font-bold tabular-nums ${pnlColor}`}>{pnlSign}{totalPnl.toFixed(4)} USDT</span>
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] text-white/40 uppercase tracking-wide" title="Total initial margin locked across all open positions">Margin Used</span>
-                              <span className="font-semibold text-white/80 tabular-nums">{totalMargin.toFixed(4)} USDT</span>
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="flex items-center gap-1 text-[10px] text-white/40 uppercase tracking-wide" title="Wallet Balance + Unrealised PnL. Higher than Available because margin is locked.">
-                                Account Equity
-                                <button
-                                  type="button"
-                                  onClick={refreshBalances}
-                                  aria-label="Refresh futures account balance"
-                                  title="Refresh balance"
-                                  className="text-white/40 hover:text-white transition-colors"
-                                >
-                                  <MdRefresh size={13} className={isRefreshing ? "animate-spin" : ""} />
-                                </button>
-                              </span>
-                              <span className="font-semibold text-white/80 tabular-nums">{equity.toFixed(4)} USDT</span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-              </TabsPanel>
-              <TabsPanel value="open">
-                {!futuresOpenOrders || futuresOpenOrders.length === 0 ? (
-                  <div className="flex-1 min-h-[150px] flex flex-col items-center justify-center gap-2">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20">
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                    </div>
-                    <p className="text-xs font-medium text-white/30">You have no open orders.</p>
-                  </div>
-                ) : (
-                  <div className="flex-1 min-h-0 overflow-auto">
-                    <Table classNames={{ table: "min-w-[600px]", th: "!text-[10px] uppercase tracking-wide !text-white/40 !border-b !border-white/[0.05] !py-3 !font-medium", td: "!text-sm !text-white/80 !border-b !border-white/[0.03] !py-3", tr: "hover:!bg-white/[0.02] transition-colors" }}>
-                      <thead>
-                        <TableTr>
-                          <TableTh className="!pl-4">Pair</TableTh>
-                          <TableTh>Type</TableTh>
-                          <TableTh>Side</TableTh>
-                          <TableTh>Price</TableTh>
-                          <TableTh>Quantity</TableTh>
-                          <TableTh>Filled</TableTh>
-                          <TableTh className="!pr-4 !text-right">Action</TableTh>
-                        </TableTr>
-                      </thead>
-                      <tbody>
-                        {futuresOpenOrders.map((ord: any, idx: number) => {
-                          const pair = ord.pair || `${ord.base || ''}/${ord.quote || 'USDT'}`;
-                          const isLong = ord.side?.toLowerCase() === 'long' || ord.side?.toLowerCase() === 'buy';
-                          return (
-                            <TableTr key={ord.id || idx}>
-                              <TableTd className="!pl-4 font-bold text-white">{pair}</TableTd>
-                              <TableTd className="capitalize">{ord.type || ord.orderType || '—'}</TableTd>
-                              <TableTd>
-                                <span className={clsx("text-xs font-bold uppercase px-1.5 py-0.5 rounded", isLong ? "bg-emerald-400/10 text-emerald-400" : "bg-red-400/10 text-red-400")}>{ord.side}</span>
-                              </TableTd>
-                              <TableTd className="font-mono">${Number(ord.price || 0).toLocaleString()}</TableTd>
-                              <TableTd className="font-mono">{Number(ord.quantity || ord.size || 0).toLocaleString()}</TableTd>
-                              <TableTd className="font-mono text-white/50">{Number(ord.filled || ord.filledQty || 0).toLocaleString()}</TableTd>
-                              <TableTd className="!pr-4 !text-right">
-                                 <button onClick={() => cancelOrder(ord.id)} className="text-[11px] font-semibold text-red-400 hover:underline px-2 py-1 bg-red-400/10 rounded">Cancel</button>
-                              </TableTd>
-                            </TableTr>
-                          );
-                        })}
-                      </tbody>
-                    </Table>
-                  </div>
-                )}
-              </TabsPanel>
-              <TabsPanel value="orders">
-                {!futuresOrderHistory || futuresOrderHistory.length === 0 ? (
-                  <div className="flex-1 min-h-[150px] flex flex-col items-center justify-center gap-2">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/20">
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                    </div>
-                    <p className="text-xs font-medium text-white/30">No order history.</p>
-                  </div>
-                ) : (
-                  <div className="flex-1 min-h-0 overflow-auto">
-                    <Table classNames={{ table: "min-w-[600px]", th: "!text-[10px] uppercase tracking-wide !text-white/40 !border-b !border-white/[0.05] !py-3 !font-medium", td: "!text-sm !text-white/80 !border-b !border-white/[0.03] !py-3", tr: "hover:!bg-white/[0.02] transition-colors" }}>
-                      <thead>
-                        <TableTr>
-                          <TableTh className="!pl-4">Pair</TableTh>
-                          <TableTh>Type</TableTh>
-                          <TableTh>Side</TableTh>
-                          <TableTh>Price</TableTh>
-                          <TableTh>Quantity</TableTh>
-                          <TableTh>Status</TableTh>
-                          <TableTh className="!pr-4">Date</TableTh>
-                        </TableTr>
-                      </thead>
-                      <tbody>
-                        {futuresOrderHistory.map((ord: any, idx: number) => {
-                          const pair = ord.pair || `${ord.base || ''}/${ord.quote || 'USDT'}`;
-                          const isLong = ord.side?.toLowerCase() === 'long' || ord.side?.toLowerCase() === 'buy';
-                          return (
-                            <TableTr key={ord.id || idx}>
-                              <TableTd className="!pl-4 font-bold text-white">{pair}</TableTd>
-                              <TableTd className="capitalize">{ord.type || ord.orderType || '—'}</TableTd>
-                              <TableTd>
-                                <span className={clsx("text-xs font-bold uppercase px-1.5 py-0.5 rounded", isLong ? "bg-emerald-400/10 text-emerald-400" : "bg-red-400/10 text-red-400")}>{ord.side}</span>
-                              </TableTd>
-                              <TableTd className="font-mono">${Number(ord.price || 0).toLocaleString()}</TableTd>
-                              <TableTd className="font-mono">{Number(ord.quantity || ord.size || 0).toLocaleString()}</TableTd>
-                              <TableTd>
-                                <span className={clsx("text-xs font-medium capitalize", ord.status === 'filled' ? 'text-emerald-400' : ord.status === 'cancelled' ? 'text-red-400' : 'text-white/50')}>{ord.status || '—'}</span>
-                              </TableTd>
-                              <TableTd className="!pr-4 text-white/40 text-xs">{ord.createdAt ? new Date(ord.createdAt).toLocaleString() : '—'}</TableTd>
-                            </TableTr>
-                          );
-                        })}
-                      </tbody>
-                    </Table>
-                  </div>
-                )}
-              </TabsPanel>
-              <TabsPanel value="tradeHistory">
-                <div className="flex-1 min-h-0 overflow-auto">
-                  <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
-                </div>
-              </TabsPanel>
-            </Tabs>
-          </div>
         </div>
 
+        {/* COL 2: Order Book and live market trades */}
         <OrderBookTabs
-          className="hidden min-[1150px]:flex rounded min-h-0"
+          className="hidden min-[1150px]:flex min-h-0 min-[1150px]:col-start-2 min-[1150px]:row-start-2"
           buyOrders={orderBook.buyOrders}
           sellOrders={orderBook.sellOrders}
           recentTrades={recentTrades}
@@ -1457,6 +793,7 @@ function FuturesTradesInner() {
           base={baseAsset}
           quote={quoteAsset}
           currentPrice={chartLastPrice ?? feed.price}
+          dayChangePercent={feed.changePercent24h}
           buyPercentage={orderBook.buyPercentage}
           sellPercentage={orderBook.sellPercentage}
           isConnected={orderBook.isConnected}
@@ -1466,95 +803,14 @@ function FuturesTradesInner() {
             priceUserEditedRef.current = true;
           }}
         />
-        <div className="hidden">
-          <div className="px-4 py-3 border-b border-white/[0.06] text-sm text-white/90 font-semibold flex items-center justify-between">
-            <span>Order Book</span>
-            <div className="flex gap-2">
-              <button className="w-5 h-5 rounded bg-white/10 flex flex-col items-center justify-center gap-px opacity-100 hover:bg-white/20 transition-colors">
-                <span className="w-3 h-[2px] bg-error-1" />
-                <span className="w-3 h-[2px] bg-success-6" />
-              </button>
-              <button className="w-5 h-5 rounded bg-transparent flex flex-col items-center justify-center gap-px opacity-50 hover:bg-white/10 transition-colors">
-                <span className="w-3 h-[2px] bg-success-6" />
-                <span className="w-3 h-[2px] bg-success-6" />
-              </button>
-              <button className="w-5 h-5 rounded bg-transparent flex flex-col items-center justify-center gap-px opacity-50 hover:bg-white/10 transition-colors">
-                <span className="w-3 h-[2px] bg-error-1" />
-                <span className="w-3 h-[2px] bg-error-1" />
-              </button>
-            </div>
-          </div>
 
-          <div className="flex flex-col flex-1 overflow-hidden p-1">
-            <div className="grid grid-cols-3 px-3 py-1 mb-1">
-              <span className="text-[10px] font-medium text-white/40">Price(USDT)</span>
-              <span className="text-[10px] font-medium text-white/40 text-right">Qty({baseAsset})</span>
-              <span className="text-[10px] font-medium text-white/40 text-right">Total</span>
-            </div>
-
-            {orderBook.sellOrders.length === 0 && orderBook.buyOrders.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center">
-                <span className="text-xs text-white/30 font-medium">No order data</span>
-              </div>
-            ) : (
-              <div className="flex flex-col flex-1">
-                <div className="flex flex-col justify-end flex-1 overflow-hidden gap-[2px]">
-                  {[...orderBook.sellOrders].reverse().map((order, i) => {
-                    const widthPercent = Math.min((order.quantity / maxAskVol) * 100, 100);
-                    return (
-                      <button
-                        type="button"
-                        key={`ask-${i}`}
-                        onClick={() => { setFuturesPrice(order.price); priceUserEditedRef.current = true; }}
-                        className="relative grid grid-cols-3 px-3 py-[2px] overflow-hidden cursor-pointer hover:bg-white/[0.02]"
-                      >
-                        <div className="absolute top-0 right-0 bottom-0 bg-error-1/[0.08] transition-all duration-300" style={{ width: `${widthPercent}%` }} />
-                        <span className="text-[11px] font-mono tabular-nums font-semibold text-error-1 z-10">{order.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <span className="text-[11px] font-mono tabular-nums font-medium text-white/80 text-right z-10">{order.quantity.toFixed(4)}</span>
-                        <span className="text-[11px] font-mono tabular-nums text-white/40 text-right z-10">{(order.price * order.quantity).toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {orderBook.sellOrders.length > 0 && orderBook.buyOrders.length > 0 && (() => {
-                  const lowestAsk = Math.min(...orderBook.sellOrders.map((o) => o.price));
-                  const highestBid = Math.max(...orderBook.buyOrders.map((o) => o.price));
-                  const spread = +(lowestAsk - highestBid).toFixed(2);
-                  return (
-                    <div className="py-2.5 px-3 flex items-center justify-between border-y border-white/[0.04] my-2">
-                      <span className={clsx('text-base font-bold font-mono tabular-nums', changeColor)}>
-                        {feed.price !== null ? formatPrice(feed.price) : '—'}
-                      </span>
-                      <span className="text-[10px] font-medium text-white/40">Spread {spread}</span>
-                    </div>
-                  );
-                })()}
-
-                <div className="flex flex-col flex-1 overflow-hidden gap-[2px]">
-                  {orderBook.buyOrders.map((order, i) => {
-                    const widthPercent = Math.min((order.quantity / maxBidVol) * 100, 100);
-                    return (
-                      <button
-                        type="button"
-                        key={`bid-${i}`}
-                        onClick={() => { setFuturesPrice(order.price); priceUserEditedRef.current = true; }}
-                        className="relative grid grid-cols-3 px-3 py-[2px] overflow-hidden cursor-pointer hover:bg-white/[0.02]"
-                      >
-                        <div className="absolute top-0 right-0 bottom-0 bg-success-6/[0.08] transition-all duration-300" style={{ width: `${widthPercent}%` }} />
-                        <span className="text-[11px] font-mono tabular-nums font-semibold text-success-6 z-10">{order.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <span className="text-[11px] font-mono tabular-nums font-medium text-white/80 text-right z-10">{order.quantity.toFixed(4)}</span>
-                        <span className="text-[11px] font-mono tabular-nums text-white/40 text-right z-10">{(order.price * order.quantity).toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Desktop trading panel: Positions / Open Orders / Order History / ... (spans under chart + order book) */}
+        <div className="hidden min-[1150px]:flex flex-col min-w-0 min-h-[260px] max-h-[420px] col-span-2 col-start-1 row-start-3">
+          <TradingPanel selectedPair={selectedPair} market="futures" className="flex-1 min-h-0" />
         </div>
 
-        <div className="bg-[#181a20] rounded flex flex-col flex-1 p-4 overflow-auto max-[1150px]:min-h-[400px]">
+        {/* COL 3: Trade Form (Responsive) */}
+        <div className="bg-[#181a20] flex flex-col flex-1 p-4 overflow-auto max-[1150px]:min-h-[400px] min-[1150px]:col-start-3 min-[1150px]:row-start-1 min-[1150px]:row-span-3">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Popover classNames={{ dropdown: '!bg-[#181a20] !border-white/[0.06] !px-1 !pt-3 !pb-2' }}>
@@ -1660,9 +916,6 @@ function FuturesTradesInner() {
           </Tabs>
         </div>
       </div>
-      
-      
-
 
       {/* MOBILE VIEW */}
       <div className="min-[1150px]:hidden flex flex-col flex-1 pb-[80px] min-h-0 relative">
@@ -1697,16 +950,17 @@ function FuturesTradesInner() {
           <div className="flex flex-col flex-1 overflow-auto custom-scrollbar pb-[65px]">
             <div className="h-[400px] shrink-0 bg-[#181a20]">
               <CandlestickChart
+                key={selectedPair}
                 symbol={selectedPair}
                 market="futures"
+                orderBook={orderBook}
                 orderLevels={chartOrderLevels}
                 priceRange={{ min: feed.low24h, max: feed.high24h }}
-                orderBook={orderBook}
                 lastPrice={lastTradedPrice}
                 onLastPriceChange={setChartLastPrice}
               />
             </div>
-            
+
             {/* Bottom Action Bar */}
             <div className="bg-[#181a20] py-4 px-6 flex justify-center gap-4">
               <button onClick={() => setQuickOrderOpen(true)} className="flex-1 max-w-[160px] bg-[#2ecc71] text-white font-bold rounded-full py-2.5 text-sm active:scale-95 transition-transform">
@@ -1725,7 +979,7 @@ function FuturesTradesInner() {
               recentTrades={recentTrades}
               recentTradesLoading={recentTradesLoading}
               base={baseAsset}
-              quote="USDT"
+              quote={quoteAsset}
               currentPrice={chartLastPrice ?? feed.price}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
@@ -1736,115 +990,13 @@ function FuturesTradesInner() {
                 priceUserEditedRef.current = true;
               }}
             />
-            {/* Legacy mobile book markup kept hidden while the shared panel handles both tabs. */}
-            <Tabs className="hidden" defaultValue="orderbook" classNames={{
-              tab: "!py-3 !px-4 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none font-bold text-sm text-white/50",
-              list: "border-b border-white/[0.06] flex items-center before:!border-0 w-full",
-              panel: "!p-0"
-            }}>
-              <TabsList>
-                <TabsTab value="orderbook">Order Book</TabsTab>
-                <TabsTab value="trades">Trades</TabsTab>
-              </TabsList>
-              
-              <TabsPanel value="orderbook">
-                <div className="flex flex-col p-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Bids (Left) */}
-                    <div className="flex flex-col gap-1">
-                      <div className="flex justify-between text-[10px] text-white/40 mb-1 px-1">
-                        <span>Qty</span><span>Price</span>
-                      </div>
-                      {orderBook.buyOrders.map((order, i) => {
-                        const w = Math.min((order.quantity / maxBidVol) * 100, 100);
-                        return (
-                          <div key={`bid-${i}`} onClick={() => setFuturesPrice(order.price)} className="flex justify-between relative py-0.5 px-1 cursor-pointer">
-                            <div className="absolute top-0 right-0 bottom-0 bg-success-6/[0.08]" style={{ width: `${w}%` }} />
-                            <span className="text-[11px] font-mono text-white/80 z-10">{order.quantity.toFixed(4)}</span>
-                            <span className="text-[11px] font-mono text-success-6 z-10">{order.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {/* Asks (Right) */}
-                    <div className="flex flex-col gap-1">
-                      <div className="flex justify-between text-[10px] text-white/40 mb-1 px-1">
-                        <span>Price</span><span>Qty</span>
-                      </div>
-                      {[...orderBook.sellOrders].reverse().map((order, i) => {
-                        const w = Math.min((order.quantity / maxAskVol) * 100, 100);
-                        return (
-                          <div key={`ask-${i}`} onClick={() => setFuturesPrice(order.price)} className="flex justify-between relative py-0.5 px-1 cursor-pointer">
-                            <div className="absolute top-0 left-0 bottom-0 bg-error-1/[0.08]" style={{ width: `${w}%` }} />
-                            <span className="text-[11px] font-mono text-error-1 z-10">{order.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                            <span className="text-[11px] font-mono text-white/80 z-10">{order.quantity.toFixed(4)}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </TabsPanel>
-              
-              <TabsPanel value="trades">
-                <div className="flex flex-col p-2">
-                  {renderRecentTrades(30)}
-                </div>
-              </TabsPanel>
-            </Tabs>
-
           </div>
         ) : (
           // --- TRADE VIEW ---
-          <div className="flex flex-col flex-1 overflow-auto custom-scrollbar">
-            <div className="flex bg-[#181a20] flex-1">
-              {/* Left Side: Trade Form */}
+          <div className="flex flex-col flex-1 overflow-auto custom-scrollbar pb-[65px]">
+            <div className="flex bg-[#181a20] shrink-0">
               <div className="w-full px-3 py-4">
                 {tradeFormPanel}
-              </div>
-
-              {/* Right Side: Stacked Order Book */}
-              <div className="hidden">
-                <div className="flex justify-between text-[10px] text-white/40 mb-2 px-1">
-                  <span>Price</span><span>Qty</span>
-                </div>
-                {/* Asks */}
-                <div className="flex flex-col justify-end flex-1 overflow-hidden gap-[2px]">
-                  {[...orderBook.sellOrders].reverse().slice(-10).map((order, i) => {
-                    const w = Math.min((order.quantity / maxAskVol) * 100, 100);
-                    return (
-                      <div key={`ask-${i}`} onClick={() => setFuturesPrice(order.price)} className="flex justify-between relative py-0.5 px-1 cursor-pointer">
-                        <div className="absolute top-0 right-0 bottom-0 bg-error-1/[0.08]" style={{ width: `${w}%` }} />
-                        <span className="text-[11px] font-mono text-error-1 z-10">{order.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                        <span className="text-[11px] font-mono text-white/80 z-10">{order.quantity.toFixed(4)}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-                
-                {/* Current Price */}
-                <div className="py-2 px-1 flex flex-col my-1">
-                  <span className={clsx("text-[13px] font-bold font-mono", changeColor)}>
-                    {feed.price !== null ? formatPrice(feed.price) : "—"}
-                  </span>
-                  <span className="text-[10px] text-white/40">
-                    ${feed.price !== null ? formatPrice(feed.price) : "—"}
-                  </span>
-                </div>
-
-                {/* Bids */}
-                <div className="flex flex-col flex-1 overflow-hidden gap-[2px]">
-                  {orderBook.buyOrders.slice(0, 10).map((order, i) => {
-                    const w = Math.min((order.quantity / maxBidVol) * 100, 100);
-                    return (
-                      <div key={`bid-${i}`} onClick={() => setFuturesPrice(order.price)} className="flex justify-between relative py-0.5 px-1 cursor-pointer">
-                        <div className="absolute top-0 right-0 bottom-0 bg-success-6/[0.08]" style={{ width: `${w}%` }} />
-                        <span className="text-[11px] font-mono text-success-6 z-10">{order.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                        <span className="text-[11px] font-mono text-white/80 z-10">{order.quantity.toFixed(4)}</span>
-                      </div>
-                    )
-                  })}
-                </div>
               </div>
             </div>
 
@@ -1856,7 +1008,7 @@ function FuturesTradesInner() {
               recentTrades={recentTrades}
               recentTradesLoading={recentTradesLoading}
               base={baseAsset}
-              quote="USDT"
+              quote={quoteAsset}
               currentPrice={chartLastPrice ?? feed.price}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
@@ -1868,239 +1020,8 @@ function FuturesTradesInner() {
               }}
             />
 
-            {/* Positions & Orders Tabs */}
-            <div className="bg-[#181a20] rounded flex flex-col mt-2 mb-[80px] h-[320px] overflow-hidden">
-              <Tabs
-                classNames={{
-                  tab: "!pb-2 !pt-3 hover:!bg-transparent hover:!border-0 data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-primary !border-b-[2px] !border-transparent !rounded-none !text-xs !font-semibold text-white/50",
-                  list: "!flex !items-center border-b border-white/[0.06] px-4 shrink-0",
-                  panel: "flex-1 flex flex-col min-h-0 overflow-hidden",
-                  root: "!flex !flex-col !min-h-0 !h-full",
-                }}
-                defaultValue="positions"
-              >
-                <TabsList>
-                  <TabsTab value="positions">Positions ({futuresPositions.length})</TabsTab>
-                  <TabsTab value="open-orders">Open Orders ({futuresOpenOrders?.length ?? 0})</TabsTab>
-                  <TabsTab value="history">Order History</TabsTab>
-                  <TabsTab value="tradeHistory">Trade History</TabsTab>
-                </TabsList>
-                <TabsPanel value="positions">
-                  <div className="p-4 flex-1 min-h-0 overflow-y-auto flex flex-col">
-                    {!futuresPositions || futuresPositions.length === 0 ? (
-                      <div className="flex-1 min-h-[150px] flex flex-col items-center justify-center gap-2">
-                        <p className="text-xs font-medium text-white/30">No open positions</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-3">
-                        {futuresPositions.map((pos: any) => {
-                          const { pair, isLong, size, entryPrice, markPrice, leverage, margin, pnl, roe, tp, sl } = resolveFuturesPosition(pos, feed, selectedPair);
-                          const positionId = getFuturesPositionId(pos);
-                          const pnlSign = pnl >= 0 ? '+' : '';
-                          const pnlColor = pnl >= 0 ? 'text-emerald-400' : 'text-red-400';
-                          return (
-                            <div key={pos.id || pos._id || `${pos.pair}-${pos.side}`} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm font-bold text-white">{pair} <span className={`text-xs font-bold ${isLong ? 'text-emerald-400' : 'text-red-400'}`}>{pos.side?.toUpperCase()} {leverage}x</span></span>
-                                <div className="text-right">
-                                  <span className={`text-sm font-bold tabular-nums ${pnlColor}`}>{pnlSign}{pnl.toFixed(4)}</span>
-                                  <span className={`block text-[10px] tabular-nums ${pnlColor}`}>{pnlSign}{roe.toFixed(2)}%</span>
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-1 text-xs">
-                                <div className="flex justify-between"><span className="text-white/40">Size</span><span className="text-white tabular-nums">{size}</span></div>
-                                <div className="flex justify-between"><span className="text-white/40">Entry</span><span className="text-white tabular-nums">${entryPrice.toLocaleString()}</span></div>
-                                <div className="flex justify-between"><span className="text-white/40">Mark</span><span className="text-white tabular-nums">${markPrice.toLocaleString()}</span></div>
-                                <div className="flex justify-between"><span className="text-white/40">Margin</span><span className="text-white tabular-nums">{margin.toFixed(2)}</span></div>
-                                <div className="flex justify-between col-span-2"><span className="text-white/40">TP</span><span className="text-emerald-400 tabular-nums">{tp ?? '—'}</span></div>
-                                <div className="flex justify-between col-span-2"><span className="text-white/40">SL</span><span className="text-red-400 tabular-nums">{sl ?? '—'}</span></div>
-                              </div>
-                              {renderFuturesPositionDetails(pos)}
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => {
-                                    let qty = '';
-                                    modals.open({
-                                      ...DEFAULT_MODAL_SETTINGS,
-                                      size: 'lg',
-                                      title: <span className="text-white font-bold text-base">Partial Close</span>,
-                                      styles: POSITION_MODAL_STYLES,
-                                      children: (
-                                        <div className="flex flex-col gap-4">
-                                          <p className="text-xs text-white/50">Current size: <span className="text-white font-semibold">{size} {pair.split('/')[0]}</span></p>
-                                          <TextInput
-                                            label="Close Quantity"
-                                            placeholder={`Max ${size}`}
-                                            onChange={(e) => { qty = e.currentTarget.value; }}
-                                          />
-                                          <button
-                                            className="w-full h-10 mt-1 rounded bg-amber-500/80 hover:bg-amber-500 text-white text-sm font-semibold transition-colors"
-                                            onClick={() => {
-                                              if (!qty || isNaN(Number(qty)) || Number(qty) <= 0) return;
-                                              partialClosePosition({ positionId, close_quantity: qty });
-                                            }}
-                                          >
-                                            Confirm Partial Close
-                                          </button>
-                                        </div>
-                                      ),
-                                    });
-                                  }}
-                                  className="flex-1 text-[11px] font-semibold text-amber-400 hover:text-amber-300 px-2 py-1.5 bg-amber-400/10 hover:bg-amber-400/20 rounded transition-colors"
-                                >
-                                  Partial
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    let tp = pos.takeProfitPrice ?? pos.take_profit_price ?? pos.takeProfit ?? pos.take_profit ?? '';
-                                    let sl = pos.stopLossPrice ?? pos.stop_loss_price ?? pos.stopLoss ?? pos.stop_loss ?? '';
-                                    modals.open({
-                                      ...DEFAULT_MODAL_SETTINGS,
-                                      size: 'lg',
-                                      title: <span className="text-white font-bold text-base">Update TP/SL</span>,
-                                      styles: POSITION_MODAL_STYLES,
-                                      children: (
-                                        <div className="flex flex-col gap-4">
-                                          <TextInput
-                                            label="Take Profit Price"
-                                            placeholder="Enter target price"
-                                            defaultValue={tp}
-                                            onChange={(e) => { tp = e.currentTarget.value; }}
-                                          />
-                                          <TextInput
-                                            label="Stop Loss Price"
-                                            placeholder="Enter trigger price"
-                                            defaultValue={sl}
-                                            onChange={(e) => { sl = e.currentTarget.value; }}
-                                          />
-                                          <button
-                                            className="w-full h-10 mt-2 rounded bg-primary text-white text-sm font-semibold"
-                                            onClick={() => updateTPSL({ positionId, take_profit_price: tp, stop_loss_price: sl })}
-                                          >
-                                            Confirm Update
-                                          </button>
-                                        </div>
-                                      ),
-                                    });
-                                  }}
-                                  className="flex-1 text-[11px] font-semibold text-white/60 hover:text-white px-2 py-1.5 bg-white/5 rounded"
-                                >
-                                  TP/SL
-                                </button>
-                                <button
-                                  onClick={() => positionId && closePositionById(positionId)}
-                                  disabled={!positionId || closingPositionIds.has(positionId)}
-                                  className="flex-1 text-[11px] font-semibold text-primary hover:underline px-2 py-1.5 bg-primary/10 rounded disabled:opacity-50"
-                                >
-                                  {closingPositionIds.has(positionId) ? 'Closing...' : 'Close'}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                        <div className="border-t border-white/[0.06] pt-3 flex flex-col gap-1.5 text-xs">
-                          {(() => {
-                            const totalPnl = futuresPositions.reduce((sum: number, pos: any) => {
-                              return sum + resolveFuturesPosition(pos, feed, selectedPair).pnl;
-                            }, 0);
-                            const totalMargin = futuresPositions.reduce((sum: number, pos: any) => {
-                              return sum + resolveFuturesPosition(pos, feed, selectedPair).margin;
-                            }, 0);
-                            const equity = walletBalanceUsd + totalPnl;
-                            const totalPnlColor = totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400';
-                            const totalPnlSign = totalPnl >= 0 ? '+' : '';
-                            return (
-                              <>
-                                <div className="flex justify-between"><span className="text-white/40">Total uPNL</span><span className={`font-bold tabular-nums ${totalPnlColor}`}>{totalPnlSign}{totalPnl.toFixed(4)} USDT</span></div>
-                                <div className="flex justify-between"><span className="text-white/40">Margin Used</span><span className="font-semibold text-white/80 tabular-nums">{totalMargin.toFixed(4)} USDT</span></div>
-                                <div className="flex justify-between">
-                                  <span className="flex items-center gap-1 text-white/40">
-                                    Account Equity
-                                    <button
-                                      type="button"
-                                      onClick={refreshBalances}
-                                      aria-label="Refresh futures account balance"
-                                      title="Refresh balance"
-                                      className="text-white/40 hover:text-white transition-colors"
-                                    >
-                                      <MdRefresh size={13} className={isRefreshing ? "animate-spin" : ""} />
-                                    </button>
-                                  </span>
-                                  <span className="font-semibold text-white/80 tabular-nums">{equity.toFixed(4)} USDT</span>
-                                </div>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </TabsPanel>
-                <TabsPanel value="open-orders">
-                  <div className="p-4 flex-1 min-h-0 overflow-y-auto flex flex-col">
-                    {!futuresOpenOrders || futuresOpenOrders.length === 0 ? (
-                      <div className="flex-1 min-h-[150px] flex flex-col items-center justify-center gap-2">
-                        <p className="text-xs font-medium text-white/30">No open orders</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-3">
-                        {futuresOpenOrders.map((order: any) => {
-                          const isLong = order.side?.toLowerCase() === 'long' || order.side?.toLowerCase() === 'buy';
-                          return (
-                            <div key={order.id} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm font-bold text-white">{order.pair} <span className={`text-xs font-bold ${isLong ? 'text-emerald-400' : 'text-red-400'}`}>{order.side?.toUpperCase()}</span></span>
-                                <button onClick={() => cancelOrder(order.id)} className="text-[11px] font-semibold text-red-400 px-2 py-1 bg-red-400/10 rounded">Cancel</button>
-                              </div>
-                              <div className="grid grid-cols-2 gap-1 text-xs">
-                                <div className="flex justify-between"><span className="text-white/40">Type</span><span className="text-white capitalize">{order.type || '—'}</span></div>
-                                <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white tabular-nums">${Number(order.price || 0).toLocaleString()}</span></div>
-                                <div className="flex justify-between"><span className="text-white/40">Qty</span><span className="text-white tabular-nums">{Number(order.quantity || order.size || 0)}</span></div>
-                                <div className="flex justify-between"><span className="text-white/40">Filled</span><span className="text-white tabular-nums">{Number(order.filled || 0)}</span></div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </TabsPanel>
-                <TabsPanel value="history">
-                  <div className="p-4 flex-1 min-h-0 overflow-y-auto flex flex-col">
-                    {!futuresOrderHistory || futuresOrderHistory.length === 0 ? (
-                      <div className="flex-1 min-h-[150px] flex flex-col items-center justify-center gap-2">
-                        <p className="text-xs font-medium text-white/30">No order history</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-3">
-                        {futuresOrderHistory.map((ord: any, idx: number) => {
-                          const isLong = ord.side?.toLowerCase() === 'long' || ord.side?.toLowerCase() === 'buy';
-                          return (
-                            <div key={ord.id || idx} className="p-3 border border-white/[0.06] rounded-xl flex flex-col gap-2">
-                              <div className="flex justify-between items-center gap-2">
-                                <span className="text-sm font-bold text-white truncate">{ord.pair || `${ord.base || ''}/${ord.quote || 'USDT'}`} <span className={`text-[10px] font-bold uppercase ml-1 ${isLong ? 'text-emerald-400' : 'text-red-400'}`}>{ord.side}</span></span>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${ord.status === 'filled' ? 'bg-emerald-400/15 text-emerald-400' : ord.status === 'cancelled' ? 'bg-red-400/15 text-red-400' : 'bg-white/10 text-white/50'}`}>{ord.status || '—'}</span>
-                              </div>
-                              <div className="grid grid-cols-2 gap-1 text-xs">
-                                <div className="flex justify-between"><span className="text-white/40">Type</span><span className="text-white capitalize">{ord.type || ord.orderType || '—'}</span></div>
-                                <div className="flex justify-between"><span className="text-white/40">Price</span><span className="text-white tabular-nums">${Number(ord.price || 0).toLocaleString()}</span></div>
-                                <div className="flex justify-between"><span className="text-white/40">Qty</span><span className="text-white tabular-nums">{Number(ord.quantity || ord.size || 0)}</span></div>
-                                <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white/60 text-right">{ord.createdAt ? new Date(ord.createdAt).toLocaleString() : '—'}</span></div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </TabsPanel>
-                <TabsPanel value="tradeHistory">
-                  <div className="p-4 flex-1 min-h-0 overflow-y-auto flex flex-col">
-                    <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
-                  </div>
-                </TabsPanel>
-              </Tabs>
-            </div>
+            {/* Mobile trading panel */}
+            <TradingPanel selectedPair={selectedPair} market="futures" mobile className="rounded mt-2 min-h-[420px]" />
           </div>
         )}
       </div>
