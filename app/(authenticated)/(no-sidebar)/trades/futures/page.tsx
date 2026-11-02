@@ -46,10 +46,10 @@ import { MobileBottomSheet } from '@/src/components/shared/mobile-bottom-sheet';
 import { MobileBottomNav } from '@/src/components/shared/mobile-bottom-nav';
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { FuturesTradePageSkeleton } from "@/src/components/skeletons/trades";
-import type { OrderLevel } from "@/src/components/trades/candlestick-char";
+import type { OrderLevel } from "@/src/components/trades/candlestick-chart";
 
 const CandlestickChart = dynamic(
-  () => import('@/src/components/trades/candlestick-char'),
+  () => import('@/src/components/trades/candlestick-chart'),
   { ssr: false, loading: () => <Skeleton variant="chart" height="100%" /> }
 );
 

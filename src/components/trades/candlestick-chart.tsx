@@ -1,11 +1,14 @@
 "use client";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { FiArrowUp, FiArrowDown, FiChevronDown, FiMaximize2, FiMinimize2 } from "react-icons/fi";
+import { FiArrowUp, FiArrowDown, FiChevronDown, FiMaximize2, FiMinimize2, FiCheck, FiRotateCcw } from "react-icons/fi";
+import { TbChartCandle, TbChartBar, TbChartLine, TbChartArea, TbFunction } from "react-icons/tb";
 import clsx from "clsx";
 import type { OrderBookEntry } from "@/src/hooks/use-order-book";
 import { TokenOverview } from "@/src/components/trades/token-overview";
 import { TradeFlowPanel } from "@/src/components/trades/trade-flow-panel";
+import type { ChartType, ChartIndicators } from "@/src/components/trades/candlestick-chart-lwc";
+import { DEFAULT_INDICATORS } from "@/src/components/trades/candlestick-chart-lwc";
 
 // Lightweight Charts is the only renderer. Kept code-split with ssr:false
 // because the library touches the DOM at module scope.
@@ -419,6 +422,44 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
   const bids = orderBook?.buyOrders ?? [];
   const asks = orderBook?.sellOrders ?? [];
 
+  const [chartType, setChartType] = useState<ChartType>("candles");
+  const [indicators, setIndicators] = useState<ChartIndicators>(DEFAULT_INDICATORS);
+  const [priceScaleMode, setPriceScaleMode] = useState<"normal" | "log" | "percent">("normal");
+  const [showChartTypeDropdown, setShowChartTypeDropdown] = useState(false);
+  const [showIndicatorsModal, setShowIndicatorsModal] = useState(false);
+  const chartTypeMenuRef = useRef<HTMLDivElement>(null);
+  const indicatorsMenuRef = useRef<HTMLDivElement>(null);
+
+  const [utcTime, setUtcTime] = useState("");
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setUtcTime(now.toISOString().slice(11, 19));
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (
+        chartTypeMenuRef.current &&
+        !chartTypeMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowChartTypeDropdown(false);
+      }
+      if (
+        indicatorsMenuRef.current &&
+        !indicatorsMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowIndicatorsModal(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
   const exitFullscreen = useCallback(async () => {
     const root = chartRootRef.current;
     fullscreenFallbackRef.current = false;
@@ -654,33 +695,344 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
                 size={12}
               />
             </div>
+
+            {/* Divider */}
+            <div className="mx-1 h-3.5 w-px bg-white/10" />
+
+            {/* Chart Type Selector */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowChartTypeDropdown((v) => !v);
+                  setShowIndicatorsModal(false);
+                }}
+                title={`Chart type: ${chartType}`}
+                aria-label="Chart type"
+                className={clsx(
+                  "flex h-7 items-center gap-1 rounded px-2 text-xs font-semibold transition-colors hover:bg-white/[0.08]",
+                  showChartTypeDropdown ? "bg-white/[0.08] text-white" : "text-white/60 hover:text-white"
+                )}
+              >
+                {chartType === "candles" && <TbChartCandle size={15} />}
+                {chartType === "bars" && <TbChartBar size={15} />}
+                {chartType === "line" && <TbChartLine size={15} />}
+                {chartType === "area" && <TbChartArea size={15} />}
+                <FiChevronDown size={11} className="text-white/40" />
+              </button>
+
+              {showChartTypeDropdown && (
+                <div
+                  ref={chartTypeMenuRef}
+                  className="absolute left-0 top-8 z-50 flex w-36 flex-col gap-0.5 rounded-lg border border-white/10 bg-[#1e2026] p-1.5 shadow-2xl backdrop-blur-md"
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setChartType("candles"); setShowChartTypeDropdown(false); }}
+                    className={clsx(
+                      "flex items-center justify-between rounded px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/[0.08]",
+                      chartType === "candles" ? "text-primary bg-primary/10" : "text-white/80"
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <TbChartCandle size={15} />
+                      Candles
+                    </span>
+                    {chartType === "candles" && <FiCheck size={12} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setChartType("bars"); setShowChartTypeDropdown(false); }}
+                    className={clsx(
+                      "flex items-center justify-between rounded px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/[0.08]",
+                      chartType === "bars" ? "text-primary bg-primary/10" : "text-white/80"
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <TbChartBar size={15} />
+                      Bars
+                    </span>
+                    {chartType === "bars" && <FiCheck size={12} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setChartType("line"); setShowChartTypeDropdown(false); }}
+                    className={clsx(
+                      "flex items-center justify-between rounded px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/[0.08]",
+                      chartType === "line" ? "text-primary bg-primary/10" : "text-white/80"
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <TbChartLine size={15} />
+                      Line
+                    </span>
+                    {chartType === "line" && <FiCheck size={12} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setChartType("area"); setShowChartTypeDropdown(false); }}
+                    className={clsx(
+                      "flex items-center justify-between rounded px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/[0.08]",
+                      chartType === "area" ? "text-primary bg-primary/10" : "text-white/80"
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <TbChartArea size={15} />
+                      Area
+                    </span>
+                    {chartType === "area" && <FiCheck size={12} />}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Indicators Button */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowIndicatorsModal((v) => !v);
+                  setShowChartTypeDropdown(false);
+                }}
+                title="Indicators"
+                aria-label="Indicators"
+                className={clsx(
+                  "flex h-7 items-center gap-1.5 rounded px-2 text-xs font-semibold transition-colors hover:bg-white/[0.08]",
+                  showIndicatorsModal ? "bg-white/[0.08] text-white" : "text-white/60 hover:text-white"
+                )}
+              >
+                <TbFunction size={16} />
+                <span className="text-[11px]">Indicators</span>
+              </button>
+
+              {showIndicatorsModal && (
+                <div
+                  ref={indicatorsMenuRef}
+                  className="absolute left-0 top-8 z-50 flex w-72 flex-col gap-3 rounded-xl border border-white/10 bg-[#1e2026] p-4 shadow-2xl backdrop-blur-md"
+                >
+                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-2">
+                    <span className="text-xs font-bold text-white">Technical Indicators</span>
+                    <button
+                      type="button"
+                      onClick={() => setIndicators(DEFAULT_INDICATORS)}
+                      title="Reset indicators"
+                      className="flex items-center gap-1 text-[11px] text-white/50 hover:text-white transition-colors"
+                    >
+                      <FiRotateCcw size={10} />
+                      Reset
+                    </button>
+                  </div>
+
+                  {/* MA 7 */}
+                  <div className="flex items-center justify-between">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-white/90">
+                      <input
+                        type="checkbox"
+                        checked={indicators.showMa7}
+                        onChange={(e) => setIndicators((prev) => ({ ...prev, showMa7: e.target.checked }))}
+                        className="h-3.5 w-3.5 rounded accent-[#F0B90B]"
+                      />
+                      <span className="h-2 w-2 rounded-full bg-[#F0B90B]" />
+                      Moving Average 1
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={500}
+                      value={indicators.ma7Period}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val > 0) {
+                          setIndicators((prev) => ({ ...prev, ma7Period: val }));
+                        }
+                      }}
+                      className="h-6 w-14 rounded border border-white/15 bg-white/[0.04] px-1 text-center font-mono text-xs text-white outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  {/* MA 25 */}
+                  <div className="flex items-center justify-between">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-white/90">
+                      <input
+                        type="checkbox"
+                        checked={indicators.showMa25}
+                        onChange={(e) => setIndicators((prev) => ({ ...prev, showMa25: e.target.checked }))}
+                        className="h-3.5 w-3.5 rounded accent-[#E040FB]"
+                      />
+                      <span className="h-2 w-2 rounded-full bg-[#E040FB]" />
+                      Moving Average 2
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={500}
+                      value={indicators.ma25Period}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val > 0) {
+                          setIndicators((prev) => ({ ...prev, ma25Period: val }));
+                        }
+                      }}
+                      className="h-6 w-14 rounded border border-white/15 bg-white/[0.04] px-1 text-center font-mono text-xs text-white outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  {/* MA 99 */}
+                  <div className="flex items-center justify-between">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-white/90">
+                      <input
+                        type="checkbox"
+                        checked={indicators.showMa99}
+                        onChange={(e) => setIndicators((prev) => ({ ...prev, showMa99: e.target.checked }))}
+                        className="h-3.5 w-3.5 rounded accent-[#00BCD4]"
+                      />
+                      <span className="h-2 w-2 rounded-full bg-[#00BCD4]" />
+                      Moving Average 3
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={500}
+                      value={indicators.ma99Period}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val > 0) {
+                          setIndicators((prev) => ({ ...prev, ma99Period: val }));
+                        }
+                      }}
+                      className="h-6 w-14 rounded border border-white/15 bg-white/[0.04] px-1 text-center font-mono text-xs text-white outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  {/* Volume */}
+                  <div className="flex items-center justify-between border-t border-white/[0.06] pt-2">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-white/90">
+                      <input
+                        type="checkbox"
+                        checked={indicators.showVolume}
+                        onChange={(e) => setIndicators((prev) => ({ ...prev, showVolume: e.target.checked }))}
+                        className="h-3.5 w-3.5 rounded accent-primary"
+                      />
+                      Volume Histogram
+                    </label>
+                  </div>
+
+                  {/* Volume SMA */}
+                  <div className="flex items-center justify-between">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-white/90">
+                      <input
+                        type="checkbox"
+                        checked={indicators.showVolumeSma}
+                        onChange={(e) => setIndicators((prev) => ({ ...prev, showVolumeSma: e.target.checked }))}
+                        className="h-3.5 w-3.5 rounded accent-[#3B82F6]"
+                      />
+                      <span className="h-2 w-2 rounded-full bg-[#3B82F6]" />
+                      Volume SMA (9)
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* Chart views */}
       {view === "chart" ? (
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          <div className="relative h-full min-w-0 flex-1 overflow-hidden">
-            <LwcCandlestickChart
-              symbol={symbol}
-              interval={interval}
-              market={market}
-              orderLevels={orderLevels}
-              onLastPriceChange={onLastPriceChange}
-            />
-          </div>
-          {insightTabs && showDepth && (
-            <div className="flex w-[340px] shrink-0 border-l border-white/[0.06]">
-              <DepthPanel
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            <div className="relative h-full min-w-0 flex-1 overflow-hidden">
+              <LwcCandlestickChart
                 symbol={symbol}
-                buyOrders={bids}
-                sellOrders={asks}
-                isConnected={orderBook?.isConnected ?? false}
-                lastPrice={lastPrice}
+                interval={interval}
+                market={market}
+                orderLevels={orderLevels}
+                onLastPriceChange={onLastPriceChange}
+                chartType={chartType}
+                indicators={indicators}
+                priceScaleMode={priceScaleMode}
               />
             </div>
-          )}
+            {insightTabs && showDepth && (
+              <div className="flex w-[340px] shrink-0 border-l border-white/[0.06]">
+                <DepthPanel
+                  symbol={symbol}
+                  buyOrders={bids}
+                  sellOrders={asks}
+                  isConnected={orderBook?.isConnected ?? false}
+                  lastPrice={lastPrice}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Bybit-style bottom bar: time range shortcuts, UTC clock, %/log/auto toggles */}
+          <div className="flex h-7 shrink-0 items-center justify-between border-t border-white/[0.06] bg-[#181a20] px-2.5 text-[11px] font-mono select-none">
+            {/* Quick Range shortcuts */}
+            <div className="flex items-center gap-2 text-white/45">
+              {[
+                { label: "1D", targetInterval: "5m" },
+                { label: "5D", targetInterval: "15m" },
+                { label: "1M", targetInterval: "1h" },
+                { label: "3M", targetInterval: "4h" },
+                { label: "6M", targetInterval: "1d" },
+                { label: "1Y", targetInterval: "1d" },
+              ].map(({ label, targetInterval }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setIntervalVal(targetInterval as Interval)}
+                  className="hover:text-white transition-colors px-1"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Real-time UTC clock */}
+            <div className="hidden sm:block text-white/40">
+              {utcTime} UTC
+            </div>
+
+            {/* Scale toggles: %, log, auto */}
+            <div className="flex items-center gap-2 font-semibold">
+              <button
+                type="button"
+                onClick={() => setPriceScaleMode((curr) => (curr === "percent" ? "normal" : "percent"))}
+                className={clsx(
+                  "px-1.5 py-0.5 rounded transition-colors",
+                  priceScaleMode === "percent" ? "text-primary bg-primary/10" : "text-white/45 hover:text-white"
+                )}
+                title="Percentage scale"
+              >
+                %
+              </button>
+              <button
+                type="button"
+                onClick={() => setPriceScaleMode((curr) => (curr === "log" ? "normal" : "log"))}
+                className={clsx(
+                  "px-1.5 py-0.5 rounded transition-colors",
+                  priceScaleMode === "log" ? "text-primary bg-primary/10" : "text-white/45 hover:text-white"
+                )}
+                title="Logarithmic scale"
+              >
+                log
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPriceScaleMode("normal");
+                }}
+                className={clsx(
+                  "px-1.5 py-0.5 rounded transition-colors",
+                  priceScaleMode === "normal" ? "text-primary bg-primary/10" : "text-white/45 hover:text-white"
+                )}
+                title="Auto scale"
+              >
+                auto
+              </button>
+            </div>
+          </div>
         </div>
       ) : view === "overview" ? (
         <TokenOverview base={base} />

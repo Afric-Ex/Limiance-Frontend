@@ -38,11 +38,11 @@ import { MobileBottomSheet } from "@/src/components/shared/mobile-bottom-sheet";
 import { MobileBottomNav } from "@/src/components/shared/mobile-bottom-nav";
 
 const CandlestickChart = dynamic(
-  () => import("@/src/components/trades/candlestick-char"),
+  () => import("@/src/components/trades/candlestick-chart"),
   { ssr: false, loading: () => <Skeleton variant="chart" height="100%" /> }
 );
 
-import type { OrderLevel } from "@/src/components/trades/candlestick-char";
+import type { OrderLevel } from "@/src/components/trades/candlestick-chart";
 
 type TradeMode = "spot" | "cross" | "isolated";
 
