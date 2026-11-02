@@ -9,6 +9,7 @@ import { LimBalanceCard } from "@/src/components/earn/lim-balance-card";
 import { WaysToEarn } from "@/src/components/earn/ways-to-earn";
 import { MyRewards } from "@/src/components/earn/my-rewards";
 import { LimUtility } from "@/src/components/earn/lim-utility";
+import { EarnTab } from "@/src/components/assets/earn-tab";
 import {
   EarnProducts,
   EARN_PRODUCTS,
@@ -44,6 +45,7 @@ function EarnInner() {
         activeProduct={selectedProduct}
         onProductChange={setSelectedProduct}
       />
+      <EarnTab />
       <MyRewards />
     </main>
   );

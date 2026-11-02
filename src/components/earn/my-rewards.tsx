@@ -7,10 +7,8 @@ import { EmptyState } from "@/src/components/ui/empty-state";
 import { StatCell } from "@/src/components/ui/stat-cell";
 import { BalanceCloak } from "@/src/components/shared/balance-cloak";
 import { RewardStatusBadge } from "./reward-status-badge";
-import { useLimRewardsSummary } from "@/src/hooks/use-lim-wallet";
-import { rewardsKeys, rewardsService } from "@/src/services/rewards";
-import { normalizeRewardItems } from "@/src/lib/rewards";
-import { formatAmount, LIM_SYMBOL } from "@/src/lib/lim";
+import { earnKeys, earnService } from "@/src/services/earn";
+import { formatAmount } from "@/src/lib/lim";
 
 const RECENT_LIMIT = 5;
 
@@ -22,38 +20,26 @@ const formatRewardDate = (value?: string): string | null => {
 };
 
 /**
- * Rewards ledger: lifetime/pending/period totals plus the latest credit
- * entries. All figures come from `rewards/summary` and `rewards/history`;
- * when those endpoints are not available the card degrades to a quiet empty
- * state instead of showing zeros as if they were real balances.
+ * Rewards ledger: lifetime/pending/period totals plus the latest distribution
+ * entries from `/earn/my_rewards`.
  */
 export function MyRewards() {
-  const {
-    summary,
-    isLoading: summaryLoading,
-    isUnavailable: summaryUnavailable,
-  } = useLimRewardsSummary();
-
-  const historyQuery = useQuery({
-    queryKey: rewardsKeys.historyList({ page: 1, limit: RECENT_LIMIT }),
-    queryFn: () => rewardsService.getHistory({ page: 1, limit: RECENT_LIMIT }),
-    select: (res: unknown) => normalizeRewardItems(res).slice(0, RECENT_LIMIT),
-    staleTime: 60_000,
+  const { data: rewardsData, isLoading } = useQuery({
+    queryKey: earnKeys.myRewards,
+    queryFn: () => earnService.myRewards(),
+    staleTime: 30_000,
     retry: false,
     throwOnError: false,
   });
 
-  const rewards = historyQuery.data ?? [];
-  const historyLoading = historyQuery.isLoading;
+  const history = rewardsData?.history ?? [];
+  const totalEarnedUsd = rewardsData?.totalEarnedUsd ?? 0;
+  const yesterdayRewardsUsd = rewardsData?.yesterdayRewardsUsd ?? 0;
+  const thirtyDayRewardsUsd = rewardsData?.thirtyDayRewardsUsd ?? 0;
+  const totalStakedUsd = rewardsData?.totalStakedUsd ?? 0;
+  const assetSummaries = rewardsData?.assetSummaries ?? [];
 
-  const showStats = !summaryLoading && !!summary;
-  const statsUnavailable =
-    !summaryLoading && summaryUnavailable && !historyLoading && rewards.length === 0;
-
-  const periodLabel =
-    summary?.periodDays != null
-      ? `Last ${summary.periodDays} days`
-      : "Recent period";
+  const showStats = !isLoading && rewardsData != null;
 
   return (
     <section className="flex flex-col gap-5 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:rounded-xl max-[1150px]:p-4">
@@ -63,14 +49,14 @@ export function MyRewards() {
             My rewards
           </h2>
           <p className="text-[var(--text-caption)] text-[var(--color-text-secondary)]">
-            LIM credited from earning programs.
+            Accumulated interest and distributions from your Earn subscriptions.
           </p>
         </div>
       </div>
 
-      {summaryLoading ? (
-        <div className="grid grid-cols-3 gap-4">
-          {[0, 1, 2].map((key) => (
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[0, 1, 2, 3].map((key) => (
             <div key={key} className="flex flex-col gap-2">
               <Skeleton variant="text" width={72} height={12} />
               <Skeleton variant="text" width={110} height={20} />
@@ -78,47 +64,60 @@ export function MyRewards() {
           ))}
         </div>
       ) : showStats ? (
-        <div className="grid grid-cols-3 gap-4">
-          <StatCell
-            label="Total earned"
-            value={
-              summary!.totalEarned == null ? (
-                "—"
-              ) : (
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <StatCell
+              label="Total earned"
+              value={
                 <>
-                  <BalanceCloak balance={summary!.totalEarned} /> {LIM_SYMBOL}
+                  $<BalanceCloak balance={totalEarnedUsd} />
                 </>
-              )
-            }
-          />
-          <StatCell
-            label="Pending"
-            value={
-              summary!.pending == null ? (
-                "—"
-              ) : (
+              }
+            />
+            <StatCell
+              label="Yesterday"
+              value={
                 <>
-                  <BalanceCloak balance={summary!.pending} /> {LIM_SYMBOL}
+                  $<BalanceCloak balance={yesterdayRewardsUsd} />
                 </>
-              )
-            }
-          />
-          <StatCell
-            label={periodLabel}
-            value={
-              summary!.creditedPeriod == null ? (
-                "—"
-              ) : (
+              }
+            />
+            <StatCell
+              label="Last 30 days"
+              value={
                 <>
-                  <BalanceCloak balance={summary!.creditedPeriod} /> {LIM_SYMBOL}
+                  $<BalanceCloak balance={thirtyDayRewardsUsd} />
                 </>
-              )
-            }
-          />
+              }
+            />
+            <StatCell
+              label="Active staked"
+              value={
+                <>
+                  $<BalanceCloak balance={totalStakedUsd} />
+                </>
+              }
+            />
+          </div>
+
+          {assetSummaries.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/[0.06]">
+              <span className="text-xs text-[var(--color-text-secondary)]">By asset:</span>
+              {assetSummaries.map((sum) => (
+                <span
+                  key={sum.asset}
+                  className="rounded-full bg-white/[0.04] border border-white/[0.06] px-2.5 py-0.5 text-xs text-white/80"
+                >
+                  <strong className="text-white">{sum.asset}</strong>: +{formatAmount(sum.totalRewards)} earned
+                  {sum.activeStaked > 0 ? ` · ${formatAmount(sum.activeStaked)} staked` : ""}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
 
-      {historyLoading ? (
+      {isLoading ? (
         <div className="flex flex-col gap-3">
           {[0, 1, 2].map((key) => (
             <div key={key} className="flex items-center justify-between gap-4">
@@ -127,19 +126,33 @@ export function MyRewards() {
             </div>
           ))}
         </div>
-      ) : rewards.length > 0 ? (
+      ) : history.length > 0 ? (
         <ul className="flex flex-col divide-y divide-white/[0.06]">
-          {rewards.map((reward) => {
-            const date = formatRewardDate(reward.createdAt);
+          {history.slice(0, RECENT_LIMIT).map((reward) => {
+            const date = formatRewardDate(reward.distributionDate);
+            const typeLabel =
+              reward.type === "DAILY_INTEREST"
+                ? "Daily Interest"
+                : reward.type === "MATURITY_PAYOUT"
+                ? "Maturity Payout"
+                : reward.type || "Earn Reward";
+
             return (
               <li
                 key={reward.id}
                 className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
               >
                 <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="truncate text-sm font-medium text-[var(--color-text-primary)]">
-                    {reward.campaign ?? reward.source}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-medium text-[var(--color-text-primary)]">
+                      {typeLabel}
+                    </span>
+                    {reward.apy > 0 && (
+                      <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
+                        {reward.apy}% APY
+                      </span>
+                    )}
+                  </div>
                   {date && (
                     <span className="text-[var(--text-micro)] text-[var(--color-text-secondary)]">
                       {date}
@@ -147,10 +160,10 @@ export function MyRewards() {
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
-                  <span className="text-sm font-semibold tabular-nums text-[var(--color-text-primary)]">
+                  <span className="text-sm font-semibold tabular-nums text-emerald-400">
                     +{formatAmount(reward.amount)} {reward.asset}
                   </span>
-                  <RewardStatusBadge status={reward.status} />
+                  <RewardStatusBadge status="credited" />
                 </div>
               </li>
             );
@@ -158,11 +171,7 @@ export function MyRewards() {
         </ul>
       ) : (
         <EmptyState
-          caption={
-            statsUnavailable
-              ? "Reward activity will appear here as you earn LIM."
-              : "No rewards yet — earn LIM by taking part in the programs above."
-          }
+          caption="No rewards yet — subscribe to Simple Earn or Staking to begin earning daily returns."
         />
       )}
     </section>

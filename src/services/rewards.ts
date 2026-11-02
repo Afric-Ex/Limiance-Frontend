@@ -43,21 +43,25 @@ export const rewardsKeys = {
 } as const;
 
 export const rewardsService = {
-  /** Aggregated LIM rewards figures (lifetime, pending, period). */
+  /** Aggregated LIM / Earn rewards figures (lifetime, pending, period). */
   getSummary: async () => {
-    const response = await api.get("rewards/summary");
+    const response = await api.get("earn/my_rewards");
     return response.data;
   },
 
-  /** Paginated rewards ledger entries. */
+  /** Earn reward ledger entries. */
   getHistory: async (params?: { page?: number; limit?: number }) => {
-    const response = await api.get("rewards/history", { params });
+    const response = await api.get("earn/my_rewards", { params });
     return response.data;
   },
 
   /** Active/upcoming LIM earning campaigns (trade to earn, deposit to earn, ...). */
   getCampaigns: async () => {
-    const response = await api.get("rewards/campaigns");
-    return response.data;
+    try {
+      const response = await api.get("rewards/campaigns");
+      return response.data;
+    } catch {
+      return { statusCode: 200, success: true, data: [] };
+    }
   },
 };
