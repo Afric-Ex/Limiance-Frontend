@@ -38,6 +38,7 @@ export const tradingKeys = {
   marginOpenOrders: ["margin-open-orders"],
   marginBorrowHistory: ["margin-borrow-history"],
   marginLiquidationHistory: ["margin-liquidation-history"],
+  marginPnlHistory: (symbol?: string) => ["margin-pnl-history", symbol],
   convertHistory: ["convert-history"],
   fiatOrderHistory: ["fiat-order-history"],
   paymentHistory: ["payment-history"],
@@ -215,16 +216,25 @@ export const tradingService = {
     return response.data;
   },
 
-  closeMarginOrder: async (orderId: string, symbol?: string) => {
-    const response = await api.post("trading/margin/close_order", {
-      orderId,
-      ...(symbol ? { symbol: symbol.replace("/", "").toUpperCase() } : {}),
+  closeMarginOrder: async (orderId: string) => {
+    const response = await api.delete(`trading/margin/orders/${orderId}`);
+    return response.data;
+  },
+
+  cancelAllMarginOrders: async (symbol?: string) => {
+    const response = await api.post("trading/margin/cancel_all", null, {
+      params: symbol ? { symbol } : {},
     });
     return response.data;
   },
 
   marginBalance: async () => {
-    const response = await api.get("trading/margin/balance");
+    const response = await api.get("wallet/balance/margin");
+    return response.data;
+  },
+
+  marginPnlHistory: async (params?: { symbol?: string; page?: number; limit?: number }) => {
+    const response = await api.get("trading/margin/pnl_history", { params });
     return response.data;
   },
 

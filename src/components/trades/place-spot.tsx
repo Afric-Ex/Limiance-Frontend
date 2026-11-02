@@ -342,7 +342,8 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
       return placeMarginOrderWs({
         ...payload,
         type: payload.type as "buy_stop" | "sell_stop",
-        stopPrice: payload.stopPrice,
+        price: Number(payload.price),
+        stopPrice: Number(payload.stopPrice),
         ...buildTpslPayload(side),
       });
     }
@@ -360,6 +361,8 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     return placeMarginOrderWs({
       ...payload,
       type: payload.type as "buy_limit" | "sell_limit",
+      postOnly,
+      timeInForce,
       ...buildTpslPayload(side),
     });
   };

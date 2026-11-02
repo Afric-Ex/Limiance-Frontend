@@ -338,6 +338,8 @@ export function placeMarginOrderWs(data: {
   stopPrice?: number;
   takeProfit?: number;
   stopLoss?: number;
+  postOnly?: boolean;
+  timeInForce?: "GTC" | "IOC" | "FOK" | string;
 }): Promise<any> {
   const kind =
     data.type === "market" ? "market" : data.type.endsWith("_limit") ? "limit" : "stop";
@@ -362,14 +364,19 @@ export function placeMarginOrderWs(data: {
   };
   if (kind === "limit") payload.price = price;
   if (kind === "market" && Number(data.price) > 0) payload.price = Number(data.price);
-  if (kind === "stop") payload.stopPrice = Number(data.stopPrice);
+  if (kind === "stop") {
+    payload.price = price;
+    payload.stopPrice = Number(data.stopPrice);
+  }
   if (Number(data.takeProfit) > 0) payload.takeProfit = Number(data.takeProfit);
   if (Number(data.stopLoss) > 0) payload.stopLoss = Number(data.stopLoss);
+  if (data.postOnly) payload.postOnly = true;
+  if (data.timeInForce) payload.timeInForce = data.timeInForce;
   return sendOrderFrame({ type: "place_margin_order", data: payload });
 }
 
-/** place_margin_oco frame, mirroring tradingService.placeMarginOCOOrder's body. */
-export function placeMarginOcoOrderWs(data: {
+/** place_margin_oco frame fallback to REST endpoint (doc §4.6). */
+export async function placeMarginOcoOrderWs(data: {
   symbol: string;
   order_side: string;
   tp_trigger_price: string;
@@ -384,10 +391,12 @@ export function placeMarginOcoOrderWs(data: {
   if (!(Number(data.tp_trigger_price) > 0) || !(Number(data.sl_trigger_price) > 0)) {
     throw new Error("Trigger prices must be greater than zero");
   }
-  return sendOrderFrame({
-    type: "place_margin_oco",
-    data: { ...data, symbol: data.symbol.toUpperCase() },
+  const { api } = await import("./axios");
+  const res = await api.post("trading/margin/oco", {
+    ...data,
+    symbol: data.symbol.toUpperCase(),
   });
+  return res.data;
 }
 
 /** cancel_margin_order frame: { type: "cancel_margin_order", data: { orderId, symbol? } } */

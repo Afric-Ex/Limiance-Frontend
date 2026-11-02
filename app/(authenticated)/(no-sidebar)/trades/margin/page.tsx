@@ -53,10 +53,99 @@ const CandlestickChart = dynamic(
 
 type TradeMode = "cross" | "isolated";
 
+function MarginPnLPanel({ selectedPair }: { selectedPair?: string }) {
+  const { data: pnlData = [], isLoading } = useQuery({
+    queryKey: tradingKeys.marginPnlHistory(selectedPair),
+    queryFn: () => tradingService.marginPnlHistory({ symbol: selectedPair }),
+    select: (res: any) => {
+      const rows = res?.data ?? res ?? [];
+      return Array.isArray(rows) ? rows : [];
+    },
+    retry: false,
+    throwOnError: false,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex justify-center">
+        <Skeleton variant="table-row" count={3} columns={6} className="w-full" />
+      </div>
+    );
+  }
+
+  if (!pnlData.length) {
+    return (
+      <div className="flex-1 min-h-[120px] flex flex-col items-center justify-center gap-2">
+        <p className="text-xs font-medium text-white/30">No margin PnL records</p>
+      </div>
+    );
+  }
+
+  return (
+    <Table
+      classNames={{
+        th: "!text-[10px] uppercase !text-white/40 !bg-[#181a20] sticky top-0 z-10 border-b border-white/[0.06]",
+        tr: "row-hover transition-colors border-b border-transparent",
+      }}
+    >
+      <thead>
+        <TableTr>
+          <TableTh>Time</TableTh>
+          <TableTh>Pair</TableTh>
+          <TableTh>Side</TableTh>
+          <TableTh>Price</TableTh>
+          <TableTh>Quantity</TableTh>
+          <TableTh>Realized PnL</TableTh>
+        </TableTr>
+      </thead>
+      <tbody>
+        {pnlData.map((row: any, idx: number) => {
+          const pnl = Number(row.pnl ?? row.realizedPnl ?? row.profit ?? 0);
+          const isProfit = pnl >= 0;
+          const side = String(row.side ?? "").toUpperCase();
+          return (
+            <TableTr key={row.id ?? idx}>
+              <TableTd>
+                <span className="text-xs text-white/70">
+                  {row.time || row.createdAt ? new Date(row.time || row.createdAt).toLocaleString() : "—"}
+                </span>
+              </TableTd>
+              <TableTd>
+                <span className="text-xs font-semibold">{row.pair || row.symbol || "—"}</span>
+              </TableTd>
+              <TableTd>
+                <span className={`text-xs font-bold ${side === "BUY" ? "text-success-5" : "text-error-1"}`}>
+                  {side || "—"}
+                </span>
+              </TableTd>
+              <TableTd>
+                <span className="text-xs text-white/90">
+                  {row.price ? Number(row.price).toLocaleString() : "—"}
+                </span>
+              </TableTd>
+              <TableTd>
+                <span className="text-xs text-white/90">
+                  {row.quantity ?? row.amount ? Number(row.quantity ?? row.amount).toLocaleString() : "—"}
+                </span>
+              </TableTd>
+              <TableTd>
+                <span className={`text-xs font-mono font-bold ${isProfit ? "text-success-6" : "text-error-1"}`}>
+                  {isProfit ? `+${pnl}` : pnl}
+                </span>
+              </TableTd>
+            </TableTr>
+          );
+        })}
+      </tbody>
+    </Table>
+  );
+}
+
 function MarginTrades() {
   const searchParams = useSearchParams();
   const initialPair = searchParams.get("pair")?.replace("_", "/") ?? "BTC/USDT";
   const [selectedPair, setSelectedPair] = useState(initialPair);
+  const [hideOtherPairs, setHideOtherPairs] = useState(false);
   const [pairSearch, setPairSearch] = useState("");
   // Mobile and desktop headers are BOTH mounted (one is hidden by CSS), so they
   // need separate state — sharing it would open both dropdowns at once.
@@ -108,11 +197,23 @@ function MarginTrades() {
   });
 
   const { data: openOrders, isLoading: openOrdersLoading } = useQuery({
-    queryKey: tradingKeys.openOrders(selectedPair),
-    queryFn: () => tradingService.fetchMarginOpenOrders({ pair: selectedPair }),
+    queryKey: tradingKeys.openOrders(hideOtherPairs ? selectedPair : undefined),
+    queryFn: () => tradingService.fetchMarginOpenOrders({ pair: hideOtherPairs ? selectedPair : undefined }),
     select: (res: any) => res.data,
     retry: false,
     throwOnError: false,
+  });
+
+  const { mutate: cancelAllOrders, isPending: cancelAllPending } = useMutation({
+    mutationFn: () => tradingService.cancelAllMarginOrders(hideOtherPairs ? selectedPair : undefined),
+    onSuccess: () => {
+      successNotification("All margin orders cancelled");
+      queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
+      queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders(selectedPair) });
+      queryClient.invalidateQueries({ queryKey: ["order-history"] });
+      queryClient.invalidateQueries({ queryKey: ["margin-pnl-history"] });
+    },
+    onError: (e) => errorMessageHandler(e),
   });
 
   const { data: marginPositions } = useQuery({
@@ -667,15 +768,29 @@ function MarginTrades() {
                   <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
                   <TabsTab value="history">Order History</TabsTab>
                   <TabsTab value="tradeHistory">Trade History</TabsTab>
+                  <TabsTab value="pnl">PnL History</TabsTab>
                 </TabsList>
-                <div className="pr-4">
+                <div className="pr-4 flex items-center gap-3">
                   <Checkbox
                     classNames={{
                       label: "!text-[10px] !text-white/40",
                       input: "!border-white/20 !bg-transparent checked:!bg-primary",
                     }}
                     label="Hide Other Pairs"
+                    checked={hideOtherPairs}
+                    onChange={(e) => setHideOtherPairs(e.currentTarget.checked)}
                   />
+                  {openOrders && openOrders.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => cancelAllOrders()}
+                      disabled={cancelAllPending}
+                      className="flex items-center gap-1.5 rounded border border-error-1/40 bg-error-1/10 px-2.5 py-1 text-xs font-semibold text-error-1 transition-colors hover:bg-error-1/20 disabled:opacity-50"
+                    >
+                      {cancelAllPending && <Loader size={11} color="red" />}
+                      Cancel All
+                    </button>
+                  )}
                 </div>
               </div>
               <TabsPanel value="open">
@@ -799,6 +914,9 @@ function MarginTrades() {
               </TabsPanel>
               <TabsPanel value="tradeHistory">
                 <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
+              </TabsPanel>
+              <TabsPanel value="pnl">
+                <MarginPnLPanel selectedPair={hideOtherPairs ? selectedPair : undefined} />
               </TabsPanel>
             </Tabs>
           </div>
@@ -948,7 +1066,20 @@ function MarginTrades() {
         
         {/* Mobile Open Orders View */}
         <div className="min-[1150px]:hidden bg-[#181a20] rounded flex flex-col p-4 mt-2">
-           <h3 className="text-base font-bold text-white mb-4">Open Orders ({openOrders?.length ?? 0})</h3>
+           <div className="flex items-center justify-between mb-4">
+             <h3 className="text-base font-bold text-white">Open Orders ({openOrders?.length ?? 0})</h3>
+             {openOrders && openOrders.length > 0 && (
+               <button
+                 type="button"
+                 onClick={() => cancelAllOrders()}
+                 disabled={cancelAllPending}
+                 className="flex items-center gap-1.5 rounded border border-error-1/40 bg-error-1/10 px-2.5 py-1 text-xs font-semibold text-error-1 transition-colors hover:bg-error-1/20 disabled:opacity-50"
+               >
+                 {cancelAllPending && <Loader size={11} color="red" />}
+                 Cancel All
+               </button>
+             )}
+           </div>
            {openOrdersLoading ? (
              <div className="p-4 flex justify-center"><Skeleton variant="table-row" count={3} columns={1} className="w-full" /></div>
            ) : !openOrders?.length ? (
@@ -1210,6 +1341,7 @@ function MarginTrades() {
                   <TabsTab value="open">Open Orders ({openOrders?.length ?? 0})</TabsTab>
                   <TabsTab value="history">Order History</TabsTab>
                   <TabsTab value="tradeHistory">Trade History</TabsTab>
+                  <TabsTab value="pnl">PnL History</TabsTab>
                 </TabsList>
                 <TabsPanel value="open">
                   {openOrdersLoading ? (
@@ -1218,6 +1350,17 @@ function MarginTrades() {
                     <div className="p-4 text-center text-xs text-white/40">No open orders</div>
                   ) : (
                     <div className="flex flex-col gap-2">
+                      <div className="px-3 pt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => cancelAllOrders()}
+                          disabled={cancelAllPending}
+                          className="flex items-center gap-1.5 rounded border border-error-1/40 bg-error-1/10 px-2.5 py-1 text-xs font-semibold text-error-1 transition-colors hover:bg-error-1/20 disabled:opacity-50"
+                        >
+                          {cancelAllPending && <Loader size={11} color="red" />}
+                          Cancel All
+                        </button>
+                      </div>
                       {openOrders.map((order: any, index: number) => {
                         const orderId = getOrderId(order);
                         const levels = getOrderLevels(order);
@@ -1275,6 +1418,9 @@ function MarginTrades() {
                 </TabsPanel>
                 <TabsPanel value="tradeHistory">
                   <TradeRecordsList trades={tradeHistory} isLoading={tradeHistoryLoading} emptyMessage="No trade history" />
+                </TabsPanel>
+                <TabsPanel value="pnl">
+                  <MarginPnLPanel selectedPair={hideOtherPairs ? selectedPair : undefined} />
                 </TabsPanel>
               </Tabs>
             </div>
