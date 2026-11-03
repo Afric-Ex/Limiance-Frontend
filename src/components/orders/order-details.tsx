@@ -46,7 +46,7 @@ export const OrderDetails = () => {
           {isLoading ? "Loading fills" : `${filtered.length} ${filtered.length === 1 ? "fill" : "fills"}`}
         </span>
       </div>
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.07] bg-[#151820] p-3">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.07] bg-elevated p-3">
         <div className="min-w-[180px] flex-1">
           <TextInput
             classNames={searchInputClass}

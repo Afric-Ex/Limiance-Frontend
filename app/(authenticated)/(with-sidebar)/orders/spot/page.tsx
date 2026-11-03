@@ -10,7 +10,7 @@ import { FiArrowUpRight, FiClock, FiLayers, FiList, FiZap } from "react-icons/fi
 function SpotOrdersInner() {
   return (
     <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-6 pb-8 page-enter max-[1150px]:gap-5 max-[1150px]:pb-[90px]">
-      <header className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-[#151820] px-6 py-6 max-[640px]:px-4 max-[640px]:py-5">
+      <header className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-surface px-6 py-6 max-[640px]:px-4 max-[640px]:py-5">
         <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full bg-primary/[0.12] blur-3xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-5">
           <div className="flex min-w-0 items-center gap-4">
@@ -41,7 +41,7 @@ function SpotOrdersInner() {
       <Tabs
         classNames={{
           root: "flex flex-col gap-0",
-          list: "flex w-full gap-1 overflow-x-auto rounded-xl border border-white/[0.07] bg-[#11141a] p-1.5",
+          list: "flex w-full gap-1 overflow-x-auto rounded-xl border border-white/[0.07] bg-elevated p-1.5",
           tab: "!h-11 !shrink-0 !rounded-lg !border-0 !px-4 !text-sm !font-semibold !text-white/45 transition-colors hover:!bg-white/[0.04] data-[active]:!bg-white/[0.08] data-[active]:!text-white max-[480px]:!px-3 max-[480px]:!text-xs",
           tabLabel: "flex items-center gap-2",
           panel: "pt-5 max-[640px]:pt-4",

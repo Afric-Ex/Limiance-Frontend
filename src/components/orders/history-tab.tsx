@@ -60,7 +60,7 @@ export const OpenTab = () => {
           {isLoading ? "Loading orders" : `${filtered.length} active`}
         </span>
       </div>
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.07] bg-[#151820] p-3">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.07] bg-elevated p-3">
         <Select
           aria-label="Filter open orders by side"
           data={["All", "Buy", "Sell"]}
