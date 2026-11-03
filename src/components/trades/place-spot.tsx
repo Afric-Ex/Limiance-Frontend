@@ -859,12 +859,12 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
       {/* Unified order type selector: shared by desktop and mobile */}
       <div className="flex items-center justify-between gap-2 pb-1">
-        <span className="shrink-0 text-xs font-medium text-white/50"><span className="sm:hidden">Type</span><span className="hidden sm:inline">Order type</span></span>
-        <div className="min-w-0 flex-1 flex justify-end">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 text-xs font-medium text-white/50"><span className="sm:hidden">Type</span><span className="hidden sm:inline">Order type</span></span>
           <Popover
             opened={moreOpen}
             onChange={setMoreOpen}
-            position="bottom-end"
+            position="bottom-start"
             withArrow={false}
             shadow="xl"
           >
@@ -874,7 +874,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 onClick={() => setMoreOpen((open) => !open)}
                 aria-label={`Order type: ${selectedOrderTypeLabel}`}
                 aria-expanded={moreOpen}
-                className="flex h-9 w-full max-w-[150px] sm:max-w-[190px] min-w-0 items-center justify-between gap-2 rounded-lg border border-white/[0.10] bg-white/[0.05] px-3 text-left text-xs font-semibold text-white transition-colors hover:bg-white/[0.08]"
+                className="flex h-9 min-w-[110px] max-w-[150px] sm:max-w-[190px] items-center justify-between gap-2 rounded-lg border border-white/[0.10] bg-white/[0.05] px-3 text-left text-xs font-semibold text-white transition-colors hover:bg-white/[0.08]"
               >
                 <span className="truncate">{selectedOrderTypeLabel}</span>
                 <MdExpandMore

@@ -261,7 +261,7 @@ export const DisputePanel = ({ isOpen, onClose, orderMatchId, onSuccess }: Dispu
             Cancel
           </Button>
           <Button
-            className="flex-1 !bg-[#F6465D] hover:!bg-[#F6465D]/90 !text-white !h-10 !rounded-lg !text-xs !font-semibold"
+            className="flex-1 !bg-[#F6465D] hover:!bg-[#F6465D]/90 !text-white !h-10 !rounded-lg !text-xs !font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed disabled:hover:bg-gray-400"
             disabled={!reason || description.length < 20 || !agreed || isSubmitting}
             onClick={handleSubmit}
             loading={isSubmitting}
