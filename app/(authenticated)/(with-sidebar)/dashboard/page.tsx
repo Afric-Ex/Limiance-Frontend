@@ -151,7 +151,7 @@ function DashboardInner() {
         price: Number(m.price ?? m.latest_price ?? m.last_price ?? m.lastPrice ?? 0),
         changePercent24h: Number(m.changePercent24h ?? m.percent_change ?? m.priceChangePercent ?? 0),
         volume24h: Number(m.volume24h ?? m.volume ?? m.quoteVolume ?? 0),
-        image: getCryptoIcon(base) ?? m.image ?? m.logo ?? m.icon,
+        image: m.image ?? m.logo ?? m.icon ?? getCryptoIcon(base),
       };
     });
   }, [movers]);
@@ -169,7 +169,7 @@ function DashboardInner() {
         ...t,
         symbol: sym,
         pair: rawPair,
-        image: getCryptoIcon(sym) || allTokensMap.get(sym)?.image
+        image: allTokensMap.get(sym)?.image || getCryptoIcon(sym)
       });
     });
 
@@ -239,7 +239,7 @@ function DashboardInner() {
           volume24h: marketMatch?.volume24h ?? 0,
           balance: totalBalance,
           usdValue: totalBalance * price,
-          image: getCryptoIcon(sym) ?? marketMatch?.image ?? item.image ?? item.logo,
+          image: item.image || item.logo || item.icon || marketMatch?.image || getCryptoIcon(sym),
         };
       })
       .sort((a: any, b: any) => b.usdValue - a.usdValue); // Sort by USD value
@@ -478,13 +478,21 @@ function DashboardInner() {
                     <TableTr key={token.pair} className="row-hover border-b border-transparent transition-colors">
                       <TableTd className="py-1.5 pl-4 max-[768px]:pl-2 max-[768px]:py-4">
                         <span className="flex items-center gap-2.5 max-[768px]:gap-2.5">
-                          {token.image ? (
-                            <img src={token.image} alt={token.symbol} loading="lazy" decoding="async" className="w-6 h-6 max-[768px]:w-9 max-[768px]:h-9 rounded-full object-cover shrink-0" />
-                          ) : (
-                            <span className="w-6 h-6 max-[768px]:w-9 max-[768px]:h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-2xs max-[768px]:text-sm font-bold text-white/80 shrink-0">
-                              {token.symbol.charAt(0)}
-                            </span>
-                          )}
+                          <span className="relative inline-flex w-6 h-6 max-[768px]:w-9 max-[768px]:h-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5 text-2xs max-[768px]:text-sm font-bold text-white/80">
+                            <span aria-hidden="true">{String(token.symbol || "?").charAt(0)}</span>
+                            {token.image && (
+                              <img
+                                src={token.image}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                onError={(event) => {
+                                  event.currentTarget.style.display = "none";
+                                }}
+                                className="absolute inset-0 h-full w-full rounded-full object-cover"
+                              />
+                            )}
+                          </span>
                           <span className="flex items-baseline max-[768px]:flex-col max-[768px]:items-start gap-1.5 max-[768px]:gap-0">
                             <span className="text-caption max-[768px]:text-base font-bold text-white/90">
                               {token.symbol}
