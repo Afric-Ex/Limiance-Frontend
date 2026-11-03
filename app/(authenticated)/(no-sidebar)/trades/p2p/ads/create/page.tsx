@@ -9,6 +9,7 @@ import { Button, Select, NumberInput, Textarea, Checkbox, Tooltip, MultiSelect }
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useCreateAd, useAdvertiserInfo, usePaymentMethods } from "@/src/hooks/p2p/use-p2p";
+import { useTokenIconMap } from "@/src/hooks/use-token-icons";
 import { CreateOrder } from "@/src/types/p2p";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { asset, assetKeys } from "@/src/services/asset";
@@ -26,6 +27,11 @@ import clsx from "clsx";
 // Shown only while the backend lists load (or if those requests fail).
 const FALLBACK_ASSETS = ["USDT", "BTC", "ETH"];
 const FALLBACK_FIATS = ["USD", "EUR", "NGN", "GBP"];
+
+// Helper to get flag URL for fiat currencies
+function getFiatFlagUrl(code: string): string {
+  return `https://wise.com/public-resources/assets/flags/rectangle/${code.toLowerCase()}.png`;
+}
 
 const StepBadge = ({ num }: { num: number }) => (
   <div className="w-6 h-6 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-xs font-bold shrink-0 font-mono">
@@ -134,19 +140,25 @@ function CreateAdPageInner() {
     retry: false,
   });
 
+  const tokenIconMap = useTokenIconMap();
+
   const assetOptions = useMemo(() => {
     const seen = new Set<string>();
-    const options: { value: string; label: string }[] = [];
+    const options: { value: string; label: string; image?: string }[] = [];
     for (const token of listedTokens ?? []) {
       const symbol = String(token?.symbol ?? "").trim().toUpperCase();
       if (!symbol || seen.has(symbol)) continue;
       seen.add(symbol);
-      options.push({ value: symbol, label: symbol });
+      options.push({
+        value: symbol,
+        label: symbol,
+        image: token?.image || token?.logo || token?.icon || tokenIconMap[symbol] || undefined,
+      });
     }
     return options.length
       ? options
-      : FALLBACK_ASSETS.map((symbol) => ({ value: symbol, label: symbol }));
-  }, [listedTokens]);
+      : FALLBACK_ASSETS.map((symbol) => ({ value: symbol, label: symbol, image: undefined }));
+  }, [listedTokens, tokenIconMap]);
 
   const selectedTokenLogo = useMemo(() => {
     const token = (listedTokens ?? []).find(
@@ -167,19 +179,27 @@ function CreateAdPageInner() {
     const body: any = (listedCurrencies as any)?.data ?? listedCurrencies;
     const rows: any[] = Array.isArray(body) ? body : [];
     const seen = new Set<string>();
-    const options: { value: string; label: string }[] = [];
+    const options: { value: string; label: string; image?: string }[] = [];
     for (const row of rows) {
       const code = String(
         typeof row === "string" ? row : row?.symbol ?? row?.code ?? row?.currency ?? row?.name ?? ""
       ).trim().toUpperCase();
       if (!code || seen.has(code)) continue;
       seen.add(code);
-      options.push({ value: code, label: code });
+      options.push({
+        value: code,
+        label: code,
+        image: getFiatFlagUrl(code),
+      });
     }
     return options.length
       ? options
-      : FALLBACK_FIATS.map((code) => ({ value: code, label: code }));
+      : FALLBACK_FIATS.map((code) => ({ value: code, label: code, image: getFiatFlagUrl(code) }));
   }, [listedCurrencies]);
+
+  // Compute selected images after both options are available
+  const selectedAssetImage = assetOptions.find(o => o.value === selectedAsset)?.image;
+  const selectedFiatImage = fiatOptions.find(o => o.value === fiat)?.image;
 
   // Real balance from funding account via WebSocket portfolio channel
   const { coins: portfolioCoins } = usePortfolioWs({ coins: true });
@@ -370,6 +390,40 @@ function CreateAdPageInner() {
                 data={assetOptions}
                 searchable
                 classNames={{ label: labelClass, input: selectClass, dropdown: dropdownClass, option: optionClass }}
+                renderOption={({ option }) => {
+                  const opt = option as { value: string; label: string; image?: string };
+                  return (
+                    <div className="flex items-center gap-2.5">
+                      {opt.image ? (
+                        <img
+                          src={opt.image}
+                          alt={opt.label}
+                          width={20}
+                          height={20}
+                          className="rounded-full object-cover shrink-0"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-white/10 shrink-0 flex items-center justify-center text-[8px] font-bold text-white/50">
+                          {opt.label.slice(0, 2)}
+                        </div>
+                      )}
+                      <span className="text-sm font-medium">{opt.label}</span>
+                    </div>
+                  );
+                }}
+                leftSection={
+                  selectedAssetImage ? (
+                    <img
+                      src={selectedAssetImage}
+                      alt={selectedAsset}
+                      width={18}
+                      height={18}
+                      className="rounded-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                  ) : undefined
+                }
               />
               <Select
                 label="Fiat Currency"
@@ -378,6 +432,38 @@ function CreateAdPageInner() {
                 data={fiatOptions}
                 searchable
                 classNames={{ label: labelClass, input: selectClass, dropdown: dropdownClass, option: optionClass }}
+                renderOption={({ option }) => {
+                  const opt = option as { value: string; label: string; image?: string };
+                  return (
+                    <div className="flex items-center gap-2.5">
+                      {opt.image ? (
+                        <img
+                          src={opt.image}
+                          alt={opt.label}
+                          width={20}
+                          height={14}
+                          className="rounded object-cover shrink-0"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      ) : (
+                        <div className="w-5 h-3.5 rounded bg-white/10 shrink-0" />
+                      )}
+                      <span className="text-sm font-medium">{opt.label}</span>
+                    </div>
+                  );
+                }}
+                leftSection={
+                  selectedFiatImage ? (
+                    <img
+                      src={selectedFiatImage}
+                      alt={fiat}
+                      width={20}
+                      height={14}
+                      className="rounded object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                  ) : undefined
+                }
               />
             </div>
 
