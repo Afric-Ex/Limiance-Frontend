@@ -71,27 +71,35 @@ const nameOf = (value: any): string => {
 };
 
 const resolveUserSide = (order: any, userId: string): "BUY" | "SELL" => {
+  const norm = (v: unknown) => String(v ?? "").trim().toLowerCase();
+  const uId = norm(userId);
   const adType = String(
     order?.type ?? order?.order?.type ?? order?.orderType ?? order?.order_type ?? ""
   ).toUpperCase();
-  const buyerId = idOf(order?.buyerId ?? order?.buyer_id ?? order?.buyer);
-  const sellerId = idOf(order?.sellerId ?? order?.seller_id ?? order?.seller);
-  const matcherId = idOf(order?.matcherId ?? order?.matcher_id ?? order?.matcher);
-  const advertiserId = idOf(
+  const matchedAs = String(
+    order?.matchedAs ?? order?.matched_as ?? ""
+  ).toUpperCase();
+
+  const buyerId = norm(idOf(order?.buyerId ?? order?.buyer_id ?? order?.buyer));
+  const sellerId = norm(idOf(order?.sellerId ?? order?.seller_id ?? order?.seller));
+  const matcherId = norm(idOf(order?.matcherId ?? order?.matcher_id ?? order?.matcher));
+  const advertiserId = norm(idOf(
     order?.advertiserId ?? order?.advertiser_id ?? order?.advertiser
-  );
+  ));
 
-  if (userId && buyerId && buyerId === userId) return "BUY";
-  if (userId && sellerId && sellerId === userId) return "SELL";
+  if (uId && buyerId && buyerId === uId) return "BUY";
+  if (uId && sellerId && sellerId === uId) return "SELL";
 
-  if (userId && matcherId && matcherId === userId) {
+  if (uId && matcherId && matcherId === uId) {
+    if (matchedAs === "BUY" || matchedAs === "SELL") return matchedAs;
     if (adType === "BUY") return "SELL";
     if (adType === "SELL") return "BUY";
   }
-  if (userId && advertiserId && advertiserId === userId) {
-    if (adType === "BUY" || adType === "SELL") return adType;
+  if (uId && advertiserId && advertiserId === uId) {
+    if (adType === "BUY" || adType === "SELL") return adType as "BUY" | "SELL";
   }
 
+  if (matchedAs === "BUY" || matchedAs === "SELL") return matchedAs;
   return adType === "BUY" ? "BUY" : "SELL";
 };
 
@@ -124,7 +132,8 @@ function OrderHistoryPageInner() {
   );
   const { data, isLoading, refetch, isRefetching } = useAllMatchedOrders();
 
-  const fetchedOrders: any[] = (data as any)?.data?.data ?? [];
+  const rawList = (data as any)?.data?.data ?? (data as any)?.data?.orders ?? (data as any)?.data ?? [];
+  const fetchedOrders: any[] = Array.isArray(rawList) ? rawList : [];
   const allOrders =
     filterType === "ALL"
       ? fetchedOrders

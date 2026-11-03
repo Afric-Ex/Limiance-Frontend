@@ -153,8 +153,12 @@ function OrderRoomPageInner() {
   const asset = order?.asset ?? originalOrder?.asset ?? "";
   const fiat = String(order?.fiatCurrency ?? originalOrder?.currency ?? originalOrder?.fiat ?? "USD").toUpperCase();
   const quantity = parseFloat(String(order?.quantity ?? 0));
-  // Unit price comes from the advertisement's listed price. Realtime match
-  // snapshots omit it, so fall back through both the match and the original ad.
+  const rawFiatAmount = parseFloat(String(order?.fiatAmount ?? 0));
+  const effectiveMatchedUnitPrice =
+    quantity > 0 && rawFiatAmount > 0 ? rawFiatAmount / quantity : 0;
+
+  // Unit price comes from the agreed match calculation (fiatAmount / quantity),
+  // falling back through both the match and the original ad.
   const firstPositivePrice = (...values: unknown[]): number => {
     for (const value of values) {
       const parsed = parseFloat(String(value ?? ""));
@@ -162,16 +166,19 @@ function OrderRoomPageInner() {
     }
     return 0;
   };
-  const price = firstPositivePrice(
-    originalOrder?.fixedPrice,
-    originalOrder?.price,
-    order?.fixedPrice,
-    order?.price,
-    order?.adPrice,
-    order?.unitPrice,
-    order?.rate
-  );
-  const fiatAmount = order?.fiatAmount && order.fiatAmount > 0 ? order.fiatAmount : quantity * price;
+  const price =
+    effectiveMatchedUnitPrice > 0
+      ? effectiveMatchedUnitPrice
+      : firstPositivePrice(
+          originalOrder?.fixedPrice,
+          originalOrder?.price,
+          order?.fixedPrice,
+          order?.price,
+          order?.adPrice,
+          order?.unitPrice,
+          order?.rate
+        );
+  const fiatAmount = rawFiatAmount > 0 ? rawFiatAmount : quantity * price;
   const paymentMethod = order?.paymentMethod;
   // Resolve the counterparty from roles first, then names. Never fall back to
   // the signed-in user's own name/id.
@@ -203,12 +210,12 @@ function OrderRoomPageInner() {
     order?.sellerName || nestedName(order?.seller) || nestedName(order?.sellerUser);
   const orderAdvertiserName =
     order?.advertiserName || nestedName(order?.advertiser) || adOwnerNested;
-  const orderMatcherName = isAdvertiser
-    ? order?.matcherName || nestedName(order?.matcher) || nestedName(order?.matcherUser)
-    : "";
+  const orderMatcherName =
+    order?.matcherName || nestedName(order?.matcher) || nestedName(order?.matcherUser);
+
   const counterpartyName = isBuyer
-    ? orderSellerName || orderMatcherName || (!isAdvertiser ? orderAdvertiserName : "") || "Seller"
-    : orderBuyerName || orderMatcherName || (!isAdvertiser ? orderAdvertiserName : "") || "Buyer";
+    ? (orderSellerName && orderSellerName !== orderBuyerName ? orderSellerName : (!isAdvertiser ? orderAdvertiserName : orderMatcherName)) || "Seller"
+    : (orderBuyerName && orderBuyerName !== orderSellerName ? orderBuyerName : (!isAdvertiser ? orderAdvertiserName : orderMatcherName)) || "Buyer";
 
   const existingFeedbackSubmitted = !!order?.review || hasReviewForOrder(orderId) || feedbackSubmitted;
 
@@ -216,6 +223,21 @@ function OrderRoomPageInner() {
   // unix timestamps, regardless of whether the value came from REST or WS.
   const parseBackendDate = (value: unknown): Date | null =>
     parseDate(value instanceof Date ? value.toISOString() : value);
+
+  // Cached timestamp prevents real-time WebSocket state flashes from erasing the created timestamp.
+  const cachedTimestampRef = useRef<string>("");
+  const timestampCandidate =
+    order?.createdAt ??
+    order?.created_at ??
+    order?.updatedAt ??
+    order?.updated_at ??
+    originalOrder?.createdAt ??
+    originalOrder?.created_at ??
+    "";
+  if (timestampCandidate && parseBackendDate(timestampCandidate)) {
+    cachedTimestampRef.current = String(timestampCandidate);
+  }
+  const effectiveCreatedAt = parseBackendDate(timestampCandidate || cachedTimestampRef.current);
 
   const deadlineDate = parseBackendDate(order?.expiryTime ?? "");
   const deadlineStr = deadlineDate
@@ -561,7 +583,10 @@ function OrderRoomPageInner() {
                   <div className="flex min-w-0 flex-col gap-1.5">
                     <div className="text-white/45">Unit Price</div>
                     <div className="font-mono text-white">
-                      {price.toLocaleString()} {fiat}/{asset}
+                      {price > 0
+                        ? price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+                        : "—"}{" "}
+                      {fiat}/{asset}
                     </div>
                   </div>
                   <div className="flex min-w-0 flex-col gap-1.5">
@@ -571,15 +596,7 @@ function OrderRoomPageInner() {
                   <div className="col-span-2 flex flex-col gap-1.5">
                     <div className="text-white/45">Order Timestamp</div>
                     <div className="text-white/70">
-                      {parseBackendDate(
-                        order.createdAt ??
-                          order.created_at ??
-                          order.updatedAt ??
-                          order.updated_at ??
-                          originalOrder?.createdAt ??
-                          originalOrder?.created_at ??
-                          ""
-                      )?.toLocaleString() ?? "—"}
+                      {effectiveCreatedAt ? effectiveCreatedAt.toLocaleString() : "—"}
                     </div>
                   </div>
                 </div>

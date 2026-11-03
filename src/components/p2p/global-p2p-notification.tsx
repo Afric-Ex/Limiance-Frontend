@@ -12,6 +12,7 @@ interface MatchNotice {
   asset?: string;
   quantity?: unknown;
   amount?: unknown;
+  fiatAmount?: unknown;
   price?: unknown;
   fiat?: string;
   orderType?: string;
@@ -72,6 +73,7 @@ export function GlobalP2PNotification() {
       const quantity = toPositiveNumber(notice.quantity);
       const price = toPositiveNumber(notice.price);
       const amount =
+        toPositiveNumber(notice.fiatAmount) ??
         toPositiveNumber(notice.amount) ??
         (quantity && price ? quantity * price : undefined);
 
@@ -134,7 +136,8 @@ export function GlobalP2PNotification() {
         orderId: match.orderId ?? match.order_id,
         asset: match.asset,
         quantity: match.quantity,
-        amount: match.amount ?? match.fiatAmount ?? match.fiat_amount,
+        fiatAmount: match.fiatAmount ?? match.fiat_amount ?? match.amount,
+        amount: match.fiatAmount ?? match.fiat_amount ?? match.amount,
         price: match.price ?? match.fixedPrice ?? match.fixed_price ?? match.rate,
         fiat: match.fiat ?? match.fiatCurrency ?? match.fiat_currency,
         orderType: match.type ?? match.orderType ?? match.order_type,
@@ -182,7 +185,8 @@ export function GlobalP2PNotification() {
         orderId: order?.orderId ?? order?.order_id,
         asset: order?.asset,
         quantity: order?.quantity,
-        amount: order?.amount ?? order?.fiatAmount ?? order?.fiat_amount,
+        fiatAmount: order?.fiatAmount ?? order?.fiat_amount ?? order?.amount,
+        amount: order?.fiatAmount ?? order?.fiat_amount ?? order?.amount,
         price:
           order?.price ??
           order?.fixedPrice ??
