@@ -17,10 +17,10 @@ export function EarnHeader() {
           </span>
 
           <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-bold leading-tight tracking-[-0.04em] text-white sm:text-4xl xl:text-[42px]">
+            <h1 className="text-2xl font-bold leading-tight tracking-[-0.04em] text-white sm:text-3xl">
               Grow your <span className="text-primary">{LIM_SYMBOL}</span>
             </h1>
-            <p className="max-w-xl text-sm leading-6 text-white/55 sm:text-base">
+            <p className="max-w-xl text-sm leading-6 text-white/55">
               Put your digital assets to work with {LIM_NAME}. Explore earning
               products with clear terms, transparent rates and control over
               your holdings.
@@ -35,7 +35,7 @@ export function EarnHeader() {
               Explore products <FaArrowRight size={12} />
             </a>
             <Link
-              href="/assets"
+              href="/assets/overview"
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.025] px-5 text-sm font-semibold text-white/75 transition-colors hover:border-white/25 hover:bg-white/[0.06] hover:text-white"
             >
               View wallet <MdArrowOutward size={15} />

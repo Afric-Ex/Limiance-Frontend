@@ -15,7 +15,7 @@ interface OpenFuturesModalProps {
 }
 
 export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) => {
-  const { setUser, user, fetchUser } = useUserStore();
+  const { fetchUser } = useUserStore();
   const [checked, setChecked] = useState(false);
   const [checked2, setChecked2] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

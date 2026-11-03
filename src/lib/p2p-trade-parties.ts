@@ -87,29 +87,6 @@ export function getTradeParties(
 }
 
 /**
- * Normalizes multiple possible field names to extract a single value.
- * Used for handling API responses that may return fields in different formats.
- */
-function extractField<T>(
-  sources: (T | null | undefined)[],
-  extractor?: (value: T) => string | undefined
-): string {
-  for (const source of sources) {
-    if (!source) continue;
-    
-    if (typeof source === "string") {
-      return source.trim();
-    }
-    
-    if (typeof source === "object" && extractor) {
-      const extracted = extractor(source);
-      if (extracted) return extracted.trim();
-    }
-  }
-  return "";
-}
-
-/**
  * Extracts ID from nested or flat structures commonly returned by the API.
  * Handles fields like: id, userId, user_id, _id, or nested object.id
  */

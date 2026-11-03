@@ -24,7 +24,6 @@ import {
   IoChevronDown,
   IoFlashOutline,
 } from "react-icons/io5";
-import { IoIosGift } from "react-icons/io";
 import { BusinessCard } from "../icons/business-card";
 import { Send } from "../icons/send";
 import { RiExchangeFundsLine, RiBarChartFill, RiCustomerService2Line } from "react-icons/ri";
@@ -53,7 +52,6 @@ const mainNavLinks: NavItem[] = [
       { name: "Spot", link: "/assets/spot" },
       { name: "Margin", link: "/assets/margin" },
       { name: "Futures", link: "/assets/futures" },
-      { name: "Trading Bots", link: "/assets/trading-bots" },
       { name: "Earn", link: "/assets/earn" },
       { name: "Funding", link: "/assets/funding" },
     ],
@@ -74,7 +72,6 @@ const mainNavLinks: NavItem[] = [
   { name: "Futures", link: "/trades/futures", icon: IoFlashOutline, badge: "PRO" },
   { name: "Margin", link: "/trades/margin", icon: RiBarChartFill },
   { name: "P2P Trading", link: "/trades/p2p", icon: RiExchangeFundsLine },
-  { name: "Rewards Hub", link: "/assets/earn", icon: IoIosGift },
   {
     name: "Account",
     routeIdentifier: "account",
