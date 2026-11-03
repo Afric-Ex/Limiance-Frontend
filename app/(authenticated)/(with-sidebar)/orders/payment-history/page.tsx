@@ -33,6 +33,7 @@ function PaymentHistoryInner() {
   const { data: history, isLoading } = useQuery({
     queryKey: tradingKeys.paymentHistory,
     queryFn: () => tradingService.paymentHistory(),
+    select: (res) => res?.data ?? [],
   });
 
   const allHistory: any[] = Array.isArray(history) ? history : [];

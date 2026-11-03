@@ -27,6 +27,7 @@ export const OrderDetails = () => {
   const { data: trades, isLoading } = useQuery({
     queryKey: tradingKeys.spotRecentTrades(symbol),
     queryFn: () => tradingService.spotRecentTrades({ symbol }),
+    select: (res) => res?.data ?? [],
   });
 
   const allTrades: any[] = Array.isArray(trades) ? trades : [];

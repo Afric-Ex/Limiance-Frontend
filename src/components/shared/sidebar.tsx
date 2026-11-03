@@ -187,13 +187,15 @@ function NavLink({
   pathname: string;
   onNavigate?: () => void;
 }) {
+  if (!item.link) return null;
+
   const isActive =
-    pathname === item.link || pathname.startsWith((item.link ?? "") + "/");
+    pathname === item.link || pathname.startsWith(item.link + "/");
   const Icon = item.icon;
 
   return (
     <Link
-      href={item.link!}
+      href={item.link}
       onClick={onNavigate}
       className={clsx(
         "group flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200",
@@ -378,21 +380,9 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             )}
           </div>
 
-          <SectionLabel label="Finance" />
-          <div className="flex flex-col gap-0.5">
-            {mainNavLinks.slice(7, 8).map((item) => (
-              <NavLink
-                key={item.name}
-                item={item}
-                pathname={pathname}
-                onNavigate={onNavigate}
-              />
-            ))}
-          </div>
-
           <SectionLabel label="Profile" />
           <div className="flex flex-col gap-0.5">
-            {mainNavLinks.slice(8).map((item) =>
+            {mainNavLinks.slice(7).map((item) =>
               item.children ? (
                 <NavDropdown
                   key={item.name}
