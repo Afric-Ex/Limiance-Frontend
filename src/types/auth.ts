@@ -47,6 +47,7 @@ export interface LoginResponse {
   secondFactorRequired?: boolean;
   loginChallengeToken?: string;
   challengeToken?: string;
+  wsToken?: string;
   data: {
     id: string;
     user_id?: string;

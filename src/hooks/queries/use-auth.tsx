@@ -17,6 +17,7 @@ import { modals } from "@mantine/modals";
 import { errorNotification, successNotification } from "@/src/lib/notification-handler";
 import { useUserStore } from "@/src/stores/user-store";
 import { markLoginGrace } from "@/src/lib/login-grace";
+import { wsClient } from "@/src/lib/websocket-client";
 
 type OtpFormValues = {
   otp: string;
@@ -106,9 +107,16 @@ export const useAuth = () => {
       credentialMode: "http-only-cookie",
     });
 
+    if (typeof payload?.wsToken === "string" && payload.wsToken) {
+      wsClient.setAuthTicket(payload.wsToken);
+    }
+
     const user = getLoginUser(payload);
     if (user) {
       setUser(user);
+      if (!payload?.wsToken) {
+        void useUserStore.getState().fetchUser();
+      }
     } else {
       // Cookie-only backends are free to answer a successful login with an
       // empty body: the credential is the Set-Cookie, not the payload. Ask the

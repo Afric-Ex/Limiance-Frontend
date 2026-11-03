@@ -7,6 +7,9 @@ import {
   CandlestickSeries,
   HistogramSeries,
   LineSeries,
+  AreaSeries,
+  BarSeries,
+  PriceScaleMode,
   ColorType,
   CrosshairMode,
   LineStyle,
@@ -19,6 +22,7 @@ import {
   type CandlestickData,
   type HistogramData,
   type LineData,
+  type LogicalRange,
 } from "lightweight-charts";
 import { useCandleFeed } from "@/src/components/trades/use-candle-feed";
 import { calculateSMA, calculateSingleSMA } from "@/src/components/trades/indicators";
@@ -38,7 +42,7 @@ import {
 import { DrawingToolbar, type ToolbarTool } from "@/src/components/trades/drawing-toolbar";
 import type { ChartMarket } from "@/src/components/trades/use-candle-feed";
 import type { KlineCandle } from "@/src/types/trading";
-import type { OrderLevel } from "@/src/components/trades/candlestick-char";
+import type { OrderLevel } from "@/src/components/trades/candlestick-chart";
 
 const APP_CHART_BACKGROUND = "#181a20";
 const BULL_COLOR = "#16c784";
@@ -240,6 +244,30 @@ function applyPanMode(chart: IChartApi, suppressed: boolean): void {
 }
 
 
+export type ChartType = "candles" | "line" | "area" | "bars";
+
+export interface ChartIndicators {
+  showMa7: boolean;
+  showMa25: boolean;
+  showMa99: boolean;
+  showVolume: boolean;
+  showVolumeSma: boolean;
+  ma7Period: number;
+  ma25Period: number;
+  ma99Period: number;
+}
+
+export const DEFAULT_INDICATORS: ChartIndicators = {
+  showMa7: true,
+  showMa25: true,
+  showMa99: true,
+  showVolume: true,
+  showVolumeSma: true,
+  ma7Period: 7,
+  ma25Period: 25,
+  ma99Period: 99,
+};
+
 // Lightweight Charts throws on unsorted or duplicate timestamps, so the feed is
 // sanitized on the way in rather than trusted.
 function toCandleData(candles: KlineCandle[]) {
@@ -253,6 +281,20 @@ function toCandleData(candles: KlineCandle[]) {
     if (seen.has(time)) continue;
     seen.add(time);
     out.push({ t: time, d: { time, open: c.open, high: c.high, low: c.low, close: c.close } });
+  }
+  return out.sort((a, b) => a.t - b.t).map((x) => x.d);
+}
+
+function toLineData(candles: KlineCandle[]): LineData[] {
+  const seen = new Set<number>();
+  const out: { t: number; d: LineData }[] = [];
+  for (const c of candles) {
+    if (!Number.isFinite(c.time) || c.time <= 0) continue;
+    if (!Number.isFinite(c.close) || c.close <= 0) continue;
+    const time = Math.floor(c.time / 1000) as UTCTimestamp;
+    if (seen.has(time)) continue;
+    seen.add(time);
+    out.push({ t: time, d: { time, value: c.close } });
   }
   return out.sort((a, b) => a.t - b.t).map((x) => x.d);
 }
@@ -328,16 +370,22 @@ export function LwcCandlestickChart({
   market = "spot",
   orderLevels = [],
   onLastPriceChange,
+  chartType = "candles",
+  indicators = DEFAULT_INDICATORS,
+  priceScaleMode = "normal",
 }: {
   symbol: string;
   interval: string;
   market?: ChartMarket;
   orderLevels?: OrderLevel[];
   onLastPriceChange?: (price: number | null) => void;
+  chartType?: ChartType;
+  indicators?: ChartIndicators;
+  priceScaleMode?: "normal" | "log" | "percent";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const candleSeriesRef = useRef<ISeriesApi<any> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const volumeSmaSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const ma7SeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
@@ -353,7 +401,7 @@ export function LwcCandlestickChart({
   const previewRef = useRef<DrawingPrimitive | null>(null);
   // Series the preview was attached to, so a rebuild never detaches from a
   // disposed series.
-  const previewSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const previewSeriesRef = useRef<ISeriesApi<any> | null>(null);
   const toolRef = useRef<ToolbarTool>("pointer");
   const pendingRef = useRef<PendingDrawing | null>(null);
   const selectedIdRef = useRef<string | null>(null);
@@ -379,6 +427,10 @@ export function LwcCandlestickChart({
   // full dataset changed (initial load/refetch), so the incremental last-candle
   // update path is unsafe until setData has installed all of it.
   const appliedHistoryRef = useRef<KlineCandle[] | undefined>(undefined);
+  const prevBarCountRef = useRef<number>(0);
+  const loadingMoreRef = useRef(false);
+  const hasMoreHistoryRef = useRef(true);
+  const loadMoreHistoryRef = useRef<(() => Promise<number>) | undefined>(undefined);
   const [legend, setLegend] = useState<{ o: number; h: number; l: number; c: number; v?: number; vsma?: number; ma7?: number; ma25?: number; ma99?: number } | null>(null);
   const [drawingsBySymbol, setDrawingsBySymbol] = useState<Record<string, Drawing[]>>(() =>
     readStoredDrawings(market)
@@ -504,7 +556,7 @@ export function LwcCandlestickChart({
    * freshly created series) and from the sync effect below (so a change to the
    * list is reflected without rebuilding the chart).
    */
-  const syncPrimitives = useCallback((series: ISeriesApi<"Candlestick">, list: readonly Drawing[]) => {
+  const syncPrimitives = useCallback((series: ISeriesApi<any>, list: readonly Drawing[]) => {
     const live = primitivesRef.current;
     const wanted = new Set(list.map((d) => d.id));
     for (const [id, primitive] of live) {
@@ -607,7 +659,19 @@ export function LwcCandlestickChart({
     drawingsRef.current = drawingsBySymbol;
   }, [drawingsBySymbol]);
 
-  const { candles, historyCandles, isLoading, isError, historyFetched, wsPending } = useCandleFeed(symbol, interval, market);
+  const {
+    candles,
+    historyCandles,
+    isLoading,
+    isError,
+    historyFetched,
+    wsPending,
+    isLoadingMoreHistory,
+    hasMoreHistory,
+    loadMoreHistory,
+  } = useCandleFeed(symbol, interval, market);
+  hasMoreHistoryRef.current = hasMoreHistory ?? false;
+  loadMoreHistoryRef.current = loadMoreHistory;
   const n = candles.length;
   const hasChartData = useMemo(() => toCandleData(candles).length > 0, [candles]);
 
@@ -624,7 +688,7 @@ export function LwcCandlestickChart({
     );
   }, [latestClose]);
 
-  const syncPriceLines = useCallback((series: ISeriesApi<"Candlestick">, levels: readonly OrderLevel[]) => {
+  const syncPriceLines = useCallback((series: ISeriesApi<any>, levels: readonly OrderLevel[]) => {
     for (const line of priceLinesRef.current) series.removePriceLine(line);
     priceLinesRef.current = levels
       .filter((level) => Number.isFinite(level.price) && level.price > 0)
@@ -677,7 +741,16 @@ export function LwcCandlestickChart({
         vertLines: { color: "rgba(255,255,255,0.03)" },
         horzLines: { color: "rgba(255,255,255,0.05)" },
       },
-      rightPriceScale: { borderColor: "rgba(255,255,255,0.06)", scaleMargins: { top: 0.12, bottom: 0.22 } },
+      rightPriceScale: {
+        mode:
+          priceScaleMode === "log"
+            ? PriceScaleMode.Logarithmic
+            : priceScaleMode === "percent"
+            ? PriceScaleMode.Percentage
+            : PriceScaleMode.Normal,
+        borderColor: "rgba(255,255,255,0.06)",
+        scaleMargins: { top: 0.12, bottom: 0.22 },
+      },
       timeScale: {
         borderColor: "rgba(255,255,255,0.06)",
         barSpacing: isMobile ? 3.5 : 5,
@@ -705,17 +778,49 @@ export function LwcCandlestickChart({
       },
     });
 
-    const candlesSeries = chart.addSeries(CandlestickSeries, {
-      upColor: BULL_COLOR,
-      downColor: BEAR_COLOR,
-      wickUpColor: BULL_COLOR,
-      wickDownColor: BEAR_COLOR,
-      borderVisible: false,
-      lastValueVisible: true,
-      priceLineVisible: true,
-      priceLineStyle: LineStyle.Dotted,
-      priceLineWidth: 1,
-    });
+    let candlesSeries: ISeriesApi<any>;
+    if (chartType === "bars") {
+      candlesSeries = chart.addSeries(BarSeries, {
+        upColor: BULL_COLOR,
+        downColor: BEAR_COLOR,
+        lastValueVisible: true,
+        priceLineVisible: true,
+        priceLineStyle: LineStyle.Dotted,
+        priceLineWidth: 1,
+      });
+    } else if (chartType === "line") {
+      candlesSeries = chart.addSeries(LineSeries, {
+        color: BULL_COLOR,
+        lineWidth: 2,
+        lastValueVisible: true,
+        priceLineVisible: true,
+        priceLineStyle: LineStyle.Dotted,
+        priceLineWidth: 1,
+      });
+    } else if (chartType === "area") {
+      candlesSeries = chart.addSeries(AreaSeries, {
+        topColor: "rgba(22,199,132,0.28)",
+        bottomColor: "rgba(22,199,132,0.01)",
+        lineColor: BULL_COLOR,
+        lineWidth: 2,
+        lastValueVisible: true,
+        priceLineVisible: true,
+        priceLineStyle: LineStyle.Dotted,
+        priceLineWidth: 1,
+      });
+    } else {
+      candlesSeries = chart.addSeries(CandlestickSeries, {
+        upColor: BULL_COLOR,
+        downColor: BEAR_COLOR,
+        wickUpColor: BULL_COLOR,
+        wickDownColor: BEAR_COLOR,
+        borderVisible: false,
+        lastValueVisible: true,
+        priceLineVisible: true,
+        priceLineStyle: LineStyle.Dotted,
+        priceLineWidth: 1,
+      });
+    }
 
     chartRef.current = chart;
     candleSeriesRef.current = candlesSeries;
@@ -727,6 +832,7 @@ export function LwcCandlestickChart({
       priceFormat: { type: "volume" },
       lastValueVisible: false,
       priceLineVisible: false,
+      visible: indicators.showVolume,
     });
     const volumeSmaSeries = chart.addSeries(LineSeries, {
       priceScaleId: "volume",
@@ -735,14 +841,37 @@ export function LwcCandlestickChart({
       crosshairMarkerVisible: false,
       priceLineVisible: false,
       lastValueVisible: false,
+      visible: indicators.showVolume && indicators.showVolumeSma,
     });
     chart.priceScale("volume").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
     volumeSeriesRef.current = volumeSeries;
     volumeSmaSeriesRef.current = volumeSmaSeries;
 
-    const ma7Series = chart.addSeries(LineSeries, { color: "#F0B90B", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false });
-    const ma25Series = chart.addSeries(LineSeries, { color: "#E040FB", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false });
-    const ma99Series = chart.addSeries(LineSeries, { color: "#00BCD4", lineWidth: 1, crosshairMarkerVisible: false, priceLineVisible: false });
+    // Moving average overlays with lastValueVisible: false to prevent axis clutter
+    const ma7Series = chart.addSeries(LineSeries, {
+      color: "#F0B90B",
+      lineWidth: 1,
+      crosshairMarkerVisible: false,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      visible: indicators.showMa7,
+    });
+    const ma25Series = chart.addSeries(LineSeries, {
+      color: "#E040FB",
+      lineWidth: 1,
+      crosshairMarkerVisible: false,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      visible: indicators.showMa25,
+    });
+    const ma99Series = chart.addSeries(LineSeries, {
+      color: "#00BCD4",
+      lineWidth: 1,
+      crosshairMarkerVisible: false,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      visible: indicators.showMa99,
+    });
     ma7SeriesRef.current = ma7Series;
     ma25SeriesRef.current = ma25Series;
     ma99SeriesRef.current = ma99Series;
@@ -871,7 +1000,27 @@ export function LwcCandlestickChart({
       chartRef.current = null;
       chart.remove();
     };
-  }, [symbol, interval, addDrawing, detachPreview, setPending, setSelectedId, syncPanMode, syncPrimitives, syncPriceLines]);
+  }, [symbol, interval, chartType, indicators, priceScaleMode, addDrawing, detachPreview, setPending, setSelectedId, syncPanMode, syncPrimitives, syncPriceLines]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const mode =
+      priceScaleMode === "log"
+        ? PriceScaleMode.Logarithmic
+        : priceScaleMode === "percent"
+        ? PriceScaleMode.Percentage
+        : PriceScaleMode.Normal;
+    chart.priceScale("right").applyOptions({ mode });
+  }, [priceScaleMode]);
+
+  useEffect(() => {
+    if (ma7SeriesRef.current) ma7SeriesRef.current.applyOptions({ visible: indicators.showMa7 });
+    if (ma25SeriesRef.current) ma25SeriesRef.current.applyOptions({ visible: indicators.showMa25 });
+    if (ma99SeriesRef.current) ma99SeriesRef.current.applyOptions({ visible: indicators.showMa99 });
+    if (volumeSeriesRef.current) volumeSeriesRef.current.applyOptions({ visible: indicators.showVolume });
+    if (volumeSmaSeriesRef.current) volumeSmaSeriesRef.current.applyOptions({ visible: indicators.showVolume && indicators.showVolumeSma });
+  }, [indicators]);
 
   // Full loads/history changes replace the series; live updates touch only the
   // latest bar so the current candle can move without resetting the whole chart.
@@ -881,7 +1030,9 @@ export function LwcCandlestickChart({
     if (!candlesSeries || !chart) return;
     
     const candleData = toCandleData(candles);
-    const key = `${symbol}|${interval}`;
+    const isLineOrArea = chartType === "line" || chartType === "area";
+    const mainData = isLineOrArea ? toLineData(candles) : candleData;
+    const key = `${symbol}|${interval}|${chartType}`;
     const latestIndex = candleData.length - 1;
     const lastCandle = candleData[latestIndex] ?? null;
     const previousLastCandle = lastCandleRef.current;
@@ -898,10 +1049,16 @@ export function LwcCandlestickChart({
       lastCandle !== null &&
       lastCandleTime !== null &&
       lastCandleTime >= previousLastCandleTime;
+
     if (canUpdateLastCandle) {
-      candlesSeries.update(lastCandle);
+      if (isLineOrArea) {
+        if (lastCandle) candlesSeries.update({ time: lastCandle.time, value: lastCandle.close });
+      } else {
+        if (lastCandle) candlesSeries.update(lastCandle);
+      }
+
       const volumeSeries = volumeSeriesRef.current;
-      if (volumeSeries) {
+      if (volumeSeries && indicators.showVolume) {
         const lastVolCandle = candles[candles.length - 1];
         if (
           lastVolCandle &&
@@ -921,32 +1078,53 @@ export function LwcCandlestickChart({
       const ma7Series = ma7SeriesRef.current;
       const ma25Series = ma25SeriesRef.current;
       const ma99Series = ma99SeriesRef.current;
-      if (ma7Series) {
-        const pt = calculateSingleSMA(candleData, 7);
+      if (ma7Series && indicators.showMa7) {
+        const pt = calculateSingleSMA(candleData, indicators.ma7Period);
         if (pt) ma7Series.update(pt);
       }
-      if (ma25Series) {
-        const pt = calculateSingleSMA(candleData, 25);
+      if (ma25Series && indicators.showMa25) {
+        const pt = calculateSingleSMA(candleData, indicators.ma25Period);
         if (pt) ma25Series.update(pt);
       }
-      if (ma99Series) {
-        const pt = calculateSingleSMA(candleData, 99);
+      if (ma99Series && indicators.showMa99) {
+        const pt = calculateSingleSMA(candleData, indicators.ma99Period);
         if (pt) ma99Series.update(pt);
       }
     } else {
-      candlesSeries.setData(candleData);
+      const prevTotal = prevBarCountRef.current;
+      candlesSeries.setData(mainData);
       const volumeSeries = volumeSeriesRef.current;
-      if (volumeSeries) volumeSeries.setData(toVolumeData(candles));
+      if (volumeSeries) volumeSeries.setData(indicators.showVolume ? toVolumeData(candles) : []);
 
       const ma7Series = ma7SeriesRef.current;
       const ma25Series = ma25SeriesRef.current;
       const ma99Series = ma99SeriesRef.current;
-      if (ma7Series) ma7Series.setData(calculateSMA(candleData, 7));
-      if (ma25Series) ma25Series.setData(calculateSMA(candleData, 25));
-      if (ma99Series) ma99Series.setData(calculateSMA(candleData, 99));
+      if (ma7Series) {
+        ma7Series.setData(indicators.showMa7 ? calculateSMA(candleData, indicators.ma7Period) : []);
+      }
+      if (ma25Series) {
+        ma25Series.setData(indicators.showMa25 ? calculateSMA(candleData, indicators.ma25Period) : []);
+      }
+      if (ma99Series) {
+        ma99Series.setData(indicators.showMa99 ? calculateSMA(candleData, indicators.ma99Period) : []);
+      }
+
+      // If older bars were prepended, shift the visible logical range so the chart view stays pinned
+      if (prevTotal > 0 && candleData.length > prevTotal && fittedRef.current === key) {
+        const addedBars = candleData.length - prevTotal;
+        const currentRange = chart.timeScale().getVisibleLogicalRange();
+        if (currentRange && currentRange.from < 50) {
+          chart.timeScale().setVisibleLogicalRange({
+            from: currentRange.from + addedBars,
+            to: currentRange.to + addedBars,
+          });
+        }
+      }
     }
     const volumeSmaSeries = volumeSmaSeriesRef.current;
-    if (volumeSmaSeries) volumeSmaSeries.setData(toVolumeSmaData(toVolumeData(candles)));
+    if (volumeSmaSeries) {
+      volumeSmaSeries.setData(indicators.showVolume && indicators.showVolumeSma ? toVolumeSmaData(toVolumeData(candles)) : []);
+    }
     lastCandleRef.current = lastCandle;
     candleDataContextRef.current = key;
     candleDataSeriesRef.current = candlesSeries;
@@ -964,7 +1142,8 @@ export function LwcCandlestickChart({
         to: total + 4,
       });
     }
-  }, [candles, historyCandles, symbol, interval]);
+    prevBarCountRef.current = candleData.length;
+  }, [candles, historyCandles, symbol, interval, chartType, indicators]);
 
   // Keep the latest levels in a ref so an interval/pair chart rebuild can
   // replay them immediately, then update the current series without rebuilding
@@ -1017,16 +1196,30 @@ export function LwcCandlestickChart({
     //  - the visible logical range covers wheel and pinch zoom;
     //  - the container observer covers a resize (IChartApi has no size
     //    subscription, and timeScale().subscribeSizeChange misses height only).
-    const onChange = () => positionLabel();
-    const observer = new ResizeObserver(onChange);
+    const onRangeChange = (newRange?: LogicalRange | null) => {
+      positionLabel();
+      if (!newRange || !hasMoreHistoryRef.current || loadingMoreRef.current) return;
+      if (typeof newRange.from === "number" && newRange.from < 25) {
+        const fetchMore = loadMoreHistoryRef.current;
+        if (!fetchMore) return;
+        loadingMoreRef.current = true;
+        fetchMore()
+          .catch(() => {})
+          .finally(() => {
+            loadingMoreRef.current = false;
+          });
+      }
+    };
+    const onResizeOrMove = () => positionLabel();
+    const observer = new ResizeObserver(onResizeOrMove);
     observer.observe(container);
     const timeScale = chartRef.current?.timeScale();
-    timeScale?.subscribeVisibleLogicalRangeChange(onChange);
-    window.addEventListener("mousemove", onChange);
+    timeScale?.subscribeVisibleLogicalRangeChange(onRangeChange);
+    window.addEventListener("mousemove", onResizeOrMove);
     return () => {
       observer.disconnect();
-      timeScale?.unsubscribeVisibleLogicalRangeChange(onChange);
-      window.removeEventListener("mousemove", onChange);
+      timeScale?.unsubscribeVisibleLogicalRangeChange(onRangeChange);
+      window.removeEventListener("mousemove", onResizeOrMove);
     };
   }, [interval, positionLabel, symbol]);
 
@@ -1331,23 +1524,23 @@ export function LwcCandlestickChart({
             <span className={barTone}>
               {barSign}{formatPrice(barChange)} ({barSign}{barChangePct.toFixed(2)}%)
             </span>
-            {legend?.ma7 !== undefined && <span style={{ color: "#F0B90B" }}>MA(7) <span className="text-white/80">{formatPrice(legend.ma7)}</span></span>}
-            {legend?.ma25 !== undefined && <span style={{ color: "#E040FB" }}>MA(25) <span className="text-white/80">{formatPrice(legend.ma25)}</span></span>}
-            {legend?.ma99 !== undefined && <span style={{ color: "#00BCD4" }}>MA(99) <span className="text-white/80">{formatPrice(legend.ma99)}</span></span>}
+            {indicators.showMa7 && legend?.ma7 !== undefined && <span style={{ color: "#F0B90B" }}>MA({indicators.ma7Period}) <span className="text-white/80">{formatPrice(legend.ma7)}</span></span>}
+            {indicators.showMa25 && legend?.ma25 !== undefined && <span style={{ color: "#E040FB" }}>MA({indicators.ma25Period}) <span className="text-white/80">{formatPrice(legend.ma25)}</span></span>}
+            {indicators.showMa99 && legend?.ma99 !== undefined && <span style={{ color: "#00BCD4" }}>MA({indicators.ma99Period}) <span className="text-white/80">{formatPrice(legend.ma99)}</span></span>}
           </span>
         </div>
       )}
 
       {/* Volume band label. The band is the bottom 20% of the plot area (above the
           ~26px time axis), so the label sits at 80% of that height. */}
-      {shown && (
+      {indicators.showVolume && shown && (
         <div
           className="pointer-events-none absolute left-2 z-10 flex items-center gap-2 text-2xs font-mono text-white/50"
           style={{ top: "calc((100% - 26px) * 0.8 + 2px)" }}
         >
-          <span>Volume SMA {VOLUME_SMA_PERIOD}</span>
+          <span>Volume {indicators.showVolumeSma ? `SMA ${VOLUME_SMA_PERIOD}` : ""}</span>
           {shown.v !== undefined && <span className={barTone}>{formatVolume(shown.v)}</span>}
-          {shownVolumeSma !== undefined && <span style={{ color: VOLUME_SMA_COLOR }}>{formatVolume(shownVolumeSma)}</span>}
+          {indicators.showVolumeSma && shownVolumeSma !== undefined && <span style={{ color: VOLUME_SMA_COLOR }}>{formatVolume(shownVolumeSma)}</span>}
         </div>
       )}
 

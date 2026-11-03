@@ -16,7 +16,7 @@ import type { HistoryMarket, MarketHistoryPage } from "@/src/hooks/use-order-his
  * show "—" — never an invented figure.
  * ──────────────────────────────────────────────────────────────────────────── */
 
-export type StatusFilter = "all" | "FILLED" | "CANCELLED" | "REJECTED";
+export type StatusFilter = "all" | "closed" | "FILLED" | "CANCELLED" | "REJECTED";
 export const DATE_RANGES = [
   { days: 7, label: "Last 7D" },
   { days: 30, label: "Last 30D" },
@@ -68,8 +68,12 @@ function toRow(raw: any, market: HistoryMarket, index: number): OrderHistoryRow 
   const status = normalizeStatus(raw?.status);
   const filled = status === "FILLED";
 
-  const rawType = text(firstDefined(raw?.type, raw?.orderType, raw?.order_type)).toLowerCase();
-  const type = rawType.replace(/^(buy|sell|long|short)_/, "");
+  const MARKET_SET = new Set(["spot", "futures", "margin"]);
+  const rawTypeCandidate = text(firstDefined(raw?.orderType, raw?.order_type, raw?.type)).toLowerCase();
+  const rawType = MARKET_SET.has(rawTypeCandidate) ? "" : rawTypeCandidate;
+  const type = rawType.replace(/^(buy|sell|long|short)_/, "") || (num(raw?.price) ? "limit" : "market");
+
+  const rowMarket = (raw?.market_type || raw?.marketType || raw?.market || market) as HistoryMarket;
 
   const side = text(raw?.side).toLowerCase();
   const direction =
@@ -97,9 +101,9 @@ function toRow(raw: any, market: HistoryMarket, index: number): OrderHistoryRow 
   const hasValue = (v: unknown) => v !== undefined && v !== null && v !== "" && Number(v) !== 0;
 
   return {
-    key: `${market}-${id || index}`,
+    key: `${rowMarket}-${id || index}`,
     id,
-    market,
+    market: rowMarket,
     pair,
     base,
     quote,
@@ -143,7 +147,13 @@ export function filterOrderHistoryRows(rows: readonly OrderHistoryRow[], f: Orde
     if (f.orderType === "limit_market" && !(row.type.includes("limit") || row.type.includes("market"))) return false;
     if (f.orderType === "tpsl" && !row.hasTpsl) return false;
     if (f.orderType === "oco" && !row.type.includes("oco")) return false;
-    if (f.status !== "all" && row.status !== f.status) return false;
+    if (f.status !== "all") {
+      if (f.status === "closed") {
+        if (!["FILLED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED", "CLOSED"].includes(row.status)) return false;
+      } else if (row.status !== f.status) {
+        return false;
+      }
+    }
     if (row.timeMs !== null && row.timeMs < cutoff) return false;
     if (f.instrument !== "all" && !row.pair.includes(f.instrument)) return false;
     if (f.hideOtherPairs && current && normalizePair(row.pair) !== current) return false;

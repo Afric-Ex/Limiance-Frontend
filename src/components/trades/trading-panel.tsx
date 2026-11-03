@@ -47,7 +47,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const [activeOrderTypeTab, setActiveOrderTypeTab] = useState<OrderTypeTab>("limit_market");
   const [hideOtherPairs, setHideOtherPairs] = useState(false);
   const [selectedInstrument, setSelectedInstrument] = useState("all");
-  const [selectedMarket, setSelectedMarket] = useState<TradingMarketFilter>("all");
+  const [selectedMarket, setSelectedMarket] = useState<TradingMarketFilter>(market || "all");
   // Trade History specific filters
   const [tradeHistoryDays, setTradeHistoryDays] = useState<number>(7);
   const [tradeHistoryAllMarkets, setTradeHistoryAllMarkets] = useState(true);
@@ -133,10 +133,14 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const { coins: portfolioResponse } = usePortfolioWs({ coins: true });
 
   const { mutate: closeOrder, isPending: closeOrderPending } = useMutation({
-    mutationFn: (orderId: string) => cancelSpotOrderWs(orderId),
+    mutationFn: (orderId: string) => {
+      if (market === "futures") return tradingService.cancelFuturesOrder(orderId);
+      if (market === "margin") return tradingService.closeMarginOrder(orderId);
+      return cancelSpotOrderWs(orderId);
+    },
     onSuccess: () => {
       successNotification("Order cancelled");
-      queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
+      queryClient.invalidateQueries({ queryKey: ["open-orders"] });
       queryClient.invalidateQueries({ queryKey: [ORDER_HISTORY_QUERY_KEY] });
       refreshBalances();
     },
@@ -144,10 +148,21 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   });
 
   const { mutate: cancelAllOrders, isPending: cancelAllPending } = useMutation({
-    mutationFn: () => tradingService.cancelAllSpotOrders(hideOtherPairs ? selectedPair : undefined),
+    mutationFn: () => {
+      const sym = hideOtherPairs ? selectedPair : undefined;
+      const targetMarket = selectedMarket !== "all" ? selectedMarket : market;
+      if (targetMarket === "futures") return tradingService.cancelAllFuturesOrders(sym);
+      if (targetMarket === "margin") return tradingService.cancelAllMarginOrders(sym);
+      if (targetMarket === "spot") return tradingService.cancelAllSpotOrders(sym);
+      return Promise.allSettled([
+        tradingService.cancelAllSpotOrders(sym),
+        tradingService.cancelAllMarginOrders(sym),
+        tradingService.cancelAllFuturesOrders(sym),
+      ]);
+    },
     onSuccess: () => {
       successNotification("All open orders cancelled");
-      queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
+      queryClient.invalidateQueries({ queryKey: ["open-orders"] });
       queryClient.invalidateQueries({ queryKey: [ORDER_HISTORY_QUERY_KEY] });
       refreshBalances();
     },
@@ -204,7 +219,14 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const filteredOrders = useMemo(() => {
     if (!openOrders) return [];
     let filtered = [...openOrders];
-    
+
+    if (selectedMarket !== "all") {
+      filtered = filtered.filter((order: any) => {
+        const m = String(order.market_type || order.marketType || order.market || "").toLowerCase();
+        return m === selectedMarket;
+      });
+    }
+
     if (hideOtherPairs && selectedPair) {
       const normalized = selectedPair.replace("/", "").toUpperCase();
       filtered = filtered.filter((order: any) => {
@@ -212,16 +234,16 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
         return orderPair === normalized;
       });
     }
-    
+
     if (selectedInstrument !== "all") {
       filtered = filtered.filter((order: any) => {
         const orderPair = getOrderPair(order);
         return orderPair.includes(selectedInstrument);
       });
     }
-    
+
     return filtered;
-  }, [openOrders, hideOtherPairs, selectedPair, selectedInstrument]);
+  }, [openOrders, selectedMarket, hideOtherPairs, selectedPair, selectedInstrument]);
 
   const openOrderCount = filteredOrders?.length ?? 0;
   const filteredPositions = useMemo(() => {
@@ -443,6 +465,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
               className="ml-auto h-6 rounded border border-white/10 bg-white/[0.05] px-2 text-xs font-semibold text-primary outline-none"
             >
               <option value="all">All Orders</option>
+              <option value="closed">Closed (All)</option>
               <option value="FILLED">Filled</option>
               <option value="CANCELLED">Cancelled</option>
               <option value="REJECTED">Rejected</option>
@@ -574,7 +597,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
         {activeMainTab === "assets" && <AssetsTable assets={portfolioResponse} mobile={mobile} />}
         {activeMainTab === "borrowings" && <BorrowingsTable borrowings={borrowings} loading={borrowingsLoading} mobile={mobile} />}
         {activeMainTab === "tools" && <ToolsPanel />}
-        {activeMainTab === "pnl" && <PnLPanel selectedPair={hideOtherPairs ? selectedPair : undefined} />}
+        {activeMainTab === "pnl" && <PnLPanel selectedPair={hideOtherPairs ? selectedPair : undefined} market={market} />}
       </div>
     </div>
   );
@@ -643,8 +666,10 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
   // type, so ignore those values and keep only a real order type when present.
   const MARKET_TYPES = new Set(["spot", "futures", "margin", "cross", "isolated"]);
   const getOrderType = (order: any) => {
-    const raw = String(order?.orderType ?? order?.order_type ?? order?.type ?? "").toLowerCase();
-    return MARKET_TYPES.has(raw) ? "" : raw;
+    const raw = String(order?.orderType ?? order?.order_type ?? "").toLowerCase();
+    if (raw && !MARKET_TYPES.has(raw)) return raw;
+    const t = String(order?.type ?? "").toLowerCase();
+    return MARKET_TYPES.has(t) ? "" : t;
   };
   const hasConditional = (order: any) =>
     Number(order?.takeProfit) > 0 ||
@@ -653,25 +678,35 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
     Number(order?.sl_trigger_price) > 0;
   const getOrderTypeLabel = (order: any) => {
     const type = getOrderType(order);
-    if (type) return type;
+    if (type) return type.replace(/^(buy|sell|long|short)_/, "");
     if (hasConditional(order)) return "TP/SL";
     return Number(order?.price) > 0 ? "Limit" : "Market";
   };
   const getOrderMarket = (order: any) => {
-    const market = String(order?.type ?? order?.marketType ?? order?.market_type ?? "").toLowerCase();
+    const market = String(order?.market_type ?? order?.marketType ?? order?.market ?? order?.type ?? "").toLowerCase();
     return MARKET_TYPES.has(market) ? market : "spot";
   };
 
   const getOrderPrice = (order: any) =>
     order?.price ?? order?.orderPrice ?? order?.order_price ?? order?.avgPrice ?? order?.fillPrice;
 
-  const getAvgPrice = (order: any) =>
-    order?.avgPrice ?? order?.avg_price ?? order?.averagePrice ?? order?.fillPrice;
+  const getAvgPrice = (order: any) => {
+    const val = order?.avgPrice ?? order?.avg_price ?? order?.averagePrice ?? order?.fillPrice;
+    if (val === "0" || val === 0 || !val) return null;
+    return val;
+  };
 
-  const getFilledValue = (order: any) =>
-    order?.cumExecValue ?? order?.filledValue ?? order?.executedValue;
+  const getFilledValue = (order: any) => {
+    const val = order?.cumExecValue ?? order?.filledValue ?? order?.executedValue;
+    if (val === "0" || val === 0 || !val) return null;
+    return val;
+  };
 
-  const getFee = (order: any) => order?.cumExecFee ?? order?.fee;
+  const getFee = (order: any) => {
+    const val = order?.cumExecFee ?? order?.fee;
+    if (val === "0" || val === 0 || !val) return null;
+    return val;
+  };
 
   const getOrderStatus = (order: any) => order?.orderStatus ?? order?.status ?? order?.state;
 
@@ -1150,10 +1185,19 @@ function ToolsPanel() {
   );
 }
 
-function PnLPanel({ selectedPair }: { selectedPair?: string }) {
+function PnLPanel({ selectedPair, market = "spot" }: { selectedPair?: string; market?: TradingMarket }) {
   const { data: pnlData = [], isLoading } = useQuery({
-    queryKey: tradingKeys.spotPnlHistory(selectedPair),
-    queryFn: () => tradingService.spotPnlHistory({ symbol: selectedPair }),
+    queryKey:
+      market === "futures"
+        ? tradingKeys.futuresPnlHistory(selectedPair)
+        : market === "margin"
+        ? tradingKeys.marginPnlHistory(selectedPair)
+        : tradingKeys.spotPnlHistory(selectedPair),
+    queryFn: () => {
+      if (market === "futures") return tradingService.futuresPnlHistory({ symbol: selectedPair });
+      if (market === "margin") return tradingService.marginPnlHistory({ symbol: selectedPair });
+      return tradingService.spotPnlHistory({ symbol: selectedPair });
+    },
     select: (res: any) => {
       const rows = res?.data ?? res ?? [];
       return Array.isArray(rows) ? rows : [];
@@ -1169,13 +1213,15 @@ function PnLPanel({ selectedPair }: { selectedPair?: string }) {
     );
   }
 
+  const marketTitle = market === "futures" ? "Futures" : market === "margin" ? "Margin" : "Spot";
+
   if (!pnlData.length) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <MdInfo size={32} className="text-white/20" />
-        <p className="text-xs text-white/40">No Spot PnL records</p>
+        <p className="text-xs text-white/40">No {marketTitle} PnL records</p>
         <p className="text-xs text-white/30 max-w-md text-center">
-          Realized profit and loss will be displayed here as your spot orders are executed.
+          Realized profit and loss will be displayed here as your {market} orders are executed.
         </p>
       </div>
     );

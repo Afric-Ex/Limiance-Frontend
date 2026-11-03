@@ -41,6 +41,7 @@ export const tradingKeys = {
   marginBorrowHistory: ["margin-borrow-history"],
   marginLiquidationHistory: ["margin-liquidation-history"],
   marginPnlHistory: (symbol?: string) => ["margin-pnl-history", symbol],
+  futuresPnlHistory: (symbol?: string) => ["futures-pnl-history", symbol],
   convertHistory: ["convert-history"],
   fiatOrderHistory: ["fiat-order-history"],
   paymentHistory: ["payment-history"],
@@ -413,23 +414,37 @@ export const tradingService = {
   },
 
   cancelFuturesOrder: async (orderId: string) => {
-    const response = await api.delete(`trading/futures/order/${orderId}`);
+    const response = await api.delete(`trading/futures/orders/${orderId}`);
     return response.data;
   },
 
   editFuturesOrder: async (data: { orderId: string; price?: string; quantity?: string }) => {
     const { orderId, ...body } = data;
-    const response = await api.patch(`trading/futures/order/${orderId}`, body);
+    const response = await api.patch(`trading/futures/orders/${orderId}`, body);
+    return response.data;
+  },
+
+  cancelAllFuturesOrders: async (symbol?: string) => {
+    const response = await api.post("trading/futures/cancel_all", null, {
+      params: symbol ? { symbol } : {},
+    });
+    return response.data;
+  },
+
+  futuresPnlHistory: async (params?: { symbol?: string; page?: number; limit?: number }) => {
+    const response = await api.get("trading/futures/pnl_history", { params });
     return response.data;
   },
 
 
   // ─── Orders & History ────────────────────────────────────────────────────
   fetchOpenOrders: async (params?: { pair?: string; market_type?: TradingMarketFilter }) => {
+    const m = params?.market_type || "spot";
     const response = await api.get("trading/order_history", {
       params: {
         status: "open",
-        market_type: params?.market_type || "spot",
+        market_type: m,
+        type: m,
         ...(params?.pair ? { pair: params.pair } : {}),
       },
     });
@@ -507,18 +522,22 @@ export const tradingService = {
     symbol: string;
     interval: string;
     limit?: number;
-    startTime?: string;
-    endTime?: string;
+    startTime?: string | number;
+    endTime?: string | number;
     market?: string;
   }) => {
     const response = await api.get("trading/kline/historical", {
       params: {
         symbol: params.symbol,
-        ...(params.startTime ? { "start-time": params.startTime } : {}),
-        ...(params.endTime ? { "end-time": params.endTime } : {}),
+        ...(params.startTime !== undefined && params.startTime !== ""
+          ? { "start-time": String(params.startTime), startTime: String(params.startTime) }
+          : {}),
+        ...(params.endTime !== undefined && params.endTime !== ""
+          ? { "end-time": String(params.endTime), endTime: String(params.endTime) }
+          : {}),
         interval: params.interval,
         limit: params.limit || 500,
-        ...(params.market ? { market: params.market } : {}),
+        ...(params.market ? { market: params.market, marketType: params.market } : {}),
       },
     });
     return response.data;
@@ -588,7 +607,7 @@ export const tradingService = {
     market_type?: "spot" | "margin" | "futures" | "all";
     page?: number;
     limit?: number;
-    status?: OrderHistoryStatus;
+    status?: OrderHistoryStatus | string;
     order_type?: string;
     side?: string;
     pair?: string;
@@ -597,9 +616,10 @@ export const tradingService = {
   }) => {
     const response = await api.get("trading/order_history", { params: {
       market_type: params?.market_type ?? "all",
+      type: params?.market_type ?? "all",
       page: params?.page ?? 1,
       limit: params?.limit ?? 20,
-      ...(params?.status && { status: params.status }),
+      ...(params?.status && { status: String(params.status).toLowerCase() }),
       ...(params?.order_type && { order_type: params.order_type }),
       ...(params?.side && { side: params.side }),
       ...(params?.pair && { pair: params.pair }),

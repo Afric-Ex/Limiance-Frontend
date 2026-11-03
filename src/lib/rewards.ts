@@ -103,6 +103,8 @@ export function normalizeRewardStatus(raw: unknown): RewardStatus {
 export function unwrapRewardList(payload: unknown): unknown[] {
   const candidates: unknown[] = [
     payload,
+    (payload as any)?.history,
+    (payload as any)?.data?.history,
     (payload as any)?.data,
     (payload as any)?.data?.data,
     (payload as any)?.data?.rewards,
@@ -138,6 +140,11 @@ export function normalizeRewardItem(raw: unknown): RewardItem | null {
   const source =
     firstString(
       record.source,
+      record.type === "DAILY_INTEREST"
+        ? "Daily Interest"
+        : record.type === "MATURITY_PAYOUT"
+        ? "Maturity Payout"
+        : undefined,
       record.program,
       record.campaignName,
       record.campaign?.name,
@@ -145,12 +152,20 @@ export function normalizeRewardItem(raw: unknown): RewardItem | null {
       record.type
     ) ?? "LIM reward";
 
-  const createdAt = firstString(record.createdAt, record.created_at, record.timestamp, record.date);
+  const createdAt = firstString(
+    record.createdAt,
+    record.created_at,
+    record.distributionDate,
+    record.distribution_date,
+    record.timestamp,
+    record.date
+  );
   const reference = firstString(
     record.reference,
     record.transactionReference,
     record.txRef,
-    record.ledgerId
+    record.ledgerId,
+    record.positionId
   );
 
   return {
@@ -159,7 +174,7 @@ export function normalizeRewardItem(raw: unknown): RewardItem | null {
     campaign: firstString(record.campaignName, record.campaign?.name, record.campaign),
     amount: String(amount).trim(),
     asset: (firstString(record.asset, record.symbol, record.currency) ?? "LIM").toUpperCase(),
-    status: normalizeRewardStatus(record.status ?? record.state),
+    status: normalizeRewardStatus(record.status ?? record.state ?? "credited"),
     createdAt,
     reference,
   };
@@ -183,19 +198,35 @@ export function normalizeRewardsSummary(payload: unknown): RewardsSummary | null
   const body: any = (payload as any)?.data?.data ?? (payload as any)?.data ?? payload;
 
   const totalEarned = numberOrNull(
-    body.totalEarned ?? body.total_earned ?? body.lifetimeEarned ?? body.earned
+    body.totalEarned ??
+      body.totalEarnedUsd ??
+      body.total_earned_usd ??
+      body.total_earned ??
+      body.lifetimeEarned ??
+      body.earned
   );
   const pending = numberOrNull(
-    body.pending ?? body.pendingRewards ?? body.pending_rewards ?? body.uncredited
+    body.pending ??
+      body.yesterdayRewardsUsd ??
+      body.yesterday_rewards_usd ??
+      body.pendingRewards ??
+      body.pending_rewards ??
+      body.uncredited
   );
   const creditedPeriod = numberOrNull(
     body.creditedPeriod ??
+      body.thirtyDayRewardsUsd ??
+      body.thirty_day_rewards_usd ??
       body.credited_period ??
       body.last30Days ??
       body.last_30_days ??
       body.periodEarned
   );
-  const periodDays = numberOrNull(body.periodDays ?? body.period_days);
+  const periodDays =
+    numberOrNull(body.periodDays ?? body.period_days) ??
+    (body.thirtyDayRewardsUsd != null || body.thirty_day_rewards_usd != null
+      ? 30
+      : null);
 
   if (
     totalEarned == null &&

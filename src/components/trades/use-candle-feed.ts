@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { wsClient } from "@/src/lib/websocket-client";
@@ -163,6 +163,12 @@ export interface CandleFeed {
   historyFetched: boolean;
   /** True while the socket is up but no candle has arrived for this pair/interval. */
   wsPending: boolean;
+  /** True while an older history chunk is loading. */
+  isLoadingMoreHistory?: boolean;
+  /** True if more historical candles can be requested. */
+  hasMoreHistory?: boolean;
+  /** Request older historical candles. Returns count of newly added bars. */
+  loadMoreHistory?: () => Promise<number>;
 }
 
 /**
@@ -197,13 +203,19 @@ export function useCandleFeed(symbol: string, interval: string, market: ChartMar
   // liveCandles only tracks the incremental WS updates; history is merged in
   // at render time so it always appears regardless of arrival order.
   const [liveCandles, setLiveCandles] = useState<KlineCandle[] | null>(null);
+  const [prependedCandles, setPrependedCandles] = useState<KlineCandle[]>([]);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+  const [isLoadingMoreHistory, setIsLoadingMoreHistory] = useState(false);
 
-  // Reset the live buffer whenever the pair or interval changes
+  // Reset the live buffer and prepended historical bars whenever the pair, interval, or market changes
   useEffect(() => {
     setLiveCandles(null);
+    setPrependedCandles([]);
+    setHasMoreHistory(true);
+    setIsLoadingMoreHistory(false);
     setWsReady(false);
     setRestFallback(false);
-  }, [symbol, interval]);
+  }, [symbol, interval, market]);
 
   // Track whether the shared socket is up. Only while this chart is mounted —
   // the status listener used to be permanent, so a closed chart still held the
@@ -265,8 +277,61 @@ export function useCandleFeed(symbol: string, interval: string, market: ChartMar
     return unsubscribe;
   }, [candleRequest, wsPair, interval, symbol, requestedPairKey]);
 
-  const candles = useMemo(() => {
+  const combinedHistory = useMemo(() => {
     const base = historyCandles ?? [];
+    if (prependedCandles.length === 0) return base;
+    if (base.length === 0) return prependedCandles;
+    const byTime = new Map<number, KlineCandle>();
+    for (const c of prependedCandles) byTime.set(c.time, c);
+    for (const c of base) byTime.set(c.time, c);
+    return Array.from(byTime.values()).sort((a, b) => a.time - b.time);
+  }, [historyCandles, prependedCandles]);
+
+  const loadMoreHistory = useCallback(async (): Promise<number> => {
+    if (!hasMoreHistory || isLoadingMoreHistory || isLoading) return 0;
+    const all = combinedHistory;
+    if (all.length === 0) return 0;
+
+    let oldestTime = all[0].time;
+    for (let i = 1; i < all.length; i++) {
+      if (all[i].time < oldestTime) oldestTime = all[i].time;
+    }
+
+    setIsLoadingMoreHistory(true);
+    try {
+      const endTime = Math.floor(oldestTime - 1);
+      const res = await tradingService.klineData({
+        symbol,
+        interval,
+        limit: 500,
+        endTime,
+        market,
+      });
+      const olderKlines = normalizeKlines(res);
+      const strictlyOlder = olderKlines.filter((k) => k.time < oldestTime);
+      if (strictlyOlder.length === 0) {
+        setHasMoreHistory(false);
+        return 0;
+      }
+
+      setPrependedCandles((prev) => {
+        const existing = new Set(prev.map((c) => c.time));
+        const newBars = strictlyOlder.filter((c) => !existing.has(c.time));
+        if (newBars.length === 0) return prev;
+        return [...newBars, ...prev].sort((a, b) => a.time - b.time);
+      });
+
+      return strictlyOlder.length;
+    } catch (err) {
+      console.warn("Failed to load more historical candles:", err);
+      return 0;
+    } finally {
+      setIsLoadingMoreHistory(false);
+    }
+  }, [hasMoreHistory, isLoadingMoreHistory, isLoading, combinedHistory, symbol, interval, market]);
+
+  const candles = useMemo(() => {
+    const base = combinedHistory;
     if (!liveCandles || liveCandles.length === 0) return base;
     if (base.length === 0) return liveCandles;
 
@@ -283,14 +348,17 @@ export function useCandleFeed(symbol: string, interval: string, market: ChartMar
     const byTime = new Map(base.map((c) => [c.time, c]));
     for (const c of liveCandles) byTime.set(c.time, c);
     return [...byTime.values()].sort((a, b) => a.time - b.time);
-  }, [historyCandles, liveCandles]);
+  }, [combinedHistory, liveCandles]);
 
   return {
     candles,
-    historyCandles,
+    historyCandles: combinedHistory,
     isLoading,
     isError,
     historyFetched,
     wsPending: !wsReady && !restFallback && !isLoading && candles.length === 0,
+    isLoadingMoreHistory,
+    hasMoreHistory,
+    loadMoreHistory,
   };
 }
