@@ -904,7 +904,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 {advancedTab ? `${advancedLabels[advancedTab]} ▾` : "▾"}
               </button>
             </Popover.Target>
-            <Popover.Dropdown className="!min-w-[160px] !rounded-xl !border !border-white/[0.08] !bg-[#1c1f28] !px-0 !py-1 !shadow-xl">
+            <Popover.Dropdown className="!min-w-[160px] !rounded-xl !border !border-white/[0.08] !bg-[#181a20] !px-0 !py-1 !shadow-xl">
               {advancedOptions.map((opt) => (
                 <button
                   key={opt.value}
