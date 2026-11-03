@@ -11,7 +11,7 @@
 }
 
 .list {
-  @apply flex-nowrap gap-1 overflow-x-auto rounded-xl border border-white/[0.07] bg-[#111419] p-1;
+  @apply flex-nowrap gap-1 overflow-x-auto rounded-xl border border-white/[0.07] bg-[var(--color-surface)] p-1;
 }
 
 .list::before {
@@ -27,7 +27,7 @@
 }
 
 .tab[data-active] {
-  @apply border-0 bg-[#28344d];
+  @apply border-0 bg-[var(--color-primary)];
 }
 
 .table_th {
@@ -39,5 +39,5 @@
 }
 
 .select_input {
-  @apply h-10 rounded-lg border-white/10 bg-[#171a20] text-white;
+  @apply h-10 rounded-lg border-white/10 bg-[var(--color-elevated)] text-white;
 }

@@ -310,13 +310,13 @@ export const EarnTab = ({
           {/* Simple Earn & Staking tabs — render live backend earn products */}
           {(productTab === "Simple Earn" || productTab === "Staking") && (
             <TabsPanel value={productTab}>
-              <div className="min-h-[250px] rounded-xl border border-white/[0.07] bg-[#111419] px-4 py-5 sm:px-5">
+              <div className="min-h-[250px] rounded-xl border border-white/[0.07] bg-surface px-4 py-5 sm:px-5">
                 {tabProducts.length > 0 ? (
                   <div className="grid grid-cols-1 gap-4">
                     {tabProducts.map((product) => (
                         <div
                           key={product.id}
-                          className="flex flex-col gap-4 rounded-xl border border-white/[0.07] bg-[#191e26] p-4 transition-colors hover:border-white/[0.13] sm:flex-row sm:items-center sm:justify-between"
+                          className="flex flex-col gap-4 rounded-xl border border-white/[0.07] bg-elevated p-4 transition-colors hover:border-white/[0.13] sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                             <ProductIcon image={product.image} asset={product.asset} />
@@ -364,7 +364,7 @@ export const EarnTab = ({
           {/* Remaining tabs — keep structured placeholder layout */}
           {productTabs.slice(2).map((item) => (
             <TabsPanel key={item} value={item}>
-              <div className="min-h-[250px] rounded-xl border border-white/[0.07] bg-[#111419] px-4 py-5 sm:px-5">
+              <div className="min-h-[250px] rounded-xl border border-white/[0.07] bg-surface px-4 py-5 sm:px-5">
                 <div className="flex flex-col h-full gap-5">
                   <div className="flex flex-col">
                     <div className="self-end">
@@ -396,7 +396,7 @@ export const EarnTab = ({
       )}
 
       {mainTab === "My Positions" && (
-        <div className="flex min-h-[250px] flex-col gap-5 rounded-xl border border-white/[0.07] bg-[#111419] px-4 py-5 sm:px-5">
+        <div className="flex min-h-[250px] flex-col gap-5 rounded-xl border border-white/[0.07] bg-surface px-4 py-5 sm:px-5">
           {/* Summary metrics bar */}
           {rewardsData && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-white/[0.02] border border-white/10 rounded-xl">
@@ -430,7 +430,7 @@ export const EarnTab = ({
                 return (
                   <div
                     key={pos.id}
-                    className="flex flex-col gap-4 rounded-xl border border-white/[0.07] bg-[#191e26] p-4 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-4 rounded-xl border border-white/[0.07] bg-elevated p-4 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-4">
                       <ProductIcon image={pos.image} asset={pos.asset} />
