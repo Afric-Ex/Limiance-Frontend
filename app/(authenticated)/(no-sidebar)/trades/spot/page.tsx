@@ -64,6 +64,7 @@ function SpotTrades() {
   const [chartExpanded, setChartExpanded] = useState(false);
   const [, setOrderBookOpen] = useState(false);
   const [mobileMode, setMobileMode] = useState<"trade" | "chart">("trade");
+  const [mobileTradePanel, setMobileTradePanel] = useState<"order" | "book">("order");
   const [quickOrderOpen, setQuickOrderOpen] = useState(false);
   const [quickOrderSide, setQuickOrderSide] = useState<"buy" | "sell">("buy");
   const [tpslPreview, setTpslPreview] = useState<TpslPreview>({});
@@ -624,9 +625,43 @@ function SpotTrades() {
           // --- TRADE VIEW: Side-by-side PlaceSpot (Left) and OrderBook (Right) ---
           <div className="flex flex-col flex-1 min-h-0 bg-[#181a20] pb-[65px]">
             {/* Main content area: side-by-side layout */}
-            <div className="flex flex-1 min-h-[360px] gap-3 p-3 overflow-hidden">
+            <div className="flex flex-1 min-h-[360px] flex-col gap-2 p-3 overflow-hidden min-[480px]:flex-row min-[480px]:gap-3">
+              <div
+                role="tablist"
+                aria-label="Trading panels"
+                className="grid shrink-0 grid-cols-2 rounded-lg border border-white/[0.06] bg-white/[0.03] p-1 min-[480px]:hidden"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mobileTradePanel === "order"}
+                  onClick={() => setMobileTradePanel("order")}
+                  className={clsx(
+                    "rounded-md px-3 py-2 text-xs font-semibold transition-colors",
+                    mobileTradePanel === "order" ? "bg-white/[0.08] text-white" : "text-white/45"
+                  )}
+                >
+                  Place Order
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mobileTradePanel === "book"}
+                  onClick={() => setMobileTradePanel("book")}
+                  className={clsx(
+                    "rounded-md px-3 py-2 text-xs font-semibold transition-colors",
+                    mobileTradePanel === "book" ? "bg-white/[0.08] text-white" : "text-white/45"
+                  )}
+                >
+                  Order Book
+                </button>
+              </div>
               {/* LEFT: Place Spot (60% width) */}
-              <div className="flex-[1.5] flex flex-col min-w-0 bg-[#181a20] rounded-xl border border-white/[0.06] overflow-hidden">
+              <div className={clsx(
+                "min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.06] bg-[#181a20]",
+                mobileTradePanel === "order" ? "flex" : "hidden",
+                "min-[480px]:flex min-[480px]:flex-[1.5]"
+              )}>
                 <Tabs
                   className="flex h-full min-h-0 flex-col"
                   classNames={{
@@ -652,7 +687,11 @@ function SpotTrades() {
               </div>
 
               {/* RIGHT: Order Book (40% width) */}
-              <div className="flex-1 flex flex-col min-w-0 rounded-xl border border-white/[0.06] overflow-hidden">
+              <div className={clsx(
+                "min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.06]",
+                mobileTradePanel === "book" ? "flex" : "hidden",
+                "min-[480px]:flex min-[480px]:flex-1"
+              )}>
                 <OrderBookTabs
                   className="flex-1 min-h-0"
                   buyOrders={orderBook.buyOrders}

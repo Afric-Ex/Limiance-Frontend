@@ -9,7 +9,7 @@ import { MdOutlineSwapHoriz } from "react-icons/md";
 
 function ConvertHistoryInner() {
   return (
-    <main className="flex flex-col gap-8 px-5 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-6 mt-2">
+    <main className="flex flex-col gap-8 page-enter max-[1150px]:gap-6">
       <OrdersPageHeader
         icon={<MdOutlineSwapHoriz size={24} />}
         title="Convert History"
