@@ -13,6 +13,7 @@ import QueryProvider from "@/src/providers/query-provider";
 import { Toaster } from "react-hot-toast";
 import Providers from "@/src/components/providers";
 import { NotificationsProvider } from "@/src/components/shared/notifications-provider";
+import { WebSocketProvider } from "@/src/components/providers/websocket-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -49,17 +50,19 @@ export default function RootLayout({
       <body className="antialiased overflow-x-hidden">
         <Toaster />
         <MantineProvider theme={theme} forceColorScheme="dark">
-          <Providers>
-            <QueryProvider>
-              <ModalsProvider>
-                <NotificationsProvider />
-                <AppContainer>
-                  <Header />
-                  {children}
-                </AppContainer>
-              </ModalsProvider>
-            </QueryProvider>
-          </Providers>
+          <WebSocketProvider>
+            <Providers>
+              <QueryProvider>
+                <ModalsProvider>
+                  <NotificationsProvider />
+                  <AppContainer>
+                    <Header />
+                    {children}
+                  </AppContainer>
+                </ModalsProvider>
+              </QueryProvider>
+            </Providers>
+          </WebSocketProvider>
         </MantineProvider>
       </body>
     </html>
