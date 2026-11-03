@@ -304,7 +304,7 @@ export function OrderBookTabs({
       key={`${side}-${distance}-${order.price}`}
       onClick={() => onSelectPrice(order.price)}
       className={clsx(
-        "relative grid shrink-0 grid-cols-3 overflow-hidden px-3 py-[3px] text-left hover:bg-white/[0.04]",
+        "relative grid shrink-0 grid-cols-2 min-[1150px]:grid-cols-3 overflow-hidden px-3 py-[3px] text-left hover:bg-white/[0.04]",
         distance >= 5 && "max-[1150px]:hidden"
       )}
     >
@@ -321,7 +321,7 @@ export function OrderBookTabs({
         {formatPrice(order.price)}
       </span>
       <span className="z-10 text-right font-mono text-micro tabular-nums text-white/80">{formatNumber(order.quantity, 6)}</span>
-      <span className="z-10 text-right font-mono text-micro tabular-nums text-white/60">{formatNumber(order.total, 6)}</span>
+      <span className="z-10 hidden text-right font-mono text-micro tabular-nums text-white/60 min-[1150px]:block">{formatNumber(order.total, 6)}</span>
     </button>
   );
 
@@ -366,10 +366,10 @@ export function OrderBookTabs({
               <FiChevronDown aria-hidden="true" className="pointer-events-none absolute right-1.5 text-white/50" size={12} />
             </div>
           </div>
-          <div className="grid shrink-0 grid-cols-3 px-3 py-1">
+          <div className="grid shrink-0 grid-cols-2 px-3 py-1 min-[1150px]:grid-cols-3">
             <span className="text-2xs text-white/40">Price({quote})</span>
             <span className="text-right text-2xs text-white/40">Qty({base})</span>
-            <span className="text-right text-2xs text-white/40">Total({base})</span>
+            <span className="hidden text-right text-2xs text-white/40 min-[1150px]:block">Total({base})</span>
           </div>
           {empty ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center text-xs text-white/35">
