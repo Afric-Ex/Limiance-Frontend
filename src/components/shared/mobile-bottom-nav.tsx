@@ -195,6 +195,14 @@ export const MobileBottomNav = () => {
   const pathname = usePathname();
   const [tradeOpen, setTradeOpen] = useState(false);
 
+  if (
+    pathname.startsWith("/trades/spot") ||
+    pathname.startsWith("/trades/margin") ||
+    pathname.startsWith("/trades/futures")
+  ) {
+    return null;
+  }
+
   return (
     <>
       <TradeSheet open={tradeOpen} onClose={() => setTradeOpen(false)} />

@@ -53,6 +53,49 @@ function formatVolume(val: number) {
   return val.toFixed(2);
 }
 
+function MarketTokenIcon({
+  symbol,
+  image,
+  className,
+}: {
+  symbol: string;
+  image?: string;
+  className: string;
+}) {
+  const fallbackImage = getCryptoIcon(symbol);
+  const [useFallback, setUseFallback] = useState(!image);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setUseFallback(!image);
+    setImageFailed(false);
+  }, [image, symbol]);
+
+  const src = useFallback ? fallbackImage : image;
+
+  return (
+    <span className={clsx("relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5 font-bold text-white/80", className)}>
+      <span aria-hidden="true">{symbol.charAt(0) || "?"}</span>
+      {src && !imageFailed && (
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => {
+            if (!useFallback && fallbackImage && fallbackImage !== image) {
+              setUseFallback(true);
+            } else {
+              setImageFailed(true);
+            }
+          }}
+          className="absolute inset-0 h-full w-full rounded-full object-cover"
+        />
+      )}
+    </span>
+  );
+}
+
 // Real SVG sparkline rendered from the market feed's `sparkline` price series.
 function Sparkline({ pair, values }: { pair: string; values: number[] }) {
   const points = useMemo(() => {
@@ -488,20 +531,7 @@ function MarketsPageInner() {
                       {/* Coin */}
                       <td className="py-3">
                         <div className="flex items-center gap-3">
-                          {token.image ? (
-                            <img 
-                              src={token.image} 
-                              alt={token.symbol} 
-                              loading="lazy" 
-                              decoding="async" 
-                              className="w-6 h-6 rounded-full object-cover shrink-0" 
-                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                            />
-                          ) : (
-                            <span className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-2xs font-bold text-white/80 shrink-0">
-                              {token.symbol.charAt(0)}
-                            </span>
-                          )}
+                          <MarketTokenIcon symbol={token.symbol} image={token.image} className="h-6 w-6 text-2xs" />
                           <div className="flex items-center gap-1.5">
                             <span className="text-caption font-bold text-white">{token.symbol}</span>
                             <span className="text-2xs font-medium text-white/30">/{quote || "USDT"}</span>
@@ -610,20 +640,7 @@ function MarketsPageInner() {
                   className="flex items-center justify-between w-full py-4 text-left active:bg-white/[0.02] cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    {token.image ? (
-                      <img 
-                        src={token.image} 
-                        alt={token.symbol} 
-                        loading="lazy" 
-                        decoding="async" 
-                        className="w-9 h-9 rounded-full object-cover shrink-0" 
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                      />
-                    ) : (
-                      <span className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-white/80 shrink-0">
-                        {token.symbol.charAt(0)}
-                      </span>
-                    )}
+                    <MarketTokenIcon symbol={token.symbol} image={token.image} className="h-9 w-9 text-sm" />
                     <div>
                       <div className="flex items-center gap-1">
                         <span className="text-sm font-bold text-white">{token.symbol}</span>

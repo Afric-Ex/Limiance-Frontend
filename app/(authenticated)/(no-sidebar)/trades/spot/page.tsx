@@ -557,7 +557,7 @@ function SpotTrades() {
               recentTradesLoading={recentTradesLoading}
               base={base}
               quote={quote}
-              currentPrice={chartLastPrice ?? feed.price}
+              currentPrice={chartLastPrice ?? effectiveMarketPrice}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -624,14 +624,16 @@ function SpotTrades() {
           // --- TRADE VIEW: Side-by-side PlaceSpot (Left) and OrderBook (Right) ---
           <div className="flex flex-col flex-1 min-h-0 bg-[#181a20] pb-[65px]">
             {/* Main content area: side-by-side layout */}
-            <div className="flex flex-1 min-h-0 gap-3 p-3 overflow-hidden">
+            <div className="flex flex-1 min-h-[360px] gap-3 p-3 overflow-hidden">
               {/* LEFT: Place Spot (60% width) */}
               <div className="flex-[1.5] flex flex-col min-w-0 bg-[#181a20] rounded-xl border border-white/[0.06] overflow-hidden">
                 <Tabs
+                  className="flex h-full min-h-0 flex-col"
                   classNames={{
                     tab: "!py-3 !px-3 flex-1 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-white !border-b-[2px] !border-transparent !rounded-none font-bold text-xs text-white/40",
-                    list: "border-b border-white/[0.06] flex items-center before:!border-0 w-full",
-                    panel: "!p-3 flex-1 overflow-y-auto custom-scrollbar",
+                    root: "flex h-full min-h-0 flex-col",
+                    list: "shrink-0 border-b border-white/[0.06] flex items-center before:!border-0 w-full",
+                    panel: "!p-3 !min-h-0 !flex-1 !overflow-y-auto custom-scrollbar",
                   }}
                   value={quickOrderSide}
                   onChange={(v) => setQuickOrderSide(v as "buy"|"sell")}
@@ -659,7 +661,7 @@ function SpotTrades() {
                   recentTradesLoading={recentTradesLoading}
                   base={base}
                   quote={quote}
-                  currentPrice={feed.price}
+                  currentPrice={effectiveMarketPrice}
                   buyPercentage={orderBook.buyPercentage}
                   sellPercentage={orderBook.sellPercentage}
                   isConnected={orderBook.isConnected}
