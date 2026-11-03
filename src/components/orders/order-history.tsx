@@ -60,6 +60,7 @@ export const OrderHistory = () => {
   const { data: orders, isLoading } = useQuery({
     queryKey: tradingKeys.orderHistory(),
     queryFn: () => tradingService.spotOrderHistory(),
+    select: (res) => res?.data ?? [],
   });
 
   const hasOrders = orders && orders.length > 0;

@@ -22,6 +22,7 @@ export const FiatDeposit = () => {
   const { data: history, isLoading } = useQuery({
     queryKey: tradingKeys.fiatOrderHistory,
     queryFn: () => tradingService.fiatOrderHistory(),
+    select: (res) => res?.data ?? [],
   });
 
   const allHistory: any[] = Array.isArray(history) ? history : [];

@@ -29,6 +29,7 @@ export const OpenTab = () => {
   const { data: orders, isLoading } = useQuery({
     queryKey: tradingKeys.openOrders(),
     queryFn: () => tradingService.fetchOpenOrders(),
+    select: (res) => res?.data ?? [],
   });
 
   const { mutate: cancelOrder } = useMutation({

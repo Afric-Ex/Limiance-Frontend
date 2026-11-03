@@ -18,6 +18,7 @@ export const ConvertOpenOrders = () => {
   const { data: history, isLoading } = useQuery({
     queryKey: tradingKeys.convertHistory,
     queryFn: () => tradingService.convertHistory(),
+    select: (res) => res?.data ?? [],
   });
 
   const allHistory: any[] = Array.isArray(history) ? history : [];
