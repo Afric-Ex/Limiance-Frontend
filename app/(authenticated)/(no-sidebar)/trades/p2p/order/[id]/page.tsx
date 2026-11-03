@@ -127,7 +127,7 @@ function OrderRoomPageInner() {
   );
 
   const isMatcher = sameId(matcherId, currentUserId);
-  const isAdvertiser =
+  const _isAdvertiser =
     !isMatcher &&
     Boolean(
       sameId(advertiserId, currentUserId) ||

@@ -666,7 +666,6 @@ export function LwcCandlestickChart({
     isError,
     historyFetched,
     wsPending,
-    isLoadingMoreHistory,
     hasMoreHistory,
     loadMoreHistory,
   } = useCandleFeed(symbol, interval, market);

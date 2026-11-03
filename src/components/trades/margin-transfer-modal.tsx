@@ -81,7 +81,7 @@ export const MarginTransferModal = ({
       if (current && availableAssets.some((a: any) => a.symbol === current)) return current;
       return availableAssets[0]?.symbol || defaultAsset;
     });
-  }, [availableAssets]);
+  }, [availableAssets, defaultAsset]);
 
   const selectedAssetData = portfolioResponse?.find((a: any) => a.symbol === selectedAsset);
   const availableBalance = getWalletBalance(selectedAssetData, fromWallet);
