@@ -110,14 +110,32 @@ class WebSocketClient {
    */
   public setAuthTicket(ticket: string | null | undefined) {
     const normalized = typeof ticket === "string" && ticket.trim().length > 0 ? ticket.trim() : null;
-    if (!normalized) return;
+    if (!normalized) {
+      console.warn("[WebSocketClient] setAuthTicket called with empty/null token:", {
+        ticketType: typeof ticket,
+        ticketLength: typeof ticket === "string" ? ticket.length : 0,
+        hasActiveConnection: this.isConnected || this.isConnecting,
+        subscriptionsCount: this.subscriptions.size,
+      });
+      return;
+    }
     const changed = this.wsTicket !== normalized;
     this.wsTicket = normalized;
     this.authFailed = false;
 
+    console.log("[WebSocketClient] Auth ticket set successfully", {
+      ticketSet: true,
+      changed,
+      isConnected: this.isConnected,
+      isConnecting: this.isConnecting,
+      connectedWithTicket: this.connectedWithTicket,
+      subscriptionsCount: this.subscriptions.size,
+    });
+
     // If the socket already connected as an unauthenticated guest viewer before
     // login / user hydration completed, reconnect immediately to upgrade it.
     if ((this.isConnected || this.isConnecting) && (!this.connectedWithTicket || changed)) {
+      console.log("[WebSocketClient] Reconnecting to upgrade authentication");
       const hadSubs = this.subscriptions.size > 0;
       this.disconnect();
       if (hadSubs) {
@@ -127,6 +145,13 @@ class WebSocketClient {
   }
 
   private handleNetworkRestore() {
+    console.log("[WebSocketClient] Network restored event", {
+      authFailed: this.authFailed,
+      isConnected: this.isConnected,
+      isConnecting: this.isConnecting,
+      subscriptionsCount: this.subscriptions.size,
+      hasTicket: Boolean(this.wsTicket),
+    });
     if (this.authFailed) return;
     if (!this.isConnected && !this.isConnecting && this.subscriptions.size > 0) {
       if (this.reconnectTimeout) {
@@ -134,6 +159,7 @@ class WebSocketClient {
         this.reconnectTimeout = null;
       }
       this.retryCount = 0;
+      console.log("[WebSocketClient] Triggering reconnection after network restore");
       this.connect();
     }
   }
@@ -234,8 +260,14 @@ class WebSocketClient {
 
   public connect() {
     if (typeof window === "undefined") return;
-    if (this.isConnected || this.isConnecting) return;
-    if (this.authFailed) return;
+    if (this.isConnected || this.isConnecting) {
+      console.log("[WebSocketClient] Already connected or connecting, skipping connect");
+      return;
+    }
+    if (this.authFailed) {
+      console.warn("[WebSocketClient] Auth has failed, cannot reconnect");
+      return;
+    }
     this.cancelIdleClose();
 
     const url = this.resolveSocketUrl();
@@ -243,6 +275,13 @@ class WebSocketClient {
 
     this.isConnecting = true;
     this.intentionalClose = false;
+
+    console.log("[WebSocketClient] Initiating connection", {
+      url: url.replace(/\?.*/, ""), // Redact query params
+      hasTicket: Boolean(this.wsTicket),
+      subscriptionsCount: this.subscriptions.size,
+      retryCount: this.retryCount,
+    });
 
     try {
       // No credential is ever appended to the URL. On same-site domains the
@@ -256,6 +295,10 @@ class WebSocketClient {
       this.ws = socket;
 
       socket.onopen = () => {
+        console.log("[WebSocketClient] Connection established", {
+          connectedWithTicket: this.connectedWithTicket,
+          retryCount: this.retryCount,
+        });
         this.isConnecting = false;
         this.retryCount = 0;
         this.authFailed = false;
@@ -308,6 +351,13 @@ class WebSocketClient {
       };
 
       socket.onclose = (event) => {
+        console.warn("[WebSocketClient] Connection closed", {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+          intentionalClose: this.intentionalClose,
+          subscriptionsCount: this.subscriptions.size,
+        });
         this.isConnecting = false;
         this.notifyStatus(false);
         this.stopHeartbeat();
@@ -345,11 +395,13 @@ class WebSocketClient {
       };
 
       socket.onerror = () => {
+        console.error("[WebSocketClient] WebSocket error");
         if (this.ws) {
           this.ws.close();
         }
       };
-    } catch {
+    } catch (err) {
+      console.error("[WebSocketClient] Connection exception:", redactDiagnostic({ error: err }));
       this.isConnecting = false;
       this.notifyStatus(false);
       this.stopHeartbeat();
