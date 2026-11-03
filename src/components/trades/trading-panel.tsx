@@ -691,15 +691,32 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
   const getOrderPrice = (order: any) =>
     order?.price ?? order?.orderPrice ?? order?.order_price ?? order?.avgPrice ?? order?.fillPrice;
 
+  const isOrderFilled = (order: any) => {
+    const s = String(order?.orderStatus ?? order?.status ?? order?.state ?? "").toUpperCase();
+    return s === "FILLED" || s === "CLOSED";
+  };
+
   const getAvgPrice = (order: any) => {
     const val = order?.avgPrice ?? order?.avg_price ?? order?.averagePrice ?? order?.fillPrice;
-    if (val === "0" || val === 0 || !val) return null;
+    if (val === "0" || val === 0 || !val) {
+      if (isOrderFilled(order)) {
+        return getOrderPrice(order);
+      }
+      return null;
+    }
     return val;
   };
 
   const getFilledValue = (order: any) => {
     const val = order?.cumExecValue ?? order?.filledValue ?? order?.executedValue;
-    if (val === "0" || val === 0 || !val) return null;
+    if (val === "0" || val === 0 || !val) {
+      if (isOrderFilled(order)) {
+        const p = Number(getAvgPrice(order));
+        const q = Number(getFilledQuantity(order));
+        if (p > 0 && q > 0) return p * q;
+      }
+      return null;
+    }
     return val;
   };
 
@@ -724,8 +741,16 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
     return Number.isFinite(executed) && Number.isFinite(leaves) ? executed + leaves : undefined;
   };
 
-  const getFilledQuantity = (order: any) =>
-    order?.filledQuantity ?? order?.filled ?? order?.cumExecQty ?? order?.executedQty ?? 0;
+  const getFilledQuantity = (order: any) => {
+    const val = order?.filledQuantity ?? order?.filled ?? order?.cumExecQty ?? order?.executedQty;
+    if (val === "0" || val === 0 || !val) {
+      if (isOrderFilled(order)) {
+        return getOrderQuantity(order) ?? 0;
+      }
+      return 0;
+    }
+    return val;
+  };
 
   const getOrderTotal = (order: any) => {
     const total = Number(order?.total);
@@ -919,9 +944,13 @@ function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
           const pair = getPair(trade);
           const side = String(first(trade, ["side","orderSide","direction"]) ?? "").toUpperCase();
           const isBuy = side === "BUY";
-          const filledPrice = Number(first(trade, ["filledPrice","fill_price","avgPrice","avg_price","price","executionPrice"]));
-          const filledQty = Number(first(trade, ["filledQuantity","filled_quantity","executedQuantity","qty","quantity","amount","size"]));
-          const filledValue = Number(first(trade, ["filledValue","filled_value","total"])) || (filledPrice * filledQty);
+          const isFilledTrade = String(trade?.status ?? trade?.orderStatus ?? "").toUpperCase() === "FILLED";
+          const rawFilledPrice = Number(first(trade, ["filledPrice","fill_price","avgPrice","avg_price","price","executionPrice"]));
+          const filledPrice = rawFilledPrice > 0 ? rawFilledPrice : Number(trade?.price ?? 0);
+          const rawFilledQty = Number(first(trade, ["filledQuantity","filled_quantity","executedQuantity","qty","quantity","amount","size"]));
+          const filledQty = rawFilledQty > 0 ? rawFilledQty : (isFilledTrade ? Number(trade?.quantity ?? 0) : 0);
+          const rawFilledVal = Number(first(trade, ["filledValue","filled_value","total"]));
+          const filledValue = rawFilledVal > 0 ? rawFilledVal : (filledPrice * filledQty);
           const fee = Number(first(trade, ["fee","commission","tradingFee","trading_fee"]));
           const feeAsset = String(first(trade, ["feeAsset","fee_asset","commissionAsset"]) ?? "");
           const txId = String(first(trade, ["id","tradeId","trade_id","transactionId","transaction_id","fillId"]) ?? "");
@@ -980,11 +1009,15 @@ function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
             const mkt = String(first(trade, ["market","market_type"]) ?? "Spot");
             const side = String(first(trade, ["side","orderSide","direction"]) ?? "").toUpperCase();
             const isBuy = side === "BUY" || side === "LONG";
+            const isFilledTrade = String(trade?.status ?? trade?.orderStatus ?? "").toUpperCase() === "FILLED";
             const orderType = String(first(trade, ["orderType","order_type","type"]) ?? "Limit");
             const filledType = String(first(trade, ["filledType","filled_type","execType","exec_type","tradeType"]) ?? "Normal");
-            const filledPrice = Number(first(trade, ["filledPrice","fill_price","avgPrice","avg_price","price","executionPrice"]));
-            const filledQty = Number(first(trade, ["filledQuantity","filled_quantity","executedQuantity","qty","quantity","amount","size"]));
-            const filledValue = Number(first(trade, ["filledValue","filled_value","total"])) || (filledPrice * filledQty);
+            const rawFilledPrice = Number(first(trade, ["filledPrice","fill_price","avgPrice","avg_price","price","executionPrice"]));
+            const filledPrice = rawFilledPrice > 0 ? rawFilledPrice : Number(trade?.price ?? 0);
+            const rawFilledQty = Number(first(trade, ["filledQuantity","filled_quantity","executedQuantity","qty","quantity","amount","size"]));
+            const filledQty = rawFilledQty > 0 ? rawFilledQty : (isFilledTrade ? Number(trade?.quantity ?? 0) : 0);
+            const rawFilledVal = Number(first(trade, ["filledValue","filled_value","total"]));
+            const filledValue = rawFilledVal > 0 ? rawFilledVal : (filledPrice * filledQty);
             const fee = Number(first(trade, ["fee","commission","tradingFee","trading_fee"]));
             const feeAsset = String(first(trade, ["feeAsset","fee_asset","commissionAsset"]) ?? "");
             const txId = String(first(trade, ["id","tradeId","trade_id","transactionId","transaction_id","fillId"]) ?? "");
