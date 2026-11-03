@@ -80,6 +80,8 @@ class WebSocketClient {
   /** In-memory ephemeral handshake ticket for cross-origin WS deployments (never persisted to storage). */
   private wsTicket: string | null = null;
   private connectedWithTicket = false;
+  /** Keepalive flag: when true, maintain connection even with zero subscriptions. */
+  private shouldMaintainConnection = false;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -151,9 +153,11 @@ class WebSocketClient {
       isConnecting: this.isConnecting,
       subscriptionsCount: this.subscriptions.size,
       hasTicket: Boolean(this.wsTicket),
+      shouldMaintainConnection: this.shouldMaintainConnection,
     });
     if (this.authFailed) return;
-    if (!this.isConnected && !this.isConnecting && this.subscriptions.size > 0) {
+    const hasActiveWork = this.subscriptions.size > 0 || this.shouldMaintainConnection;
+    if (!this.isConnected && !this.isConnecting && hasActiveWork) {
       if (this.reconnectTimeout) {
         clearTimeout(this.reconnectTimeout);
         this.reconnectTimeout = null;
@@ -175,9 +179,13 @@ class WebSocketClient {
    */
   private scheduleIdleClose() {
     if (this.idleCloseTimeout) return;
+    if (this.shouldMaintainConnection) {
+      console.log("[WebSocketClient] Keepalive enabled, not scheduling idle close");
+      return;
+    }
     this.idleCloseTimeout = setTimeout(() => {
       this.idleCloseTimeout = null;
-      if (this.subscriptions.size > 0) return;
+      if (this.subscriptions.size > 0 || this.shouldMaintainConnection) return;
       this.disconnect();
     }, IDLE_CLOSE_DELAY_MS);
   }
@@ -190,6 +198,30 @@ class WebSocketClient {
 
   public getIsConnected(): boolean {
     return this.isConnected;
+  }
+
+  /**
+   * Enable keepalive mode to maintain the WebSocket connection even when there
+   * are no active subscriptions. Useful for ensuring the connection is ready when needed.
+   */
+  public setMaintainConnection(maintain: boolean) {
+    if (maintain === this.shouldMaintainConnection) return;
+    
+    this.shouldMaintainConnection = maintain;
+    console.log("[WebSocketClient] Keepalive mode", {
+      enabled: maintain,
+      isConnected: this.isConnected,
+      isConnecting: this.isConnecting,
+    });
+
+    if (maintain) {
+      this.cancelIdleClose();
+      if (!this.isConnected && !this.isConnecting) {
+        this.connect();
+      }
+    } else if (!this.isConnecting && this.subscriptions.size === 0) {
+      this.scheduleIdleClose();
+    }
   }
 
   public onStatusChange(handler: WsStatusHandler): () => void {
@@ -273,6 +305,12 @@ class WebSocketClient {
     const url = this.resolveSocketUrl();
     if (!url) return;
 
+    const hasWork = this.subscriptions.size > 0 || this.shouldMaintainConnection;
+    if (!hasWork) {
+      console.log("[WebSocketClient] No active subscriptions or keepalive enabled, skipping connect");
+      return;
+    }
+
     this.isConnecting = true;
     this.intentionalClose = false;
 
@@ -281,6 +319,7 @@ class WebSocketClient {
       hasTicket: Boolean(this.wsTicket),
       subscriptionsCount: this.subscriptions.size,
       retryCount: this.retryCount,
+      shouldMaintainConnection: this.shouldMaintainConnection,
     });
 
     try {
