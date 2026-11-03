@@ -50,32 +50,43 @@ export const OpenTab = () => {
   });
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
-        <div className="flex flex-wrap gap-4 items-end">
-          <Select
-            label="Trade Side"
-            data={["All", "Buy", "Sell"]}
-            value={side}
-            onChange={(v) => setSide(v || "All")}
-            classNames={selectStyles}
-            className="w-[140px]"
-          />
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-base font-semibold text-white">Open orders</h2>
+          <p className="mt-1 text-xs text-white/40">Track or cancel your active spot orders.</p>
         </div>
-        <div className="flex items-center gap-4">
+        <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium tabular-nums text-white/55">
+          {isLoading ? "Loading orders" : `${filtered.length} active`}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.07] bg-elevated p-3">
+        <Select
+          aria-label="Filter open orders by side"
+          data={["All", "Buy", "Sell"]}
+          value={side}
+          onChange={(v) => setSide(v || "All")}
+          classNames={selectStyles}
+          className="w-full sm:w-[140px]"
+        />
+        <div className="flex min-w-[180px] flex-1 items-end gap-2">
           <TextInput
             classNames={searchInputClass}
-            placeholder="Search pair..."
+            aria-label="Search open orders by pair"
+            placeholder="Search pair"
+            value={pair}
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
             onChange={(e) => setPair(e.currentTarget.value)}
           />
-          <button
-            className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
-            onClick={() => { setPair(""); setSide("All"); }}
-          >
-            Reset
-          </button>
         </div>
+        <button
+          type="button"
+          disabled={!pair && side === "All"}
+          className="h-10 rounded-lg px-3 text-xs font-semibold text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white disabled:cursor-default disabled:opacity-35"
+          onClick={() => { setPair(""); setSide("All"); }}
+        >
+          Clear filters
+        </button>
       </div>
 
       <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No open orders right now.">
@@ -119,6 +130,6 @@ export const OpenTab = () => {
           </TableTbody>
         </Table>
       </TableCard>
-    </div>
+    </section>
   );
 };

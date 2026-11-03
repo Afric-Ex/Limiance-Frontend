@@ -62,7 +62,7 @@ export function MyRewards() {
   ];
 
   return (
-    <section className="flex flex-col gap-5 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:p-5">
+    <section className="flex flex-col gap-5 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-sm:gap-4 max-sm:p-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -76,7 +76,7 @@ export function MyRewards() {
 
       {/* Stats row */}
       {summaryLoading ? (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[0, 1, 2].map((key) => (
             <div key={key} className="flex flex-col gap-2 rounded-xl border border-white/[0.06] p-4">
               <Skeleton variant="text" width={60} height={11} />
@@ -129,13 +129,13 @@ export function MyRewards() {
               return (
                 <li
                   key={reward.id}
-                  className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0"
+                  className="flex flex-col gap-3 py-3.5 first:pt-0 last:pb-0 max-sm:gap-2"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <FaGift size={12} />
                     </div>
-                    <div className="flex min-w-0 flex-col gap-0.5">
+                    <div className="flex min-w-0 flex-col gap-0.5 flex-1">
                       <span className="truncate text-sm font-semibold text-white">
                         {reward.campaign ?? reward.source}
                       </span>
@@ -144,7 +144,7 @@ export function MyRewards() {
                       )}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex items-center justify-between gap-3 sm:flex-row max-sm:pl-11">
                     <span className="text-sm font-bold tabular-nums text-white">
                       +{formatAmount(reward.amount)}{" "}
                       <span className="text-white/40">{reward.asset}</span>

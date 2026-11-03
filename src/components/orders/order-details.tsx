@@ -1,6 +1,6 @@
 "use client";
 
-import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } from "@mantine/core";
+import { Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } from "@mantine/core";
 import React, { useState } from "react";
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
@@ -9,7 +9,6 @@ import {
   fmtDateTime,
   fmtNum,
   getPair,
-  selectStyles,
   searchInputClass,
   sideTone,
   TableCard,
@@ -37,34 +36,38 @@ export const OrderDetails = () => {
     t.fee ?? t.commission ?? (t.feeAmount !== undefined ? t.feeAmount : null);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
-        <div className="flex flex-wrap gap-4 items-end">
-          <Select
-            label="Time"
-            data={["All", "Last 7 Days", "Last 30 Days"]}
-            classNames={selectStyles}
-            className="w-[140px]"
-          />
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-base font-semibold text-white">Trade fills</h2>
+          <p className="mt-1 text-xs text-white/40">Individual executions, fees and settled amounts by trading pair.</p>
         </div>
-        <div className="flex items-center gap-4">
+        <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium tabular-nums text-white/55">
+          {isLoading ? "Loading fills" : `${filtered.length} ${filtered.length === 1 ? "fill" : "fills"}`}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.07] bg-elevated p-3">
+        <div className="min-w-[180px] flex-1">
           <TextInput
             classNames={searchInputClass}
-            placeholder={symbol === "BTCUSDT" ? "BTCUSDT" : "Search pair..."}
+            aria-label="Search trade fills by pair"
+            placeholder="Search pair (e.g. BTCUSDT)"
             value={symbol}
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
             onChange={(e) => setSymbol(normalizeSymbol(e.currentTarget.value))}
           />
-          <button
-            className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
-            onClick={() => setSymbol("BTCUSDT")}
-          >
-            Reset
-          </button>
         </div>
+        <button
+          type="button"
+          disabled={symbol === "BTCUSDT"}
+          className="h-10 rounded-lg px-3 text-xs font-semibold text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white disabled:cursor-default disabled:opacity-35"
+          onClick={() => setSymbol("BTCUSDT")}
+        >
+          Reset pair
+        </button>
       </div>
 
-      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No trade records found.">
+      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No trade fills found for this pair." minHeight={340}>
         <Table classNames={tableClassNames}>
           <TableThead>
             <TableTr>
@@ -81,7 +84,7 @@ export const OrderDetails = () => {
             {filtered.map((t: any, idx: number) => (
               <TableTr key={t.id ?? t.tradeId ?? idx}>
                 <TableTd className="pl-5 text-white/50">{fmtDateTime(t.createdAt ?? t.time ?? t.ts)}</TableTd>
-                <TableTd className="!text-white !font-bold">{getPair(t) ?? t.symbol}</TableTd>
+                <TableTd className="!text-white !font-bold">{getPair(t) !== "—" ? getPair(t) : t.symbol ?? "—"}</TableTd>
                 <TableTd className={sideTone(t.side)}>{String(t.side ?? "—").toUpperCase()}</TableTd>
                 <TableTd>{fmtNum(t.price)}</TableTd>
                 <TableTd>{fmtNum(t.quantity ?? t.qty ?? t.filled)}</TableTd>
@@ -92,6 +95,6 @@ export const OrderDetails = () => {
           </TableTbody>
         </Table>
       </TableCard>
-    </div>
+    </section>
   );
 };

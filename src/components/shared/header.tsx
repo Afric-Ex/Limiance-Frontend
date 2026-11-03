@@ -17,7 +17,6 @@ import Link from "next/link";
 import { useAssets } from "@/src/hooks/use-assets";
 import { BuyCryptoDropdown } from "./buy-crypto-dropdown";
 import { EarnDropdown } from "./earn-dropdown";
-import { MoreDropdown } from "./more-dropdown";
 import { UserAvatar } from "./user-avatar";
 import { LanguageDropdown } from "./language-dropdown";
 import { NotificationsDropdown, NotificationDetailModal, useNotificationCount } from "./notifications-dropdown";
@@ -43,11 +42,6 @@ const navList = [
   {
     name: "Earn",
     children: <EarnDropdown />,
-    hover: true,
-  },
-  {
-    name: "More",
-    children: <MoreDropdown />,
     hover: true,
   },
 ];

@@ -1,26 +1,12 @@
 import React from "react";
-import { QuickBuy } from "../icons/quick-buy";
 import { P2pTrading } from "../icons/p2p-trading";
 import { FiatOtc } from "../icons/fiat-otc";
 import { IoSwapHorizontal } from "react-icons/io5";
-import { BsArrowRepeat } from "react-icons/bs";
 import { MdAddCard } from "react-icons/md";
 import clsx from "clsx";
 import Link from "next/link";
 
 const list = [
-  {
-    icon: QuickBuy,
-    title: "One-Express / One-Click Buy",
-    subtitle: "Purchase cryptocurrencies quickly and easily using your credit/debit card, Apple Pay, Google Pay, or fiat balance.",
-    link: "/transactions/fiat-deposit?tab=card",
-  },
-  {
-    icon: BsArrowRepeat,
-    title: "Recurring Buy",
-    subtitle: "Set up automated, recurring crypto purchases on a schedule (Auto-Invest) to build your portfolio over time.",
-    link: "/buy-crypto",
-  },
   {
     icon: IoSwapHorizontal,
     title: "Convert",
