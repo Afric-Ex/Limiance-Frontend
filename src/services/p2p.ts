@@ -425,24 +425,7 @@ export const p2p = {
     end_date?: string;
     status?: string;
   }): Promise<ApiResponse<unknown>> => {
-    // Prefer REST for the full row (type, names, amount, timestamps); fall back
-    // to the WS match history only when REST is unavailable.
-    return withWsFallback(
-      () => api.get(`trading/p2p/all_matched_orders`, { params }),
-      async () => {
-        const { getUserP2PMatchesWs, normalizeWsUserMatchesResponse } =
-          await loadP2PWs();
-        const payload = await getUserP2PMatchesWs({
-          status: params?.status,
-          type: params?.type,
-          page: params?.page,
-          limit: params?.limit,
-        });
-        return {
-          data: normalizeWsUserMatchesResponse(payload),
-        } as unknown as ApiResponse<unknown>;
-      }
-    );
+    return api.get(`trading/p2p/all_matched_orders`, { params });
   },
 
   updateMatchedOrder: async (data: {
@@ -450,7 +433,11 @@ export const p2p = {
     status: string;
     [key: string]: unknown;
   }): Promise<ApiResponse<unknown>> => {
-    if (typeof window !== "undefined") {
+    const isDispute =
+      String(data.status).toUpperCase() === "DISPUTED" ||
+      Boolean(data.reason || data.description || data.evidence);
+
+    if (!isDispute && typeof window !== "undefined") {
       try {
         const { updateP2PMatchStatusWs } = await loadP2PWs();
         const payload = await updateP2PMatchStatusWs(
@@ -459,9 +446,7 @@ export const p2p = {
         );
         return { data: payload } as unknown as ApiResponse<unknown>;
       } catch {
-        // The WS status frame carries only the status. Disputes also send a
-        // reason/description, and some deployments reject DISPUTED over the
-        // socket, so always retry through REST before surfacing an error.
+        // Fall back to REST below
       }
     }
 

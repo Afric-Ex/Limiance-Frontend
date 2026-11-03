@@ -23,6 +23,7 @@ interface SpotPairHeaderProps {
   markets: Feed["markets"];
   onSelectPair: (base: string, quote: string) => void;
   className?: string;
+  currentPrice?: number | null;
 }
 
 // Quote assets that trade ~1:1 with USD, so "≈ price USD" is accurate for them.
@@ -64,6 +65,7 @@ export function SpotPairHeader({
   markets,
   onSelectPair,
   className,
+  currentPrice,
 }: SpotPairHeaderProps) {
   const icons = useTokenIconMap();
   const names = useTokenNameMap();
@@ -72,7 +74,7 @@ export function SpotPairHeader({
   const prevPriceRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const next = toNum(feed.price);
+    const next = toNum(currentPrice ?? feed.price);
     if (next === null) return;
     const prev = prevPriceRef.current;
     prevPriceRef.current = next;
@@ -80,7 +82,7 @@ export function SpotPairHeader({
     setPriceFlash(next > prev ? "up" : "down");
     const t = setTimeout(() => setPriceFlash(null), 600);
     return () => clearTimeout(t);
-  }, [feed.price]);
+  }, [currentPrice, feed.price]);
 
   const [base = "", quote = ""] = (selectedPair || "").includes("/")
     ? selectedPair.split("/")
@@ -91,7 +93,7 @@ export function SpotPairHeader({
   const iconUrl = icons[base.toUpperCase()];
   const coinName = names[base.toUpperCase()];
 
-  const price = toNum(feed.price);
+  const price = toNum(currentPrice ?? feed.price);
   const pct = toNum(feed.changePercent24h);
   const high = toNum(feed.high24h);
   const low = toNum(feed.low24h);

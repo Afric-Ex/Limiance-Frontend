@@ -35,7 +35,13 @@ function patchMatchedOrder(
         data: {
           ...body,
           success: true,
-          data: { ...order, ...compactPatch },
+          data: {
+            ...order,
+            ...compactPatch,
+            createdAt: order.createdAt || order.created_at || compactPatch.createdAt || compactPatch.created_at,
+            created_at: order.created_at || order.createdAt || compactPatch.created_at || compactPatch.createdAt,
+            expiryTime: order.expiryTime || order.expiry_time || compactPatch.expiryTime || compactPatch.expiry_time,
+          },
         },
       };
     }

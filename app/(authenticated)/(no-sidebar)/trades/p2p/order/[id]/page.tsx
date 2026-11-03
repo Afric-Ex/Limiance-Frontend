@@ -153,8 +153,12 @@ function OrderRoomPageInner() {
   const asset = order?.asset ?? originalOrder?.asset ?? "";
   const fiat = String(order?.fiatCurrency ?? originalOrder?.currency ?? originalOrder?.fiat ?? "USD").toUpperCase();
   const quantity = parseFloat(String(order?.quantity ?? 0));
-  // Unit price comes from the advertisement's listed price. Realtime match
-  // snapshots omit it, so fall back through both the match and the original ad.
+  const rawFiatAmount = parseFloat(String(order?.fiatAmount ?? 0));
+  const effectiveMatchedUnitPrice =
+    quantity > 0 && rawFiatAmount > 0 ? rawFiatAmount / quantity : 0;
+
+  // Unit price comes from the agreed match calculation (fiatAmount / quantity),
+  // falling back through both the match and the original ad.
   const firstPositivePrice = (...values: unknown[]): number => {
     for (const value of values) {
       const parsed = parseFloat(String(value ?? ""));
@@ -162,16 +166,19 @@ function OrderRoomPageInner() {
     }
     return 0;
   };
-  const price = firstPositivePrice(
-    originalOrder?.fixedPrice,
-    originalOrder?.price,
-    order?.fixedPrice,
-    order?.price,
-    order?.adPrice,
-    order?.unitPrice,
-    order?.rate
-  );
-  const fiatAmount = order?.fiatAmount && order.fiatAmount > 0 ? order.fiatAmount : quantity * price;
+  const price =
+    effectiveMatchedUnitPrice > 0
+      ? effectiveMatchedUnitPrice
+      : firstPositivePrice(
+          originalOrder?.fixedPrice,
+          originalOrder?.price,
+          order?.fixedPrice,
+          order?.price,
+          order?.adPrice,
+          order?.unitPrice,
+          order?.rate
+        );
+  const fiatAmount = rawFiatAmount > 0 ? rawFiatAmount : quantity * price;
   const paymentMethod = order?.paymentMethod;
   // Resolve the counterparty purely from roles. The advertiser and matcher are
   // the two people on a match, but prefer buyer/seller ids when present because
@@ -286,6 +293,12 @@ function OrderRoomPageInner() {
     originalOrder?.createdAt,
     originalOrder?.created_at
   );
+
+  // Cached timestamp prevents real-time WebSocket state flashes from erasing the created timestamp.
+  const cachedTimestampRef = useRef<string>("");
+  if (orderCreatedDate) cachedTimestampRef.current = orderCreatedDate.toISOString();
+  const effectiveCreatedAt =
+    orderCreatedDate ?? parseBackendDate(cachedTimestampRef.current);
 
   const updatedAtDate = parseFirstDate(order?.updatedAt, order?.updated_at, orderCreatedDate);
   const updatedAtStr = (updatedAtDate ?? new Date()).toISOString();
@@ -626,7 +639,10 @@ function OrderRoomPageInner() {
                   <div className="flex min-w-0 flex-col gap-1.5">
                     <div className="text-white/45">Unit Price</div>
                     <div className="font-mono text-white">
-                      {price.toLocaleString()} {fiat}/{asset}
+                      {price > 0
+                        ? price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+                        : "—"}{" "}
+                      {fiat}/{asset}
                     </div>
                   </div>
                   <div className="flex min-w-0 flex-col gap-1.5">
@@ -636,7 +652,7 @@ function OrderRoomPageInner() {
                   <div className="col-span-2 flex flex-col gap-1.5">
                     <div className="text-white/45">Order Timestamp</div>
                     <div className="text-white/70">
-                      {orderCreatedDate?.toLocaleString() ?? "—"}
+                      {effectiveCreatedAt ? effectiveCreatedAt.toLocaleString() : "—"}
                     </div>
                   </div>
                 </div>

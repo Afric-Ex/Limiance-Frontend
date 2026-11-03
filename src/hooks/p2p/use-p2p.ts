@@ -154,9 +154,21 @@ export const useUpdateMatchedOrder = () => {
 function mapP2PError(err: string, httpStatus?: number, requestedStatus?: string): string {
   const requested = requestedStatus?.toUpperCase();
   if (httpStatus === 404) return "Order match not found. Refresh your P2P orders and open the latest trade before trying again.";
-  if (!err) return requested === "CANCELLED" ? "Failed to cancel order" : "Failed to update order";
+  if (!err) return requested === "CANCELLED" ? "Failed to cancel order" : requested === "DISPUTED" ? "Failed to file dispute" : "Failed to update order";
   const e = err.toLowerCase();
-  if (e.includes("expiry") || e.includes("expired") || e.includes("dispute before")) return "Payment window has expired. You can no longer confirm payment for this order.";
+  if (requested === "DISPUTED") {
+    if (e.includes("dispute before") || e.includes("expiry")) {
+      return "Disputes can be filed after the counterparty confirms payment or after the payment timer expires.";
+    }
+    if (e.includes("unauthorized")) {
+      return "You are not authorized to dispute this order.";
+    }
+    if (e.includes("already") || e.includes("disputed")) {
+      return "A dispute has already been filed for this order.";
+    }
+  }
+  if (e.includes("dispute before")) return "Disputes can be filed after the counterparty confirms payment or after the payment timer expires.";
+  if (e.includes("expiry") || e.includes("expired")) return "Payment window has expired. You can no longer confirm payment for this order.";
   if (e.includes("self") || e.includes("selfmatch")) return "You cannot confirm payment on your own ad.";
   if (e.includes("already fulfilled") || e.includes("already completed")) return "This order has already been completed.";
   if (e.includes("cancelled")) return "This order has been cancelled.";
