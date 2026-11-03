@@ -118,7 +118,12 @@ function MarginTrades() {
   });
 
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "margin");
-  const lastTradedPrice = getLatestTradePrice(recentTrades) ?? feed.price ?? null;
+  const effectiveMarketPrice =
+    (feed.price != null && feed.price > 0 ? feed.price : null) ??
+    (chartLastPrice != null && chartLastPrice > 0 ? chartLastPrice : null) ??
+    getLatestTradePrice(recentTrades) ??
+    null;
+  const lastTradedPrice = effectiveMarketPrice ?? getLatestTradePrice(recentTrades) ?? feed.price ?? null;
 
   const { mutate: handleSetLeverage } = useMutation({
     mutationFn: (newLeverage: number) => tradingService.setMarginLeverage(newLeverage),
@@ -354,7 +359,7 @@ function MarginTrades() {
               <button onClick={() => setMobileMode("trade")} className={`p-1.5 rounded-md transition-all ${mobileMode === "trade" ? "bg-white/15 text-white" : "text-white/40"}`}><IoListOutline size={15} /></button>
             </div>
             <span className={clsx("text-sm font-bold tabular-nums", changeColor)}>
-              {feed.price !== null ? formatPrice(feed.price) : "—"}
+              {effectiveMarketPrice !== null ? formatPrice(effectiveMarketPrice) : "—"}
             </span>
             <span className={clsx(
               "text-2xs font-semibold px-1.5 py-0.5 rounded",
@@ -381,6 +386,7 @@ function MarginTrades() {
           onPairSearchChange={setPairSearch}
           markets={filteredMarkets}
           onSelectPair={handleSelectPair}
+          currentPrice={effectiveMarketPrice}
         />
 
         {/* MOBILE: Floating Order Book Button */}
@@ -423,7 +429,7 @@ function MarginTrades() {
           recentTradesLoading={recentTradesLoading}
           base={base}
           quote={quote}
-          currentPrice={chartLastPrice ?? feed.price}
+          currentPrice={effectiveMarketPrice}
           dayChangePercent={feed.changePercent24h}
           buyPercentage={orderBook.buyPercentage}
           sellPercentage={orderBook.sellPercentage}
@@ -553,7 +559,7 @@ function MarginTrades() {
               recentTradesLoading={recentTradesLoading}
               base={base}
               quote={quote}
-              currentPrice={chartLastPrice ?? feed.price}
+              currentPrice={effectiveMarketPrice}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -599,7 +605,7 @@ function MarginTrades() {
               recentTradesLoading={recentTradesLoading}
               base={base}
               quote={quote}
-              currentPrice={chartLastPrice ?? feed.price}
+              currentPrice={effectiveMarketPrice}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}

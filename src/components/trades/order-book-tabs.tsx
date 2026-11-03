@@ -267,8 +267,8 @@ export function OrderBookTabs({
   const highestBid = rawBids.length > 0 ? rawBids[0].price : null;
   const spread = lowestAsk !== null && highestBid !== null ? lowestAsk - highestBid : null;
   const latestTradePrice = getLatestTradePrice(recentTrades);
-  const lastTradedPrice =
-    latestTradePrice ?? (currentPrice != null && currentPrice > 0 ? currentPrice : null);
+  const validCurrentPrice = currentPrice != null && Number.isFinite(currentPrice) && currentPrice > 0 ? currentPrice : null;
+  const lastTradedPrice = validCurrentPrice ?? latestTradePrice;
 
   // Arrow next to the last price: direction of its most recent move.
   useEffect(() => {

@@ -128,9 +128,12 @@ function FuturesTradesInner() {
   });
 
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "futures");
-  // The spot/margin feed does not carry futures prices, so only use actual
-  // futures trades here; the depth panel falls back to the futures mid.
-  const lastTradedPrice = getLatestTradePrice(recentTrades);
+  const effectiveMarketPrice =
+    (feed.price != null && feed.price > 0 ? feed.price : null) ??
+    (chartLastPrice != null && chartLastPrice > 0 ? chartLastPrice : null) ??
+    getLatestTradePrice(recentTrades) ??
+    null;
+  const lastTradedPrice = effectiveMarketPrice ?? getLatestTradePrice(recentTrades);
 
   const { mutate: handleSetFuturesMode } = useMutation({
     mutationFn: (mode: MarginMode) => tradingService.setFuturesMode(mode),
@@ -723,7 +726,7 @@ function FuturesTradesInner() {
               <button onClick={() => setMobileMode("trade")} className={`p-1.5 rounded-md transition-all ${mobileMode === "trade" ? "bg-white/15 text-white" : "text-white/40"}`}><IoListOutline size={15} /></button>
             </div>
             <span className={clsx("text-sm font-bold tabular-nums", changeColor)}>
-              {feed.price !== null ? formatPrice(feed.price) : "—"}
+              {effectiveMarketPrice !== null ? formatPrice(effectiveMarketPrice) : "—"}
             </span>
             <span className={clsx(
               "text-2xs font-semibold px-1.5 py-0.5 rounded",
@@ -750,6 +753,7 @@ function FuturesTradesInner() {
           onPairSearchChange={setPairSearch}
           markets={filteredMarkets}
           onSelectPair={handleSelectPair}
+          currentPrice={effectiveMarketPrice}
         />
 
         {/* MOBILE: Floating Order Book Button */}
@@ -792,7 +796,7 @@ function FuturesTradesInner() {
           recentTradesLoading={recentTradesLoading}
           base={baseAsset}
           quote={quoteAsset}
-          currentPrice={chartLastPrice ?? feed.price}
+          currentPrice={effectiveMarketPrice}
           dayChangePercent={feed.changePercent24h}
           buyPercentage={orderBook.buyPercentage}
           sellPercentage={orderBook.sellPercentage}
@@ -980,7 +984,7 @@ function FuturesTradesInner() {
               recentTradesLoading={recentTradesLoading}
               base={baseAsset}
               quote={quoteAsset}
-              currentPrice={chartLastPrice ?? feed.price}
+              currentPrice={effectiveMarketPrice}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -1009,7 +1013,7 @@ function FuturesTradesInner() {
               recentTradesLoading={recentTradesLoading}
               base={baseAsset}
               quote={quoteAsset}
-              currentPrice={chartLastPrice ?? feed.price}
+              currentPrice={effectiveMarketPrice}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
