@@ -25,7 +25,6 @@ export const Liquidation = () => {
   const { data: records, isLoading } = useQuery({
     queryKey: tradingKeys.marginLiquidationHistory,
     queryFn: () => tradingService.marginLiquidationHistory(),
-    select: (res) => res.data,
   });
 
   const allRecords: any[] = Array.isArray(records) ? records : [];

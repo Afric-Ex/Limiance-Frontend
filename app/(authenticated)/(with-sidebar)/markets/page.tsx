@@ -200,14 +200,25 @@ function MarketsPageInner() {
   }, [favoritesQuery.data]);
 
   const isFavoritePair = useCallback((pair: string) => {
-    const compactPair = pair.replace(/[\/_-]/g, "").toUpperCase();
-    return favorites.some((favorite) => favorite.replace(/[\/_-]/g, "").toUpperCase() === compactPair);
+    if (!pair || !favorites || favorites.length === 0) return false;
+    
+    // Normalize both the incoming pair and favorites for comparison
+    const normalizedPair = pair.replace(/[\/_-]/g, "").toUpperCase().trim();
+    
+    return favorites.some((favorite) => {
+      const normalizedFavorite = favorite.replace(/[\/_-]/g, "").toUpperCase().trim();
+      return normalizedFavorite === normalizedPair;
+    });
   }, [favorites]);
+
+  const [pendingFavoritePair, setPendingFavoritePair] = useState<string | null>(null);
 
   const favoriteMutation = useMutation({
     mutationFn: ({ pair, isFavorite }: { pair: string; isFavorite: boolean }) =>
       isFavorite ? tradingService.removeFavorite(pair) : tradingService.addFavorite(pair),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trading-favorites"] }),
+    onMutate: ({ pair }) => setPendingFavoritePair(pair),
+    onSettled: () => setPendingFavoritePair(null),
   });
 
   useEffect(() => {
@@ -466,7 +477,7 @@ function MarketsPageInner() {
                         <button
                           type="button"
                           aria-label={isFav ? `Remove ${token.pair} from favorites` : `Add ${token.pair} to favorites`}
-                          disabled={favoriteMutation.isPending}
+                          disabled={pendingFavoritePair === token.pair}
                           onClick={(e) => toggleFav(token.pair, e)}
                           className="p-1 disabled:opacity-50"
                         >
@@ -478,7 +489,14 @@ function MarketsPageInner() {
                       <td className="py-3">
                         <div className="flex items-center gap-3">
                           {token.image ? (
-                            <img src={token.image} alt={token.symbol} loading="lazy" decoding="async" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                            <img 
+                              src={token.image} 
+                              alt={token.symbol} 
+                              loading="lazy" 
+                              decoding="async" 
+                              className="w-6 h-6 rounded-full object-cover shrink-0" 
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                            />
                           ) : (
                             <span className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-2xs font-bold text-white/80 shrink-0">
                               {token.symbol.charAt(0)}
@@ -488,7 +506,7 @@ function MarketsPageInner() {
                             <span className="text-caption font-bold text-white">{token.symbol}</span>
                             <span className="text-2xs font-medium text-white/30">/{quote || "USDT"}</span>
                             {hasData && token.leverage && (
-                              <span className="text-2xs font-bold px-1 py-0.2 bg-primary/15 text-primary rounded uppercase shrink-0">
+                              <span className="text-2xs font-bold px-1.5 py-0.5 bg-primary/15 text-primary rounded-md uppercase shrink-0 border border-primary/30">
                                 {token.leverage}
                               </span>
                             )}
@@ -593,7 +611,14 @@ function MarketsPageInner() {
                 >
                   <div className="flex items-center gap-3">
                     {token.image ? (
-                      <img src={token.image} alt={token.symbol} loading="lazy" decoding="async" className="w-9 h-9 rounded-full object-cover shrink-0" />
+                      <img 
+                        src={token.image} 
+                        alt={token.symbol} 
+                        loading="lazy" 
+                        decoding="async" 
+                        className="w-9 h-9 rounded-full object-cover shrink-0" 
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
                     ) : (
                       <span className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-white/80 shrink-0">
                         {token.symbol.charAt(0)}
@@ -604,7 +629,7 @@ function MarketsPageInner() {
                         <span className="text-sm font-bold text-white">{token.symbol}</span>
                         <span className="text-micro text-white/30">/{quote || "USDT"}</span>
                         {hasData && token.leverage && (
-                          <span className="text-2xs font-bold px-1 bg-primary/15 text-primary rounded uppercase shrink-0">
+                          <span className="text-2xs font-bold px-1.5 py-0.5 bg-primary/15 text-primary rounded-md uppercase shrink-0 border border-primary/30">
                             {token.leverage}
                           </span>
                         )}
@@ -618,7 +643,7 @@ function MarketsPageInner() {
                     <button
                       type="button"
                       aria-label={isFav ? `Remove ${token.pair} from favorites` : `Add ${token.pair} to favorites`}
-                      disabled={favoriteMutation.isPending}
+                      disabled={pendingFavoritePair === token.pair}
                       onClick={(event) => toggleFav(token.pair, event)}
                       className="p-2 disabled:opacity-50"
                     >

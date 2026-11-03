@@ -685,9 +685,12 @@ function FuturesTradesInner() {
                   className="flex items-center gap-1 px-1 py-0.5 rounded tap-scale"
                 >
                   <IoSwapHorizontal size={16} className="text-white/40" />
-                  <span className="text-body font-bold text-white/90">
-                    {selectedPair} <span className="text-primary text-2xs align-top bg-primary/10 px-1 rounded ml-1">Perp</span>
-                  </span>
+                  <div className="flex items-center gap-1 min-w-0">
+                    <span className="text-body font-bold text-white/90 truncate">
+                      {selectedPair}
+                    </span>
+                    <span className="text-primary text-2xs bg-primary/10 px-1 rounded shrink-0 whitespace-nowrap">Perp</span>
+                  </div>
                   <MdKeyboardArrowDown className="text-white/40" size={16} />
                 </button>
               </PopoverTarget>

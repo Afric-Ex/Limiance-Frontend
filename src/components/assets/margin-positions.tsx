@@ -10,10 +10,9 @@ import { useRouter } from "next/navigation";
 
 export const MarginPositions = () => {
   const router = useRouter();
-  const { data: positions, isLoading } = useQuery({
+  const { data: positions = [], isLoading } = useQuery({
     queryKey: ["margin-positions"],
     queryFn: () => tradingService.marginPositions(),
-    select: (res) => res.data ?? [],
     staleTime: 30_000,
     throwOnError: false,
     retry: false,

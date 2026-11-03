@@ -65,11 +65,10 @@ export const MarginOpenOrders = () => {
   const [filter, setFilter] = useState("Cross");
   const queryClient = useQueryClient();
 
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders = [], isLoading } = useQuery({
     queryKey: tradingKeys.marginOpenOrders,
     queryFn: () =>
       tradingService.fetchMarginOpenOrders(),
-    select: (res) => res.data,
   });
 
   const { mutate: cancelOrder } = useMutation({

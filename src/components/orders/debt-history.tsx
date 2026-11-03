@@ -25,7 +25,6 @@ export const DebtHistory = () => {
   const { data: records, isLoading } = useQuery({
     queryKey: tradingKeys.marginBorrowHistory,
     queryFn: () => tradingService.marginBorrowHistory(),
-    select: (res) => res.data,
   });
 
   const allRecords: any[] = Array.isArray(records) ? records : [];

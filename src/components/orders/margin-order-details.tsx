@@ -27,7 +27,6 @@ export const MarginOrderDetails = () => {
   const { data: records, isLoading } = useQuery({
     queryKey: tradingKeys.marginOrderHistory,
     queryFn: () => tradingService.marginOrderHistory(),
-    select: (res) => res.data,
   });
 
   const allRecords: any[] = Array.isArray(records) ? records : [];
