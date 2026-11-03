@@ -1,10 +1,10 @@
-import { Tabs, TabsList, TabsTab, Slider, Loader, Popover } from "@mantine/core";
+import { Slider, Loader, Popover } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import toast from "react-hot-toast";
 import { MarginBorrowRepayModal } from "./margin-borrow-repay-modal";
 import { MarginTransferModal } from "./margin-transfer-modal";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
-import { MdExpandMore, MdKeyboardArrowRight, MdRefresh } from "react-icons/md";
+import { MdExpandMore, MdRefresh } from "react-icons/md";
 import { icons } from "../assets/icons";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -160,7 +160,7 @@ function FieldRow({
 }
 
 export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLeverageChange, marketPrice, clickedPrice, compactSide, sideToggle = false, onLeverageChangeEnd, onTpslChange, onFill }: Props) => {
-  const [activeTab, setActiveTab] = useState("limit");
+  const [activeTab, setActiveTab] = useState("market");
   const [advancedTab, setAdvancedTab] = useState<AdvancedTab | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [tpslTriggerType, setTpslTriggerType] = useState<"last" | "mark" | "index">("last");
@@ -200,25 +200,24 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
   const effectiveTab = advancedTab ?? activeTab;
 
-  const advancedLabels: Record<AdvancedTab, string> = {
-    tpsl: "TP/SL",
-    oco: "OCO",
-    conditional: "Conditional",
-    trailing: "Trailing Stop",
-  };
+  const orderTypeOptions: AdvancedOption[] = [
+    { value: "limit" as AdvancedTab, label: "Limit" },
+    { value: "market" as AdvancedTab, label: "Market" },
+    { value: "tpsl", label: "TP/SL" },
+    { value: "conditional", label: "Conditional", disabled: true },
+    { value: "stop" as AdvancedTab, label: "Stop Limit" },
+    ...(mode !== "spot" ? [{ value: "oco" as AdvancedTab, label: "OCO" }] : []),
+  ];
 
-  const advancedOptions: AdvancedOption[] =
-    mode === "spot"
-      ? [
-          { value: "tpsl", label: "TP/SL" },
-          { value: "conditional", label: "Conditional", disabled: true },
-        ]
-      : [
-          { value: "tpsl", label: "TP/SL" },
-          { value: "oco", label: "OCO" },
-          { value: "conditional", label: "Conditional", disabled: true },
-          { value: "trailing", label: "Trailing Stop", disabled: true },
-        ];
+  const selectedOrderType = effectiveTab;
+  const selectedOrderTypeLabel =
+    selectedOrderType === "stop"
+      ? "Stop Limit"
+      : selectedOrderType === "tpsl"
+        ? "TP/SL"
+        : selectedOrderType === "oco"
+          ? "OCO"
+          : selectedOrderType.charAt(0).toUpperCase() + selectedOrderType.slice(1);
 
   const queryClient = useQueryClient();
 
@@ -858,92 +857,69 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         </div>
       )}
 
-      {/* Order type tabs */}
+      {/* Unified order type selector: shared by desktop and mobile */}
       <div className="flex items-center justify-between gap-2 pb-1">
-        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-          <div className="min-w-0 overflow-x-auto scroll-x-hidden">
-            <Tabs
-              classNames={{
-                tab: "!p-0 hover:!bg-transparent text-xs font-bold text-white/50 hover:!text-white/80 data-[active]:!text-white !border-0 whitespace-nowrap",
-                list: "!flex !items-center before:!border-0 !gap-3 sm:!gap-4",
-              }}
-              value={advancedTab ? null : activeTab}
-              onChange={(v) => {
-                setActiveTab(v ?? "limit");
-                setAdvancedTab(null);
-              }}
-            >
-              <TabsList>
-                <TabsTab value="limit">Limit</TabsTab>
-                <TabsTab value="market">Market</TabsTab>
-                <TabsTab value="stop">
-                  <span className="flex items-center gap-1">
-                    Stop Limit <MdKeyboardArrowRight className="rotate-90 opacity-50" />
-                  </span>
-                </TabsTab>
-              </TabsList>
-            </Tabs>
-          </div>
+        <span className="shrink-0 text-xs font-medium text-white/50"><span className="sm:hidden">Type</span><span className="hidden sm:inline">Order type</span></span>
+        <div className="min-w-0 flex-1 flex justify-end">
           <Popover
             opened={moreOpen}
             onChange={setMoreOpen}
-            position="bottom-start"
+            position="bottom-end"
             withArrow={false}
             shadow="xl"
           >
             <Popover.Target>
               <button
                 type="button"
-                onClick={() => setMoreOpen((o) => !o)}
-                aria-label="More order types"
+                onClick={() => setMoreOpen((open) => !open)}
+                aria-label={`Order type: ${selectedOrderTypeLabel}`}
                 aria-expanded={moreOpen}
-                className={clsx(
-                  "flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-xs font-bold transition-colors hover:bg-white/[0.07]",
-                  advancedTab ? "!border-primary/30 text-primary" : "text-white/70 hover:text-white"
-                )}
+                className="flex h-9 w-full max-w-[150px] sm:max-w-[190px] min-w-0 items-center justify-between gap-2 rounded-lg border border-white/[0.10] bg-white/[0.05] px-3 text-left text-xs font-semibold text-white transition-colors hover:bg-white/[0.08]"
               >
-                {advancedTab ? (
-                  <span>{advancedLabels[advancedTab]}</span>
-                ) : (
-                  <>
-                    <span className="hidden sm:inline">More</span>
-                    <span className="sm:hidden">Order Type</span>
-                  </>
-                )}
+                <span className="truncate">{selectedOrderTypeLabel}</span>
                 <MdExpandMore
                   size={16}
                   className={clsx("shrink-0 transition-transform", moreOpen && "rotate-180")}
                 />
               </button>
             </Popover.Target>
-            <Popover.Dropdown className="!min-w-[160px] !rounded-xl !border !border-white/[0.08] !bg-[#181a20] !px-0 !py-1 !shadow-xl">
-              {advancedOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  disabled={opt.disabled}
-                  onClick={() => {
-                    if (opt.disabled) return;
-                    setActiveTab(opt.value);
-                    setAdvancedTab(opt.value);
-                    setMoreOpen(false);
-                  }}
-                  className={clsx(
-                    "flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors",
-                    opt.disabled
-                      ? "cursor-not-allowed text-white/30"
-                      : "text-white/80 hover:bg-white/[0.05]",
-                    advancedTab === opt.value && "bg-primary/[0.08] !text-primary"
-                  )}
-                >
-                  <span>{opt.label}</span>
-                  {opt.disabled && (
-                    <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wide text-white/40">
-                      Soon
-                    </span>
-                  )}
-                </button>
-              ))}
+            <Popover.Dropdown className="!z-[300] !w-[190px] !min-w-[190px] !rounded-xl !border !border-white/[0.08] bg-elevated !p-1 !shadow-xl">
+              {orderTypeOptions.map((option) => {
+                const value = option.value as string;
+                const isSelected = selectedOrderType === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={option.disabled}
+                    onClick={() => {
+                      if (option.disabled) return;
+                      if (value === "tpsl" || value === "oco") {
+                        setActiveTab(value);
+                        setAdvancedTab(value as AdvancedTab);
+                      } else {
+                        setActiveTab(value);
+                        setAdvancedTab(null);
+                      }
+                      setMoreOpen(false);
+                    }}
+                    className={clsx(
+                      "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
+                      option.disabled
+                        ? "cursor-not-allowed text-white/30"
+                        : "text-white/80 hover:bg-white/[0.06]",
+                      isSelected && "bg-primary/[0.10] !text-primary"
+                    )}
+                  >
+                    <span>{option.label}</span>
+                    {option.disabled && (
+                      <span className="shrink-0 rounded bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/40">
+                        Soon
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </Popover.Dropdown>
           </Popover>
         </div>

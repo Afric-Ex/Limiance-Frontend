@@ -12,6 +12,7 @@ import {
   P2PMatchOrder,
   P2POrderListings,
   P2PReleaseOrder,
+  P2PAdvertiserReviewsResponse,
   PaymentMethodsResponse,
   UserAds,
 } from "../types/p2p";
@@ -23,6 +24,8 @@ export const p2pKey = {
   paymentMethods: () => ["payment-method"],
   becomeAdvertiser: () => ["become-advertiser"],
   advertiserInfo: ["advertiser-info"],
+  advertiserReviews: (advertiserId: string, page = 1, limit = 10) =>
+    ["p2p-advertiser-reviews", advertiserId, page, limit],
   disputedOrders: ["disputed-orders"],
   allMatchedOrders: (params?: any) => ["all-matched-orders", params],
   allMatchedOrdersRoot: ["all-matched-orders"],
@@ -250,6 +253,14 @@ export const p2p = {
 
   advertiserInfo: (): Promise<ApiResponse<AdvertiserInfo>> =>
     api.get("trading/p2p/advertiser_info"),
+
+  getAdvertiserReviews: (
+    advertiserId: string,
+    params: { page?: number; limit?: number } = {}
+  ): Promise<ApiResponse<P2PAdvertiserReviewsResponse>> =>
+    api.get(`trading/p2p/advertiser/${encodeURIComponent(advertiserId)}/reviews`, {
+      params: { page: params.page ?? 1, limit: params.limit ?? 10 },
+    }),
 
   becomeAdvertiser: async () => {
     const response = await api.get("trading/p2p/become_an_advertiser");

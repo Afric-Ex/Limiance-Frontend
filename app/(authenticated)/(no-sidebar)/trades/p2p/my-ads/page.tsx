@@ -15,8 +15,10 @@ import { P2PMyAdsSkeleton } from "@/src/components/skeletons/p2p";
 
 type AdStatus = "ACTIVE" | "INACTIVE" | "ALL";
 
+// `p-4.5` is not part of Tailwind's default spacing scale, so it generated
+// no padding. Use supported spacing utilities to keep the card content inset.
 const CARD_CLASS =
-  "rounded-xl border border-white/[0.07] bg-[#181a20] p-4.5 transition-colors hover:border-white/[0.12]";
+  "rounded-xl border border-white/[0.07] bg-[#181a20] p-4 sm:p-5 transition-colors hover:border-white/[0.12]";
 
 function MyAdsPageInner() {
   const router = useRouter();
@@ -62,9 +64,9 @@ function MyAdsPageInner() {
 
   return (
     <P2PLayout>
-      <div className="w-full max-w-7xl mx-auto py-6 max-[1150px]:py-4 page-enter">
+      <div className="w-full max-w-7xl min-w-0 mx-auto py-5 sm:py-6 page-enter">
         {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5 sm:mb-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 text-primary">
               <MdOutlineStorefront size={20} />
@@ -77,7 +79,7 @@ function MyAdsPageInner() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             <Button
               size="xs"
               variant="subtle"
@@ -110,7 +112,7 @@ function MyAdsPageInner() {
         </div>
 
         {/* Tabs */}
-        <div className="mb-5">
+        <div className="mb-5 sm:mb-6 overflow-x-auto">
           <SegmentedControl
             value={activeTab}
             onChange={(v) => setActiveTab(v as AdStatus)}
@@ -148,7 +150,7 @@ function MyAdsPageInner() {
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 sm:gap-4">
             {displayAds.map((ad) => {
               const paymentMethods = ad.paymentMethod ?? [];
               const isActive = ad.active;
@@ -156,10 +158,10 @@ function MyAdsPageInner() {
               const coinIcon = getCryptoIcon(String(ad.asset ?? ""));
 
               return (
-                <div key={ad.id} className={`${CARD_CLASS} flex flex-col md:flex-row gap-4 justify-between`}>
+                <div key={ad.id} className={`${CARD_CLASS} flex min-w-0 flex-col gap-4 md:flex-row md:items-center md:justify-between`}>
                   {/* Left Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2.5 mb-3">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2.5 mb-4">
                       {coinIcon ? (
                         <img src={coinIcon} alt={String(ad.asset)} width={22} height={22} className="shrink-0" />
                       ) : (
@@ -187,22 +189,22 @@ function MyAdsPageInner() {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-4 text-xs sm:grid-cols-4 sm:gap-4">
                       <div>
                         <div className="text-white/35 text-2xs mb-0.5 uppercase tracking-wider">Price</div>
-                        <div className="text-white font-mono font-semibold">
+                        <div className="text-white font-mono font-semibold break-words">
                           {parseFloat(String(ad.price ?? 0)).toLocaleString()} {ad.fiat}
                         </div>
                       </div>
                       <div>
                         <div className="text-white/35 text-2xs mb-0.5 uppercase tracking-wider">Available</div>
-                        <div className="text-white font-mono">
+                        <div className="text-white font-mono break-words">
                           {parseFloat(String(ad.availableQuantity ?? 0)).toLocaleString()} {ad.asset}
                         </div>
                       </div>
                       <div>
                         <div className="text-white/35 text-2xs mb-0.5 uppercase tracking-wider">Limit</div>
-                        <div className="text-white font-mono">
+                        <div className="text-white font-mono break-words">
                           {(ad.minQuantity ?? 0).toLocaleString()} – {(ad.maxQuantity ?? 0).toLocaleString()}
                         </div>
                       </div>
@@ -227,11 +229,11 @@ function MyAdsPageInner() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex flex-row md:flex-col gap-2 items-start md:items-end justify-start md:justify-center shrink-0 border-t md:border-t-0 md:border-l border-white/[0.06] pt-3 md:pt-0 md:pl-4">
+                  <div className="flex w-full flex-row gap-2 border-t border-white/[0.06] pt-3 md:w-auto md:min-w-[88px] md:flex-col md:items-end md:justify-center md:border-l md:border-t-0 md:pl-4 md:pt-0">
                     <Button
                       size="xs"
                       variant="subtle"
-                      className="!bg-white/[0.05] hover:!bg-white/[0.08] !border !border-white/[0.08] !text-white/80 !h-8 !rounded-lg !text-xs !font-medium"
+                      className="!h-9 !flex-1 !rounded-lg !border !border-white/[0.08] !bg-white/[0.05] !text-xs !font-medium !text-white/80 hover:!bg-white/[0.08] md:!w-full md:!flex-none"
                       leftSection={<MdEdit size={13} />}
                       onClick={() => router.push(`/trades/p2p/ads/edit/${ad.id}`)}
                     >
@@ -241,7 +243,7 @@ function MyAdsPageInner() {
                       size="xs"
                       variant="subtle"
                       loading={(deactivating || reactivating) && togglingAdId === ad.id}
-                      className={`!h-8 !rounded-lg !text-xs !font-medium border ${
+                      className={`!h-9 !flex-1 !rounded-lg !text-xs !font-medium border md:!w-full md:!flex-none ${
                         isActive
                           ? "!border-[#FBA42A]/30 !text-[#FBA42A] hover:!bg-[#FBA42A]/10"
                           : "!border-buy/30 !text-buy hover:!bg-buy/10"

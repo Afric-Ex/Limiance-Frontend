@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Button, Drawer } from "@mantine/core";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -9,10 +9,10 @@ dayjs.extend(relativeTime);
 import { MdVerified } from "react-icons/md";
 import { FaThumbsDown, FaThumbsUp } from "react-icons/fa";
 import toast from "react-hot-toast";
-import { P2POrderListings } from "@/src/types/p2p";
+import { P2POrderListings, P2PAdvertiserReviewsResponse } from "@/src/types/p2p";
+import { useAdvertiserReviews } from "@/src/hooks/p2p/use-p2p";
 import {
   blockAdvertiser,
-  getAdvertiserReviews,
   isAdvertiserBlocked,
   reportAdvertiser,
   unblockAdvertiser,
@@ -28,7 +28,21 @@ interface AdvertiserProfilePanelProps {
   onRelationshipChange?: () => void;
 }
 
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const REVIEWS_PER_PAGE = 10;
+
+const unwrapReviewsResponse = (response: any): P2PAdvertiserReviewsResponse | null => {
+  const candidates = [
+    response?.data?.data,
+    response?.data,
+    response?.data?.data?.data,
+    response,
+  ];
+  return (
+    candidates.find(
+      (candidate) => candidate && Array.isArray(candidate.reviews)
+    ) ?? null
+  );
+};
 
 export const AdvertiserProfilePanel = ({
   advertiser,
@@ -38,40 +52,36 @@ export const AdvertiserProfilePanel = ({
   const isOpen = !!advertiser;
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-
-  if (!isOpen || !advertiser) {
-    return null;
-  }
-
-  const name =
-    [advertiser.firstName, advertiser.lastName].filter(Boolean).join(" ") || "Merchant";
-  const trades = Math.floor(Number(advertiser.totalOrdersCompleted ?? 0));
-  const completionRate = Number(advertiser.completionPercentage ?? 0);
-  const rating = Number(advertiser.rating ?? 0);
-  const blocked = isAdvertiserBlocked(advertiser.id);
-
-  const allReviews = getAdvertiserReviews(advertiser.id);
-  const threshold = Date.now() - THIRTY_DAYS_MS;
-  const recentReviews = allReviews.filter(
-    (review) => new Date(review.createdAt).getTime() >= threshold
+  const [reviewPage, setReviewPage] = useState(1);
+  const advertiserId = advertiser?.id ?? "";
+  const reviewsQuery = useAdvertiserReviews(
+    advertiserId,
+    reviewPage,
+    REVIEWS_PER_PAGE
   );
-  const feedback = {
-    all: allReviews,
-    recent: recentReviews,
-    positive: recentReviews.filter((review) => review.rating === "POSITIVE").length,
-    negative: recentReviews.filter((review) => review.rating === "NEGATIVE").length,
-  };
+
+  const name = advertiser
+    ? [advertiser.firstName, advertiser.lastName].filter(Boolean).join(" ") || "Merchant"
+    : "Merchant";
+  const trades = Math.floor(Number(advertiser?.totalOrdersCompleted ?? 0));
+  const completionRate = Number(advertiser?.completionPercentage ?? 0);
+  const blocked = isAdvertiserBlocked(advertiserId);
+  const reviewData = useMemo(
+    () => unwrapReviewsResponse(reviewsQuery.data),
+    [reviewsQuery.data]
+  );
+  const reviews = reviewData?.reviews ?? [];
+  const averageRating = Number(reviewData?.averageRating ?? advertiser?.rating ?? 0);
+  const totalReviews = Number(reviewData?.totalRecords ?? 0);
+  const totalPages = Math.max(1, Number(reviewData?.totalPages ?? 1));
 
   const handleBlockToggle = (reason: string) => {
+    if (!advertiser) return;
     if (blocked) {
       unblockAdvertiser(advertiser.id);
       toast.success(`${name} has been unblocked`);
     } else {
-      blockAdvertiser({
-        id: advertiser.id,
-        name,
-        reason,
-      });
+      blockAdvertiser({ id: advertiser.id, name, reason });
       toast.success(`${name} has been blocked`);
     }
 
@@ -81,6 +91,7 @@ export const AdvertiserProfilePanel = ({
   };
 
   const handleReportSubmit = (payload: { reason: string; details: string }) => {
+    if (!advertiser) return;
     reportAdvertiser({
       id: advertiser.id,
       name,
@@ -90,6 +101,8 @@ export const AdvertiserProfilePanel = ({
     toast.success("Report submitted");
     onRelationshipChange?.();
   };
+
+  if (!isOpen || !advertiser) return null;
 
   return (
     <>
@@ -157,62 +170,111 @@ export const AdvertiserProfilePanel = ({
             <div className="bg-white/[0.03] border border-white/[0.06] p-3 rounded-lg">
               <div className="text-white/40 text-2xs uppercase tracking-wider mb-0.5">Average Rating</div>
               <div className="text-sm font-semibold text-white mt-1">
-                {rating > 0 ? `${rating.toFixed(1)} / 5.0` : "No rating"}
+                {averageRating > 0 ? `${averageRating.toFixed(1)} / 5.0` : "No rating"}
               </div>
             </div>
             <div className="bg-white/[0.03] border border-white/[0.06] p-3 rounded-lg">
-              <div className="text-white/40 text-2xs uppercase tracking-wider mb-0.5">30d Reviews</div>
-              <div className="text-sm font-semibold text-white mt-1">{feedback.recent.length}</div>
+              <div className="text-white/40 text-2xs uppercase tracking-wider mb-0.5">Total Reviews</div>
+              <div className="text-sm font-semibold text-white mt-1">
+                {reviewsQuery.isLoading ? "—" : totalReviews}
+              </div>
             </div>
           </div>
 
-          <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-3">Feedback (30d)</h3>
-            <div className="flex gap-3 mb-3">
+          <section aria-label="Advertiser reviews">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50">Advertiser Reviews</h3>
+              {reviewsQuery.isFetching && !reviewsQuery.isLoading && (
+                <span className="text-2xs text-white/40">Updating…</span>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-3 mb-3">
               <div className="flex items-center gap-1.5 text-buy text-xs font-semibold bg-buy/10 border border-buy/20 px-2.5 py-1 rounded-md">
                 <FaThumbsUp size={12} />
-                <span>{feedback.positive} Positive</span>
+                <span>{reviewData?.positiveCount ?? 0} Positive</span>
               </div>
               <div className="flex items-center gap-1.5 text-[#F6465D] text-xs font-semibold bg-[#F6465D]/10 border border-[#F6465D]/20 px-2.5 py-1 rounded-md">
                 <FaThumbsDown size={12} />
-                <span>{feedback.negative} Negative</span>
+                <span>{reviewData?.negativeCount ?? 0} Negative</span>
               </div>
             </div>
 
-            {feedback.recent.length === 0 ? (
+            {reviewsQuery.isLoading ? (
+              <div className="bg-white/[0.02] border border-white/[0.05] p-4 rounded-lg text-xs text-white/45 text-center">
+                Loading advertiser reviews…
+              </div>
+            ) : reviewsQuery.isError ? (
+              <div className="bg-white/[0.02] border border-white/[0.05] p-4 rounded-lg text-xs text-white/55 text-center">
+                <p>Unable to load reviews right now.</p>
+                <button
+                  type="button"
+                  onClick={() => reviewsQuery.refetch()}
+                  className="mt-2 text-primary hover:underline font-semibold"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : reviews.length === 0 ? (
               <div className="bg-white/[0.02] border border-white/[0.05] p-4 rounded-lg text-xs text-white/40 text-center">
-                No recent feedback has been submitted for this advertiser.
+                No reviews have been submitted for this advertiser yet.
               </div>
             ) : (
               <div className="space-y-2">
-                {feedback.recent.map((item) => (
-                  <div key={item.orderMatchId} className="bg-white/[0.03] border border-white/[0.06] p-3 rounded-lg text-xs">
+                {reviews.map((item) => (
+                  <article
+                    key={item.id || item.orderMatchId}
+                    className="bg-white/[0.03] border border-white/[0.06] p-3 rounded-lg text-xs"
+                  >
                     <div className="flex items-center gap-2 mb-1.5 text-white/40">
                       <span className={item.rating === "POSITIVE" ? "text-buy" : "text-[#F6465D]"}>
                         {item.rating === "POSITIVE" ? <FaThumbsUp size={11} /> : <FaThumbsDown size={11} />}
                       </span>
-                      <span className="font-medium text-white/70">{item.reviewerName}</span>
+                      <span className="font-medium text-white/70">{item.reviewerName || "Anonymous"}</span>
                       <span>·</span>
                       <span>{dayjs(item.createdAt).fromNow()}</span>
                     </div>
-                    <div className="text-white/80">{item.review || "No comment left."}</div>
-                    {item.tags.length > 0 && (
+                    <div className="text-white/80 break-words">{item.review || "No comment left."}</div>
+                    {!!item.tags?.length && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {item.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="px-2 py-0.5 rounded bg-white/[0.05] text-2xs text-white/50"
-                          >
+                          <span key={tag} className="px-2 py-0.5 rounded bg-white/[0.05] text-2xs text-white/50">
                             {tag}
                           </span>
                         ))}
                       </div>
                     )}
-                  </div>
+                  </article>
                 ))}
               </div>
             )}
-          </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-3">
+                <span className="text-2xs text-white/40">Page {reviewPage} of {totalPages}</span>
+                <div className="flex gap-2">
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    disabled={reviewPage <= 1 || reviewsQuery.isFetching}
+                    onClick={() => setReviewPage((page) => Math.max(1, page - 1))}
+                    className="!text-white/70 disabled:!opacity-40"
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    disabled={reviewPage >= totalPages || reviewsQuery.isFetching}
+                    onClick={() => setReviewPage((page) => Math.min(totalPages, page + 1))}
+                    className="!text-white/70 disabled:!opacity-40"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </section>
         </div>
       </Drawer>
 
