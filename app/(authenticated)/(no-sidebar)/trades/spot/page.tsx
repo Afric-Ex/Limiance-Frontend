@@ -694,7 +694,7 @@ function SpotTrades() {
             </div>
 
             {/* Mobile trading panel */}
-            <div className="shrink-0 px-3 pb-3">
+            <div className="w-full shrink-0 pb-3">
               <TradingPanel selectedPair={selectedPair} market="spot" mobile className="rounded min-h-[360px]" />
             </div>
           </div>
