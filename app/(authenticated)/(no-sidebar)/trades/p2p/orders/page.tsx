@@ -80,6 +80,8 @@ const resolveUserSide = (order: any, userId: string): "BUY" | "SELL" => {
     order?.matchedAs ?? order?.matched_as ?? ""
   ).toUpperCase();
 
+  if (matchedAs === "BUY" || matchedAs === "SELL") return matchedAs;
+
   const buyerId = norm(idOf(order?.buyerId ?? order?.buyer_id ?? order?.buyer));
   const sellerId = norm(idOf(order?.sellerId ?? order?.seller_id ?? order?.seller));
   const matcherId = norm(idOf(order?.matcherId ?? order?.matcher_id ?? order?.matcher));
@@ -91,7 +93,6 @@ const resolveUserSide = (order: any, userId: string): "BUY" | "SELL" => {
   if (uId && sellerId && sellerId === uId) return "SELL";
 
   if (uId && matcherId && matcherId === uId) {
-    if (matchedAs === "BUY" || matchedAs === "SELL") return matchedAs;
     if (adType === "BUY") return "SELL";
     if (adType === "SELL") return "BUY";
   }
@@ -99,7 +100,6 @@ const resolveUserSide = (order: any, userId: string): "BUY" | "SELL" => {
     if (adType === "BUY" || adType === "SELL") return adType as "BUY" | "SELL";
   }
 
-  if (matchedAs === "BUY" || matchedAs === "SELL") return matchedAs;
   return adType === "BUY" ? "BUY" : "SELL";
 };
 
@@ -154,7 +154,15 @@ function OrderHistoryPageInner() {
 
   const formatDate = (value: unknown) => {
     const d = parseDate(value);
-    return d ? d.toLocaleString() : "—";
+    if (!d) return "—";
+    return d.toLocaleString("en-US", {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+    });
   };
 
   return (

@@ -70,6 +70,19 @@ export const parseDate = (value: unknown): Date | null => {
     return normalizedDate;
   }
 
+  // Handles date-times without a zone (and single-digit hours). iOS Safari
+  // rejects several of these while desktop browsers accept them.
+  const compact = str.match(
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.(\d+))?\s*(?:UTC|GMT|Z)?$/i
+  );
+  if (compact) {
+    const [, year, month, day, hour, minute, second, frac] = compact;
+    const ms = Number((frac ?? "0").slice(0, 3).padEnd(3, "0"));
+    return new Date(
+      Date.UTC(+year, +month - 1, +day, +hour, +minute, +(second ?? 0), ms)
+    );
+  }
+
   // Handles Go-style backend format like "2026-10-15 13:39:35.123262 +0000 UTC"
   // (Safari and some browsers reject it in `new Date`, so parse the parts manually).
   const go = str.match(

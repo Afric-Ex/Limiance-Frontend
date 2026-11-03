@@ -107,6 +107,9 @@ function OrderRoomPageInner() {
   const adType = String(
     order?.type ?? order?.orderType ?? order?.order_type ?? originalOrder?.type ?? ""
   ).toUpperCase();
+  const matchedAs = String(
+    order?.matchedAs ?? order?.matched_as ?? originalOrder?.matchedAs ?? originalOrder?.matched_as ?? ""
+  ).toUpperCase();
 
   // The API returns `matcherId` but sometimes no flat buyer/seller/advertiser
   // id — fall back to the nested user objects.
@@ -233,6 +236,16 @@ function OrderRoomPageInner() {
         name.trim().toLowerCase() === currentUserName.trim().toLowerCase()
     );
   const counterpartyName = (() => {
+    const matchedSideName =
+      matchedAs === "SELL"
+        ? orderSellerName
+        : matchedAs === "BUY"
+          ? orderBuyerName
+          : "";
+    if (matchedSideName && !isCurrentUserName(matchedSideName)) {
+      return matchedSideName;
+    }
+
     const direct = counterpartyId ? nameById.get(counterpartyId) : "";
     if (direct && !isCurrentUserName(direct)) return direct;
     const resolved = [
