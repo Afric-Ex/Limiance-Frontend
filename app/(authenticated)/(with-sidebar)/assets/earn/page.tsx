@@ -15,8 +15,8 @@ import { Launchpad } from "@/src/components/earn/launchpad";
  * The page now has one clear hierarchy:
  * 1. Earn overview / primary action
  * 2. Live LIM wallet balance
- * 3. Product catalogue and positions
- * 4. Reward activity
+ * 3. Reward totals and recent activity
+ * 4. Product catalogue and positions
  * 5. Launchpad (upcoming features)
  *
  * The previous token-utility cards, featured-program cards and static
@@ -71,11 +71,11 @@ function EarnInner() {
         </div>
       </section>
 
+      <MyRewards />
+
       <EarnTab />
 
       <Launchpad />
-
-      <MyRewards />
     </main>
   );
 }

@@ -2,7 +2,6 @@
 
 import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput, Skeleton } from "@mantine/core";
 import React, { useState } from "react";
-import { EmptyTable } from "../icons/empty-table";
 import clsx from "clsx";
 import { Search } from "../icons/search";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,11 +9,12 @@ import { tradingKeys, tradingService } from "@/src/services/trading";
 import { cancelMarginOrderWs } from "@/src/lib/order-ws";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
+import { OrdersEmptyState } from "./orders-shared";
 
 const selectStyles = {
-  input: "!h-11 !rounded-xl !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !text-white !bg-[#181a20] !text-sm !font-medium !transition-all !duration-200",
+  input: "!h-10 !rounded-lg !border !border-white/[0.09] hover:!border-white/[0.16] focus:!border-primary/50 !text-white !bg-elevated !text-sm !font-medium !transition-colors",
   label: "!text-xs !font-semibold !text-white/40 !mb-1.5",
-  dropdown: "!bg-[#181a20] !border-white/[0.08]",
+  dropdown: "!bg-elevated !border-white/[0.08]",
   option: "hover:!bg-white/[0.04] !text-sm data-[checked]:!bg-primary/20 data-[checked]:!text-primary"
 };
 
@@ -87,7 +87,7 @@ export const MarginOpenOrders = () => {
   return (
     <div className="flex flex-col gap-6">
       {/* Top Filter Bar */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-end p-4 rounded-2xl bg-[#181a20] border border-white/[0.06] gap-6">
+      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
         <div className="flex flex-wrap gap-4 items-end">
           <Select
             label="Order Type"
@@ -148,7 +148,7 @@ export const MarginOpenOrders = () => {
       </div>
 
       {/* Table Section */}
-      <div className="min-h-[400px] rounded-2xl bg-[#181a20] border border-white/[0.06] overflow-hidden">
+      <div className="min-h-[260px] overflow-hidden border-y border-white/[0.08]">
         {isLoading ? (
           <div className="p-6 flex flex-col gap-4">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -159,7 +159,7 @@ export const MarginOpenOrders = () => {
           <div className="overflow-x-auto custom-scrollbar">
             <Table classNames={{ 
               table: "min-w-[900px]",
-              th: "!text-white/40 !uppercase !tracking-wider !text-xs !font-bold !border-b !border-white/[0.06] !py-4 !bg-[#181a20]", 
+              th: "!text-white/40 !uppercase !tracking-wider !text-xs !font-bold !border-b !border-white/[0.06] !py-4 !bg-surface",
               td: "!text-sm !py-4 !border-b !border-white/[0.04] !text-white/80 !font-medium",
               tr: "hover:!bg-white/[0.02] !transition-colors"
             }}>
@@ -225,10 +225,10 @@ export const MarginOpenOrders = () => {
             </Table>
           </div>
         ) : (
-          <div className="h-[400px] flex items-center justify-center flex-col gap-4 opacity-70">
-            <EmptyTable />
-            <span className="text-sm font-semibold text-white/40">No open orders right now.</span>
-          </div>
+          <OrdersEmptyState
+            title="No open margin orders"
+            description="Open margin orders will appear here when you place them."
+          />
         )}
       </div>
     </div>

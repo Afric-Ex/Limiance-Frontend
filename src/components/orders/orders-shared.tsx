@@ -3,8 +3,55 @@
 import { EmptyTable } from "../icons/empty-table";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { parseDate } from "@/src/lib/parse-date";
+import Link from "next/link";
+import { FiActivity, FiArrowUpRight } from "react-icons/fi";
 
 export { parseDate };
+
+export const OrdersPageFrame = ({
+  title,
+  description,
+  actionLabel = "Trade spot",
+  actionHref = "/trades/spot",
+  children,
+}: {
+  title: string;
+  description: string;
+  actionLabel?: string | null;
+  actionHref?: string;
+  children: React.ReactNode;
+}) => (
+  <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 pb-8 page-enter max-[1150px]:gap-4 max-[1150px]:pb-[90px]">
+    <header className="flex flex-wrap items-end justify-between gap-4 border-b border-white/[0.08] pb-5 max-[640px]:pb-4">
+      <div className="min-w-0">
+        <div className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          Account activity
+        </div>
+        <h1 className="text-[26px] font-semibold tracking-tight text-white max-[640px]:text-[22px]">{title}</h1>
+        <p className="mt-1 text-sm text-white/50">{description}</p>
+      </div>
+      {actionLabel && actionHref && (
+        <Link
+          href={actionHref}
+          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-primary-strong px-4 text-sm font-semibold text-white transition-colors hover:bg-primary"
+        >
+          {actionLabel}
+          <FiArrowUpRight aria-hidden="true" size={15} />
+        </Link>
+      )}
+    </header>
+    {children}
+  </main>
+);
+
+export const ordersTabsClassNames = {
+  root: "flex flex-col",
+  list: "!flex !w-full !min-w-0 !flex-nowrap !items-stretch gap-1 overflow-x-auto border-b border-white/[0.08] scrollbar-none",
+  tab: "!h-11 !shrink-0 !rounded-none !border-b-2 !border-transparent !px-4 !text-xs !font-semibold !text-white/45 transition-colors hover:!bg-transparent hover:!text-white/75 data-[active]:!border-primary data-[active]:!text-white sm:!px-5 sm:!text-sm",
+  tabLabel: "!whitespace-nowrap",
+  panel: "pt-5 max-[640px]:pt-4",
+};
 
 export const toNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
@@ -99,25 +146,25 @@ export const tableClassNames = {
 };
 
 export const selectStyles = {
-  input: "!h-10 !rounded-xl !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !text-white !bg-[#181a20] !text-sm !font-medium !transition-all !duration-200",
+  input: "!h-10 !rounded-lg !border !border-white/[0.09] hover:!border-white/[0.16] focus:!border-primary/50 !text-white !bg-elevated !text-sm !font-medium !transition-colors",
   label: "!text-xs !font-semibold !text-white/40 !mb-1.5",
-  dropdown: "!bg-[#181a20] !border-white/[0.08]",
+  dropdown: "!bg-elevated !border-white/[0.08]",
   option: "hover:!bg-white/[0.04] !text-sm data-[checked]:!bg-primary/20 data-[checked]:!text-primary",
 };
 
 export const dateStyles = {
-  input: "!h-10 !rounded-xl !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !text-white !bg-[#181a20] !text-sm !font-medium !transition-all !duration-200",
+  input: "!h-10 !rounded-lg !border !border-white/[0.09] hover:!border-white/[0.16] focus:!border-primary/50 !text-white !bg-elevated !text-sm !font-medium !transition-colors",
   label: "!text-xs !font-semibold !text-white/40 !mb-1.5",
   calendarHeader: "!text-white",
   day: "data-[selected]:!bg-primary hover:!bg-white/[0.04]",
 };
 
 export const searchInputClass = {
-  input: "!h-10 !bg-white/[0.04] hover:!bg-white/[0.06] focus:!bg-white/[0.08] !border !border-white/[0.08] focus:!border-primary/50 focus:!shadow-[0_0_10px_rgba(77,119,240,0.12)] !w-full sm:!w-[240px] !rounded-xl !transition-all placeholder:!text-white/20",
+  input: "!h-10 !bg-white/[0.035] hover:!bg-white/[0.05] focus:!bg-white/[0.05] !border !border-white/[0.08] focus:!border-primary/50 !w-full sm:!w-[240px] !rounded-lg !transition-colors placeholder:!text-white/30",
 };
 
 export const FilterBar = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-5 rounded-2xl bg-gradient-to-br from-white/[0.02] to-white/[0.005] border border-white/[0.08] backdrop-blur-sm">
+  <div className="flex flex-col justify-between gap-3 border-y border-white/[0.08] py-3 sm:flex-row sm:items-center">
     {children}
   </div>
 );
@@ -166,8 +213,8 @@ export const TableCard = ({
 }) => {
   if (loading) {
     return (
-      <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.02] to-white/[0.005] overflow-hidden backdrop-blur-sm">
-        <div className="flex flex-col gap-4 p-6">
+      <div className="overflow-hidden border-y border-white/[0.08]">
+        <div className="flex flex-col gap-3 py-5">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-12 w-full" />
           ))}
@@ -179,23 +226,59 @@ export const TableCard = ({
   if (!hasData) {
     return (
       <div
-        className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.02] to-white/[0.005] flex flex-col items-center justify-center gap-4 opacity-70 backdrop-blur-sm"
+        className="flex flex-col items-center justify-center gap-3 border-y border-white/[0.08] py-12 text-center"
         style={{ minHeight }}
       >
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] flex items-center justify-center">
-          <EmptyTable />
-        </div>
-        <span className="text-sm font-semibold text-white/40">{emptyTitle}</span>
+        <FiActivity aria-hidden="true" size={24} className="text-primary/75" strokeWidth={1.5} />
+        <span className="text-sm font-medium text-white/60">{emptyTitle}</span>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.02] to-white/[0.005] overflow-hidden backdrop-blur-sm">
+    <div className="overflow-hidden border-y border-white/[0.08]">
       <div className="overflow-x-auto custom-scrollbar">{children}</div>
     </div>
   );
 };
+
+export const OrdersEmptyState = ({
+  title,
+  description,
+  actionLabel,
+  actionHref,
+  onAction,
+}: {
+  title: string;
+  description: string;
+  actionLabel?: string;
+  actionHref?: string;
+  onAction?: () => void;
+}) => (
+  <div className="flex min-h-[280px] flex-col items-center justify-center px-5 py-12 text-center">
+    <FiActivity aria-hidden="true" size={27} className="mb-5 text-primary/80" strokeWidth={1.5} />
+    <h3 className="text-base font-semibold text-white">{title}</h3>
+    <p className="mt-2 max-w-sm text-sm leading-6 text-white/45">{description}</p>
+    {actionLabel && actionHref && (
+      <Link
+        href={actionHref}
+        className="mt-5 inline-flex h-9 items-center gap-2 rounded-lg bg-primary-strong px-4 text-xs font-semibold text-white transition-colors hover:bg-primary"
+      >
+        {actionLabel}
+        <FiArrowUpRight aria-hidden="true" size={14} />
+      </Link>
+    )}
+    {actionLabel && onAction && (
+      <button
+        type="button"
+        onClick={onAction}
+        className="mt-5 rounded-lg px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/[0.08]"
+      >
+        {actionLabel}
+      </button>
+    )}
+  </div>
+);
 
 export const EmptyState = ({ title }: { title: string }) => (
   <div className="flex h-[320px] flex-col items-center justify-center gap-4 opacity-70">

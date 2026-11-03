@@ -11,6 +11,7 @@ import {
   getAmount,
   getPair,
   getTotal,
+  OrdersEmptyState,
   selectStyles,
   searchInputClass,
   sideTone,
@@ -64,7 +65,7 @@ export const OrderHistory = () => {
         </span>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.07] bg-elevated p-3">
+      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
         <TextInput
           aria-label="Search order history by pair"
           classNames={searchInputClass}
@@ -80,7 +81,7 @@ export const OrderHistory = () => {
           value={side}
           onChange={(value) => setSide(value ?? "All")}
           classNames={selectStyles}
-          className="w-full sm:w-[132px]"
+          className="w-[116px] shrink-0"
         />
         <Select
           aria-label="Filter order history by status"
@@ -88,50 +89,65 @@ export const OrderHistory = () => {
           value={status}
           onChange={(value) => setStatus(value ?? "All")}
           classNames={selectStyles}
-          className="w-full sm:w-[150px]"
+          className="w-[132px] shrink-0"
         />
-        <button
-          type="button"
-          onClick={resetFilters}
-          disabled={!query && side === "All" && status === "All"}
-          className="h-10 rounded-lg px-3 text-xs font-semibold text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white disabled:cursor-default disabled:opacity-35"
-        >
-          Clear filters
-        </button>
+        {(query || side !== "All" || status !== "All") && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="h-9 shrink-0 rounded-lg px-2 text-xs font-semibold text-white/45 transition-colors hover:text-white"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
-      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No orders match these filters." minHeight={340}>
-        <Table classNames={tableClassNames}>
-          <TableThead>
-            <TableTr>
-              <TableTh className="pl-5">Time</TableTh>
-              <TableTh>Pair</TableTh>
-              <TableTh>Side</TableTh>
-              <TableTh>Type</TableTh>
-              <TableTh>Price</TableTh>
-              <TableTh>Amount</TableTh>
-              <TableTh>Filled</TableTh>
-              <TableTh>Total</TableTh>
-              <TableTh>Status</TableTh>
-            </TableTr>
-          </TableThead>
-          <TableTbody>
-            {filtered.map((order: any, index) => (
-              <TableTr key={order.id ?? order.orderId ?? `${getPair(order)}-${index}`}>
-                <TableTd className="pl-5 text-white/50">{fmtDate(order.createdAt ?? order.time)}</TableTd>
-                <TableTd className="!font-bold !text-white">{getPair(order)}</TableTd>
-                <TableTd className={sideTone(order.side)}>{String(order.side ?? "—").toUpperCase()}</TableTd>
-                <TableTd className="text-white/65">{order.type ?? "—"}</TableTd>
-                <TableTd className="font-mono tabular-nums">{fmtNum(order.price)}</TableTd>
-                <TableTd className="font-mono tabular-nums">{fmtNum(getAmount(order))}</TableTd>
-                <TableTd className="font-mono tabular-nums">{fmtNum(order.filled ?? order.filledQuantity ?? 0)}</TableTd>
-                <TableTd className="font-mono tabular-nums !text-white">{fmtNum(getTotal(order))}</TableTd>
-                <TableTd><StatusPill status={order.status} /></TableTd>
+      {isLoading || filtered.length > 0 ? (
+        <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="" minHeight={340}>
+          <Table classNames={tableClassNames}>
+            <TableThead>
+              <TableTr>
+                <TableTh className="pl-5">Time</TableTh>
+                <TableTh>Pair</TableTh>
+                <TableTh>Side</TableTh>
+                <TableTh>Type</TableTh>
+                <TableTh>Price</TableTh>
+                <TableTh>Amount</TableTh>
+                <TableTh>Filled</TableTh>
+                <TableTh>Total</TableTh>
+                <TableTh>Status</TableTh>
               </TableTr>
-            ))}
-          </TableTbody>
-        </Table>
-      </TableCard>
+            </TableThead>
+            <TableTbody>
+              {filtered.map((order: any, index) => (
+                <TableTr key={order.id ?? order.orderId ?? `${getPair(order)}-${index}`}>
+                  <TableTd className="pl-5 text-white/50">{fmtDate(order.createdAt ?? order.time)}</TableTd>
+                  <TableTd className="!font-bold !text-white">{getPair(order)}</TableTd>
+                  <TableTd className={sideTone(order.side)}>{String(order.side ?? "—").toUpperCase()}</TableTd>
+                  <TableTd className="text-white/65">{order.type ?? "—"}</TableTd>
+                  <TableTd className="font-mono tabular-nums">{fmtNum(order.price)}</TableTd>
+                  <TableTd className="font-mono tabular-nums">{fmtNum(getAmount(order))}</TableTd>
+                  <TableTd className="font-mono tabular-nums">{fmtNum(order.filled ?? order.filledQuantity ?? 0)}</TableTd>
+                  <TableTd className="font-mono tabular-nums !text-white">{fmtNum(getTotal(order))}</TableTd>
+                  <TableTd><StatusPill status={order.status} /></TableTd>
+                </TableTr>
+              ))}
+            </TableTbody>
+          </Table>
+        </TableCard>
+      ) : (
+        <OrdersEmptyState
+          title={orders.length === 0 ? "No spot orders yet" : "No orders match these filters"}
+          description={
+            orders.length === 0
+              ? "Your completed and cancelled spot orders will be recorded here."
+              : "Adjust your search or filters to find the order you're looking for."
+          }
+          actionLabel={orders.length === 0 ? "Place a spot trade" : "Clear filters"}
+          actionHref={orders.length === 0 ? "/trades/spot" : undefined}
+          onAction={orders.length > 0 ? resetFilters : undefined}
+        />
+      )}
     </section>
   );
 };

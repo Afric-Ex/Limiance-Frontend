@@ -1,22 +1,19 @@
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@mantine/core";
-import classes from "@/src/styles/assets-margin.module.css";
 import { FiatBuySell } from "@/src/components/orders/fiat-buy-sell";
 import { FiatDeposit } from "@/src/components/orders/fiat-deposit";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { FiatOrdersSkeleton } from "@/src/components/skeletons/orders";
-import { OrdersPageHeader } from "@/src/components/orders/orders-page-header";
-import { MdOutlineAccountBalanceWallet } from "react-icons/md";
+import { OrdersPageFrame, ordersTabsClassNames } from "@/src/components/orders/orders-shared";
 
 function FiatOrdersInner() {
   return (
-    <main className="flex flex-col gap-8 page-enter max-[1150px]:gap-6">
-      <OrdersPageHeader
-        icon={<MdOutlineAccountBalanceWallet size={24} />}
-        title="Fiat Orders"
-        description="Fiat buy/sell orders and deposit / withdrawal records"
-      />
-
-      <Tabs classNames={classes} defaultValue="buy">
+    <OrdersPageFrame
+      title="Fiat orders"
+      description="Review fiat purchases, sales, deposits and withdrawals."
+      actionLabel="Buy crypto"
+      actionHref="/buy-crypto"
+    >
+      <Tabs classNames={ordersTabsClassNames} defaultValue="buy">
         <TabsList>
           <TabsTab value="buy">Buy (Sell)</TabsTab>
           <TabsTab value="deposit">Deposit (Withdraw)</TabsTab>
@@ -29,7 +26,7 @@ function FiatOrdersInner() {
           <FiatDeposit />
         </TabsPanel>
       </Tabs>
-    </main>
+    </OrdersPageFrame>
   );
 }
 
