@@ -10,7 +10,7 @@ import { useLimWallet } from "@/src/hooks/use-lim-wallet";
 import { LIM_SYMBOL, formatAmount } from "@/src/lib/lim";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
-import { MdSwapHoriz, MdShoppingCart, MdArrowOutward, MdVisibilityOff } from "react-icons/md";
+import { MdSwapHoriz, MdShoppingCart, MdArrowOutward } from "react-icons/md";
 import { FaCircle } from "react-icons/fa6";
 
 const SEGMENTS = [

@@ -647,6 +647,21 @@ function MobileRow({ label, value, valueClass }: { label: string; value: React.R
   );
 }
 
+// The API overloads `type` with the market ("spot"/"futures"), not the order
+// type, so ignore those values and keep only a real order type when present.
+const MARKET_TYPES = new Set(["spot", "futures", "margin", "cross", "isolated"]);
+const getOrderType = (order: any) => {
+  const raw = String(order?.orderType ?? order?.order_type ?? "").toLowerCase();
+  if (raw && !MARKET_TYPES.has(raw)) return raw;
+  const t = String(order?.type ?? "").toLowerCase();
+  return MARKET_TYPES.has(t) ? "" : t;
+};
+const hasConditional = (order: any) =>
+  Number(order?.takeProfit) > 0 ||
+  Number(order?.stopLoss) > 0 ||
+  Number(order?.tp_trigger_price) > 0 ||
+  Number(order?.sl_trigger_price) > 0;
+
 // Table Components
 function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mobile }: any) {
   const formatOrderNumber = (value: unknown) => {
@@ -662,21 +677,6 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
   const getOrderPair = (order: any) =>
     order?.pair ||
     (order?.base && order?.quote ? `${order.base}/${order.quote}` : order?.symbol || "—");
-
-  // The API overloads `type` with the market ("spot"/"futures"), not the order
-  // type, so ignore those values and keep only a real order type when present.
-  const MARKET_TYPES = new Set(["spot", "futures", "margin", "cross", "isolated"]);
-  const getOrderType = (order: any) => {
-    const raw = String(order?.orderType ?? order?.order_type ?? "").toLowerCase();
-    if (raw && !MARKET_TYPES.has(raw)) return raw;
-    const t = String(order?.type ?? "").toLowerCase();
-    return MARKET_TYPES.has(t) ? "" : t;
-  };
-  const hasConditional = (order: any) =>
-    Number(order?.takeProfit) > 0 ||
-    Number(order?.stopLoss) > 0 ||
-    Number(order?.tp_trigger_price) > 0 ||
-    Number(order?.sl_trigger_price) > 0;
   const getOrderTypeLabel = (order: any) => {
     const type = getOrderType(order);
     if (type) return type.replace(/^(buy|sell|long|short)_/, "");
