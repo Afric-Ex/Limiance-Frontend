@@ -272,7 +272,24 @@ function OrderHistoryPageInner() {
                 advertiserName ||
                 matcherName;
               // Counterparty is the other side of the trade from the user's side.
-              const counterparty = userSide === "BUY" ? sellerName : buyerName;
+              const matcherId = idOf(order?.matcherId ?? order?.matcher_id ?? order?.matcher);
+              const matchedAs = String(order?.matchedAs ?? order?.matched_as ?? "").toUpperCase();
+              const isCurrentUserMatcher = Boolean(
+                currentUserId && matcherId && matcherId.toLowerCase() === currentUserId.toLowerCase()
+              );
+              // A matcher is the taker: when they matched a SELL ad, show the
+              // buyer; when they matched a BUY ad, show the seller.
+              const counterparty = isCurrentUserMatcher
+                ? matchedAs === "SELL"
+                  ? buyerName
+                  : matchedAs === "BUY"
+                    ? sellerName
+                    : userSide === "BUY"
+                      ? sellerName
+                      : buyerName
+                : userSide === "BUY"
+                  ? sellerName
+                  : buyerName;
               const isBuy = userSide === "BUY";
               const coinIcon = getCryptoIcon(String(asset ?? ""));
               const orderRef = String(order.orderId ?? order.id ?? "—");

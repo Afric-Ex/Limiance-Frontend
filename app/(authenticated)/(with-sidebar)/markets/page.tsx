@@ -10,7 +10,7 @@ import { useMarketFeed } from "@/src/hooks/use-market-feed";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { MarketsPageSkeleton } from "@/src/components/skeletons/with-sidebar";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 
 type TokenRow = {
@@ -142,7 +142,7 @@ function MarketsPageInner() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const feed = useMarketFeed("BTC/USDT");
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const queryClient = useQueryClient();
   const [mainTab, setMainTab] = useState<"favorites" | "spot" | "margin" | "futures" | "derivatives" | "tradfi" | "newly-listed">("spot");
   const [spotQuoteTab, setSpotQuoteTab] = useState<string>("All");
   
@@ -161,23 +161,54 @@ function MarketsPageInner() {
     staleTime: 10 * 60_000, // Cache for 10 minutes
   });
 
+  const listedTokens = listedTokensData?.data ?? [];
+
   const tokenLogos = useMemo(() => {
     const logos: Record<string, string> = {};
-    const tokens = listedTokensData?.data || [];
-    tokens.forEach((t: any) => {
-      if (t.symbol && t.logo) {
-        logos[t.symbol.toUpperCase()] = t.logo;
-      }
+    listedTokens.forEach((token: any) => {
+      if (token.symbol && token.logo) logos[String(token.symbol).toUpperCase()] = token.logo;
     });
     return logos;
-  }, [listedTokensData]);
+  }, [listedTokens]);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("market_favorites");
-    if (stored) {
-      try { setFavorites(JSON.parse(stored)); } catch (_e) {}
-    }
-  }, []);
+  // The quote/base filters are driven by the same listed-token registry as token logos.
+  const spotBaseFilters = useMemo(() => {
+    const symbols = listedTokens
+      .map((token: any) => String(token.symbol ?? token.base ?? "").trim().toUpperCase())
+      .filter(Boolean);
+    return ["All", ...Array.from(new Set(symbols)).sort()];
+  }, [listedTokens]);
+
+  const favoritesQuery = useQuery({
+    queryKey: ["trading-favorites"],
+    queryFn: () => tradingService.getFavorites(),
+    staleTime: 30_000,
+  });
+
+  const favorites = useMemo(() => {
+    const response: any = favoritesQuery.data;
+    const rows = Array.isArray(response) ? response
+      : Array.isArray(response?.data) ? response.data
+      : Array.isArray(response?.data?.favorites) ? response.data.favorites
+      : Array.isArray(response?.data?.items) ? response.data.items
+      : Array.isArray(response?.favorites) ? response.favorites
+      : [];
+    return rows.map((item: any) => {
+      const raw = typeof item === "string" ? item : item?.symbol ?? item?.pair ?? item?.market;
+      return String(raw ?? "").toUpperCase();
+    }).filter(Boolean);
+  }, [favoritesQuery.data]);
+
+  const isFavoritePair = useCallback((pair: string) => {
+    const compactPair = pair.replace(/[\/_-]/g, "").toUpperCase();
+    return favorites.some((favorite) => favorite.replace(/[\/_-]/g, "").toUpperCase() === compactPair);
+  }, [favorites]);
+
+  const favoriteMutation = useMutation({
+    mutationFn: ({ pair, isFavorite }: { pair: string; isFavorite: boolean }) =>
+      isFavorite ? tradingService.removeFavorite(pair) : tradingService.addFavorite(pair),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trading-favorites"] }),
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -197,11 +228,8 @@ function MarketsPageInner() {
 
   const toggleFav = (pair: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setFavorites(prev => {
-      const next = prev.includes(pair) ? prev.filter(p => p !== pair) : [...prev, pair];
-      localStorage.setItem("market_favorites", JSON.stringify(next));
-      return next;
-    });
+    const isFavorite = isFavoritePair(pair);
+    favoriteMutation.mutate({ pair, isFavorite });
   };
 
   const normaliseRow = useCallback((m: any): TokenRow => {
@@ -243,12 +271,12 @@ function MarketsPageInner() {
   const activeRows = useMemo(() => {
     let list: TokenRow[] = [];
     if (mainTab === "favorites") {
-      list = spotTokens.filter(t => favorites.includes(t.pair));
+      list = spotTokens.filter(t => isFavoritePair(t.pair));
     } else if (mainTab === "spot") {
       if (spotQuoteTab === "All") {
         list = spotTokens;
       } else {
-        list = spotTokens.filter(t => t.pair.endsWith(`/${spotQuoteTab}`));
+        list = spotTokens.filter(t => t.symbol === spotQuoteTab);
       }
     } else if (mainTab === "margin" || mainTab === "futures") {
       // Margin / Futures tabs list the same pairs as Spot; only the trade
@@ -265,7 +293,7 @@ function MarketsPageInner() {
     }
 
     return list;
-  }, [mainTab, spotQuoteTab, spotTokens, favorites, search]);
+  }, [mainTab, spotQuoteTab, spotTokens, isFavoritePair, search]);
 
   const totalPages = Math.ceil(activeRows.length / ITEMS_PER_PAGE) || 1;
   const paginatedRows = useMemo(() => {
@@ -363,14 +391,12 @@ function MarketsPageInner() {
         {/* Tier 2 Spot Sub-tabs */}
         {mainTab === "spot" && (
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1 border-b border-transparent">
-            {[
-              "All", "USDC", "USDT", "USDE", "MNT", "USD1", "EUR", "BRL", "PLN", "TRY", "SOL", "BTC", "ETH", "XUSD", "RLUSD", "USD"
-            ].map((quote) => {
-              const active = spotQuoteTab === quote;
+            {spotBaseFilters.map((base) => {
+              const active = spotQuoteTab === base;
               return (
                 <button
-                  key={quote}
-                  onClick={() => setSpotQuoteTab(quote)}
+                  key={base}
+                  onClick={() => setSpotQuoteTab(base)}
                   className={clsx(
                     "px-3 py-1 rounded-md text-xs font-semibold tracking-wide transition-all shrink-0",
                     active
@@ -378,7 +404,7 @@ function MarketsPageInner() {
                       : "bg-transparent text-white/40 hover:text-white/75 border border-transparent"
                   )}
                 >
-                  {quote}
+                  {base}
                 </button>
               );
             })}
@@ -423,7 +449,7 @@ function MarketsPageInner() {
                 </tr>
               ) : (
                 paginatedRows.map((token) => {
-                  const isFav = favorites.includes(token.pair);
+                  const isFav = isFavoritePair(token.pair);
                   const hasData = token.price > 0;
                   const isUp = token.change >= 0;
                   const [, quote] = token.pair.split("/");
@@ -436,12 +462,16 @@ function MarketsPageInner() {
                       className="hover:bg-white/[0.02] cursor-pointer transition-colors"
                     >
                       {/* Favorite */}
-                      <td className="py-3 pl-4 w-10" onClick={(e) => toggleFav(token.pair, e)}>
-                        {isFav ? (
-                          <MdStar size={16} className="text-yellow-500 hover:scale-115 transition-transform" />
-                        ) : (
-                          <MdStarBorder size={16} className="text-white/20 hover:text-white/60 transition-colors" />
-                        )}
+                      <td className="py-3 pl-4 w-10">
+                        <button
+                          type="button"
+                          aria-label={isFav ? `Remove ${token.pair} from favorites` : `Add ${token.pair} to favorites`}
+                          disabled={favoriteMutation.isPending}
+                          onClick={(e) => toggleFav(token.pair, e)}
+                          className="p-1 disabled:opacity-50"
+                        >
+                          {isFav ? <MdStar size={16} className="text-yellow-500 hover:scale-115 transition-transform" /> : <MdStarBorder size={16} className="text-white/20 hover:text-white/60 transition-colors" />}
+                        </button>
                       </td>
 
                       {/* Coin */}
@@ -551,11 +581,15 @@ function MarketsPageInner() {
               const hasData = token.price > 0;
               const isUp = token.change >= 0;
               const [, quote] = token.pair.split("/");
+              const isFav = isFavoritePair(token.pair);
               return (
-                <button
+                <div
                   key={token.pair}
                   onClick={() => goTrade(token.pair)}
-                  className="flex items-center justify-between w-full py-4 text-left active:bg-white/[0.02]"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") goTrade(token.pair); }}
+                  className="flex items-center justify-between w-full py-4 text-left active:bg-white/[0.02] cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     {token.image ? (
@@ -580,7 +614,17 @@ function MarketsPageInner() {
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      aria-label={isFav ? `Remove ${token.pair} from favorites` : `Add ${token.pair} to favorites`}
+                      disabled={favoriteMutation.isPending}
+                      onClick={(event) => toggleFav(token.pair, event)}
+                      className="p-2 disabled:opacity-50"
+                    >
+                      {isFav ? <MdStar size={18} className="text-yellow-500" /> : <MdStarBorder size={18} className="text-white/30" />}
+                    </button>
+                    <div className="text-right">
                     <p className="text-sm font-bold text-white tabular-nums">
                       {hasData ? `$${token.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: token.price > 100 ? 2 : 4 })}` : "-"}
                     </p>
@@ -594,8 +638,9 @@ function MarketsPageInner() {
                     ) : (
                       <span className="inline-block text-micro font-bold px-1.5 py-0.5 rounded mt-1 text-white/40">-</span>
                     )}
+                    </div>
                   </div>
-                </button>
+                </div>
               );
             })
           )}

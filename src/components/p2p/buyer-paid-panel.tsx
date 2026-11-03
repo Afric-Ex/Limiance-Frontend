@@ -7,6 +7,7 @@ interface BuyerPaidPanelProps {
   quantity: number;
   asset: string;
   updatedAt: string;
+  deadlineStr?: string;
   onDisputeOpen: () => void;
 }
 
@@ -15,24 +16,25 @@ export function BuyerPaidPanel({
   quantity,
   asset,
   updatedAt,
+  deadlineStr: propDeadlineStr,
   onDisputeOpen,
 }: BuyerPaidPanelProps) {
   const [secondsLeft, setSecondsLeft] = React.useState(0);
 
-  const deadlineStr = updatedAt
+  const effectiveDeadlineStr = propDeadlineStr || (updatedAt
     ? new Date(new Date(updatedAt).getTime() + 15 * 60000).toISOString()
-    : new Date(Date.now() + 900000).toISOString();
+    : new Date(Date.now() + 900000).toISOString());
 
   React.useEffect(() => {
-    const end = new Date(deadlineStr).getTime();
+    const end = new Date(effectiveDeadlineStr).getTime();
     const tick = () => {
-      const diff = Math.floor((end - Date.now()) / 1000);
+      const diff = Math.max(0, Math.floor((end - Date.now()) / 1000));
       setSecondsLeft(diff);
     };
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [deadlineStr]);
+  }, [effectiveDeadlineStr]);
 
   const mins = Math.max(0, Math.floor(secondsLeft / 60));
   const secs = Math.max(0, secondsLeft % 60);

@@ -267,7 +267,15 @@ export const EarnTab = ({
         )}
       </Modal>
 
-      <div className="flex gap-4 border-b border-b-white/15 mb-4">
+      <section id="earn-products" className="flex flex-col gap-5 rounded-2xl border border-white/[0.07] bg-[#181a20] p-5 sm:p-6">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight text-white">Earn products</h2>
+          <p className="mt-1 text-xs text-white/45">Explore available products or review your active subscriptions.</p>
+        </div>
+        <span className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35 sm:mt-0">Limiance Earn</span>
+      </div>
+      <div className="flex gap-5 border-b border-white/[0.08]">
         {mainTabs.map((tab) => (
           <button
             key={tab}
@@ -302,15 +310,15 @@ export const EarnTab = ({
           {/* Simple Earn & Staking tabs — render live backend earn products */}
           {(productTab === "Simple Earn" || productTab === "Staking") && (
             <TabsPanel value={productTab}>
-              <div className="py-5 min-h-[292px] border border-gray-9 rounded-32px bg-gray-7 px-7 pb-9">
+              <div className="min-h-[250px] rounded-xl border border-white/[0.07] bg-[#111419] px-4 py-5 sm:px-5">
                 {tabProducts.length > 0 ? (
                   <div className="grid grid-cols-1 gap-4">
                     {tabProducts.map((product) => (
                         <div
                           key={product.id}
-                          className="flex items-center justify-between p-4 bg-gray-15/10 rounded-xl border border-white/10"
+                          className="flex flex-col gap-4 rounded-xl border border-white/[0.07] bg-[#191e26] p-4 transition-colors hover:border-white/[0.13] sm:flex-row sm:items-center sm:justify-between"
                         >
-                          <div className="flex items-center gap-4">
+                          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                             <ProductIcon image={product.image} asset={product.asset} />
                             <div className="flex flex-col gap-1">
                               <span className="font-semibold text-white">{product.name} ({product.asset})</span>
@@ -319,7 +327,7 @@ export const EarnTab = ({
                               </span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-8">
+                          <div className="flex items-center justify-between gap-4 sm:justify-end sm:gap-8">
                             <div className="flex flex-col gap-1 text-right">
                               <span className="text-emerald-400 font-semibold">{product.apy}% APY</span>
                               <span className="text-xs text-white/55">Min: {product.minAmount} {product.asset}</span>
@@ -329,7 +337,7 @@ export const EarnTab = ({
                                 setSelectedProduct(product);
                                 openStake();
                               }}
-                              className="bg-primary hover:bg-primary/90 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors"
+                              className="min-h-10 shrink-0 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
                             >
                               {product.lockDays > 0 ? "Stake" : "Subscribe"}
                             </button>
@@ -356,7 +364,7 @@ export const EarnTab = ({
           {/* Remaining tabs — keep structured placeholder layout */}
           {productTabs.slice(2).map((item) => (
             <TabsPanel key={item} value={item}>
-              <div className="py-5 min-h-[292px] border border-gray-9 rounded-32px bg-gray-7 px-7 pb-9">
+              <div className="min-h-[250px] rounded-xl border border-white/[0.07] bg-[#111419] px-4 py-5 sm:px-5">
                 <div className="flex flex-col h-full gap-5">
                   <div className="flex flex-col">
                     <div className="self-end">
@@ -388,7 +396,7 @@ export const EarnTab = ({
       )}
 
       {mainTab === "My Positions" && (
-        <div className="py-5 min-h-[292px] border border-gray-9 rounded-32px bg-gray-7 px-7 pb-9 flex flex-col gap-6">
+        <div className="flex min-h-[250px] flex-col gap-5 rounded-xl border border-white/[0.07] bg-[#111419] px-4 py-5 sm:px-5">
           {/* Summary metrics bar */}
           {rewardsData && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-white/[0.02] border border-white/10 rounded-xl">
@@ -422,7 +430,7 @@ export const EarnTab = ({
                 return (
                   <div
                     key={pos.id}
-                    className="flex items-center justify-between p-4 bg-gray-15/10 rounded-xl border border-white/10"
+                    className="flex flex-col gap-4 rounded-xl border border-white/[0.07] bg-[#191e26] p-4 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-4">
                       <ProductIcon image={pos.image} asset={pos.asset} />
@@ -433,7 +441,7 @@ export const EarnTab = ({
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-8">
+                    <div className="flex flex-wrap items-center justify-between gap-4 sm:justify-end sm:gap-6">
                       <div className="flex flex-col gap-1 text-right">
                         <span className="font-semibold text-white font-mono">{pos.amount} {pos.asset}</span>
                         <span className="text-xs text-emerald-400">+{pos.earned} earned</span>
@@ -465,6 +473,7 @@ export const EarnTab = ({
           )}
         </div>
       )}
+      </section>
     </>
   );
 };

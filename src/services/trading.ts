@@ -56,6 +56,21 @@ export const tradingKeys = {
 } as const;
 
 export const tradingService = {
+  getFavorites: async () => {
+    const response = await api.get("trading/favorites");
+    return response.data;
+  },
+
+  addFavorite: async (symbol: string) => {
+    const response = await api.post(`trading/favorites/${encodeURIComponent(symbol)}`);
+    return response.data;
+  },
+
+  removeFavorite: async (symbol: string) => {
+    const response = await api.delete(`trading/favorites/${encodeURIComponent(symbol)}`);
+    return response.data;
+  },
+
   orderBooks: async (): Promise<ApiResponse<OrderBooksResponse>> => {
     const response = await api.get("trading/order_books");
     return response.data;
