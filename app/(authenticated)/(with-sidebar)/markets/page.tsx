@@ -161,7 +161,7 @@ function MarketsPageInner() {
     staleTime: 10 * 60_000, // Cache for 10 minutes
   });
 
-  const listedTokens = listedTokensData?.data ?? [];
+  const listedTokens = useMemo(() => listedTokensData?.data ?? [], [listedTokensData?.data]);
 
   const tokenLogos = useMemo(() => {
     const logos: Record<string, string> = {};

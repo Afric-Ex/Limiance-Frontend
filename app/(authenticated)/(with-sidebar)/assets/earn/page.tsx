@@ -7,6 +7,7 @@ import { RewardNotificationBanner } from "@/src/components/earn/reward-notificat
 import { LimBalanceCard } from "@/src/components/earn/lim-balance-card";
 import { MyRewards } from "@/src/components/earn/my-rewards";
 import { EarnTab } from "@/src/components/assets/earn-tab";
+import { Launchpad } from "@/src/components/earn/launchpad";
 
 /**
  * Limiance Earn dashboard.
@@ -16,6 +17,7 @@ import { EarnTab } from "@/src/components/assets/earn-tab";
  * 2. Live LIM wallet balance
  * 3. Product catalogue and positions
  * 4. Reward activity
+ * 5. Launchpad (upcoming features)
  *
  * The previous token-utility cards, featured-program cards and static
  * product-preview tabs repeated the same destinations and product names.
@@ -37,7 +39,7 @@ function EarnInner() {
             <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
               Earn with confidence
             </span>
-            <h2 className="max-w-lg text-xl font-semibold leading-snug tracking-tight text-white sm:text-2xl">
+            <h2 className="max-w-lg text-lg font-semibold leading-snug tracking-tight text-white sm:text-xl">
               Choose a strategy that fits the way you manage your assets.
             </h2>
             <p className="max-w-xl text-sm leading-6 text-white/50">
@@ -70,6 +72,8 @@ function EarnInner() {
       </section>
 
       <EarnTab />
+
+      <Launchpad />
 
       <MyRewards />
     </main>

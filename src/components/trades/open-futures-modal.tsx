@@ -15,7 +15,7 @@ interface OpenFuturesModalProps {
 }
 
 export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) => {
-  const { setUser, user } = useUserStore();
+  const { fetchUser } = useUserStore();
   const [checked, setChecked] = useState(false);
   const [checked2, setChecked2] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,7 +27,8 @@ export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) =
     try {
       await tradingService.acceptFutures();
       toast.success("Futures Account activated successfully!");
-      if (user) setUser({ ...user, isFuturesAccepted: true });
+      // Refetch user data from backend to ensure isFuturesAccepted is updated
+      await fetchUser();
       onConfirm();
       modals.closeAll();
     } catch (error: any) {

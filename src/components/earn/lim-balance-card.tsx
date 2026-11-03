@@ -94,7 +94,7 @@ export function LimBalanceCard() {
               <p className="text-sm font-semibold text-white/80">Limiance Token</p>
             </div>
           </div>
-          <Link href="/assets" className="flex items-center gap-1 text-xs font-semibold text-primary transition-colors hover:text-primary/80">
+          <Link href="/assets/overview" className="flex items-center gap-1 text-xs font-semibold text-primary transition-colors hover:text-primary/80">
             View assets <MdArrowOutward size={13} />
           </Link>
         </div>
@@ -102,14 +102,14 @@ export function LimBalanceCard() {
         {/* Balance headline */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-baseline gap-2.5">
-            <span className="text-[42px] leading-none font-extrabold tracking-tight text-white tabular-nums max-[1150px]:text-3xl">
+            <span className="text-3xl leading-none font-extrabold tracking-tight text-white tabular-nums sm:text-2xl max-[1150px]:text-2xl">
               {isLoading ? (
                 <span className="skeleton inline-block h-10 w-44 rounded align-middle" />
               ) : (
                 <BalanceCloak balance={available} />
               )}
             </span>
-            <span className="text-xl font-bold text-white/40">{LIM_SYMBOL}</span>
+            <span className="text-lg font-bold text-white/40 sm:text-base">{LIM_SYMBOL}</span>
           </div>
           {usdtValue != null && (
             <p className="flex items-center gap-2 text-sm text-white/50">

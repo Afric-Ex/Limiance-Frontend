@@ -621,16 +621,17 @@ function SpotTrades() {
 
           </div>
         ) : (
-          // --- TRADE VIEW ---
-          <div className="flex flex-col flex-1 overflow-auto custom-scrollbar pb-[65px]">
-            <div className="flex bg-[#181a20] shrink-0">
-              {/* Left Side: Trade Form */}
-              <div className="w-full">
+          // --- TRADE VIEW: Side-by-side PlaceSpot (Left) and OrderBook (Right) ---
+          <div className="flex flex-col flex-1 min-h-0 bg-[#181a20] pb-[65px]">
+            {/* Main content area: side-by-side layout */}
+            <div className="flex flex-1 min-h-0 gap-3 p-3 overflow-hidden">
+              {/* LEFT: Place Spot (60% width) */}
+              <div className="flex-[1.5] flex flex-col min-w-0 bg-[#181a20] rounded-xl border border-white/[0.06] overflow-hidden">
                 <Tabs
                   classNames={{
-                    tab: "!py-3 !px-2 flex-1 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-white !border-b-[2px] !border-transparent !rounded-none font-bold text-xs text-white/40",
-                    list: "border-b border-white/[0.06] flex items-center before:!border-0 w-full mb-3",
-                    panel: "!px-3 !pb-4",
+                    tab: "!py-3 !px-3 flex-1 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-white !border-b-[2px] !border-transparent !rounded-none font-bold text-xs text-white/40",
+                    list: "border-b border-white/[0.06] flex items-center before:!border-0 w-full",
+                    panel: "!p-3 flex-1 overflow-y-auto custom-scrollbar",
                   }}
                   value={quickOrderSide}
                   onChange={(v) => setQuickOrderSide(v as "buy"|"sell")}
@@ -648,70 +649,30 @@ function SpotTrades() {
                 </Tabs>
               </div>
 
-              {/* Right Side: Stacked Order Book */}
-              <div className="hidden">
-                <div className="flex justify-between text-2xs text-white/40 mb-2 px-1">
-                  <span>Price</span><span>Qty</span>
-                </div>
-                {/* Asks */}
-                <div className="flex flex-col justify-end flex-1 overflow-hidden gap-[2px]">
-                  {[...orderBook.sellOrders].reverse().slice(-10).map((order, i) => {
-                    const w = Math.min((order.quantity / maxAskVol) * 100, 100);
-                    return (
-                      <div key={`ask-${i}`} onClick={() => setClickedPrice(order.price)} className="flex justify-between relative py-0.5 px-1 cursor-pointer">
-                        <div className="absolute top-0 right-0 bottom-0 bg-error-1/[0.08]" style={{ width: `${w}%` }} />
-                        <span className="text-micro font-mono text-error-1 z-10">{order.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                        <span className="text-micro font-mono text-white/80 z-10">{order.quantity.toFixed(4)}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-                
-                {/* Current Price */}
-                <div className="py-2 px-1 flex flex-col my-1">
-                  <span className={clsx("text-caption font-bold font-mono", changeColor)}>
-                    {effectiveMarketPrice !== null ? formatPrice(effectiveMarketPrice) : "—"}
-                  </span>
-                  <span className="text-2xs text-white/40">
-                    ${effectiveMarketPrice !== null ? formatPrice(effectiveMarketPrice) : "—"}
-                  </span>
-                </div>
-
-                {/* Bids */}
-                <div className="flex flex-col flex-1 overflow-hidden gap-[2px]">
-                  {orderBook.buyOrders.slice(0, 10).map((order, i) => {
-                    const w = Math.min((order.quantity / maxBidVol) * 100, 100);
-                    return (
-                      <div key={`bid-${i}`} onClick={() => setClickedPrice(order.price)} className="flex justify-between relative py-0.5 px-1 cursor-pointer">
-                        <div className="absolute top-0 right-0 bottom-0 bg-success-6/[0.08]" style={{ width: `${w}%` }} />
-                        <span className="text-micro font-mono text-success-6 z-10">{order.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                        <span className="text-micro font-mono text-white/80 z-10">{order.quantity.toFixed(4)}</span>
-                      </div>
-                    )
-                  })}
-                </div>
+              {/* RIGHT: Order Book (40% width) */}
+              <div className="flex-1 flex flex-col min-w-0 rounded-xl border border-white/[0.06] overflow-hidden">
+                <OrderBookTabs
+                  className="flex-1 min-h-0"
+                  buyOrders={orderBook.buyOrders}
+                  sellOrders={orderBook.sellOrders}
+                  recentTrades={recentTrades}
+                  recentTradesLoading={recentTradesLoading}
+                  base={base}
+                  quote={quote}
+                  currentPrice={feed.price}
+                  buyPercentage={orderBook.buyPercentage}
+                  sellPercentage={orderBook.sellPercentage}
+                  isConnected={orderBook.isConnected}
+                  lastUpdated={orderBook.lastUpdated}
+                  onSelectPrice={setClickedPrice}
+                />
               </div>
             </div>
 
-            <OrderBookTabs
-              className="min-[1150px]:hidden shrink-0"
-              fixedHeight={320}
-              buyOrders={orderBook.buyOrders}
-              sellOrders={orderBook.sellOrders}
-              recentTrades={recentTrades}
-              recentTradesLoading={recentTradesLoading}
-              base={base}
-              quote={quote}
-              currentPrice={chartLastPrice ?? feed.price}
-              buyPercentage={orderBook.buyPercentage}
-              sellPercentage={orderBook.sellPercentage}
-              isConnected={orderBook.isConnected}
-              lastUpdated={orderBook.lastUpdated}
-              onSelectPrice={setClickedPrice}
-            />
-
             {/* Mobile trading panel */}
-            <TradingPanel selectedPair={selectedPair} market="spot" mobile className="rounded mt-2 min-h-[420px]" />
+            <div className="shrink-0 px-3 pb-3">
+              <TradingPanel selectedPair={selectedPair} market="spot" mobile className="rounded min-h-[360px]" />
+            </div>
           </div>
         )}
       </div>
