@@ -413,12 +413,26 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
   const { mutate: placeBuy, isPending: buyLoading } = useMutation({
     mutationFn: () => placeOrder("buy"),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       if (onFill) {
         const p = buildPayload("buy");
+        const resPrice = Number(
+          res?.data?.price ??
+          res?.data?.avgPrice ??
+          res?.data?.fillPrice ??
+          res?.data?.executionPrice ??
+          res?.price ??
+          res?.avgPrice
+        );
+        const effectivePrice =
+          Number.isFinite(resPrice) && resPrice > 0
+            ? resPrice
+            : activeTab === "market"
+            ? (marketPrice ?? +p.price)
+            : +p.price;
         onFill({
           side: "buy",
-          price: activeTab === "market" ? (marketPrice ?? +p.price) : +p.price,
+          price: effectivePrice,
           quantity: +p.quantity,
           takeProfit: parseNum(buyTp) || undefined,
           stopLoss: parseNum(buySl) || undefined,
@@ -434,12 +448,26 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
   const { mutate: placeSell, isPending: sellLoading } = useMutation({
     mutationFn: () => placeOrder("sell"),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       if (onFill) {
         const p = buildPayload("sell");
+        const resPrice = Number(
+          res?.data?.price ??
+          res?.data?.avgPrice ??
+          res?.data?.fillPrice ??
+          res?.data?.executionPrice ??
+          res?.price ??
+          res?.avgPrice
+        );
+        const effectivePrice =
+          Number.isFinite(resPrice) && resPrice > 0
+            ? resPrice
+            : activeTab === "market"
+            ? (marketPrice ?? +p.price)
+            : +p.price;
         onFill({
           side: "sell",
-          price: activeTab === "market" ? (marketPrice ?? +p.price) : +p.price,
+          price: effectivePrice,
           quantity: +p.quantity,
           takeProfit: parseNum(sellTp) || undefined,
           stopLoss: parseNum(sellSl) || undefined,

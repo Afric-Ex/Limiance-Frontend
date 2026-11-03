@@ -128,12 +128,24 @@ function FuturesTradesInner() {
   });
 
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "futures");
+  const latestTradePrice = getLatestTradePrice(recentTrades);
+  const bestAsk = orderBook.sellOrders[0]?.price;
+  const bestBid = orderBook.buyOrders[0]?.price;
+  const orderBookMidPrice = bestAsk && bestBid ? (bestAsk + bestBid) / 2 : bestAsk ?? bestBid ?? null;
+
+  const isFeedPriceConsistent =
+    feed.price != null &&
+    feed.price > 0 &&
+    (bestBid == null || bestAsk == null || (feed.price >= bestBid * 0.98 && feed.price <= bestAsk * 1.02));
+
   const effectiveMarketPrice =
-    (feed.price != null && feed.price > 0 ? feed.price : null) ??
+    (latestTradePrice != null && latestTradePrice > 0 ? latestTradePrice : null) ??
     (chartLastPrice != null && chartLastPrice > 0 ? chartLastPrice : null) ??
-    getLatestTradePrice(recentTrades) ??
+    orderBookMidPrice ??
+    (isFeedPriceConsistent ? feed.price : null) ??
+    (feed.price != null && feed.price > 0 ? feed.price : null) ??
     null;
-  const lastTradedPrice = effectiveMarketPrice ?? getLatestTradePrice(recentTrades);
+  const lastTradedPrice = latestTradePrice ?? chartLastPrice ?? feed.price ?? null;
 
   const { mutate: handleSetFuturesMode } = useMutation({
     mutationFn: (mode: MarginMode) => tradingService.setFuturesMode(mode),

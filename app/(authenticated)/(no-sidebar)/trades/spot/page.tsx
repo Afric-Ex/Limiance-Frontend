@@ -95,7 +95,8 @@ function SpotTrades() {
   });
 
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "spot");
-  const lastTradedPrice = getLatestTradePrice(recentTrades) ?? feed.price ?? null;
+  const latestTradePrice = getLatestTradePrice(recentTrades);
+  const lastTradedPrice = latestTradePrice ?? chartLastPrice ?? feed.price ?? null;
 
   // Price flash effect
   const [flashClass, setFlashClass] = useState("");
@@ -186,7 +187,23 @@ function SpotTrades() {
   };
 
   const orderBookMidPrice = bestAsk && bestBid ? (bestAsk + bestBid) / 2 : bestAsk ?? bestBid ?? null;
-  const effectiveMarketPrice = feed.price ?? selectedMarket?.last_price ?? selectedMarket?.lastPrice ?? selectedMarket?.price ?? orderBookMidPrice;
+
+  // A feed.price is considered consistent if it is within reasonable vicinity of the book
+  const isFeedPriceConsistent =
+    feed.price != null &&
+    feed.price > 0 &&
+    (bestBid == null || bestAsk == null || (feed.price >= bestBid * 0.98 && feed.price <= bestAsk * 1.02));
+
+  const effectiveMarketPrice =
+    (latestTradePrice != null && latestTradePrice > 0 ? latestTradePrice : null) ??
+    (chartLastPrice != null && chartLastPrice > 0 ? chartLastPrice : null) ??
+    orderBookMidPrice ??
+    (isFeedPriceConsistent ? feed.price : null) ??
+    (feed.price != null && feed.price > 0 ? feed.price : null) ??
+    selectedMarket?.last_price ??
+    selectedMarket?.lastPrice ??
+    selectedMarket?.price ??
+    null;
   const chartOrderLevels: OrderLevel[] = (openOrders ?? []).flatMap((order: any) => {
     const entry = Number(order.price ?? order.entryPrice);
     const takeProfit = Number(order.takeProfit ?? order.take_profit ?? order.take_profit_price ?? order.tp_trigger_price ?? order.tp_price ?? order.tp);

@@ -266,9 +266,26 @@ export function OrderBookTabs({
   const lowestAsk = rawAsks.length > 0 ? rawAsks[0].price : null;
   const highestBid = rawBids.length > 0 ? rawBids[0].price : null;
   const spread = lowestAsk !== null && highestBid !== null ? lowestAsk - highestBid : null;
+  const midPrice = lowestAsk !== null && highestBid !== null ? (lowestAsk + highestBid) / 2 : lowestAsk ?? highestBid ?? null;
   const latestTradePrice = getLatestTradePrice(recentTrades);
   const validCurrentPrice = currentPrice != null && Number.isFinite(currentPrice) && currentPrice > 0 ? currentPrice : null;
-  const lastTradedPrice = validCurrentPrice ?? latestTradePrice;
+
+  // The center price in an order book is the Last Traded Price (or order book mid-price if no trades yet).
+  // A price that falls significantly outside the current live [highestBid, lowestAsk] spread is considered stale.
+  const isWithinSpread = (p: number | null): p is number => {
+    if (p === null || !Number.isFinite(p) || p <= 0) return false;
+    if (lowestAsk !== null && highestBid !== null && lowestAsk >= highestBid) {
+      return p >= highestBid * 0.999 && p <= lowestAsk * 1.001;
+    }
+    return true;
+  };
+
+  const lastTradedPrice =
+    (latestTradePrice !== null && isWithinSpread(latestTradePrice) ? latestTradePrice : null) ??
+    (validCurrentPrice !== null && isWithinSpread(validCurrentPrice) ? validCurrentPrice : null) ??
+    midPrice ??
+    latestTradePrice ??
+    validCurrentPrice;
 
   // Arrow next to the last price: direction of its most recent move.
   useEffect(() => {

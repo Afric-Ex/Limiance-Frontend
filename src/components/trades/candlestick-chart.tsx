@@ -134,8 +134,14 @@ const DepthPanel = memo(function DepthPanel({
   const spreadPct = bestAsk !== null && spread > 0 ? (spread / bestAsk) * 100 : 0;
   const midPrice = bestBid !== null && bestAsk !== null ? (bestAsk + bestBid) / 2 : null;
   // The price shown between the asks and bids is the last traded price; fall
-  // back to the mid only until the first trade for this market arrives.
-  const displayPrice = lastPrice ?? midPrice;
+  // back to the mid if the passed lastPrice is stale or outside the live book.
+  const isWithinSpread =
+    lastPrice !== null &&
+    lastPrice !== undefined &&
+    Number.isFinite(lastPrice) &&
+    lastPrice > 0 &&
+    (bestBid === null || bestAsk === null || (lastPrice >= bestBid * 0.999 && lastPrice <= bestAsk * 1.001));
+  const displayPrice = (isWithinSpread ? lastPrice : null) ?? midPrice ?? lastPrice;
 
   const bookTotal = bidTotal + askTotal;
   const buyPct = bookTotal > 0 ? Math.round((bidTotal / bookTotal) * 100) : 50;
