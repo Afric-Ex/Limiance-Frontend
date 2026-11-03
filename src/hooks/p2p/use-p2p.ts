@@ -363,7 +363,11 @@ export const useSendChatMessage = () => {
                     ? message.senderName.trim()
                     : undefined,
                 createdAt: String(
-                  message.createdAt ?? new Date().toISOString()
+                  message.createdAt ??
+                    message.created_at ??
+                    message.timestamp ??
+                    message.sentAt ??
+                    new Date().toISOString()
                 ),
               },
             ],

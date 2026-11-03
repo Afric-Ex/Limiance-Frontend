@@ -4,11 +4,14 @@ import dayjs from "dayjs";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { EmptyState } from "@/src/components/ui/empty-state";
-import { StatCell } from "@/src/components/ui/stat-cell";
 import { BalanceCloak } from "@/src/components/shared/balance-cloak";
 import { RewardStatusBadge } from "./reward-status-badge";
-import { earnKeys, earnService } from "@/src/services/earn";
-import { formatAmount } from "@/src/lib/lim";
+import { useLimRewardsSummary } from "@/src/hooks/use-lim-wallet";
+import { rewardsKeys, rewardsService } from "@/src/services/rewards";
+import { normalizeRewardItems } from "@/src/lib/rewards";
+import { formatAmount, LIM_SYMBOL } from "@/src/lib/lim";
+import { MdEmojiEvents, MdPending, MdHistory } from "react-icons/md";
+import { FaGift } from "react-icons/fa6";
 
 const RECENT_LIMIT = 5;
 
@@ -19,160 +22,150 @@ const formatRewardDate = (value?: string): string | null => {
   return parsed.format("MMM D, YYYY · HH:mm");
 };
 
-/**
- * Rewards ledger: lifetime/pending/period totals plus the latest distribution
- * entries from `/earn/my_rewards`.
- */
 export function MyRewards() {
-  const { data: rewardsData, isLoading } = useQuery({
-    queryKey: earnKeys.myRewards,
-    queryFn: () => earnService.myRewards(),
-    staleTime: 30_000,
+  const { summary, isLoading: summaryLoading, isUnavailable: summaryUnavailable } = useLimRewardsSummary();
+
+  const historyQuery = useQuery({
+    queryKey: rewardsKeys.historyList({ page: 1, limit: RECENT_LIMIT }),
+    queryFn: () => rewardsService.getHistory({ page: 1, limit: RECENT_LIMIT }),
+    select: (res: unknown) => normalizeRewardItems(res).slice(0, RECENT_LIMIT),
+    staleTime: 60_000,
     retry: false,
     throwOnError: false,
   });
 
-  const history = rewardsData?.history ?? [];
-  const totalEarnedUsd = rewardsData?.totalEarnedUsd ?? 0;
-  const yesterdayRewardsUsd = rewardsData?.yesterdayRewardsUsd ?? 0;
-  const thirtyDayRewardsUsd = rewardsData?.thirtyDayRewardsUsd ?? 0;
-  const totalStakedUsd = rewardsData?.totalStakedUsd ?? 0;
-  const assetSummaries = rewardsData?.assetSummaries ?? [];
+  const rewards = historyQuery.data ?? [];
+  const historyLoading = historyQuery.isLoading;
+  const showStats = !summaryLoading && !!summary;
+  const statsUnavailable = !summaryLoading && summaryUnavailable && !historyLoading && rewards.length === 0;
+  const periodLabel = summary?.periodDays != null ? `Last ${summary.periodDays} days` : "Recent period";
 
-  const showStats = !isLoading && rewardsData != null;
+  const STAT_CARDS = [
+    {
+      label: "Total earned",
+      icon: <MdEmojiEvents size={16} className="text-primary" />,
+      value: summary?.totalEarned,
+      bg: "bg-primary/[0.07] border-primary/15",
+    },
+    {
+      label: "Pending",
+      icon: <MdPending size={16} className="text-amber-400" />,
+      value: summary?.pending,
+      bg: "bg-amber-400/[0.07] border-amber-400/15",
+    },
+    {
+      label: periodLabel,
+      icon: <MdHistory size={16} className="text-blue-400" />,
+      value: summary?.creditedPeriod,
+      bg: "bg-blue-500/[0.07] border-blue-500/15",
+    },
+  ];
 
   return (
-    <section className="flex flex-col gap-5 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:rounded-xl max-[1150px]:p-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-[var(--text-subtitle)] font-semibold text-[var(--color-text-primary)]">
-            My rewards
-          </h2>
-          <p className="text-[var(--text-caption)] text-[var(--color-text-secondary)]">
-            Accumulated interest and distributions from your Earn subscriptions.
-          </p>
+    <section className="flex flex-col gap-5 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:p-5">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <FaGift size={16} />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-white">My rewards</h2>
+          <p className="text-xs text-white/45">LIM credited from earning programs.</p>
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {[0, 1, 2, 3].map((key) => (
-            <div key={key} className="flex flex-col gap-2">
-              <Skeleton variant="text" width={72} height={12} />
-              <Skeleton variant="text" width={110} height={20} />
+      {/* Stats row */}
+      {summaryLoading ? (
+        <div className="grid grid-cols-3 gap-3">
+          {[0, 1, 2].map((key) => (
+            <div key={key} className="flex flex-col gap-2 rounded-xl border border-white/[0.06] p-4">
+              <Skeleton variant="text" width={60} height={11} />
+              <Skeleton variant="text" width={100} height={20} />
             </div>
           ))}
         </div>
       ) : showStats ? (
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <StatCell
-              label="Total earned"
-              value={
-                <>
-                  $<BalanceCloak balance={totalEarnedUsd} />
-                </>
-              }
-            />
-            <StatCell
-              label="Yesterday"
-              value={
-                <>
-                  $<BalanceCloak balance={yesterdayRewardsUsd} />
-                </>
-              }
-            />
-            <StatCell
-              label="Last 30 days"
-              value={
-                <>
-                  $<BalanceCloak balance={thirtyDayRewardsUsd} />
-                </>
-              }
-            />
-            <StatCell
-              label="Active staked"
-              value={
-                <>
-                  $<BalanceCloak balance={totalStakedUsd} />
-                </>
-              }
-            />
-          </div>
-
-          {assetSummaries.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/[0.06]">
-              <span className="text-xs text-[var(--color-text-secondary)]">By asset:</span>
-              {assetSummaries.map((sum) => (
-                <span
-                  key={sum.asset}
-                  className="rounded-full bg-white/[0.04] border border-white/[0.06] px-2.5 py-0.5 text-xs text-white/80"
-                >
-                  <strong className="text-white">{sum.asset}</strong>: +{formatAmount(sum.totalRewards)} earned
-                  {sum.activeStaked > 0 ? ` · ${formatAmount(sum.activeStaked)} staked` : ""}
-                </span>
-              ))}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {STAT_CARDS.map((card) => (
+            <div key={card.label} className={`flex flex-col gap-2 rounded-xl border p-4 ${card.bg}`}>
+              <div className="flex items-center gap-2">
+                {card.icon}
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{card.label}</span>
+              </div>
+              <div className="text-lg font-bold tabular-nums text-white">
+                {card.value == null ? (
+                  <span className="text-white/30">—</span>
+                ) : (
+                  <>
+                    <BalanceCloak balance={card.value} />{" "}
+                    <span className="text-sm font-semibold text-white/40">{LIM_SYMBOL}</span>
+                  </>
+                )}
+              </div>
             </div>
-          )}
+          ))}
         </div>
       ) : null}
 
-      {isLoading ? (
+      {/* Reward history */}
+      {historyLoading ? (
         <div className="flex flex-col gap-3">
           {[0, 1, 2].map((key) => (
-            <div key={key} className="flex items-center justify-between gap-4">
+            <div key={key} className="flex items-center justify-between gap-4 py-2">
               <Skeleton variant="text" width={160} height={14} />
               <Skeleton variant="text" width={80} height={14} />
             </div>
           ))}
         </div>
-      ) : history.length > 0 ? (
-        <ul className="flex flex-col divide-y divide-white/[0.06]">
-          {history.slice(0, RECENT_LIMIT).map((reward) => {
-            const date = formatRewardDate(reward.distributionDate);
-            const typeLabel =
-              reward.type === "DAILY_INTEREST"
-                ? "Daily Interest"
-                : reward.type === "MATURITY_PAYOUT"
-                ? "Maturity Payout"
-                : reward.type || "Earn Reward";
-
-            return (
-              <li
-                key={reward.id}
-                className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
-              >
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium text-[var(--color-text-primary)]">
-                      {typeLabel}
-                    </span>
-                    {reward.apy > 0 && (
-                      <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
-                        {(reward.apy <= 1 ? reward.apy * 100 : reward.apy).toFixed(2)}% APY
+      ) : rewards.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <div className="mb-2 flex items-center gap-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Recent activity</p>
+            <div className="h-px flex-1 bg-white/[0.05]" />
+          </div>
+          <ul className="flex flex-col divide-y divide-white/[0.04]">
+            {rewards.map((reward) => {
+              const date = formatRewardDate(reward.createdAt);
+              return (
+                <li
+                  key={reward.id}
+                  className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <FaGift size={12} />
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <span className="truncate text-sm font-semibold text-white">
+                        {reward.campaign ?? reward.source}
                       </span>
-                    )}
+                      {date && (
+                        <span className="text-[11px] text-white/40">{date}</span>
+                      )}
+                    </div>
                   </div>
-                  {date && (
-                    <span className="text-[var(--text-micro)] text-[var(--color-text-secondary)]">
-                      {date}
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="text-sm font-bold tabular-nums text-white">
+                      +{formatAmount(reward.amount)}{" "}
+                      <span className="text-white/40">{reward.asset}</span>
                     </span>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="text-sm font-semibold tabular-nums text-emerald-400">
-                    +{formatAmount(reward.amount)} {reward.asset}
-                  </span>
-                  <RewardStatusBadge status="credited" />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                    <RewardStatusBadge status={reward.status} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       ) : (
-        <EmptyState
-          caption="No rewards yet — subscribe to Simple Earn or Staking to begin earning daily returns."
-        />
+        <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] py-8">
+          <EmptyState
+            caption={
+              statsUnavailable
+                ? "Reward activity will appear here as you earn LIM."
+                : "No rewards yet — earn LIM by taking part in the programs above."
+            }
+          />
+        </div>
       )}
     </section>
   );

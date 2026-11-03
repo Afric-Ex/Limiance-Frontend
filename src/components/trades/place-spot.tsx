@@ -859,29 +859,31 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
       )}
 
       {/* Order type tabs */}
-      <div className="flex items-center justify-between gap-2 overflow-x-auto custom-scrollbar pb-1">
-        <div className="flex items-center gap-3 min-w-0">
-          <Tabs
-            classNames={{
-              tab: "!p-0 hover:!bg-transparent text-xs font-bold text-white/50 hover:!text-white/80 data-[active]:!text-white !border-0 whitespace-nowrap",
-              list: "!flex !items-center before:!border-0 !gap-4",
-            }}
-            value={advancedTab ? null : activeTab}
-            onChange={(v) => {
-              setActiveTab(v ?? "limit");
-              setAdvancedTab(null);
-            }}
-          >
-            <TabsList>
-              <TabsTab value="limit">Limit</TabsTab>
-              <TabsTab value="market">Market</TabsTab>
-              <TabsTab value="stop">
-                <span className="flex items-center gap-1">
-                  Stop Limit <MdKeyboardArrowRight className="rotate-90 opacity-50" />
-                </span>
-              </TabsTab>
-            </TabsList>
-          </Tabs>
+      <div className="flex items-center justify-between gap-2 pb-1">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+          <div className="min-w-0 overflow-x-auto scroll-x-hidden">
+            <Tabs
+              classNames={{
+                tab: "!p-0 hover:!bg-transparent text-xs font-bold text-white/50 hover:!text-white/80 data-[active]:!text-white !border-0 whitespace-nowrap",
+                list: "!flex !items-center before:!border-0 !gap-3 sm:!gap-4",
+              }}
+              value={advancedTab ? null : activeTab}
+              onChange={(v) => {
+                setActiveTab(v ?? "limit");
+                setAdvancedTab(null);
+              }}
+            >
+              <TabsList>
+                <TabsTab value="limit">Limit</TabsTab>
+                <TabsTab value="market">Market</TabsTab>
+                <TabsTab value="stop">
+                  <span className="flex items-center gap-1">
+                    Stop Limit <MdKeyboardArrowRight className="rotate-90 opacity-50" />
+                  </span>
+                </TabsTab>
+              </TabsList>
+            </Tabs>
+          </div>
           <Popover
             opened={moreOpen}
             onChange={setMoreOpen}
@@ -895,7 +897,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 onClick={() => setMoreOpen((o) => !o)}
                 aria-label="More order types"
                 className={clsx(
-                  "flex shrink-0 items-center gap-0.5 whitespace-nowrap text-xs font-bold transition-colors",
+                  "flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded px-1 py-1.5 text-xs font-bold transition-colors",
                   advancedTab ? "text-primary" : "text-white/50 hover:text-white/80"
                 )}
               >

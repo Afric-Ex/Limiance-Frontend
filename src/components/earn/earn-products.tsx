@@ -4,19 +4,12 @@ import { useState } from "react";
 import clsx from "clsx";
 import type { IconType } from "react-icons";
 import {
-  FaArrowRightArrowLeft,
-  FaArrowsRotate,
-  FaChartLine,
-  FaLock,
-  FaPiggyBank,
-  FaRocket,
-  FaUsers,
+  FaArrowRightArrowLeft, FaArrowsRotate, FaChartLine,
+  FaLock, FaPiggyBank, FaRocket, FaUsers,
 } from "react-icons/fa6";
+import { MdAccessTime, MdCheckCircle } from "react-icons/md";
 
-export interface EarnProductPreviewStat {
-  label: string;
-  value: string;
-}
+export interface EarnProductPreviewStat { label: string; value: string }
 
 export interface EarnProduct {
   name: string;
@@ -24,43 +17,35 @@ export interface EarnProduct {
   features: readonly string[];
   icon: IconType;
   isLive?: boolean;
-  /** Three headline facts shown in the preview card. No invented numbers —
-   *  rate figures stay "shared at launch" until operations confirms them. */
   preview: readonly EarnProductPreviewStat[];
 }
 
-/** The full earn product suite, shared with the "Ways to earn" teaser grid. */
 export const EARN_PRODUCTS: EarnProduct[] = [
   {
     name: "Simple Earn",
-    description:
-      "Earn daily rewards on your idle assets with flexible savings — no lock-in, redeem whenever you want.",
+    description: "Earn daily rewards on your idle assets with flexible savings — no lock-in, redeem whenever you want.",
     features: ["Flexible", "No lock-in", "Daily rewards"],
     icon: FaPiggyBank,
-    isLive: true,
     preview: [
-      { label: "APY yield", value: "Live variable APY" },
+      { label: "APY estimate", value: "Shared at launch" },
       { label: "Lock period", value: "None — flexible" },
       { label: "Redemption", value: "Anytime" },
     ],
   },
   {
     name: "Staking",
-    description:
-      "Lock your assets for a fixed term and earn higher, predictable returns with transparent terms.",
+    description: "Lock your assets for a fixed term and earn higher, predictable returns with transparent terms.",
     features: ["Fixed terms", "Predictable APY", "On-chain staking"],
     icon: FaLock,
-    isLive: true,
     preview: [
       { label: "Return type", value: "Fixed APY" },
-      { label: "Lock period", value: "15 / 30 / 60 / 90 days" },
+      { label: "Lock period", value: "Fixed term" },
       { label: "Redemption", value: "At maturity" },
     ],
   },
   {
     name: "Launchpad",
-    description:
-      "Get early access to vetted token sales and secure your allocation before public listing.",
+    description: "Get early access to vetted token sales and secure your allocation before public listing.",
     features: ["Token sales", "Fair allocation", "Early access"],
     icon: FaRocket,
     preview: [
@@ -71,8 +56,7 @@ export const EARN_PRODUCTS: EarnProduct[] = [
   },
   {
     name: "Pool Savings",
-    description:
-      "Save together — pool funds with other users to unlock shared, community-powered yields.",
+    description: "Save together — pool funds with other users to unlock shared, community-powered yields.",
     features: ["Shared pools", "Community yield", "Low entry"],
     icon: FaUsers,
     preview: [
@@ -83,8 +67,7 @@ export const EARN_PRODUCTS: EarnProduct[] = [
   },
   {
     name: "Dual Investment",
-    description:
-      "Pick a target price and settlement date to earn enhanced yields regardless of market direction.",
+    description: "Pick a target price and settlement date to earn enhanced yields regardless of market direction.",
     features: ["Target price", "Flexible settlement", "Enhanced yield"],
     icon: FaArrowRightArrowLeft,
     preview: [
@@ -95,8 +78,7 @@ export const EARN_PRODUCTS: EarnProduct[] = [
   },
   {
     name: "Auto Invest",
-    description:
-      "Automate your strategy with scheduled recurring investments at the intervals you choose.",
+    description: "Automate your strategy with scheduled recurring investments at the intervals you choose.",
     features: ["Recurring plans", "Any schedule", "Dollar-cost averaging"],
     icon: FaArrowsRotate,
     preview: [
@@ -107,8 +89,7 @@ export const EARN_PRODUCTS: EarnProduct[] = [
   },
   {
     name: "Smart Trend",
-    description:
-      "Follow market momentum with automated strategies tuned to funding-rate and trend signals.",
+    description: "Follow market momentum with automated strategies tuned to funding-rate and trend signals.",
     features: ["Automated strategy", "Trend signals", "Funding alerts"],
     icon: FaChartLine,
     preview: [
@@ -119,88 +100,68 @@ export const EARN_PRODUCTS: EarnProduct[] = [
   },
 ];
 
-const ComingSoonBadge = () => (
-  <span className="shrink-0 rounded-full border border-amber-400/20 bg-amber-400/10 px-2.5 py-0.5 text-2xs font-bold uppercase tracking-widest text-amber-400">
-    Coming soon
-  </span>
-);
-
-const LiveBadge = () => (
-  <span className="shrink-0 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-    Live
-  </span>
-);
-
-/**
- * Preview card for one earn product. Deliberately richer than a bare
- * "coming soon" state: the product story (description + feature badges) and
- * three preview facts are real copy from the offering spec, while rate figures
- * stay honest until operations confirms them.
- */
 const ProductPreview = ({ product }: { product: EarnProduct }) => {
   const Icon = product.icon;
-
   return (
-    <div
-      key={product.name}
-      className="animate-fade-up rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 max-[1150px]:p-4"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <span
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary"
-            aria-hidden="true"
-          >
-            <Icon size={20} />
+    <div className="animate-fade-up flex flex-col gap-6 lg:flex-row lg:items-start">
+      {/* Left: info */}
+      <div className="flex flex-1 flex-col gap-5">
+        {/* Product identity */}
+        <div className="flex items-start gap-4">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+            <Icon size={24} />
           </span>
-          <div className="min-w-0">
-            <h3 className="truncate text-base font-bold text-[var(--color-text-primary)]">
-              {product.name}
-            </h3>
-            <p className="text-[var(--text-micro)] text-[var(--color-text-secondary)]">
-              {product.isLive ? "Available now on Limiance Earn" : "Launching on Limiance Earn"}
-            </p>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2.5">
+              <h3 className="text-lg font-bold text-white">{product.name}</h3>
+              <span className="flex items-center gap-1 rounded-full border border-amber-400/20 bg-amber-400/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-400">
+                <MdAccessTime size={10} />
+                Coming soon
+              </span>
+            </div>
+            <p className="text-xs text-white/45">Launching on Limiance Earn</p>
           </div>
         </div>
-        {product.isLive ? <LiveBadge /> : <ComingSoonBadge />}
+
+        {/* Description */}
+        <p className="text-sm leading-relaxed text-white/60">{product.description}</p>
+
+        {/* Feature checklist */}
+        <div className="flex flex-col gap-2">
+          {product.features.map((feature) => (
+            <div key={feature} className="flex items-center gap-2.5 text-sm">
+              <MdCheckCircle size={15} className="shrink-0 text-primary/70" />
+              <span className="text-white/70">{feature}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-        {product.description}
-      </p>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {product.features.map((feature) => (
-          <span
-            key={feature}
-            className="rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1 text-micro font-semibold text-white/60"
-          >
-            {feature}
-          </span>
-        ))}
-      </div>
-
-      <div className="mt-5 grid grid-cols-1 gap-4 border-t border-white/[0.06] pt-4 sm:grid-cols-3">
-        {product.preview.map((stat) => (
-          <div key={stat.label} className="min-w-0">
-            <div className="text-2xs font-medium uppercase tracking-wider text-white/40">
-              {stat.label}
+      {/* Right: stats card */}
+      <div className="w-full rounded-xl border border-white/[0.06] bg-white/[0.02] lg:w-72">
+        <div className="border-b border-white/[0.06] px-5 py-3.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Product details</p>
+        </div>
+        <div className="flex flex-col divide-y divide-white/[0.05]">
+          {product.preview.map((stat) => (
+            <div key={stat.label} className="flex items-center justify-between gap-4 px-5 py-3.5">
+              <span className="text-xs text-white/45">{stat.label}</span>
+              <span className="text-right text-sm font-semibold text-white">{stat.value}</span>
             </div>
-            <div className="mt-0.5 truncate text-sm font-semibold text-[var(--color-text-primary)]">
-              {stat.value}
-            </div>
+          ))}
+          {/* Placeholder APY row */}
+          <div className="flex items-center justify-between gap-4 bg-primary/[0.04] px-5 py-3.5">
+            <span className="text-xs text-white/45">Est. APY</span>
+            <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+              TBA at launch
+            </span>
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
 };
 
-/**
- * The full earn product suite. None of it is live yet, so every tab shows an
- * honest preview card — real product copy, a subtle "coming soon" badge, and
- * no invented rates. Tab navigation follows the Markets underline pattern.
- */
 export function EarnProducts({
   activeProduct,
   onProductChange,
@@ -210,9 +171,7 @@ export function EarnProducts({
 }) {
   const [internalTab, setInternalTab] = useState(EARN_PRODUCTS[0].name);
   const activeName = activeProduct ?? internalTab;
-  const active =
-    EARN_PRODUCTS.find((product) => product.name === activeName) ??
-    EARN_PRODUCTS[0];
+  const active = EARN_PRODUCTS.find((p) => p.name === activeName) ?? EARN_PRODUCTS[0];
 
   const selectProduct = (name: string) => {
     setInternalTab(name);
@@ -222,43 +181,44 @@ export function EarnProducts({
   return (
     <section
       id="earn-products"
-      className="flex scroll-mt-6 flex-col gap-5 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:rounded-xl max-[1150px]:p-5"
+      className="flex scroll-mt-6 flex-col gap-6 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:p-5"
     >
+      {/* Header */}
       <div className="flex flex-col gap-1">
-        <h2 className="text-[var(--text-subtitle)] font-semibold text-[var(--color-text-primary)]">
-          Earn products
-        </h2>
-        <p className="text-[var(--text-caption)] text-[var(--color-text-secondary)]">
-          Flexible savings, staking, launchpad and more — launching soon.
-        </p>
+        <h2 className="text-base font-bold text-white">Earn products</h2>
+        <p className="text-xs text-white/45">Flexible savings, staking, launchpad and more — launching soon.</p>
       </div>
 
-      <div className="overflow-x-auto scrollbar-none border-b border-white/[0.06]">
-        <div className="flex min-w-max items-center gap-6">
+      {/* Tab strip */}
+      <div className="overflow-x-auto scrollbar-none">
+        <div className="flex min-w-max items-center gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
           {EARN_PRODUCTS.map((product) => {
             const isActive = product.name === active.name;
+            const Icon = product.icon;
             return (
               <button
                 key={product.name}
                 type="button"
                 onClick={() => selectProduct(product.name)}
-                aria-pressed={isActive}
                 className={clsx(
-                  "relative rounded-sm pb-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
-                  isActive ? "text-white" : "text-white/45 hover:text-white/70"
+                  "flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold whitespace-nowrap transition-all",
+                  isActive
+                    ? "bg-primary text-white shadow-[0_0_12px_rgba(77,119,240,0.3)]"
+                    : "text-white/45 hover:bg-white/[0.04] hover:text-white/80"
                 )}
               >
+                <Icon size={13} />
                 {product.name}
-                {isActive && (
-                  <span className="absolute inset-x-0 bottom-0 h-[2.5px] rounded-full bg-primary" />
-                )}
               </button>
             );
           })}
         </div>
       </div>
 
-      <ProductPreview key={active.name} product={active} />
+      {/* Product detail */}
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+        <ProductPreview key={active.name} product={active} />
+      </div>
     </section>
   );
 }

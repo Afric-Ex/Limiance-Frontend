@@ -320,7 +320,16 @@ function OrderHistoryPageInner() {
                     </div>
                     <div className="min-w-0">
                       <div className={fieldLabel}>Created Date</div>
-                      <div className="mt-0.5 text-xs text-white/50">{formatDate(order.createdAt)}</div>
+                      <div className="mt-0.5 text-xs text-white/50">
+                        {formatDate(
+                          order.createdAt ||
+                            order.created_at ||
+                            order.matchedAt ||
+                            order.matched_at ||
+                            order.updatedAt ||
+                            order.updated_at
+                        )}
+                      </div>
                     </div>
                   </div>
                 </button>

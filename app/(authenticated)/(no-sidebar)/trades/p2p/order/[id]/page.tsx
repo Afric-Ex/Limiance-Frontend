@@ -100,6 +100,10 @@ function OrderRoomPageInner() {
     );
   };
   const currentUserId = user?.id != null ? String(user.id) : "";
+  const sameId = (value: unknown, id: string) => {
+    const resolved = nestedId(value);
+    return Boolean(resolved && id && resolved === id);
+  };
   const adType = String(
     order?.type ?? order?.orderType ?? order?.order_type ?? originalOrder?.type ?? ""
   ).toUpperCase();
@@ -119,26 +123,22 @@ function OrderRoomPageInner() {
     order?.matcherId ?? order?.matcher_id ?? order?.matcher
   );
 
-  const isMatcher = Boolean(matcherId && currentUserId && matcherId === currentUserId);
+  const isMatcher = sameId(matcherId, currentUserId);
   const isAdvertiser =
     !isMatcher &&
     Boolean(
-      currentUserId &&
-        ((advertiserId && advertiserId === currentUserId) ||
-          (matcherId && currentUserId) ||
-          (buyerId === currentUserId && adType === "BUY") ||
-          (sellerId === currentUserId && adType === "SELL"))
+      sameId(advertiserId, currentUserId) ||
+        (!advertiserId &&
+          ((adType === "SELL" && sameId(sellerId, currentUserId)) ||
+            (adType === "BUY" && sameId(buyerId, currentUserId))))
     );
 
   const isBuyer = Boolean(
     currentUserId &&
-      (buyerId
-        ? buyerId === currentUserId
-        : isMatcher
-          ? adType === "SELL" // taker buying from a SELL ad
-          : isAdvertiser
-            ? adType === "BUY"
-            : adType === "SELL")
+      (sameId(buyerId, currentUserId) ||
+        (!buyerId && sameId(matcherId, currentUserId) && adType === "SELL") ||
+        (!buyerId && sameId(advertiserId, currentUserId) && adType === "BUY") ||
+        (!buyerId && !matcherId && !advertiserId && adType === "SELL"))
   );
   const isSeller = !isBuyer;
   // Side is always shown from the signed-in user's perspective: the buyer sees
@@ -180,25 +180,9 @@ function OrderRoomPageInner() {
         );
   const fiatAmount = rawFiatAmount > 0 ? rawFiatAmount : quantity * price;
   const paymentMethod = order?.paymentMethod;
-  // Resolve the counterparty from roles first, then names. Never fall back to
-  // the signed-in user's own name/id.
-  const buyerSellerCounterpartyId =
-    buyerId && currentUserId && buyerId === currentUserId
-      ? sellerId || undefined
-      : sellerId && currentUserId && sellerId === currentUserId
-        ? buyerId || undefined
-        : undefined;
-  const roleCounterpartyId = isAdvertiser
-    ? matcherId || (isBuyer ? sellerId : buyerId)
-    : advertiserId || (isBuyer ? sellerId : buyerId);
-  const counterpartyId =
-    roleCounterpartyId && (!currentUserId || roleCounterpartyId !== currentUserId)
-      ? roleCounterpartyId
-      : buyerSellerCounterpartyId;
-
-  // A BUY ad has the advertiser as buyer and the matcher as seller; a SELL ad
-  // is the reverse. Only use the name belonging to the counterparty's side so
-  // the screen can never show the signed-in user's own name.
+  // Resolve the counterparty purely from roles. The advertiser and matcher are
+  // the two people on a match, but prefer buyer/seller ids when present because
+  // they describe this specific order rather than the underlying ad.
   const adOwnerNested =
     nestedName(originalOrder?.advertiser) ||
     nestedName(originalOrder?.creator) ||
@@ -213,9 +197,52 @@ function OrderRoomPageInner() {
   const orderMatcherName =
     order?.matcherName || nestedName(order?.matcher) || nestedName(order?.matcherUser);
 
-  const counterpartyName = isBuyer
-    ? (orderSellerName && orderSellerName !== orderBuyerName ? orderSellerName : (!isAdvertiser ? orderAdvertiserName : orderMatcherName)) || "Seller"
-    : (orderBuyerName && orderBuyerName !== orderSellerName ? orderBuyerName : (!isAdvertiser ? orderAdvertiserName : orderMatcherName)) || "Buyer";
+  const nameById = new Map<string, string>();
+  const registerName = (id: unknown, name: string) => {
+    const key = nestedId(id);
+    if (key && name && !nameById.has(key)) nameById.set(key, name);
+  };
+  registerName(buyerId, orderBuyerName);
+  registerName(sellerId, orderSellerName);
+  registerName(advertiserId, orderAdvertiserName);
+  registerName(matcherId, orderMatcherName);
+
+  const counterpartyId = (() => {
+    if (sameId(buyerId, currentUserId)) {
+      return sellerId || (sameId(advertiserId, currentUserId) ? matcherId : advertiserId) || "";
+    }
+    if (sameId(sellerId, currentUserId)) {
+      return buyerId || (sameId(advertiserId, currentUserId) ? matcherId : advertiserId) || "";
+    }
+    if (sameId(advertiserId, currentUserId)) {
+      return matcherId || (isBuyer ? sellerId : buyerId) || "";
+    }
+    if (sameId(matcherId, currentUserId)) {
+      return advertiserId || (isBuyer ? sellerId : buyerId) || "";
+    }
+    return [buyerId, sellerId, advertiserId, matcherId].find(
+      (id) => id && !sameId(id, currentUserId)
+    ) || "";
+  })();
+
+  const currentUserName = nestedName(user);
+  const isCurrentUserName = (name: string) =>
+    Boolean(
+      name &&
+        currentUserName &&
+        name.trim().toLowerCase() === currentUserName.trim().toLowerCase()
+    );
+  const counterpartyName = (() => {
+    const direct = counterpartyId ? nameById.get(counterpartyId) : "";
+    if (direct && !isCurrentUserName(direct)) return direct;
+    const resolved = [
+      orderBuyerName,
+      orderSellerName,
+      orderMatcherName,
+      orderAdvertiserName,
+    ].find((name) => name && !isCurrentUserName(name));
+    return resolved || (isBuyer ? "Seller" : "Buyer");
+  })();
 
   const existingFeedbackSubmitted = !!order?.review || hasReviewForOrder(orderId) || feedbackSubmitted;
 
@@ -224,27 +251,56 @@ function OrderRoomPageInner() {
   const parseBackendDate = (value: unknown): Date | null =>
     parseDate(value instanceof Date ? value.toISOString() : value);
 
-  // Cached timestamp prevents real-time WebSocket state flashes from erasing the created timestamp.
-  const cachedTimestampRef = useRef<string>("");
-  const timestampCandidate =
-    order?.createdAt ??
-    order?.created_at ??
-    order?.updatedAt ??
-    order?.updated_at ??
-    originalOrder?.createdAt ??
-    originalOrder?.created_at ??
-    "";
-  if (timestampCandidate && parseBackendDate(timestampCandidate)) {
-    cachedTimestampRef.current = String(timestampCandidate);
-  }
-  const effectiveCreatedAt = parseBackendDate(timestampCandidate || cachedTimestampRef.current);
+  const parseFirstDate = (...values: unknown[]): Date | null => {
+    for (const value of values) {
+      const parsed = parseBackendDate(value);
+      if (parsed) return parsed;
+    }
+    return null;
+  };
 
-  const deadlineDate = parseBackendDate(order?.expiryTime ?? "");
+  const deadlineDate = parseFirstDate(
+    order?.expiryTime,
+    order?.expiry_time,
+    order?.expiresAt,
+    order?.expires_at,
+    order?.deadline,
+    order?.order?.expiryTime,
+    order?.order?.expiry_time
+  );
   const deadlineStr = deadlineDate
     ? deadlineDate.toISOString()
     : new Date(Date.now() + 900000).toISOString();
 
-  const updatedAtDate = parseBackendDate(order?.updatedAt || order?.createdAt || "");
+  const orderCreatedDate = parseFirstDate(
+    order?.createdAt,
+    order?.created_at,
+    order?.matchedAt,
+    order?.matched_at,
+    order?.matchCreatedAt,
+    order?.match_created_at,
+    order?.orderCreatedAt,
+    order?.order_created_at,
+    order?.created,
+    order?.timestamp,
+    order?.time,
+    order?.order?.createdAt,
+    order?.order?.created_at,
+    order?.match?.createdAt,
+    order?.match?.created_at,
+    (orderData as any)?.data?.createdAt,
+    (orderData as any)?.data?.created_at,
+    originalOrder?.createdAt,
+    originalOrder?.created_at
+  );
+
+  // Cached timestamp prevents real-time WebSocket state flashes from erasing the created timestamp.
+  const cachedTimestampRef = useRef<string>("");
+  if (orderCreatedDate) cachedTimestampRef.current = orderCreatedDate.toISOString();
+  const effectiveCreatedAt =
+    orderCreatedDate ?? parseBackendDate(cachedTimestampRef.current);
+
+  const updatedAtDate = parseFirstDate(order?.updatedAt, order?.updated_at, orderCreatedDate);
   const updatedAtStr = (updatedAtDate ?? new Date()).toISOString();
 
   const handleConfirmPayment = () => {

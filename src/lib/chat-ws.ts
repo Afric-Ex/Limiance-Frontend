@@ -47,7 +47,13 @@ export function normalizeChatMessage(raw: any): ChatWsMessage | null {
   const senderId = String(payload.senderId ?? payload.sender_id ?? "");
   const content = String(payload.content ?? payload.message ?? "");
   const createdAt = String(
-    payload.createdAt ?? payload.created_at ?? new Date().toISOString()
+    payload.createdAt ??
+      payload.created_at ??
+      payload.timestamp ??
+      payload.sentAt ??
+      payload.sent_at ??
+      payload.time ??
+      new Date().toISOString()
   );
   const id = String(
     payload.id ??
