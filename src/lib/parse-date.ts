@@ -20,15 +20,22 @@ export const parseDate = (value: unknown): Date | null => {
   // zero time (`-62135596800000`) and `0` mean "not set", so reject them.
   const isNumeric =
     typeof value === "number" ||
-    (typeof value === "string" && /^-?\d+$/.test(value.trim()));
+    (typeof value === "string" && /^-?\d+(?:\.\d+)?$/.test(value.trim()));
   if (isNumeric) {
     const numeric = Number(value);
     // Values below 1e9 cannot be epoch timestamps; `0` (and Go's negative
     // zero time) mean "not set", and short bare numbers must not reach
     // `new Date`, which would interpret them as years.
     if (!Number.isFinite(numeric) || numeric < 1_000_000_000) return null;
-    // 10-digit values are seconds; 13-digit values are milliseconds.
-    const ms = numeric < 1_000_000_000_000 ? numeric * 1000 : numeric;
+    // Normalise seconds / milliseconds / microseconds / nanoseconds.
+    const ms =
+      numeric < 1_000_000_000_000
+        ? numeric * 1000
+        : numeric < 100_000_000_000_000
+          ? numeric
+          : numeric < 100_000_000_000_000_000
+            ? numeric / 1000
+            : numeric / 1_000_000;
     const epoch = new Date(ms);
     return Number.isNaN(epoch.getTime()) || epoch.getUTCFullYear() < 1970
       ? null

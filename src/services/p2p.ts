@@ -99,7 +99,15 @@ const normalizeChatMessages = (raw: any): P2PChatMessage[] => {
     const senderId = String(message.senderId ?? message.sender_id ?? "");
     const senderName = message.senderName ?? message.sender_name;
     const content = String(message.content ?? message.message ?? "");
-    const createdAt = String(message.createdAt ?? message.created_at ?? "");
+    const createdAt = String(
+      message.createdAt ??
+        message.created_at ??
+        message.timestamp ??
+        message.sentAt ??
+        message.sent_at ??
+        message.time ??
+        ""
+    );
 
     return {
       id: String(

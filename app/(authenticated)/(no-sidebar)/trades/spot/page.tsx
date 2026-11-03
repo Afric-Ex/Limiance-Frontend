@@ -479,26 +479,26 @@ function SpotTrades() {
       {/* MOBILE VIEW */}
       <div className="min-[1150px]:hidden flex flex-col flex-1 pb-[80px] min-h-0 relative">
         {/* Mobile market stats strip */}
-        <div className="shrink-0 grid grid-cols-2 gap-x-3 gap-y-1.5 bg-[#181a20] border-b border-white/[0.06] px-4 py-2.5">
-          <div className="flex justify-between items-center text-micro">
-            <span className="text-white/40">24h High</span>
-            <span className="text-white/90 font-semibold tabular-nums">{formatPrice(feed.high24h) ?? "—"}</span>
+        <div className="shrink-0 grid grid-cols-2 gap-x-4 gap-y-2.5 bg-[#181a20] border-b border-white/[0.06] px-4 py-3">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-2xs text-white/40">24h High</span>
+            <span className="truncate text-micro font-semibold tabular-nums text-white/90">{formatPrice(feed.high24h) ?? "—"}</span>
           </div>
-          <div className="flex justify-between items-center text-micro">
-            <span className="text-white/40">24h Low</span>
-            <span className="text-white/90 font-semibold tabular-nums">{formatPrice(feed.low24h) ?? "—"}</span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-2xs text-white/40">24h Low</span>
+            <span className="truncate text-micro font-semibold tabular-nums text-white/90">{formatPrice(feed.low24h) ?? "—"}</span>
           </div>
-          <div className="flex justify-between items-center text-micro">
-            <span className="text-white/40">24h Vol({base})</span>
-            <span className="text-white/90 font-semibold tabular-nums">{feed.volume24h !== null ? feed.volume24h.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—"}</span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-2xs text-white/40">24h Vol({base})</span>
+            <span className="truncate text-micro font-semibold tabular-nums text-white/90">{feed.volume24h !== null ? feed.volume24h.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—"}</span>
           </div>
-          <div className="flex justify-between items-center text-micro">
-            <span className="text-white/40">24h Vol({quote})</span>
-            <span className="text-white/90 font-semibold tabular-nums">{feed.volume24h !== null && feed.price !== null ? (feed.volume24h * feed.price).toLocaleString("en-US", { maximumFractionDigits: 0 }) : "—"}</span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-2xs text-white/40">24h Vol({quote})</span>
+            <span className="truncate text-micro font-semibold tabular-nums text-white/90">{feed.volume24h !== null && feed.price !== null ? (feed.volume24h * feed.price).toLocaleString("en-US", { maximumFractionDigits: 0 }) : "—"}</span>
           </div>
-          <div className="flex justify-between items-center text-micro col-span-2">
-            <span className="text-white/40">24h Change</span>
-            <span className={`font-semibold tabular-nums ${changeColor}`}>
+          <div className="col-span-2 flex flex-col gap-0.5">
+            <span className="text-2xs text-white/40">24h Change</span>
+            <span className={`text-micro font-semibold tabular-nums ${changeColor}`}>
               {feed.change24h !== null ? formatPrice(feed.change24h) : "—"}
               {feed.changePercent24h !== null ? ` (${feed.changePercent24h >= 0 ? "+" : ""}${feed.changePercent24h.toFixed(2)}%)` : ""}
             </span>
