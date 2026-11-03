@@ -63,10 +63,10 @@ const headerIconActionsGroup1 = [
 const NotificationBell = () => {
   const count = useNotificationCount();
   return (
-    <span className="relative">
+    <span className="relative inline-flex">
       <PiBellFill size={21} className={headerActionClasses} />
       {count > 0 && (
-        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-2xs font-bold flex items-center justify-center leading-none">
+        <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-primary text-white text-2xs font-bold flex items-center justify-center leading-none">
           {count > 9 ? "9+" : count}
         </span>
       )}

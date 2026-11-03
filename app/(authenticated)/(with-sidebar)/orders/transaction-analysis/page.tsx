@@ -10,7 +10,7 @@ import { MdOutlineInsights } from "react-icons/md";
 
 function TransactionAnalysisInner() {
   return (
-    <main className="flex flex-col gap-6 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-4 mt-2">
+    <main className="flex flex-col gap-6 px-5 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-4 mt-2">
       {/* Page header */}
       <div className="flex items-center gap-3.5">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">

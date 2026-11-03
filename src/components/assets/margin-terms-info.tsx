@@ -1,4 +1,4 @@
-import { Checkbox } from "@mantine/core";
+import { Checkbox, Loader } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -108,8 +108,9 @@ export const MarginTermsInfo = () => {
         <button
           onClick={() => createMarginAccount.mutate()}
           disabled={!checked || createMarginAccount.isPending}
-          className="w-full rounded-lg bg-primary px-8 py-2.5 text-sm font-bold text-white transition-all hover:brightness-110 active:scale-95 disabled:opacity-40 disabled:hover:brightness-100 disabled:active:scale-100 sm:w-auto"
+          className="w-full rounded-lg bg-primary px-8 py-2.5 text-sm font-bold text-white transition-all hover:brightness-110 active:scale-95 disabled:opacity-40 disabled:hover:brightness-100 disabled:active:scale-100 sm:w-auto flex items-center justify-center gap-2"
         >
+          {createMarginAccount.isPending && <Loader size={14} color="white" />}
           {createMarginAccount.isPending ? "Creating..." : "Confirm"}
         </button>
       </div>

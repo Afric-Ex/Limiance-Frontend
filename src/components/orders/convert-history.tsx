@@ -18,7 +18,6 @@ export const ConvertTable = () => {
     queryKey: tradingKeys.convertHistory,
     queryFn: () =>
       tradingService.convertHistory(),
-    select: (res) => res.data,
   });
 
   const hasHistory = history && history.length > 0;
