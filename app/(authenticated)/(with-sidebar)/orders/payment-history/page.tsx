@@ -15,6 +15,7 @@ import { tradingKeys, tradingService } from "@/src/services/trading";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { PaymentHistorySkeleton } from "@/src/components/skeletons/orders";
 import { Search } from "@/src/components/icons/search";
+import { OrdersPageHeader } from "@/src/components/orders/orders-page-header";
 import { MdOutlinePayments } from "react-icons/md";
 import { useState } from "react";
 import {
@@ -32,7 +33,6 @@ function PaymentHistoryInner() {
   const { data: history, isLoading } = useQuery({
     queryKey: tradingKeys.paymentHistory,
     queryFn: () => tradingService.paymentHistory(),
-    select: (res) => res.data,
   });
 
   const allHistory: any[] = Array.isArray(history) ? history : [];
@@ -41,20 +41,12 @@ function PaymentHistoryInner() {
     : allHistory;
 
   return (
-    <main className="flex flex-col gap-6 px-5 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-4 mt-2">
-      <div className="flex items-center gap-3.5">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-          <MdOutlinePayments size={22} />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)] leading-tight">
-            Payment History
-          </h1>
-          <p className="text-xs text-[var(--color-text-secondary)]">
-            Every deposit, withdrawal and transfer on your account
-          </p>
-        </div>
-      </div>
+    <main className="flex flex-col gap-8 px-5 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-6 mt-2">
+      <OrdersPageHeader
+        icon={<MdOutlinePayments size={24} />}
+        title="Payment History"
+        description="Every deposit, withdrawal and transfer on your account"
+      />
 
       <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
         <div className="flex flex-wrap gap-4 items-end">

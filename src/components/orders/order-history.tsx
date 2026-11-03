@@ -67,42 +67,44 @@ export const OrderHistory = () => {
   return (
     <div className="flex flex-col gap-6">
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 items-end bg-[#181a20] p-4 rounded-2xl border border-white/[0.06]">
-        <DateInput label="Date" classNames={dateStyles} className="w-[160px]" />
-        
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-4 p-5 rounded-2xl bg-gradient-to-br from-white/[0.02] to-white/[0.005] border border-white/[0.08] backdrop-blur-sm">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <DateInput label="Date" classNames={dateStyles} className="w-full sm:w-[160px]" />
+          
+          <div className="flex items-center gap-2 flex-1">
+            <Select
+              label="Base Asset"
+              data={["All", "BTC", "ETH", "USDT"]}
+              classNames={selectStyles}
+              className="w-[120px]"
+            />
+            <span className="text-white/40 mb-1 font-bold">-</span>
+            <Select
+              label="Quote Asset"
+              data={["All", "USDT", "USDC", "NGN"]}
+              classNames={selectStyles}
+              className="w-[120px]"
+            />
+          </div>
+
           <Select
-            label="Base Asset"
-            data={["All", "BTC", "ETH", "USDT"]}
+            label="Trade Side"
+            data={["All", "Buy", "Sell"]}
             classNames={selectStyles}
-            className="w-[120px]"
+            className="w-full sm:w-[140px]"
           />
-          <span className="text-white/40 mb-1 font-bold">-</span>
+
           <Select
-            label="Quote Asset"
-            data={["All", "USDT", "USDC", "NGN"]}
+            label="Sort By"
+            data={["Order Time", "Amount", "Price"]}
             classNames={selectStyles}
-            className="w-[120px]"
+            className="w-full sm:w-[160px]"
           />
         </div>
-
-        <Select
-          label="Trade Side"
-          data={["All", "Buy", "Sell"]}
-          classNames={selectStyles}
-          className="w-[140px]"
-        />
-
-        <Select
-          label="Sort By"
-          data={["Order Time", "Amount", "Price"]}
-          classNames={selectStyles}
-          className="w-[160px]"
-        />
       </div>
 
       {/* Table Section */}
-      <div className="min-h-[400px] rounded-2xl bg-[#181a20] border border-white/[0.06] overflow-hidden">
+      <div className="rounded-2xl bg-gradient-to-br from-white/[0.02] to-white/[0.005] border border-white/[0.08] overflow-hidden min-h-[400px]">
         {isLoading ? (
           <div className="p-6 flex flex-col gap-4">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -113,13 +115,13 @@ export const OrderHistory = () => {
           <div className="overflow-x-auto custom-scrollbar">
             <Table classNames={{ 
               table: "min-w-[900px]",
-              th: "!text-white/40 !uppercase !tracking-wider !text-xs !font-bold !border-b !border-white/[0.06] !py-4 !bg-[#181a20]", 
-              td: "!text-sm !py-4 !border-b !border-white/[0.04] !text-white/80 !font-medium",
-              tr: "hover:!bg-white/[0.02] !transition-colors cursor-default"
+              th: "!text-white/40 !uppercase !tracking-wider !text-xs !font-bold !border-b !border-white/[0.08] !py-4 !px-6 !bg-transparent !font-semibold", 
+              td: "!text-sm !py-4 !px-6 !border-b !border-white/[0.04] !text-white/80 !font-medium",
+              tr: "hover:!bg-white/[0.03] !transition-colors cursor-default"
             }}>
               <TableThead>
                 <TableTr>
-                  <TableTh className="pl-6">Time</TableTh>
+                  <TableTh>Time</TableTh>
                   <TableTh>Pair</TableTh>
                   <TableTh>Side</TableTh>
                   <TableTh>Type</TableTh>
@@ -127,24 +129,24 @@ export const OrderHistory = () => {
                   <TableTh>Amount</TableTh>
                   <TableTh>Filled</TableTh>
                   <TableTh>Total</TableTh>
-                  <TableTh className="pr-6">Status</TableTh>
+                  <TableTh>Status</TableTh>
                 </TableTr>
               </TableThead>
               <TableTbody>
                 {orders.map((order: any) => (
                   <TableTr key={order.id}>
-                    <TableTd className="pl-6 text-white/50">{formatDate(order.createdAt)}</TableTd>
+                    <TableTd className="text-white/50">{formatDate(order.createdAt)}</TableTd>
                     <TableTd className="!text-white !font-bold">{getPair(order)}</TableTd>
                     <TableTd className={order.side === "buy" ? "!text-success-6" : "!text-error-1"}>
                       {order.side?.toUpperCase() ?? "—"}
                     </TableTd>
-                    <TableTd>{order.type ?? "—"}</TableTd>
+                    <TableTd className="text-white/70">{order.type ?? "—"}</TableTd>
                     <TableTd>{formatNumber(order.price)}</TableTd>
                     <TableTd>{formatNumber(getAmount(order))}</TableTd>
                     <TableTd>{formatNumber(order.filled ?? order.filledQuantity ?? 0)}</TableTd>
-                    <TableTd>{formatNumber(getTotal(order))}</TableTd>
-                    <TableTd className="pr-6">
-                      <span className={`px-2 py-1 flex items-center justify-center w-fit text-xs font-bold rounded-md uppercase tracking-wider ${
+                    <TableTd className="!text-white">{formatNumber(getTotal(order))}</TableTd>
+                    <TableTd>
+                      <span className={`px-2.5 py-1 flex items-center justify-center w-fit text-xs font-bold rounded-lg uppercase tracking-wider ${
                         order.status === "filled" ? "text-success-6 bg-success-6/10" :
                         order.status === "cancelled" ? "text-error-1 bg-error-1/10" :
                         "text-warning-1 bg-warning-1/10"

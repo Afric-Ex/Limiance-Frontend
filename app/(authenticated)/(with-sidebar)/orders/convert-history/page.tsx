@@ -4,25 +4,17 @@ import { ConvertTable } from "@/src/components/orders/convert-history";
 import { ConvertOpenOrders } from "@/src/components/orders/convert-open-orders";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { ConvertHistorySkeleton } from "@/src/components/skeletons/orders";
+import { OrdersPageHeader } from "@/src/components/orders/orders-page-header";
 import { MdOutlineSwapHoriz } from "react-icons/md";
 
 function ConvertHistoryInner() {
   return (
-    <main className="flex flex-col gap-6 px-5 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-4 mt-2">
-      {/* Page header */}
-      <div className="flex items-center gap-3.5">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-          <MdOutlineSwapHoriz size={22} />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)] leading-tight">
-            Convert History
-          </h1>
-          <p className="text-xs text-[var(--color-text-secondary)]">
-            Past conversions and any in-progress conversion orders
-          </p>
-        </div>
-      </div>
+    <main className="flex flex-col gap-8 px-5 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-6 mt-2">
+      <OrdersPageHeader
+        icon={<MdOutlineSwapHoriz size={24} />}
+        title="Convert History"
+        description="Past conversions and any in-progress conversion orders"
+      />
 
       <Tabs classNames={classes} defaultValue="history">
         <TabsList>
