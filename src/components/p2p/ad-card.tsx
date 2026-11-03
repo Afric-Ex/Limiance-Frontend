@@ -69,7 +69,7 @@ export const AdCard = ({ ad, onActionClick, isOwnAd = false }: AdCardProps) => {
       <div className="flex flex-col items-end min-w-[120px] max-md:w-full">
         {isOwnAd ? (
           <div className="flex items-center gap-2 max-md:w-full max-md:justify-between">
-            <span className="text-[11px] font-semibold text-[#FBA42A] bg-[#FBA42A]/10 border border-[#FBA42A]/20 px-2 py-0.5 rounded-md">
+            <span className="text-micro font-semibold text-[#FBA42A] bg-[#FBA42A]/10 border border-[#FBA42A]/20 px-2 py-0.5 rounded-md">
               Your Ad
             </span>
             <Button

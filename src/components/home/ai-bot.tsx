@@ -23,7 +23,7 @@ export const AiBot = () => {
               />
               <div className="flex flex-col">
                 <span className="text-sm font-semibold">Limiance AI</span>
-                <span className="flex items-center gap-1.5 text-10px text-success-6">
+                <span className="flex items-center gap-1.5 text-2xs text-success-6">
                   <span className="w-1.5 h-1.5 rounded-full bg-success-6" />
                   Online
                 </span>

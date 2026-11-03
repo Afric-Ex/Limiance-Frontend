@@ -11,7 +11,7 @@ export const XTermOfUse = () => {
         <h4 className="text-2xl font-bold">Terms of use</h4>
         <ModalClose onClick={() => modals.closeAll()} />
       </div>
-      <div className="py-5 border-b border-b-gray-9 text-gray-14 text-18px">
+      <div className="py-5 border-b border-b-gray-9 text-gray-14 text-lg">
         <p>
           After clicking on the Link button below, you will be redirected to the
           X homepage to complete authorization for linking your account.

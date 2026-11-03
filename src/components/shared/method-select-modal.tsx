@@ -70,7 +70,7 @@ export const MethodOptionList = ({ options }: { options: MethodOption[] }) => {
                     {option.badge ? (
                       <span
                         className={clsx(
-                          "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                          "text-2xs font-semibold px-2 py-0.5 rounded-full",
                           option.badgeClass ?? DEFAULT_BADGE_CLASS
                         )}
                       >

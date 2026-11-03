@@ -96,7 +96,7 @@ export const NotificationsDropdown = () => {
         <span className="text-sm font-bold text-white">Notifications</span>
         {hasItems && (
           <div className="flex items-center gap-3">
-            <button onClick={handleMarkAllRead} className="text-[11px] font-medium text-white/50 hover:text-white transition-colors">
+            <button onClick={handleMarkAllRead} className="text-micro font-medium text-white/50 hover:text-white transition-colors">
               Mark all read
             </button>
             <button onClick={handleClear} className="text-xs font-semibold text-primary hover:text-primary/70 flex items-center gap-1 transition-colors">
@@ -121,7 +121,7 @@ export const NotificationsDropdown = () => {
                 e.stopPropagation();
                 setReadFilter(filter);
               }}
-              className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+              className={`rounded-full px-3 py-1 text-micro font-medium transition-colors ${
                 readFilter === filter
                   ? "bg-primary/20 text-primary"
                   : "text-white/50 hover:bg-white/[0.05] hover:text-white"
@@ -183,10 +183,10 @@ export const NotificationsDropdown = () => {
                   <span className={`text-xs font-semibold ${notif.read ? 'text-white/80' : 'text-white'} truncate`}>
                     {notif.title}
                   </span>
-                  <span className={`text-[11px] line-clamp-2 ${notif.read ? 'text-white/40' : 'text-white/60'}`}>
+                  <span className={`text-micro line-clamp-2 ${notif.read ? 'text-white/40' : 'text-white/60'}`}>
                     {notif.body}
                   </span>
-                  <span className="text-[10px] text-white/25 mt-1">
+                  <span className="text-2xs text-white/25 mt-1">
                     {dayjs(notif.createdAt).fromNow()}
                   </span>
                 </div>
@@ -230,7 +230,7 @@ export const NotificationDetailModal = () => {
                 {viewing.title}
               </span>
               {viewing.type && (
-                <span className="text-[10px] uppercase tracking-wider text-primary/80 font-semibold">
+                <span className="text-2xs uppercase tracking-wider text-primary/80 font-semibold">
                   {viewing.type.replaceAll("_", " ")}
                 </span>
               )}
@@ -242,7 +242,7 @@ export const NotificationDetailModal = () => {
           </p>
 
           <div className="flex items-center justify-between mt-6">
-            <span className="text-[11px] text-white/30">
+            <span className="text-micro text-white/30">
               {dayjs(viewing.createdAt).format("MMM D, YYYY h:mm A")}
             </span>
             {viewing.link ? (
@@ -259,7 +259,7 @@ export const NotificationDetailModal = () => {
                 View details →
               </button>
             ) : (
-              <span className="text-[11px] text-white/30">
+              <span className="text-micro text-white/30">
                 {viewing.read ? "Read" : "Unread"}
               </span>
             )}

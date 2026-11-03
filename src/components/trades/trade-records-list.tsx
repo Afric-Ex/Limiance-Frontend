@@ -46,7 +46,7 @@ export function TradeRecordsList({
 
   return (
     <div className="flex flex-col">
-      <div className="grid grid-cols-4 px-3 py-1.5 text-[10px] text-white/40">
+      <div className="grid grid-cols-4 px-3 py-1.5 text-2xs text-white/40">
         <span>Time</span><span className="text-center">Side</span><span className="text-right">Price</span><span className="text-right">Qty</span>
       </div>
       <div className="flex flex-col divide-y divide-white/[0.04]">
@@ -57,7 +57,7 @@ export function TradeRecordsList({
           const id = firstValue(trade, ["id", "tradeId", "trade_id", "fillId", "fill_id"]);
 
           return (
-            <div key={String(id ?? index)} className="grid grid-cols-4 px-3 py-1.5 text-[11px] font-mono tabular-nums items-center">
+            <div key={String(id ?? index)} className="grid grid-cols-4 px-3 py-1.5 text-micro font-mono tabular-nums items-center">
               <span className="text-white/40">
                 {formatTimestamp(firstValue(trade, ["createdAt", "created_at", "executedAt", "executed_at", "time", "ts"]))}
               </span>

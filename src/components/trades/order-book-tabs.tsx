@@ -142,7 +142,7 @@ function RecentTradesPanel({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="grid shrink-0 grid-cols-3 px-3 py-2 text-[10px] text-white/40">
+      <div className="grid shrink-0 grid-cols-3 px-3 py-2 text-2xs text-white/40">
         <span>Price</span>
         <span className="text-right">Qty</span>
         <span className="text-right">Time</span>
@@ -167,7 +167,7 @@ function RecentTradesPanel({
             return (
               <div
                 key={String(trade.id ?? trade.tradeId ?? trade.trade_id ?? `${time}-${price}-${index}`)}
-                className="grid grid-cols-3 items-center px-3 py-1 text-[11px] font-mono tabular-nums"
+                className="grid grid-cols-3 items-center px-3 py-1 text-micro font-mono tabular-nums"
               >
                 <span className={isBuy ? "text-success-6" : side === "SELL" ? "text-error-1" : "text-white/80"}>
                   {formatNumber(price)}
@@ -314,14 +314,14 @@ export function OrderBookTabs({
       />
       <span
         className={clsx(
-          "z-10 font-mono text-[11px] font-semibold tabular-nums",
+          "z-10 font-mono text-micro font-semibold tabular-nums",
           side === "ask" ? "text-error-1" : "text-success-6"
         )}
       >
         {formatPrice(order.price)}
       </span>
-      <span className="z-10 text-right font-mono text-[11px] tabular-nums text-white/80">{formatNumber(order.quantity, 6)}</span>
-      <span className="z-10 text-right font-mono text-[11px] tabular-nums text-white/60">{formatNumber(order.total, 6)}</span>
+      <span className="z-10 text-right font-mono text-micro tabular-nums text-white/80">{formatNumber(order.quantity, 6)}</span>
+      <span className="z-10 text-right font-mono text-micro tabular-nums text-white/60">{formatNumber(order.total, 6)}</span>
     </button>
   );
 
@@ -355,7 +355,7 @@ export function OrderBookTabs({
                 aria-label="Price grouping"
                 value={activeStep}
                 onChange={(event) => setSelectedStep(Number(event.currentTarget.value))}
-                className="h-6 w-[88px] cursor-pointer appearance-none rounded bg-white/[0.06] pl-2 pr-6 text-[11px] font-semibold text-white outline-none"
+                className="h-6 w-[88px] cursor-pointer appearance-none rounded bg-white/[0.06] pl-2 pr-6 text-micro font-semibold text-white outline-none"
               >
                 {stepOptions.map((step) => (
                   <option key={step} value={step} className="bg-[#181a20] text-white">
@@ -367,9 +367,9 @@ export function OrderBookTabs({
             </div>
           </div>
           <div className="grid shrink-0 grid-cols-3 px-3 py-1">
-            <span className="text-[10px] text-white/40">Price({quote})</span>
-            <span className="text-right text-[10px] text-white/40">Qty({base})</span>
-            <span className="text-right text-[10px] text-white/40">Total({base})</span>
+            <span className="text-2xs text-white/40">Price({quote})</span>
+            <span className="text-right text-2xs text-white/40">Qty({base})</span>
+            <span className="text-right text-2xs text-white/40">Total({base})</span>
           </div>
           {empty ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center text-xs text-white/35">
@@ -381,7 +381,7 @@ export function OrderBookTabs({
                     : "Connecting to order book…"}
               </span>
               {lastUpdated && (
-                <span className="text-[10px] text-white/25">
+                <span className="text-2xs text-white/25">
                   Last update {lastUpdated.toLocaleTimeString()}
                 </span>
               )}
@@ -400,7 +400,7 @@ export function OrderBookTabs({
                   {shownDir === "down" && <IoArrowDown size={16} />}
                   {lastTradedPrice === null ? "—" : formatPrice(lastTradedPrice)}
                 </span>
-                <span className="text-[11px] tabular-nums text-white/40">{sideNote}</span>
+                <span className="text-micro tabular-nums text-white/40">{sideNote}</span>
               </div>
               {viewMode !== "asks" && (
                 <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -415,7 +415,7 @@ export function OrderBookTabs({
               role="img"
               aria-label={`Buy pressure ${buyPercent}%, sell pressure ${sellPercent}%`}
             >
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[3px] border border-[#25AB42]/60 text-[10px] font-bold text-[#25AB42]">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[3px] border border-[#25AB42]/60 text-2xs font-bold text-[#25AB42]">
                 B
               </span>
               <span className="w-8 shrink-0 text-xs font-semibold tabular-nums text-[#25AB42]">{buyPercent}%</span>
@@ -438,7 +438,7 @@ export function OrderBookTabs({
                 />
               </div>
               <span className="w-8 shrink-0 text-right text-xs font-semibold tabular-nums text-[#F6465D]">{sellPercent}%</span>
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[3px] border border-[#F6465D]/60 text-[10px] font-bold text-[#F6465D]">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[3px] border border-[#F6465D]/60 text-2xs font-bold text-[#F6465D]">
                 S
               </span>
             </div>

@@ -166,7 +166,7 @@ function MyAdvertiserProfilePageInner() {
                 <div key={s.label} className={`${CARD_CLASS} p-4 transition-colors hover:border-white/[0.12]`}>
                   <div className={`flex items-center gap-1 mb-2 ${s.accent}`}>{s.icon}</div>
                   <div className="text-xl font-bold text-white font-mono tabular-nums">{s.value}</div>
-                  <div className="text-[11px] text-white/40 mt-0.5">{s.label}</div>
+                  <div className="text-micro text-white/40 mt-0.5">{s.label}</div>
                 </div>
               ))}
             </div>
@@ -191,7 +191,7 @@ function MyAdvertiserProfilePageInner() {
                     <MdOutlineChatBubbleOutline size={18} />
                   </div>
                   <span className="font-medium text-xs text-white/60">No recent feedback</span>
-                  <span className="text-[11px] text-white/35 mt-0.5 max-w-xs">
+                  <span className="text-micro text-white/35 mt-0.5 max-w-xs">
                     Feedback ratings left by your trading counterparties will appear here.
                   </span>
                 </div>

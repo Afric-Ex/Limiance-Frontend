@@ -102,7 +102,7 @@ export const MyWallet = () => {
             </div>
             <div className="flex min-w-0 flex-col">
               <span className="text-base font-semibold max-[1150px]:text-sm">Funding</span>
-              <span className="text-xs text-white/50 max-[1150px]:text-[10px]">Deposits / Withdrawals / P2P</span>
+              <span className="text-xs text-white/50 max-[1150px]:text-2xs">Deposits / Withdrawals / P2P</span>
             </div>
           </div>
 
@@ -114,15 +114,15 @@ export const MyWallet = () => {
                 <span className="text-base font-semibold max-[1150px]:text-sm">
                   <BalanceCloak balance={fundingUsd} />
                 </span>
-                <span className="text-xs text-white/50 max-[1150px]:text-[10px]">USD</span>
+                <span className="text-xs text-white/50 max-[1150px]:text-2xs">USD</span>
               </div>
             )}
             {isFundingLoading ? (
               <Skeleton variant="text" width="60px" height="14px" />
             ) : (
               <div className="flex items-baseline gap-1 justify-end max-[1150px]:justify-start">
-                <span className="text-xs text-white/40 max-[1150px]:text-[10px]">≈ <BalanceCloak balance={fundingBtc} /></span>
-                <span className="text-[10px] text-white/30">BTC</span>
+                <span className="text-xs text-white/40 max-[1150px]:text-2xs">≈ <BalanceCloak balance={fundingBtc} /></span>
+                <span className="text-2xs text-white/30">BTC</span>
               </div>
             )}
           </div>
@@ -150,7 +150,7 @@ export const MyWallet = () => {
             </div>
             <div className="flex min-w-0 flex-col">
               <span className="whitespace-nowrap text-base font-semibold max-[1150px]:text-sm">Unified Trading</span>
-              <span className="text-xs text-white/50 w-full max-w-[200px] leading-tight max-[1150px]:text-[10px]">
+              <span className="text-xs text-white/50 w-full max-w-[200px] leading-tight max-[1150px]:text-2xs">
                 Spot, Futures, Margin
               </span>
             </div>
@@ -164,15 +164,15 @@ export const MyWallet = () => {
                 <span className="text-base font-semibold max-[1150px]:text-sm">
                   <BalanceCloak balance={tradingUsd} />
                 </span>
-                <span className="text-xs text-white/50 max-[1150px]:text-[10px]">USD</span>
+                <span className="text-xs text-white/50 max-[1150px]:text-2xs">USD</span>
               </div>
             )}
             {isTradingLoading ? (
               <Skeleton variant="text" width="60px" height="14px" />
             ) : (
               <div className="flex items-baseline gap-1 justify-end max-[1150px]:justify-start">
-                <span className="text-xs text-white/40 max-[1150px]:text-[10px]">≈ <BalanceCloak balance={tradingBtc} /></span>
-                <span className="text-[10px] text-white/30">BTC</span>
+                <span className="text-xs text-white/40 max-[1150px]:text-2xs">≈ <BalanceCloak balance={tradingBtc} /></span>
+                <span className="text-2xs text-white/30">BTC</span>
               </div>
             )}
           </div>

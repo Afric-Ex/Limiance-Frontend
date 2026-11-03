@@ -142,7 +142,7 @@ function P2PMarketplacePageInner() {
         ) : (
           <div className="bg-[#181a20] border border-white/[0.07] rounded-xl overflow-hidden">
             {/* Table Header */}
-            <div className="hidden min-[1150px]:grid grid-cols-[minmax(180px,2fr)_1.5fr_1.5fr_1.5fr_minmax(120px,auto)] gap-4 px-5 py-3 border-b border-white/[0.06] text-[11px] font-medium uppercase tracking-wider text-white/40">
+            <div className="hidden min-[1150px]:grid grid-cols-[minmax(180px,2fr)_1.5fr_1.5fr_1.5fr_minmax(120px,auto)] gap-4 px-5 py-3 border-b border-white/[0.06] text-micro font-medium uppercase tracking-wider text-white/40">
               <span>Advertiser</span>
               <span>Price</span>
               <span>Quantity / Limits</span>
@@ -179,7 +179,7 @@ function P2PMarketplacePageInner() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           {isOwn && (
-                            <span className="text-[10px] font-semibold bg-primary/15 text-primary px-1.5 py-0.5 rounded mr-0.5">
+                            <span className="text-2xs font-semibold bg-primary/15 text-primary px-1.5 py-0.5 rounded mr-0.5">
                               You
                             </span>
                           )}
@@ -244,7 +244,7 @@ function P2PMarketplacePageInner() {
                     <div className="flex items-center justify-start min-[1150px]:justify-end min-w-[110px] max-[1150px]:w-full max-[1150px]:mt-1">
                       {isOwn ? (
                         <div className="flex min-[1150px]:flex-col items-center min-[1150px]:items-end justify-between w-full gap-1.5">
-                          <span className="text-[11px] font-semibold text-[#FBA42A] bg-[#FBA42A]/10 border border-[#FBA42A]/20 px-2 py-0.5 rounded-md">
+                          <span className="text-micro font-semibold text-[#FBA42A] bg-[#FBA42A]/10 border border-[#FBA42A]/20 px-2 py-0.5 rounded-md">
                             Your Ad
                           </span>
                           <button

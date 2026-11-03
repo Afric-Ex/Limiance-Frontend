@@ -49,11 +49,11 @@ export const OrderCancelledOverlay = ({
         <div className="bg-white/[0.03] p-4 rounded-lg border border-white/[0.06]">
           <div className="grid grid-cols-2 gap-4 mb-3">
             <div className="min-w-0">
-              <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Order ID</div>
+              <div className="text-white/40 text-2xs uppercase tracking-wider mb-0.5">Order ID</div>
               <div className="text-white font-mono text-xs truncate">{orderId}</div>
             </div>
             <div className="min-w-0">
-              <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Crypto Amount</div>
+              <div className="text-white/40 text-2xs uppercase tracking-wider mb-0.5">Crypto Amount</div>
               <div className="text-white font-semibold font-mono text-xs">
                 {cryptoAmount.toLocaleString()} {asset}
               </div>

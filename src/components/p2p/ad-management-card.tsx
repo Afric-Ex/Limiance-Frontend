@@ -48,7 +48,7 @@ export const AdManagementCard = ({
               <span className="text-xs text-white/50">{isActive ? "Active" : "Paused"}</span>
             </div>
           </div>
-          <div className="text-white/40 text-[11px]">
+          <div className="text-white/40 text-micro">
             Created: 14 Mar 2024 · Orders: 12 completed
           </div>
         </div>
@@ -62,19 +62,19 @@ export const AdManagementCard = ({
 
       <div className="grid grid-cols-2 gap-3 text-xs">
         <div className="bg-white/[0.02] border border-white/[0.04] p-3 rounded-lg">
-          <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Available Amount</div>
+          <div className="text-white/40 text-2xs uppercase tracking-wider mb-0.5">Available Amount</div>
           <div className="text-white font-medium font-mono tabular-nums">
             {ad.availableQuantity.toLocaleString()} {ad.asset}
           </div>
         </div>
         <div className="bg-white/[0.02] border border-white/[0.04] p-3 rounded-lg">
-          <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Order Limit</div>
+          <div className="text-white/40 text-2xs uppercase tracking-wider mb-0.5">Order Limit</div>
           <div className="text-white font-medium font-mono tabular-nums">
             {ad.minQuantity.toLocaleString()} – {ad.maxQuantity.toLocaleString()} {ad.asset}
           </div>
         </div>
         <div className="col-span-2">
-          <div className="text-white/40 text-[10px] uppercase tracking-wider mb-1.5">Payment Methods</div>
+          <div className="text-white/40 text-2xs uppercase tracking-wider mb-1.5">Payment Methods</div>
           <div className="flex flex-wrap gap-1.5">
             {ad.paymentMethods.map((m) => (
               <PaymentMethodBadge key={m} method={m} />
@@ -173,7 +173,7 @@ export const AdManagementCard = ({
             <MdWarning size={16} className="shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold mb-0.5">Are you sure? This action cannot be undone.</p>
-              <p className="text-yellow-500/75 text-[11px]">Any locked crypto will be returned to your Funding Account.</p>
+              <p className="text-yellow-500/75 text-micro">Any locked crypto will be returned to your Funding Account.</p>
             </div>
           </div>
           <div className="flex gap-2.5 mt-2">

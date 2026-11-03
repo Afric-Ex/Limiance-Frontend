@@ -10,6 +10,8 @@ import { getCryptoIcon } from "@/src/utils/crypto-icons";
 import { MdOutlineReceiptLong, MdRefresh } from "react-icons/md";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2POrdersSkeleton } from "@/src/components/skeletons/p2p";
+import { useUserStore } from "@/src/stores/user-store";
+import { parseDate } from "@/src/lib/parse-date";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "text-[#FBA42A] bg-[#FBA42A]/10 border-[#FBA42A]/20",
@@ -23,7 +25,7 @@ const STATUS_STYLES: Record<string, string> = {
   DISPUTED: "text-[#F6465D] bg-[#F6465D]/10 border-[#F6465D]/20",
 };
 
-const fieldLabel = "text-[10px] font-medium uppercase tracking-wider text-white/35";
+const fieldLabel = "text-2xs font-medium uppercase tracking-wider text-white/35";
 
 type OrderTab = "PROCESSING" | "EXPIRED" | "CANCELLED" | "ALL";
 
@@ -45,6 +47,53 @@ const isExpiredOrder = (order: any) => getOrderStatus(order) === "EXPIRED";
 
 const isCancelledOrder = (order: any) =>
   ["CANCELLED", "CANCELED"].includes(getOrderStatus(order));
+
+/**
+ * The side shown on this screen is the signed-in user's side, not the ad's
+ * side. A taker matching a SELL ad is buying, so the order must read BUY.
+ */
+const idOf = (value: any): string => {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  return String(value.id ?? value.userId ?? value.user_id ?? value._id ?? "");
+};
+
+const nameOf = (value: any): string => {
+  if (!value) return "";
+  if (typeof value === "string") return value.trim();
+  return (
+    [value.firstName, value.lastName].filter(Boolean).join(" ").trim() ||
+    value.fullName ||
+    value.name ||
+    value.username ||
+    ""
+  );
+};
+
+const resolveUserSide = (order: any, userId: string): "BUY" | "SELL" => {
+  const adType = String(
+    order?.type ?? order?.order?.type ?? order?.orderType ?? order?.order_type ?? ""
+  ).toUpperCase();
+  const buyerId = idOf(order?.buyerId ?? order?.buyer_id ?? order?.buyer);
+  const sellerId = idOf(order?.sellerId ?? order?.seller_id ?? order?.seller);
+  const matcherId = idOf(order?.matcherId ?? order?.matcher_id ?? order?.matcher);
+  const advertiserId = idOf(
+    order?.advertiserId ?? order?.advertiser_id ?? order?.advertiser
+  );
+
+  if (userId && buyerId && buyerId === userId) return "BUY";
+  if (userId && sellerId && sellerId === userId) return "SELL";
+
+  if (userId && matcherId && matcherId === userId) {
+    if (adType === "BUY") return "SELL";
+    if (adType === "SELL") return "BUY";
+  }
+  if (userId && advertiserId && advertiserId === userId) {
+    if (adType === "BUY" || adType === "SELL") return adType;
+  }
+
+  return adType === "BUY" ? "BUY" : "SELL";
+};
 
 const EMPTY_STATE: Record<OrderTab, { title: string; body: string }> = {
   PROCESSING: {
@@ -70,18 +119,17 @@ function OrderHistoryPageInner() {
   const [activeTab, setActiveTab] = useState<OrderTab>("PROCESSING");
   const [filterType, setFilterType] = useState<string>("ALL");
 
-  const { data, isLoading, refetch, isRefetching } = useAllMatchedOrders(
-    filterType !== "ALL" ? { type: filterType } : undefined
+  const currentUserId = useUserStore((state) =>
+    state.user?.id != null ? String(state.user.id) : ""
   );
+  const { data, isLoading, refetch, isRefetching } = useAllMatchedOrders();
 
   const fetchedOrders: any[] = (data as any)?.data?.data ?? [];
   const allOrders =
     filterType === "ALL"
       ? fetchedOrders
       : fetchedOrders.filter(
-          (o) =>
-            String(o.type ?? o.order?.type ?? "").toLowerCase() ===
-            filterType.toLowerCase()
+          (o) => resolveUserSide(o, currentUserId) === filterType
         );
 
   const displayOrders = allOrders.filter((o) => {
@@ -95,10 +143,9 @@ function OrderHistoryPageInner() {
   const expiredCount = allOrders.filter(isExpiredOrder).length;
   const cancelledCount = allOrders.filter(isCancelledOrder).length;
 
-  const formatDate = (iso: string) => {
-    if (!iso) return "—";
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
+  const formatDate = (value: unknown) => {
+    const d = parseDate(value);
+    return d ? d.toLocaleString() : "—";
   };
 
   return (
@@ -191,15 +238,25 @@ function OrderHistoryPageInner() {
               const fiat = (order.fiatCurrency ?? order.fiat ?? order.order?.fiat ?? "").toUpperCase();
               const qty = parseFloat(String(order.quantity ?? 0));
               const fiatAmt = parseFloat(String(order.fiatAmount ?? order.amount ?? 0));
-              const orderType = order.type ?? order.order?.type ?? "?";
+              const userSide = resolveUserSide(order, currentUserId);
               const status = (order.status ?? "PENDING").toUpperCase();
               const statusStyle = STATUS_STYLES[status] ?? "text-white/40 bg-white/[0.05] border-white/[0.07]";
+              const advertiserName =
+                order.advertiserName || nameOf(order.advertiser) || "—";
+              const matcherName = order.matcherName || nameOf(order.matcher) || "—";
               const sellerName =
-                order.sellerName || [order.seller?.firstName, order.seller?.lastName].filter(Boolean).join(" ") || "—";
+                order.sellerName ||
+                nameOf(order.seller) ||
+                advertiserName ||
+                matcherName;
               const buyerName =
-                order.buyerName || [order.buyer?.firstName, order.buyer?.lastName].filter(Boolean).join(" ") || "—";
-              const counterparty = orderType?.toUpperCase() === "BUY" ? buyerName : sellerName;
-              const isBuy = orderType?.toUpperCase() === "BUY";
+                order.buyerName ||
+                nameOf(order.buyer) ||
+                advertiserName ||
+                matcherName;
+              // Counterparty is the other side of the trade from the user's side.
+              const counterparty = userSide === "BUY" ? sellerName : buyerName;
+              const isBuy = userSide === "BUY";
               const coinIcon = getCryptoIcon(String(asset ?? ""));
               const orderRef = String(order.orderId ?? order.id ?? "—");
 
@@ -215,20 +272,20 @@ function OrderHistoryPageInner() {
                       {coinIcon ? (
                         <img src={coinIcon} alt={asset} width={20} height={20} className="shrink-0" />
                       ) : (
-                        <span className="w-5 h-5 shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
+                        <span className="w-5 h-5 shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-2xs font-bold text-primary">
                           {String(asset).charAt(0).toUpperCase()}
                         </span>
                       )}
                       <div className="min-w-0">
                         <div className={`text-sm font-bold ${isBuy ? "text-buy" : "text-[#F6465D]"}`}>
-                          {String(orderType).toUpperCase()} {String(asset).toUpperCase()}
+                          {userSide} {String(asset).toUpperCase()}
                         </div>
-                        <div className="mt-0.5 truncate font-mono text-[11px] text-white/35" title={orderRef}>
+                        <div className="mt-0.5 truncate font-mono text-micro text-white/35" title={orderRef}>
                           Ref: {orderRef.slice(-10).toUpperCase()}
                         </div>
                       </div>
                     </div>
-                    <span className={`inline-flex shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-md border uppercase tracking-wider ${statusStyle}`}>
+                    <span className={`inline-flex shrink-0 text-micro font-semibold px-2.5 py-0.5 rounded-md border uppercase tracking-wider ${statusStyle}`}>
                       {status.charAt(0) + status.slice(1).toLowerCase()}
                     </span>
                   </div>

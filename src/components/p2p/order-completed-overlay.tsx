@@ -175,7 +175,7 @@ export const OrderCompletedOverlay = ({
 
             {rating && (
               <div className="mb-3">
-                <div className="text-[10px] uppercase tracking-wider text-white/40 mb-1.5">Tags (optional):</div>
+                <div className="text-2xs uppercase tracking-wider text-white/40 mb-1.5">Tags (optional):</div>
                 <div className="flex flex-wrap gap-1.5">
                   {currentTags.map((tag) => (
                     <button
@@ -208,7 +208,7 @@ export const OrderCompletedOverlay = ({
                     "!bg-white/[0.04] !border-white/[0.08] !text-white focus:!border-primary/50 !rounded-lg !text-xs !p-2.5",
                 }}
               />
-              <div className="text-right text-[10px] text-white/35 mt-1">{comment.length}/200</div>
+              <div className="text-right text-2xs text-white/35 mt-1">{comment.length}/200</div>
             </div>
 
             <div className="flex gap-2.5">

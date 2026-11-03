@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "@mantine/core/styles.css";
 import "@mantine/dropzone/styles.css";
 import "@mantine/dates/styles.css";
@@ -12,6 +13,18 @@ import QueryProvider from "@/src/providers/query-provider";
 import { Toaster } from "react-hot-toast";
 import Providers from "@/src/components/providers";
 import { NotificationsProvider } from "@/src/components/shared/notifications-provider";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Limiance Exchange — Trade Crypto with Confidence",
@@ -32,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased overflow-x-hidden">
         <Toaster />
         <MantineProvider theme={theme} forceColorScheme="dark">

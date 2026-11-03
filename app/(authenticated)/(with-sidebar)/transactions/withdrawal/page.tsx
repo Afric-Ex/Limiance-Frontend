@@ -715,7 +715,7 @@ function WithdrawalInner() {
                           return token?.image ? (
                             <img src={token.image} alt={item?.asset || ""} width={18} height={18} className="rounded-full" />
                           ) : (
-                            <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[8px] font-bold">
+                            <span className="w-4 h-4 rounded-full bg-primary/20 text-primary flex items-center justify-center text-2xs font-bold">
                               {item?.asset?.[0] || "?"}
                             </span>
                           );

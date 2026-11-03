@@ -30,7 +30,7 @@ export const InputSelect = ({
         placeholder="Enter Amount"
         classNames={{
           input:
-            "!border-0 !bg-transparent focus:!border-0 !px-0 !py-0 placeholder:!text-13px placeholder:!text-[#848E9C] !flex-1",
+            "!border-0 !bg-transparent focus:!border-0 !px-0 !py-0 placeholder:!text-caption placeholder:!text-[#848E9C] !flex-1",
         }}
       />
       <Popover
@@ -90,7 +90,7 @@ export const InputSelect = ({
                         height={16}
                         alt={item.name}
                       />
-                      <span className="text-10px text-gray-14 text-nowrap">
+                      <span className="text-2xs text-gray-14 text-nowrap">
                         {item.name}
                       </span>
                     </li>

@@ -48,7 +48,7 @@ export function FAQ() {
     <AccordionItem key={item.value} value={item.value}>
       <AccordionControl
         icon={
-          <span className="md:w-50px md:h-12 w-8 h-10 rounded-lg md:text-19px text-sm font-bold text-white flex items-center justify-center bg-primary">
+          <span className="md:w-50px md:h-12 w-8 h-10 rounded-lg md:text-subtitle text-sm font-bold text-white flex items-center justify-center bg-primary">
             {idx + 1}
           </span>
         }

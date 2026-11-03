@@ -180,7 +180,7 @@ const DepthPanel = memo(function DepthPanel({
 
   const hasBook = bids.length > 0 || asks.length > 0;
   const controlClass =
-    "text-[10px] font-semibold px-2 h-6 rounded bg-white/[0.06] text-white/60 hover:text-white/90 transition-colors";
+    "text-2xs font-semibold px-2 h-6 rounded bg-white/[0.06] text-white/60 hover:text-white/90 transition-colors";
 
   return (
     <div className="w-full min-w-0 flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-3">
@@ -188,7 +188,7 @@ const DepthPanel = memo(function DepthPanel({
       <section className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 shrink-0">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-white/90">Market Depth Liquidity</span>
-          <span className="text-[10px] text-white/35">Cumulative Curves</span>
+          <span className="text-2xs text-white/35">Cumulative Curves</span>
         </div>
 
         {hasBook ? (
@@ -229,27 +229,27 @@ const DepthPanel = memo(function DepthPanel({
           </div>
         )}
 
-        <div className="flex items-center justify-center text-[10px] text-white/40 font-mono -mt-1">
+        <div className="flex items-center justify-center text-2xs text-white/40 font-mono -mt-1">
           Mid: {fmtPrice(midPrice)}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
           <div className="rounded bg-black/25 border border-white/[0.06] px-2 py-1.5">
-            <div className="text-[10px] text-white/40">Total Bid Volume</div>
+            <div className="text-2xs text-white/40">Total Bid Volume</div>
             <div className="text-xs font-bold font-mono tabular-nums text-success-6">{fmtNotional(bidTotal)}</div>
           </div>
           <div className="rounded bg-black/25 border border-white/[0.06] px-2 py-1.5">
-            <div className="text-[10px] text-white/40">Total Ask Volume</div>
+            <div className="text-2xs text-white/40">Total Ask Volume</div>
             <div className="text-xs font-bold font-mono tabular-nums text-error-1">{fmtNotional(askTotal)}</div>
           </div>
           <div className="rounded bg-black/25 border border-white/[0.06] px-2 py-1.5">
-            <div className="text-[10px] text-white/40">Order Ratio</div>
+            <div className="text-2xs text-white/40">Order Ratio</div>
             <div className="text-xs font-bold font-mono tabular-nums text-white/90">
               {buyPct}% : {sellPct}%
             </div>
           </div>
           <div className="rounded bg-black/25 border border-white/[0.06] px-2 py-1.5">
-            <div className="text-[10px] text-white/40">Socket State</div>
+            <div className="text-2xs text-white/40">Socket State</div>
             <div
               className={clsx(
                 "text-xs font-bold font-mono capitalize",
@@ -273,7 +273,7 @@ const DepthPanel = memo(function DepthPanel({
                 onClick={() => setViewMode(m)}
                 title={m === "both" ? "Both asks & bids" : `${m} only`}
                 className={clsx(
-                  "text-[10px] font-semibold px-2 h-6 rounded transition-colors capitalize",
+                  "text-2xs font-semibold px-2 h-6 rounded transition-colors capitalize",
                   viewMode === m ? "bg-white/15 text-white" : "bg-white/[0.06] text-white/50 hover:text-white/80"
                 )}
               >
@@ -305,7 +305,7 @@ const DepthPanel = memo(function DepthPanel({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 px-3 py-1.5 text-[10px] text-white/40">
+        <div className="grid grid-cols-3 px-3 py-1.5 text-2xs text-white/40">
           <span>Price ({quote})</span>
           <span className="text-right">Size ({base})</span>
           <span className="text-right">Total ({quote})</span>
@@ -323,19 +323,19 @@ const DepthPanel = memo(function DepthPanel({
                     className="absolute top-0 bottom-0 right-0 bg-error-1/[0.12] pointer-events-none"
                     style={{ width: `${row.depthPct}%` }}
                   />
-                  <span className="relative z-10 text-[11px] font-mono tabular-nums font-semibold text-error-1">
+                  <span className="relative z-10 text-micro font-mono tabular-nums font-semibold text-error-1">
                     {fmtPrice(row.price)}
                   </span>
-                  <span className="relative z-10 text-[11px] font-mono tabular-nums text-white/80 text-right">
+                  <span className="relative z-10 text-micro font-mono tabular-nums text-white/80 text-right">
                     {fmtQty(row.quantity)}
                   </span>
-                  <span className="relative z-10 text-[11px] font-mono tabular-nums text-white/40 text-right">
+                  <span className="relative z-10 text-micro font-mono tabular-nums text-white/40 text-right">
                     {fmtTotal(row.total)}
                   </span>
                 </div>
               ))
             ) : (
-              <div className="py-4 text-center text-[11px] text-white/30">No active asks</div>
+              <div className="py-4 text-center text-micro text-white/30">No active asks</div>
             ))}
 
           <div className="flex items-center justify-between px-3 py-2 my-1.5 rounded bg-black/35 border-l-[3px] border-l-blue-1">
@@ -348,7 +348,7 @@ const DepthPanel = memo(function DepthPanel({
               {fmtPrice(displayPrice)}
               {direction === "up" ? <FiArrowUp size={13} /> : direction === "down" ? <FiArrowDown size={13} /> : null}
             </span>
-            <span className="text-[10px] text-white/40">
+            <span className="text-2xs text-white/40">
               Spread: {fmtPrice(spread)} ({spreadPct.toFixed(3)}%)
             </span>
           </div>
@@ -364,25 +364,25 @@ const DepthPanel = memo(function DepthPanel({
                     className="absolute top-0 bottom-0 right-0 bg-success-6/[0.12] pointer-events-none"
                     style={{ width: `${row.depthPct}%` }}
                   />
-                  <span className="relative z-10 text-[11px] font-mono tabular-nums font-semibold text-success-6">
+                  <span className="relative z-10 text-micro font-mono tabular-nums font-semibold text-success-6">
                     {fmtPrice(row.price)}
                   </span>
-                  <span className="relative z-10 text-[11px] font-mono tabular-nums text-white/80 text-right">
+                  <span className="relative z-10 text-micro font-mono tabular-nums text-white/80 text-right">
                     {fmtQty(row.quantity)}
                   </span>
-                  <span className="relative z-10 text-[11px] font-mono tabular-nums text-white/40 text-right">
+                  <span className="relative z-10 text-micro font-mono tabular-nums text-white/40 text-right">
                     {fmtTotal(row.total)}
                   </span>
                 </div>
               ))
             ) : (
-              <div className="py-4 text-center text-[11px] text-white/30">No active bids</div>
+              <div className="py-4 text-center text-micro text-white/30">No active bids</div>
             ))}
         </div>
 
         {/* Buy/sell depth imbalance */}
         <div className="px-3 pt-2.5 pb-3 mt-1 border-t border-white/[0.06] shrink-0">
-          <div className="flex items-center justify-between text-[10px] font-semibold mb-1.5">
+          <div className="flex items-center justify-between text-2xs font-semibold mb-1.5">
             <span className="text-success-6">Buy Depth: {buyPct}%</span>
             <span className="text-error-1">Sell Depth: {sellPct}%</span>
           </div>
@@ -576,7 +576,7 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <div className="hidden items-center gap-2 text-[10px] font-medium text-white/45 sm:flex">
+          <div className="hidden items-center gap-2 text-2xs font-medium text-white/45 sm:flex">
             <span className="rounded bg-white/[0.06] px-1.5 py-1 text-white/60">{marketLabel}</span>
             <span className="inline-flex items-center gap-1.5" title="Order book WebSocket status">
               <span className={clsx("h-1.5 w-1.5 rounded-full", bookLive ? "bg-success-6" : "bg-warning-1")} />

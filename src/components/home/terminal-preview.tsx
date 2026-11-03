@@ -36,7 +36,7 @@ export function TerminalPreview() {
           <button
             key={s} role="tab" aria-selected={s === symbol}
             onClick={() => { setSymbol(s); setHover(null); }}
-            className={`${mono.className} shrink-0 rounded-md px-3 py-1.5 text-[13px] transition-colors ${
+            className={`${mono.className} shrink-0 rounded-md px-3 py-1.5 text-caption transition-colors ${
               s === symbol ? "bg-white/10 text-white" : "text-[#8A91A0] hover:bg-white/5 hover:text-white"
             }`}
           >
@@ -49,10 +49,10 @@ export function TerminalPreview() {
         <div className="min-w-0 p-4">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
             <div>
-              <div className={`${mono.className} text-[28px] font-medium leading-none tabular-nums text-white`}>
+              <div className={`${mono.className} text-3xl font-medium leading-none tabular-nums text-white`}>
                 {shown ? fmtPrice(shown.close) : mv ? fmtPrice(mv.price) : "\u2014"}
               </div>
-              <div className={`${mono.className} mt-2 text-[13px] tabular-nums ${mv ? (up ? "text-[#25AB42]" : "text-[#F6465D]") : "text-[#8A91A0]"}`}>
+              <div className={`${mono.className} mt-2 text-caption tabular-nums ${mv ? (up ? "text-[#25AB42]" : "text-[#F6465D]") : "text-[#8A91A0]"}`}>
                 {mv ? <><span aria-hidden>{up ? "\u25B2" : "\u25BC"}</span> {fmtPct(mv.changePct)} <span className="text-[#8A91A0]">24h</span></> : "24h change unavailable"}
               </div>
             </div>
@@ -69,7 +69,7 @@ export function TerminalPreview() {
           </div>
 
           {shown && !failed && (
-            <div className={`${mono.className} mt-3 flex flex-wrap gap-x-4 text-[11px] tabular-nums text-[#8A91A0]`}>
+            <div className={`${mono.className} mt-3 flex flex-wrap gap-x-4 text-micro tabular-nums text-[#8A91A0]`}>
               <span>{when(shown.time)}</span>
               <span>O {fmtPrice(shown.open)}</span><span>H {fmtPrice(shown.high)}</span>
               <span>L {fmtPrice(shown.low)}</span><span>C {fmtPrice(shown.close)}</span>
@@ -92,7 +92,7 @@ export function TerminalPreview() {
           </div>
 
           {candles.data && !failed && (
-            <p className="mt-2 flex items-center gap-2 text-[11px] text-[#8A91A0]">
+            <p className="mt-2 flex items-center gap-2 text-micro text-[#8A91A0]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#25AB42]" aria-hidden />
               Live market data, refreshed every 30 seconds
             </p>
@@ -107,7 +107,7 @@ export function TerminalPreview() {
                 <li key={p.symbol}>
                   <button
                     onClick={() => { setSymbol(p.symbol); setHover(null); }}
-                    className={`${mono.className} flex w-full items-center justify-between px-4 py-2 text-[12px] tabular-nums transition-colors hover:bg-white/5 ${p.symbol === symbol ? "bg-white/[0.06]" : ""}`}
+                    className={`${mono.className} flex w-full items-center justify-between px-4 py-2 text-xs tabular-nums transition-colors hover:bg-white/5 ${p.symbol === symbol ? "bg-white/[0.06]" : ""}`}
                   >
                     <span className="text-white">{p.symbol.replace("/USDT", "")}</span>
                     <span className={p.changePct >= 0 ? "text-[#25AB42]" : "text-[#F6465D]"}>{fmtPct(p.changePct)}</span>

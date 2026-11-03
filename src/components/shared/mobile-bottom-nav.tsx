@@ -129,11 +129,11 @@ function TradeSheet({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[15px] font-semibold text-white/90">
+                      <span className="text-body font-semibold text-white/90">
                         {opt.label}
                       </span>
                       {opt.badge && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning border border-warning/30 tracking-wider">
+                        <span className="text-2xs font-bold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning border border-warning/30 tracking-wider">
                           {opt.badge}
                         </span>
                       )}
@@ -229,7 +229,7 @@ export const MobileBottomNav = () => {
                 />
                 <span
                   className={clsx(
-                    "text-[10px] font-medium transition-colors",
+                    "text-2xs font-medium transition-colors",
                     isActive ? "text-primary" : "text-white/35"
                   )}
                 >
@@ -247,7 +247,7 @@ export const MobileBottomNav = () => {
             >
               <IoSwapHorizontal size={24} className="text-white relative z-10" />
             </button>
-            <span className="text-[10px] font-medium text-white/35 mt-1">
+            <span className="text-2xs font-medium text-white/35 mt-1">
               Trade
             </span>
           </div>
@@ -278,7 +278,7 @@ export const MobileBottomNav = () => {
                 />
                 <span
                   className={clsx(
-                    "text-[10px] font-medium transition-colors",
+                    "text-2xs font-medium transition-colors",
                     isActive ? "text-primary" : "text-white/35"
                   )}
                 >

@@ -308,7 +308,7 @@ function DashboardInner() {
             <div className="flex gap-2">
               <VerifyStatusTag verified={user?.isIDverified} status={kycStatus} />
               <div className="min-[1150px]:hidden flex items-center gap-1 bg-white/5 rounded-full px-2 py-0.5 border border-white/10">
-                <span className="text-[10px] font-semibold text-white/70">ID: {user?.id?.split("-")?.at(-1)}</span>
+                <span className="text-2xs font-semibold text-white/70">ID: {user?.id?.split("-")?.at(-1)}</span>
                 <Copy text={user?.id ?? ""} />
               </div>
             </div>
@@ -365,7 +365,7 @@ function DashboardInner() {
                     </span>
                     <div className="flex flex-col gap-0.5">
                       <h5 className="text-sm font-semibold text-white">{item.name}</h5>
-                      <span className="text-[11px] text-white/40">{item.channel}</span>
+                      <span className="text-micro text-white/40">{item.channel}</span>
                     </div>
                   </div>
                   <span className="text-white/40 group-hover:text-white transition-all shrink-0">
@@ -387,7 +387,7 @@ function DashboardInner() {
                     </span>
                     <div className="flex flex-col gap-0.5">
                       <h5 className="text-sm font-semibold text-white">{item.name}</h5>
-                      <span className="text-[11px] text-white/40">{item.channel}</span>
+                      <span className="text-micro text-white/40">{item.channel}</span>
                     </div>
                   </div>
                   <span className="text-white/40 group-hover:text-white transition-all shrink-0">
@@ -450,13 +450,13 @@ function DashboardInner() {
               >
                 <thead>
                   <TableTr>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] pl-4 max-[768px]:pl-2">Coin</TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[768px]:text-right max-[768px]:pr-2">Price</TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[768px]:text-right max-[768px]:pr-2">
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-2xs pl-4 max-[768px]:pl-2">Coin</TableTh>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-2xs max-[768px]:text-right max-[768px]:pr-2">Price</TableTh>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-2xs max-[768px]:text-right max-[768px]:pr-2">
                       <span>{item === "Holding" ? "Balance" : "24h Volume"}</span>
                     </TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] max-[768px]:hidden">24h Change</TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-[10px] text-right pr-4 max-[768px]:hidden">Action</TableTh>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-2xs max-[768px]:hidden">24h Change</TableTh>
+                    <TableTh className="!text-white/40 uppercase tracking-wider text-2xs text-right pr-4 max-[768px]:hidden">Action</TableTh>
                   </TableTr>
                 </thead>
                 <tbody>
@@ -481,15 +481,15 @@ function DashboardInner() {
                           {token.image ? (
                             <img src={token.image} alt={token.symbol} loading="lazy" decoding="async" className="w-6 h-6 max-[768px]:w-9 max-[768px]:h-9 rounded-full object-cover shrink-0" />
                           ) : (
-                            <span className="w-6 h-6 max-[768px]:w-9 max-[768px]:h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] max-[768px]:text-sm font-bold text-white/80 shrink-0">
+                            <span className="w-6 h-6 max-[768px]:w-9 max-[768px]:h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-2xs max-[768px]:text-sm font-bold text-white/80 shrink-0">
                               {token.symbol.charAt(0)}
                             </span>
                           )}
                           <span className="flex items-baseline max-[768px]:flex-col max-[768px]:items-start gap-1.5 max-[768px]:gap-0">
-                            <span className="text-[13px] max-[768px]:text-base font-bold text-white/90">
+                            <span className="text-caption max-[768px]:text-base font-bold text-white/90">
                               {token.symbol}
                             </span>
-                            <span className="text-[10px] max-[768px]:text-xs font-medium text-white/30 max-[768px]:text-white/40">{token.pair.split('/')[1]}</span>
+                            <span className="text-2xs max-[768px]:text-xs font-medium text-white/30 max-[768px]:text-white/40">{token.pair.split('/')[1]}</span>
                             <button
                               type="button"
                               onClick={() => openConvertModal(token.symbol)}
@@ -507,7 +507,7 @@ function DashboardInner() {
                         </span>
                       </TableTd>
                       <TableTd className="py-1.5 max-[768px]:text-right max-[768px]:pr-2">
-                        <span className="text-[13px] font-medium text-white/90 tabular-nums">
+                        <span className="text-caption font-medium text-white/90 tabular-nums">
                           {item === "Holding" && token.balance != null
                             ? `${Number(token.balance).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${token.symbol}`
                             : `$${formatVolume(token.volume24h * token.price)}`

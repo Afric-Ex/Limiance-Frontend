@@ -127,7 +127,7 @@ export function BuyLimAmountStep({
           </span>
         </div>
         {liveQuote && !quoteUnavailable && (
-          <span className="text-[11px] text-white/35">
+          <span className="text-micro text-white/35">
             1 USDT ≈ {formatAmount(liveQuote.rate, 6)} {LIM_SYMBOL}
           </span>
         )}
@@ -156,7 +156,7 @@ export function BuyLimAmountStep({
         Review purchase
       </Button>
 
-      <p className="text-center text-[11px] text-white/30">
+      <p className="text-center text-micro text-white/30">
         Paid from your Funding balance. You&apos;ll see the exact rate before
         anything is executed.
       </p>

@@ -23,7 +23,7 @@ function ResetPassword() {
         />
         <div className="flex flex-col max-w-416px w-full max-sm:mx-auto min-[1150px]:ml-auto gap-7 max-[1150px]:gap-6">
           <div className="flex flex-col gap-4 max-[1150px]:text-center">
-            <h2 className="md:text-45px sm:text-36px text-2xl font-bold">Reset Password</h2>
+            <h2 className="md:text-display sm:text-4xl text-2xl font-bold">Reset Password</h2>
             <p className="sm:text-xl text-base font-bold">Please Enter Your New Password</p>
           </div>
           <ResetPasswordForm />

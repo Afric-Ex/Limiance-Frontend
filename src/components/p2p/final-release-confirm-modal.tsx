@@ -45,7 +45,7 @@ export const FinalReleaseConfirmModal = ({
     >
       <div className="flex flex-col gap-4 py-2">
         <div className="bg-white/[0.03] p-4 rounded-lg border border-white/[0.06] text-center">
-          <div className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Releasing Crypto To Counterparty</div>
+          <div className="text-white/40 text-2xs uppercase tracking-wider mb-1">Releasing Crypto To Counterparty</div>
           <div className="text-xl font-bold text-white font-mono mb-1">
             {cryptoAmount.toLocaleString()} {asset}
           </div>

@@ -223,7 +223,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
             option: "!text-white/80 hover:!bg-white/[0.04]",
           }}
         />
-        <span className="text-[11px] text-white/35">
+        <span className="text-micro text-white/35">
           Conversion currently runs against your selected balance.
         </span>
       </div>

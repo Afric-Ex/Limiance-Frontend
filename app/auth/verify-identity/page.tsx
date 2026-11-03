@@ -33,7 +33,7 @@ function VerifyIdentity() {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <h2 className="text-bold-20 self-center">Verify your identity</h2>
+              <h2 className="text-xl font-bold self-center">Verify your identity</h2>
               <p className="py-10px relative">
                 To ensure the security of your account and comply with
                 regulations, we require users to complete verification process

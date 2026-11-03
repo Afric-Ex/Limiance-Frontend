@@ -212,7 +212,7 @@ function Th({ children, align = "left" }: { children: ReactNode; align?: "left" 
   return (
     <th
       className={clsx(
-        "whitespace-nowrap px-3 py-2 text-[10px] font-medium uppercase tracking-wide text-white/40",
+        "whitespace-nowrap px-3 py-2 text-2xs font-medium uppercase tracking-wide text-white/40",
         align === "right" ? "text-right" : "text-left"
       )}
     >
@@ -303,13 +303,13 @@ export function PositionsTable({
                   <div>
                     <span className="font-bold text-sm text-white">{row.pair}</span>
                     <span className={clsx("ml-2 text-xs font-semibold", row.isLong ? "text-[#25AB42]" : "text-[#F6465D]")}>{row.isLong ? "Long" : "Short"}</span>
-                    <span className="ml-1 text-[10px] text-white/40">{row.leverage}x</span>
+                    <span className="ml-1 text-2xs text-white/40">{row.leverage}x</span>
                   </div>
                 </div>
                 {row.pnl !== null && (
                   <div className={clsx("text-right font-semibold text-sm", pnlTone)}>
                     <div>{sign}{fmtMoney(row.pnl)} {row.quote}</div>
-                    <div className="text-[10px]">{row.roe === null ? "" : `${sign}${row.roe.toFixed(2)}%`}</div>
+                    <div className="text-2xs">{row.roe === null ? "" : `${sign}${row.roe.toFixed(2)}%`}</div>
                   </div>
                 )}
               </div>
@@ -383,7 +383,7 @@ export function PositionsTable({
                     <span className={clsx("h-7 w-1 shrink-0 rounded-full", row.isLong ? "bg-[#25AB42]" : "bg-[#F6465D]")} />
                     <div className="flex flex-col gap-0.5">
                       <span className="font-semibold text-white/90">{row.pair}</span>
-                      <span className="text-[10px] text-white/40">{subtitle}</span>
+                      <span className="text-2xs text-white/40">{subtitle}</span>
                     </div>
                   </div>
                 </td>
@@ -408,7 +408,7 @@ export function PositionsTable({
                         {sign}
                         {fmtMoney(row.pnl)} {row.quote}
                       </span>
-                      <span className="text-[10px]">
+                      <span className="text-2xs">
                         {row.roe === null ? "—" : `${sign}${row.roe.toFixed(2)}%`}
                       </span>
                     </div>
@@ -416,7 +416,7 @@ export function PositionsTable({
                 </td>
                 <td className="px-3 py-2.5 font-mono">
                   <div className="flex items-center gap-2">
-                    <div className="flex flex-col gap-0.5 text-[11px]">
+                    <div className="flex flex-col gap-0.5 text-micro">
                       <span className="text-[#25AB42]">{row.takeProfit !== null ? fmtPrice(row.takeProfit) : "—"}</span>
                       <span className="text-[#F6465D]">{row.stopLoss !== null ? fmtPrice(row.stopLoss) : "—"}</span>
                     </div>
@@ -440,7 +440,7 @@ export function PositionsTable({
                         type="button"
                         disabled={closing}
                         onClick={() => confirmClose(row)}
-                        className="rounded bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+                        className="rounded bg-white/[0.06] px-2.5 py-1 text-micro font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
                       >
                         {closing ? "Closing…" : "Market"}
                       </button>
@@ -448,7 +448,7 @@ export function PositionsTable({
                         type="button"
                         disabled={closing}
                         onClick={() => openPartialClose(row)}
-                        className="rounded bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+                        className="rounded bg-white/[0.06] px-2.5 py-1 text-micro font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
                       >
                         Partial
                       </button>

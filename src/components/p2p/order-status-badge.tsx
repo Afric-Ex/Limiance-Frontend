@@ -38,7 +38,7 @@ export const OrderStatusBadge = ({ status, className }: OrderStatusBadgeProps) =
   return (
     <div
       className={clsx(
-        "px-2.5 py-0.5 text-[11px] font-semibold rounded-md border uppercase tracking-wider inline-flex items-center gap-1.5",
+        "px-2.5 py-0.5 text-micro font-semibold rounded-md border uppercase tracking-wider inline-flex items-center gap-1.5",
         colorClass,
         className
       )}

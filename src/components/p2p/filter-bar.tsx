@@ -49,7 +49,7 @@ const OptionIcon = ({ src, label }: { src?: string; label: string }) => {
 
   if (!src || failed) {
     return (
-      <span className="w-4 h-4 rounded-full bg-white/10 border border-white/10 text-[9px] font-bold text-white/70 flex items-center justify-center shrink-0">
+      <span className="w-4 h-4 rounded-full bg-white/10 border border-white/10 text-2xs font-bold text-white/70 flex items-center justify-center shrink-0">
         {label.slice(0, 2)}
       </span>
     );

@@ -35,7 +35,7 @@ export const CoinAssets = () => {
                   <span className="text-base uppercase font-bold">
                     {item.symbol}
                   </span>
-                  <span className="text-8px">{item.name}</span>
+                  <span className="text-2xs">{item.name}</span>
                 </span>
               </span>
             </TableTd>
@@ -48,7 +48,7 @@ export const CoinAssets = () => {
                     +item.lockedBalance +
                     +item.marginBalance}
                 </span>
-                {/* <span className="text-8px">$0.00</span> */}
+                {/* <span className="text-2xs">$0.00</span> */}
               </span>
             </TableTd>
             <TableTd>

@@ -21,7 +21,7 @@ function Profile() {
         />
         <div className="flex flex-col max-w-460px w-full max-sm:mx-auto sm:ml-auto gap-8 animate-fade-in-up">
           <div className="flex flex-col gap-2">
-            <h2 className="md:text-[45px] sm:text-[36px] text-3xl font-bold tracking-tight">
+            <h2 className="md:text-display sm:text-4xl text-3xl font-bold tracking-tight">
               Welcome to <span className="text-primary">Limiance</span>
             </h2>
             <p className="sm:text-lg text-base text-white/50 font-medium">Please enter your personal details</p>

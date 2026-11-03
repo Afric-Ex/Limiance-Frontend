@@ -80,7 +80,7 @@ export const OrderConfirmationModal = ({
             <div className="flex justify-between items-center">
               <span className="text-white/40">Order Type</span>
               <span
-                className={`font-semibold text-[11px] px-2 py-0.5 rounded border ${
+                className={`font-semibold text-micro px-2 py-0.5 rounded border ${
                   isBuy ? "text-buy bg-buy/10 border-buy/20" : "text-[#F6465D] bg-[#F6465D]/10 border-[#F6465D]/20"
                 }`}
               >

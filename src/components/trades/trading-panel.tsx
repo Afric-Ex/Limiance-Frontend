@@ -742,7 +742,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm text-white">{getOrderPair(order)}</span>
                 <span className={clsx("text-xs font-bold uppercase", isBuySide(order.side) ? "text-success-5" : "text-error-1")}>{order.side}</span>
-                <span className="text-[10px] text-white/40 capitalize bg-white/[0.06] px-1.5 py-0.5 rounded">{getOrderTypeLabel(order)}</span>
+                <span className="text-2xs text-white/40 capitalize bg-white/[0.06] px-1.5 py-0.5 rounded">{getOrderTypeLabel(order)}</span>
               </div>
               <button onClick={() => onCancel(order.id)} disabled={cancelling} className="text-xs font-semibold text-white/40 active:text-primary transition-colors">Cancel</button>
             </div>
@@ -800,7 +800,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
               <td className="px-3 py-2.5 text-white/90 font-mono">
                 <div>{formatOrderNumber(getOrderPrice(order))}</div>
                 {getAvgPrice(order) && String(getAvgPrice(order)) !== String(getOrderPrice(order)) && (
-                  <div className="text-[10px] text-white/40">Avg {formatOrderNumber(getAvgPrice(order))}</div>
+                  <div className="text-2xs text-white/40">Avg {formatOrderNumber(getAvgPrice(order))}</div>
                 )}
               </td>
               <td className="px-3 py-2.5 text-white/90 font-mono">
@@ -809,7 +809,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
               <td className="px-3 py-2.5 text-white/90 font-mono">
                 <div>{getOrderTotal(order)?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}</div>
                 {getFilledValue(order) && (
-                  <div className="text-[10px] text-white/40">
+                  <div className="text-2xs text-white/40">
                     Filled {formatOrderNumber(getFilledValue(order))}
                   </div>
                 )}
@@ -824,7 +824,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
               </td>
               <td className="px-3 py-2.5 text-white/70">{formatStatus(getOrderStatus(order))}</td>
               <td className="px-3 py-2.5 text-white/70 font-mono">{formatOrderDate(order.createdAt)}</td>
-              <td className="px-3 py-2.5 text-white/50 font-mono text-[10px]">
+              <td className="px-3 py-2.5 text-white/50 font-mono text-2xs">
                 {order.id ? String(order.id).slice(0, 8) + "..." : "—"}
               </td>
               <td className="px-3 py-2.5 text-right">
@@ -897,7 +897,7 @@ function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm text-white">{pair || "—"}</span>
                   <span className={clsx("text-xs font-bold", isBuy ? "text-[#25AB42]" : "text-[#F6465D]")}>{side || "—"}</span>
-                  <span className="text-[10px] bg-white/[0.06] px-1.5 py-0.5 rounded text-white/50 capitalize">{orderType}</span>
+                  <span className="text-2xs bg-white/[0.06] px-1.5 py-0.5 rounded text-white/50 capitalize">{orderType}</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
@@ -907,7 +907,7 @@ function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
                 {Number.isFinite(fee) && fee !== 0 && <MobileRow label="Trading Fee" value={`${fmt(fee, 8)} ${feeAsset}`} />}
                 <MobileRow label="Time" value={fmtDate(time)} />
                 {txId && (
-                  <div className="col-span-2 flex items-center gap-1 text-[10px] text-white/30">
+                  <div className="col-span-2 flex items-center gap-1 text-2xs text-white/30">
                     <span>ID: {txId.length > 12 ? txId.slice(0, 12) + "…" : txId}</span>
                     <button type="button" onClick={() => navigator.clipboard?.writeText(txId).catch(() => {})}><MdContentCopy size={10} /></button>
                   </div>
@@ -1221,7 +1221,7 @@ function PnLPanel({ selectedPair }: { selectedPair?: string }) {
 
 function TableHeader({ children, align = "left" }: { children: React.ReactNode; align?: "left" | "right" | "center" }) {
   return (
-    <th className={clsx("px-3 py-2 text-white/40 font-medium uppercase text-[10px] tracking-wide", `text-${align}`)}>
+    <th className={clsx("px-3 py-2 text-white/40 font-medium uppercase text-2xs tracking-wide", `text-${align}`)}>
       {children}
     </th>
   );

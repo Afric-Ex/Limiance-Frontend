@@ -177,7 +177,7 @@ const shortId = (id: string) => (id.length > 14 ? `${id.slice(0, 6)}…${id.slic
 
 function Th({ children }: { children: ReactNode }) {
   return (
-    <th className="whitespace-nowrap px-3 py-2 text-left text-[10px] font-medium uppercase tracking-wide text-white/40">
+    <th className="whitespace-nowrap px-3 py-2 text-left text-2xs font-medium uppercase tracking-wide text-white/40">
       {children}
     </th>
   );
@@ -185,13 +185,13 @@ function Th({ children }: { children: ReactNode }) {
 
 function Pagination({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (page: number) => void }) {
   const btn =
-    "rounded bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40";
+    "rounded bg-white/[0.06] px-2.5 py-1 text-micro font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40";
   return (
     <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-3 py-2">
       <button type="button" className={btn} disabled={page <= 1} onClick={() => onPage(page - 1)}>
         Previous
       </button>
-      <span className="text-[11px] tabular-nums text-white/50">
+      <span className="text-micro tabular-nums text-white/50">
         Page {page} of {totalPages}
       </span>
       <button type="button" className={btn} disabled={page >= totalPages} onClick={() => onPage(page + 1)}>
@@ -240,9 +240,9 @@ export function OrderHistoryTable({ rows, loading, emptyState, page, totalPages,
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm text-white">{row.pair}</span>
                     <span className={clsx("text-xs font-bold", row.isBuy ? "text-[#25AB42]" : "text-[#F6465D]")}>{row.direction}</span>
-                    <span className="text-[10px] bg-white/[0.06] px-1.5 py-0.5 rounded text-white/50">{typeLabel(row.type)}</span>
+                    <span className="text-2xs bg-white/[0.06] px-1.5 py-0.5 rounded text-white/50">{typeLabel(row.type)}</span>
                   </div>
-                  <span className={clsx("text-[11px] font-semibold px-2 py-0.5 rounded", STATUS_STYLE[row.status] ?? "bg-white/10 text-white/60")}>
+                  <span className={clsx("text-micro font-semibold px-2 py-0.5 rounded", STATUS_STYLE[row.status] ?? "bg-white/10 text-white/60")}>
                     {row.status ? row.status.charAt(0) + row.status.slice(1).toLowerCase().replace(/_/g, " ") : "—"}
                   </span>
                 </div>
@@ -255,7 +255,7 @@ export function OrderHistoryTable({ rows, loading, emptyState, page, totalPages,
                   <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white/70 font-mono">{row.timeMs !== null ? new Date(row.timeMs).toLocaleString() : "—"}</span></div>
                 </div>
                 {row.id && (
-                  <button type="button" onClick={() => void copyId(row.id)} className="flex items-center gap-1 text-[10px] text-white/30 self-start">
+                  <button type="button" onClick={() => void copyId(row.id)} className="flex items-center gap-1 text-2xs text-white/30 self-start">
                     ID: {shortId(row.id)} <MdContentCopy size={10} />
                   </button>
                 )}
@@ -329,7 +329,7 @@ export function OrderHistoryTable({ rows, loading, emptyState, page, totalPages,
                     <span className="text-white/40">{row.quote}</span>
                   </td>
                   <td className="px-3 py-2.5">
-                    <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", STATUS_STYLE[row.status] ?? "bg-white/10 text-white/60")}>
+                    <span className={clsx("rounded px-2 py-0.5 text-micro font-semibold", STATUS_STYLE[row.status] ?? "bg-white/10 text-white/60")}>
                       {row.status ? row.status.charAt(0) + row.status.slice(1).toLowerCase().replace(/_/g, " ") : "—"}
                     </span>
                   </td>

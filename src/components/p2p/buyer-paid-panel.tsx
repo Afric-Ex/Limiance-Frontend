@@ -52,11 +52,11 @@ export function BuyerPaidPanel({
 
       {/* Countdown */}
       <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 mt-4 text-center">
-        <div className="text-[11px] uppercase tracking-wider text-white/40 mb-3">Seller must release within</div>
+        <div className="text-micro uppercase tracking-wider text-white/40 mb-3">Seller must release within</div>
         <div className="text-4xl font-mono font-bold text-white tracking-tight">
           {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
         </div>
-        <div className="text-[11px] uppercase tracking-widest text-white/35 mt-1.5">minutes : seconds</div>
+        <div className="text-micro uppercase tracking-widest text-white/35 mt-1.5">minutes : seconds</div>
       </div>
 
       {/* Waiting for seller */}

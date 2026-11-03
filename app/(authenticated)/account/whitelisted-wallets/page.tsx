@@ -208,7 +208,7 @@ export default function WhitelistedWalletsPage() {
           <div className="overflow-x-auto">
             <Table classNames={{
               table: "min-w-[680px]",
-              th: "!border-b !border-white/[0.06] !bg-[#181a20] !py-3 !text-[10px] !font-bold !uppercase !tracking-wider !text-white/40",
+              th: "!border-b !border-white/[0.06] !bg-[#181a20] !py-3 !text-2xs !font-bold !uppercase !tracking-wider !text-white/40",
               td: "!border-b !border-white/[0.04] !py-4 !text-sm !text-white/75",
             }}>
               <TableThead>

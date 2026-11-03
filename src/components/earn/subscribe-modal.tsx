@@ -45,7 +45,7 @@ export const SubscribeModal = ({ product }: { product: Product }) => {
             <img src={product.image} alt={product.asset} className="w-8 h-8 rounded-full" />
             <div className="flex flex-col">
               <span className="text-sm font-bold text-white/90">{product.asset}</span>
-              <span className="text-[10px] uppercase font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded w-fit mt-1">
+              <span className="text-2xs uppercase font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded w-fit mt-1">
                 {product.type === "fixed" ? `${product.lockDays} Days Lock` : "Flexible"}
               </span>
             </div>

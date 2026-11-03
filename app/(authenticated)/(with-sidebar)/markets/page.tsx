@@ -106,12 +106,12 @@ function ComingSoonEmpty({ tab }: { tab: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-4 text-center">
       <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary">
-        <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+        <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-2xs font-bold text-white">
           ✦
         </span>
         <IoRocketOutline size={26} />
       </span>
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
+      <span className="text-2xs font-bold uppercase tracking-[0.2em] text-primary bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
         Coming soon
       </span>
       <p className="text-sm font-semibold text-white/85">{headline}</p>
@@ -390,15 +390,15 @@ function MarketsPageInner() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/[0.06]">
-                <th className="pb-3 text-white/35 font-semibold text-[10px] uppercase tracking-wider pl-4 w-10"></th>
-                <th className="pb-3 text-white/35 font-semibold text-[10px] uppercase tracking-wider">Coin</th>
-                <th className="pb-3 text-white/35 font-semibold text-[10px] uppercase tracking-wider">Last Price</th>
-                <th className="pb-3 text-white/35 font-semibold text-[10px] uppercase tracking-wider">24h Change</th>
-                <th className="pb-3 text-white/35 font-semibold text-[10px] uppercase tracking-wider">24h High</th>
-                <th className="pb-3 text-white/35 font-semibold text-[10px] uppercase tracking-wider">24h Low</th>
-                <th className="pb-3 text-white/35 font-semibold text-[10px] uppercase tracking-wider">24h Volume</th>
-                <th className="pb-3 text-white/35 font-semibold text-[10px] uppercase tracking-wider">Market Trend</th>
-                <th className="pb-3 text-white/35 font-semibold text-[10px] uppercase tracking-wider text-right pr-4">Action</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider pl-4 w-10"></th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">Coin</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">Last Price</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">24h Change</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">24h High</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">24h Low</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">24h Volume</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">Market Trend</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider text-right pr-4">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04]">
@@ -450,15 +450,15 @@ function MarketsPageInner() {
                           {token.image ? (
                             <img src={token.image} alt={token.symbol} loading="lazy" decoding="async" className="w-6 h-6 rounded-full object-cover shrink-0" />
                           ) : (
-                            <span className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-white/80 shrink-0">
+                            <span className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-2xs font-bold text-white/80 shrink-0">
                               {token.symbol.charAt(0)}
                             </span>
                           )}
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[13px] font-bold text-white">{token.symbol}</span>
-                            <span className="text-[10px] font-medium text-white/30">/{quote || "USDT"}</span>
+                            <span className="text-caption font-bold text-white">{token.symbol}</span>
+                            <span className="text-2xs font-medium text-white/30">/{quote || "USDT"}</span>
                             {hasData && token.leverage && (
-                              <span className="text-[9px] font-bold px-1 py-0.2 bg-primary/15 text-primary rounded uppercase shrink-0">
+                              <span className="text-2xs font-bold px-1 py-0.2 bg-primary/15 text-primary rounded uppercase shrink-0">
                                 {token.leverage}
                               </span>
                             )}
@@ -497,7 +497,7 @@ function MarketsPageInner() {
                         {hasData && token.volume > 0 ? (
                           <span>
                             {formatVolume(token.volume)}
-                            <span className="text-white/30 text-[11px] ml-0.5">({quote || "USDT"})</span>
+                            <span className="text-white/30 text-micro ml-0.5">({quote || "USDT"})</span>
                           </span>
                         ) : "-"}
                       </td>
@@ -568,14 +568,14 @@ function MarketsPageInner() {
                     <div>
                       <div className="flex items-center gap-1">
                         <span className="text-sm font-bold text-white">{token.symbol}</span>
-                        <span className="text-[11px] text-white/30">/{quote || "USDT"}</span>
+                        <span className="text-micro text-white/30">/{quote || "USDT"}</span>
                         {hasData && token.leverage && (
-                          <span className="text-[8px] font-bold px-1 bg-primary/15 text-primary rounded uppercase shrink-0">
+                          <span className="text-2xs font-bold px-1 bg-primary/15 text-primary rounded uppercase shrink-0">
                             {token.leverage}
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-white/40 mt-0.5">
+                      <p className="text-micro text-white/40 mt-0.5">
                         Vol: {hasData && token.volume > 0 ? formatVolume(token.volume) : "-"}
                       </p>
                     </div>
@@ -586,13 +586,13 @@ function MarketsPageInner() {
                     </p>
                     {hasData ? (
                       <span className={clsx(
-                        "inline-block text-[11px] font-bold px-1.5 py-0.5 rounded mt-1",
+                        "inline-block text-micro font-bold px-1.5 py-0.5 rounded mt-1",
                         isUp ? "bg-success-2/10 text-success-2" : "bg-error-1/10 text-error-1"
                       )}>
                         {isUp ? "+" : ""}{token.change.toFixed(2)}%
                       </span>
                     ) : (
-                      <span className="inline-block text-[11px] font-bold px-1.5 py-0.5 rounded mt-1 text-white/40">-</span>
+                      <span className="inline-block text-micro font-bold px-1.5 py-0.5 rounded mt-1 text-white/40">-</span>
                     )}
                   </div>
                 </button>

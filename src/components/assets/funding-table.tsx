@@ -72,7 +72,7 @@ export const FundingTable = () => {
         <div className="overflow-x-auto">
           <Table classNames={{
             table: "min-w-[640px]",
-            th: "!text-white/40 !uppercase !tracking-wider !text-[10px] !font-bold !border-b !border-white/[0.06] !py-4 !bg-[#181a20]",
+            th: "!text-white/40 !uppercase !tracking-wider !text-2xs !font-bold !border-b !border-white/[0.06] !py-4 !bg-[#181a20]",
             td: "!text-sm !py-4 !border-b !border-white/[0.04] !font-medium",
             tr: "hover:!bg-white/[0.02] !transition-colors",
           }}>
@@ -124,7 +124,7 @@ export const FundingTable = () => {
                           )}
                           <span className="flex flex-col gap-0.5">
                             <span className="text-sm font-bold text-white/90 uppercase">{item.symbol}</span>
-                            <span className="text-[10px] text-white/40">{item.name}</span>
+                            <span className="text-2xs text-white/40">{item.name}</span>
                           </span>
                         </span>
                       </TableTd>

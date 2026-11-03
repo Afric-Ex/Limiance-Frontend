@@ -61,7 +61,7 @@ export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
               <div className="flex items-center gap-1.5">
                 {item.name}
                 {item.name === "Orders" && processingCount > 0 && (
-                  <span className="ml-2 inline-flex items-center justify-center bg-yellow-500 text-black text-[10px] font-bold px-1 rounded-md min-w-[18px] h-[18px]">
+                  <span className="ml-2 inline-flex items-center justify-center bg-yellow-500 text-black text-2xs font-bold px-1 rounded-md min-w-[18px] h-[18px]">
                     {processingCount}
                   </span>
                 )}

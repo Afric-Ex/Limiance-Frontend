@@ -66,7 +66,7 @@ export const RecentHistory = () => {
                   <span className="text-xs font-medium capitalize">
                     {item.type}
                   </span>
-                  <span className="text-[10px] text-white/40">
+                  <span className="text-2xs text-white/40">
                     {fmtDate(item.completedAt || item.createdAt)}
                   </span>
                 </div>
@@ -75,7 +75,7 @@ export const RecentHistory = () => {
                     {formatTransactionAmount(item.amount)}{" "}
                     <span className="uppercase text-white/50">{formatTransactionAsset(item.asset, item.chain)}</span>
                   </span>
-                  <span className="text-[10px] text-white/40 capitalize">
+                  <span className="text-2xs text-white/40 capitalize">
                     {item.status}
                   </span>
                 </div>

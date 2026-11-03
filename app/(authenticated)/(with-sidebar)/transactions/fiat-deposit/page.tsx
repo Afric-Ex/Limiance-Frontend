@@ -111,7 +111,7 @@ function FiatDepositInner() {
       {/* Page header */}
       <div className="flex max-[410px]:flex-col items-center gap-3">
         <h1 className="text-xl max-[1150px]:text-lg font-bold text-white tracking-tight">Fiat Deposit</h1>
-        <span className="text-xs max-[1150px]:text-[10px] font-medium text-white/40">
+        <span className="text-xs max-[1150px]:text-2xs font-medium text-white/40">
           Fund your account with NGN via bank transfer or card
         </span>
       </div>
@@ -134,7 +134,7 @@ function FiatDepositInner() {
 
           <div className="flex items-start gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
             <IoMdInformationCircleOutline size={16} className="text-primary shrink-0 mt-0.5" />
-            <p className="text-xs max-[1150px]:text-[10px] text-white/45 leading-relaxed">
+            <p className="text-xs max-[1150px]:text-2xs text-white/45 leading-relaxed">
               Fiat deposits are NGN-only and settled via Monnify. Prefer trading with merchants instead?{" "}
               <Link href="/trades/p2p" className="text-primary font-semibold hover:text-primary/70 transition-colors">
                 Buy on P2P

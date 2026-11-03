@@ -29,7 +29,7 @@ export const AccountSidebar = () => {
       {/* Header */}
       <div className="px-3 pb-4 mb-1 border-b border-white/[0.06]">
         <h2 className="text-base font-bold text-white">Account</h2>
-        <p className="text-[11px] text-white/40 mt-1">Manage your account settings</p>
+        <p className="text-micro text-white/40 mt-1">Manage your account settings</p>
       </div>
 
       {/* Nav Links */}

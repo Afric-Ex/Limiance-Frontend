@@ -74,13 +74,13 @@ export const NetworksDropdown = ({
           />
           <div className="p-10px bg-gray-47 rounded-lg flex items-start gap-1">
             <Info />
-            <span className="flex-1 text-10px font-medium">
+            <span className="flex-1 text-2xs font-medium">
               Ensure you select a network that matches the withdrawal platform
               of the coin you are withdrawing to avoid permanent loss of assets.
             </span>
           </div>
           <div className="flex flex-1 overflow-auto flex-col gap-[2px]">
-            <span className="bg-gray-48 font-semibold text-8px py-10px px-2 rounded-lg">
+            <span className="bg-gray-48 font-semibold text-2xs py-10px px-2 rounded-lg">
               Network
             </span>
             <div className="flex flex-1 overflow-auto flex-col">
@@ -97,8 +97,8 @@ export const NetworksDropdown = ({
                   }}
                   className="flex py-3 border-b border-b-gray-49 bg-gray-48 hover:bg-gray-48/50 cursor-pointer px-2 flex-col gap-[2px]"
                 >
-                  <span className="text-10px font-bold">{item.symbol}</span>
-                  <span className="text-8px">
+                  <span className="text-2xs font-bold">{item.symbol}</span>
+                  <span className="text-2xs">
                     {item.name} ({item.standard})
                   </span>
                 </span>

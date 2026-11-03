@@ -133,8 +133,8 @@ export const WhitelistedAddressPickerModal = ({
                     <span
                       className={
                         entry.pending
-                          ? "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning-1/10 text-warning-1 border border-warning-1/20"
-                          : "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success-6/10 text-success-6 border border-success-6/20"
+                          ? "text-2xs font-semibold px-2 py-0.5 rounded-full bg-warning-1/10 text-warning-1 border border-warning-1/20"
+                          : "text-2xs font-semibold px-2 py-0.5 rounded-full bg-success-6/10 text-success-6 border border-success-6/20"
                       }
                     >
                       {entry.pending ? entry.pendingLabel || "Pending" : "Active"}

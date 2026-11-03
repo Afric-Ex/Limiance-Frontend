@@ -163,7 +163,7 @@ function PaymentMethodsPageInner() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold">{method.data?.bankName ?? method.bankName ?? method.bank_name ?? "Bank"}</span>
                       {method.isDefault && (
-                        <span className="px-2 py-0.5 bg-success-6/20 text-success-6 text-[11px] font-bold rounded-full border border-success-6/30">Default</span>
+                        <span className="px-2 py-0.5 bg-success-6/20 text-success-6 text-micro font-bold rounded-full border border-success-6/30">Default</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -247,7 +247,7 @@ function PaymentMethodsPageInner() {
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">{label}</span>
-                    <span className="px-2 py-0.5 bg-white/10 text-white/40 text-[10px] font-bold rounded-full">Coming soon</span>
+                    <span className="px-2 py-0.5 bg-white/10 text-white/40 text-2xs font-bold rounded-full">Coming soon</span>
                   </div>
                   <span className="text-xs text-white/40">Not yet available</span>
                 </div>

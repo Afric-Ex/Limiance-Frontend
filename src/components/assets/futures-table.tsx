@@ -52,7 +52,7 @@ export const FuturesTable = () => {
             <Table
               classNames={{
                 table: "min-w-[640px]",
-                th: "!text-white/40 !uppercase !tracking-wider !text-[10px] !font-bold !border-b !border-white/[0.06] !py-4 !bg-[#181a20]",
+                th: "!text-white/40 !uppercase !tracking-wider !text-2xs !font-bold !border-b !border-white/[0.06] !py-4 !bg-[#181a20]",
                 td: "!text-sm !py-4 !border-b !border-white/[0.04] !font-medium",
                 tr: "hover:!bg-white/[0.02] !transition-colors",
               }}
@@ -99,7 +99,7 @@ export const FuturesTable = () => {
                                 className="w-8 h-8 rounded-full object-cover shrink-0"
                               />
                             ) : (
-                              <span className="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold text-white/80 flex items-center justify-center shrink-0">
+                              <span className="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-micro font-bold text-white/80 flex items-center justify-center shrink-0">
                                 {item.symbol?.[0]}
                               </span>
                             )}

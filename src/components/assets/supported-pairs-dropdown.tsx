@@ -152,7 +152,7 @@ export const SupportedListingsDropdown = ({
                 <span className="text-xs font-bold">
                   {selectedCoin?.symbol}
                 </span>
-                {selectedCoin.name && <span className="text-8px">{selectedCoin.name}</span>}
+                {selectedCoin.name && <span className="text-2xs">{selectedCoin.name}</span>}
               </span>
             </span>
           ) : (
@@ -175,7 +175,7 @@ export const SupportedListingsDropdown = ({
           />
           {selectedCoinsHistory?.length ? (
             <>
-                <span className="bg-white/[0.05] text-white/50 font-semibold text-[10px] py-2 px-2 rounded-lg">
+                <span className="bg-white/[0.05] text-white/50 font-semibold text-2xs py-2 px-2 rounded-lg">
                 History
               </span>
               <div className="flex gap-2">
@@ -188,7 +188,7 @@ export const SupportedListingsDropdown = ({
                       //   ? "bg-blue-3 text-primary"
                       //   :
                       "bg-white/[0.06] text-white/60",
-                      "w-[43px] py-1.5 flex items-center cursor-pointer justify-center rounded text-[10px]"
+                      "w-[43px] py-1.5 flex items-center cursor-pointer justify-center rounded text-2xs"
                     )}
                   >
                     {item}
@@ -198,7 +198,7 @@ export const SupportedListingsDropdown = ({
             </>
           ) : null}
           <div className="flex flex-col flex-1 overflow-auto gap-[2px]">
-            <span className="bg-white/[0.05] text-white/50 font-semibold text-[10px] py-2 px-2 rounded-lg">
+            <span className="bg-white/[0.05] text-white/50 font-semibold text-2xs py-2 px-2 rounded-lg">
               Coin
             </span>
             <div className="flex flex-1 overflow-auto flex-col">
@@ -222,8 +222,8 @@ export const SupportedListingsDropdown = ({
                   >
                     <img src={item.image} width={16} height={16} alt="usdt" />
                     <span className="flex flex-col gap-[2px]">
-                      <span className="text-10px font-bold">{item.symbol}</span>
-                      <span className="text-8px">{item.name}</span>
+                      <span className="text-2xs font-bold">{item.symbol}</span>
+                      <span className="text-2xs">{item.name}</span>
                     </span>
                   </div>
                 ))

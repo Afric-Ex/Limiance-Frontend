@@ -62,7 +62,7 @@ export const MoreDropdown = () => {
               <span className="text-sm flex items-center gap-2 font-medium text-white/90 group-hover:text-white">
                 {item.title}
                 {(item as any).badge && (
-                  <span className="py-0.5 px-1.5 text-[10px] bg-primary rounded-full">{(item as any).badge}</span>
+                  <span className="py-0.5 px-1.5 text-2xs bg-primary rounded-full">{(item as any).badge}</span>
                 )}
               </span>
               <span className="text-xs text-white/50 leading-snug">{item.subtitle}</span>

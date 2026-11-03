@@ -137,7 +137,7 @@ function NavDropdown({
             fillOpacity={isActive ? "1" : "0.6"}
           />
         </span>
-        <span className="flex-1 text-[13px] font-semibold">{item.name}</span>
+        <span className="flex-1 text-caption font-semibold">{item.name}</span>
         <IoChevronDown
           size={13}
           className={clsx(
@@ -163,7 +163,7 @@ function NavDropdown({
                 href={child.link}
                 onClick={onNavigate}
                 className={clsx(
-                  "text-[12.5px] py-1.5 px-3 rounded-lg transition-all duration-150 font-medium",
+                  "text-xs py-1.5 px-3 rounded-lg transition-all duration-150 font-medium",
                   childActive
                     ? "text-primary bg-primary/[0.08]"
                     : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
@@ -219,9 +219,9 @@ function NavLink({
           fillOpacity={isActive ? "1" : "0.6"}
         />
       </span>
-      <span className="flex-1 text-[13px] font-semibold">{item.name}</span>
+      <span className="flex-1 text-caption font-semibold">{item.name}</span>
       {item.badge && (
-        <span className="text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+        <span className="text-2xs font-bold tracking-widest px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
           {item.badge}
         </span>
       )}
@@ -233,7 +233,7 @@ function NavLink({
 
 function SectionLabel({ label }: { label: string }) {
   return (
-    <p className="px-3 pt-5 pb-1.5 text-[9.5px] font-bold tracking-[0.18em] uppercase text-white/20 select-none">
+    <p className="px-3 pt-5 pb-1.5 text-2xs font-bold tracking-[0.18em] uppercase text-white/20 select-none">
       {label}
     </p>
   );
@@ -287,10 +287,10 @@ const { data: kycStatus } = useQuery({
         <div className="flex-1 min-w-0">
           {user ? (
             <>
-              <p className="text-[12.5px] font-semibold text-white/90 truncate leading-tight">
+              <p className="text-xs font-semibold text-white/90 truncate leading-tight">
                 {displayName}
               </p>
-              <p className={clsx("text-[10px] font-medium leading-tight mt-0.5", isVerified ? "text-buy" : "text-warning/80")}>
+              <p className={clsx("text-2xs font-medium leading-tight mt-0.5", isVerified ? "text-buy" : "text-warning/80")}>
                 {statusText}
               </p>
             </>
@@ -302,7 +302,7 @@ const { data: kycStatus } = useQuery({
           ) : (
             <button
               onClick={() => void fetchUser()}
-              className="text-left text-[11px] font-medium text-white/60 hover:text-white transition-colors"
+              className="text-left text-micro font-medium text-white/60 hover:text-white transition-colors"
             >
               Profile unavailable — retry
             </button>

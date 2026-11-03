@@ -381,31 +381,54 @@ export function normalizeWsP2PUserAdsResponse(payload: any): UserAds {
 
 export function normalizeWsMatch(raw: any) {
   const source = raw && typeof raw === "object" ? raw : {};
-  const amount = toNumberValue(source.amount ?? source.fiatAmount ?? source.fiat_amount);
+
+  // Realtime match frames are partial snapshots. Leave absent fields undefined
+  // instead of filling them with "" or 0, so merging a snapshot into the cached
+  // order cannot erase values that REST already loaded (e.g. createdAt).
+  const optionalString = (...values: unknown[]): string | undefined => {
+    for (const value of values) {
+      const parsed = toStringValue(value);
+      if (parsed) return parsed;
+    }
+    return undefined;
+  };
+  const optionalNumber = (...values: unknown[]): number | undefined => {
+    for (const value of values) {
+      if (value === null || value === undefined || value === "") continue;
+      const parsed = toNumberValue(value, Number.NaN);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return undefined;
+  };
 
   return {
     ...source,
     id: toStringValue(
       source.id ?? source._id ?? source.orderMatchId ?? source.order_match_id
     ),
-    orderId: toStringValue(source.orderId ?? source.order_id),
-    quantity: toNumberValue(source.quantity),
-    amount,
-    fiatAmount: toNumberValue(source.fiatAmount ?? source.fiat_amount ?? amount),
-    fiatCurrency: toStringValue(
-      source.fiatCurrency ?? source.fiat_currency ?? source.fiat
-    ).toUpperCase(),
-    asset: toStringValue(source.asset).toUpperCase(),
+    orderId: optionalString(source.orderId, source.order_id),
+    quantity: optionalNumber(source.quantity),
+    amount: optionalNumber(source.amount, source.fiatAmount, source.fiat_amount),
+    fiatAmount: optionalNumber(
+      source.fiatAmount,
+      source.fiat_amount,
+      source.amount
+    ),
+    fiatCurrency: optionalString(
+      source.fiatCurrency,
+      source.fiat_currency,
+      source.fiat
+    )?.toUpperCase(),
+    asset: optionalString(source.asset)?.toUpperCase(),
     status: toStringValue(source.status, "PENDING").toUpperCase(),
-    buyerId: toStringValue(source.buyerId ?? source.buyer_id) || undefined,
-    sellerId: toStringValue(source.sellerId ?? source.seller_id) || undefined,
-    advertiserId:
-      toStringValue(source.advertiserId ?? source.advertiser_id) || undefined,
-    matcherId: toStringValue(source.matcherId ?? source.matcher_id) || undefined,
-    createdAt: toStringValue(source.createdAt ?? source.created_at),
-    updatedAt: toStringValue(source.updatedAt ?? source.updated_at),
-    expiryTime: toStringValue(source.expiryTime ?? source.expiry_time),
-    chatId: toStringValue(source.chatId ?? source.chat_id) || undefined,
+    buyerId: optionalString(source.buyerId, source.buyer_id),
+    sellerId: optionalString(source.sellerId, source.seller_id),
+    advertiserId: optionalString(source.advertiserId, source.advertiser_id),
+    matcherId: optionalString(source.matcherId, source.matcher_id),
+    createdAt: optionalString(source.createdAt, source.created_at),
+    updatedAt: optionalString(source.updatedAt, source.updated_at),
+    expiryTime: optionalString(source.expiryTime, source.expiry_time),
+    chatId: optionalString(source.chatId, source.chat_id),
     paymentMethod:
       source.paymentMethod ?? source.payment_method ?? source.paymentMethodDetails,
   };

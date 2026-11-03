@@ -46,12 +46,12 @@ export const FundingAccountTransferGate = ({
 
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3.5 flex items-center justify-between text-xs">
           <div className="flex flex-col gap-0.5">
-            <span className="text-white/40 text-[10px] uppercase tracking-wider">From</span>
+            <span className="text-white/40 text-2xs uppercase tracking-wider">From</span>
             <span className="font-semibold text-white">Spot Account</span>
           </div>
           <HiArrowNarrowRight size={18} className="text-white/30" />
           <div className="flex flex-col gap-0.5 text-right">
-            <span className="text-white/40 text-[10px] uppercase tracking-wider">To</span>
+            <span className="text-white/40 text-2xs uppercase tracking-wider">To</span>
             <span className="font-semibold text-white">Funding Account</span>
           </div>
         </div>
@@ -59,7 +59,7 @@ export const FundingAccountTransferGate = ({
         <div>
           <div className="flex justify-between items-center mb-1.5">
             <span className="text-white/60 text-xs font-medium">Transfer Amount</span>
-            <span className="text-white/40 text-[11px] font-mono">
+            <span className="text-white/40 text-micro font-mono">
               Available: {spotBalance.toLocaleString(undefined, { maximumFractionDigits: 8 })} {assetSymbol}
             </span>
           </div>
@@ -70,7 +70,7 @@ export const FundingAccountTransferGate = ({
             rightSection={
               <button
                 type="button"
-                className="text-[11px] font-bold text-primary hover:text-primary/80 pr-3"
+                className="text-micro font-bold text-primary hover:text-primary/80 pr-3"
                 onClick={() => setAmount(spotBalance)}
               >
                 MAX

@@ -18,6 +18,14 @@ function patchMatchedOrder(
   patch: Record<string, unknown>,
   seed = false
 ) {
+  // Realtime snapshots are partial. Never let an empty value wipe data that the
+  // REST fetch already populated (this is what made the order timestamp vanish).
+  const compactPatch = Object.fromEntries(
+    Object.entries(patch).filter(
+      ([, value]) => value !== undefined && value !== null && value !== ""
+    )
+  );
+
   queryClient.setQueryData<any>(p2pKey.matchedOrder(orderMatchId), (current: any) => {
     const body = current?.data;
     if (body && typeof body === "object" && "data" in body) {
@@ -27,7 +35,7 @@ function patchMatchedOrder(
         data: {
           ...body,
           success: true,
-          data: { ...order, ...patch },
+          data: { ...order, ...compactPatch },
         },
       };
     }
@@ -40,7 +48,7 @@ function patchMatchedOrder(
         statusCode: 200,
         success: true,
         message: "",
-        data: { ...patch },
+        data: { ...compactPatch },
       },
     };
   });

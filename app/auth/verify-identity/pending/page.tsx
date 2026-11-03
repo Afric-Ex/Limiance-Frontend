@@ -40,10 +40,10 @@ function VerifyIdentityPendingInner() {
       <HeroDecorations />
       <div className="flex max-w-1199px w-11/12 mx-auto flex-col gap-8">
       <AuthMobileBrand className="mb-0" />
-        <h1 className="pb-3 border-b border-b-white/25 text-28px font-semibold">
+        <h1 className="pb-3 border-b border-b-white/25 text-3xl font-semibold">
           Identity verification
         </h1>
-        <h2 className="text-36px max-[600px]:text-2xl font-bold">Verification in progress</h2>
+        <h2 className="text-4xl max-[600px]:text-2xl font-bold">Verification in progress</h2>
       </div>
       <div className="flex items-center justify-center flex-1">
         <div className="flex flex-col items-center gap-6 max-w-md w-full">

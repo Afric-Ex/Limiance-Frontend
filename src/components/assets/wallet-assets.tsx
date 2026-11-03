@@ -42,7 +42,7 @@ export const WalletAssets = () => {
               <TableTd>
                 <span className="flex flex-col gap-2px">
                   <span className="text-base uppercase font-bold">{item.symbol}</span>
-                  <span className="text-8px">{item.name}</span>
+                  <span className="text-2xs">{item.name}</span>
                 </span>
               </TableTd>
               <TableTd>

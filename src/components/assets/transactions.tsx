@@ -78,7 +78,7 @@ export const Transactions = () => {
                     <span className="text-xs font-medium text-gray-14">
                       {fmtDate(item.completedAt || item.createdAt)}
                     </span>
-                    {/* <span className="text-primary text-10px font-bold">
+                    {/* <span className="text-primary text-2xs font-bold">
                                   18:16:23
                                 </span> */}
                   </span>

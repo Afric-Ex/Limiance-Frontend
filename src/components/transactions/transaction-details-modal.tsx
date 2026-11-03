@@ -180,7 +180,7 @@ const StatusBadge = ({ status }: { status: string }) => {
   const key = status.toLowerCase();
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-2xs font-bold uppercase tracking-[0.12em] ${
         STATUS_TONES[key] ?? "border-white/[0.08] bg-white/[0.04] text-white/50"
       }`}
     >
@@ -192,7 +192,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 const Section = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="border-t border-white/[0.06] px-6 py-4">
-    <h3 className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
+    <h3 className="mb-1.5 flex items-center gap-2 text-2xs font-bold uppercase tracking-[0.16em] text-white/30">
       <span className="h-3 w-0.5 rounded-full bg-primary/70" />
       {title}
     </h3>
@@ -213,7 +213,7 @@ const DetailRow = ({
     <span className="shrink-0 pt-px text-xs font-medium text-white/40">
       {label}
     </span>
-    <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right text-[13px] font-semibold text-white/85">
+    <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right text-caption font-semibold text-white/85">
       {children}
     </div>
   </div>
@@ -221,7 +221,7 @@ const DetailRow = ({
 
 const IdValue = ({ value }: { value: string }) => (
   <span className="flex min-w-0 items-center justify-end gap-1.5">
-    <span className="break-all font-mono text-[11px] font-medium text-white/75">
+    <span className="break-all font-mono text-micro font-medium text-white/75">
       {value}
     </span>
     <Copy text={value} color="var(--primary)" />
@@ -239,16 +239,16 @@ const PartyValue = ({
 }) => (
   <span className="flex min-w-0 items-center justify-end gap-1.5">
     {role && (
-      <span className="shrink-0 rounded bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/45">
+      <span className="shrink-0 rounded bg-white/[0.06] px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wide text-white/45">
         {role}
       </span>
     )}
     {isYou && (
-      <span className="shrink-0 rounded bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">
+      <span className="shrink-0 rounded bg-primary/15 px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wide text-primary">
         You
       </span>
     )}
-    <span className="break-all font-mono text-[11px] font-medium text-white/75">
+    <span className="break-all font-mono text-micro font-medium text-white/75">
       {id}
     </span>
     <Copy text={id} color="var(--primary)" />
@@ -563,7 +563,7 @@ export const TransactionDetailsModal = ({
             <span className="text-sm font-bold leading-tight text-white">
               Transaction Details
             </span>
-            <span className="text-[10px] font-medium leading-tight text-white/35">
+            <span className="text-2xs font-medium leading-tight text-white/35">
               Receipt and movement details
             </span>
           </span>
@@ -600,12 +600,12 @@ export const TransactionDetailsModal = ({
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/45">
+                <span className="text-micro font-bold uppercase tracking-[0.14em] text-white/45">
                   {typeLabel || "Transaction"}
                 </span>
                 {side && (
                   <span
-                    className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] ${
+                    className={`rounded-full border px-2 py-0.5 text-2xs font-bold uppercase tracking-[0.12em] ${
                       side === "Buy"
                         ? "border-success-6/25 bg-success-6/10 text-success-6"
                         : "border-error-1/25 bg-error-1/10 text-error-1"
@@ -617,7 +617,7 @@ export const TransactionDetailsModal = ({
               </div>
 
               <div className="mt-2 flex items-baseline justify-center gap-1.5">
-                <span className="text-[28px] font-bold leading-none tracking-tight text-white tabular-nums">
+                <span className="text-3xl font-bold leading-none tracking-tight text-white tabular-nums">
                   {primaryAmount || "—"}
                 </span>
                 {primarySymbol && (

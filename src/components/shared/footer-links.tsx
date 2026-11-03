@@ -209,19 +209,19 @@ const footerLinks = [
 export const FooterLinks = () => {
   return footerLinks.map((item) => (
     <div key={item.group} className="flex flex-col gap-18px">
-      <h3 className="md:text-19px text-sm font-bold">{item.group}</h3>
+      <h3 className="md:text-subtitle text-sm font-bold">{item.group}</h3>
       <div className="flex flex-col gap-11px">
         {item.list.children.map((el, index) => (
-          <Link key={index} href={el.link} className="md:text-19px text-sm">
+          <Link key={index} href={el.link} className="md:text-subtitle text-sm">
             {el.name}
           </Link>
         ))}
         {item.list.subList ? (
           <div className="flex flex-col gap-2">
-            <h3 className="md:text-19px text-sm font-bold">{item.list.subList.name}</h3>
+            <h3 className="md:text-subtitle text-sm font-bold">{item.list.subList.name}</h3>
             <div className="flex flex-col gap-11px">
               {item.list.subList?.children?.map((ele, idx) => (
-                <Link key={idx} href={ele.link} className="md:text-19px text-sm">
+                <Link key={idx} href={ele.link} className="md:text-subtitle text-sm">
                   {ele.name}
                 </Link>
               ))}

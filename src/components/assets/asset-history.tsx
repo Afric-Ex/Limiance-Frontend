@@ -404,7 +404,7 @@ export const AssetHistory = () => {
           <MdOutlineHistory size={22} />
         </div>
         <div>
-          <h1 className="text-[20px] font-bold text-[var(--color-text-primary)] leading-tight">
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)] leading-tight">
             Asset History
           </h1>
           <p className="text-xs text-[var(--color-text-secondary)]">

@@ -42,7 +42,7 @@ export const Footer = () => {
           <div className="flex w-fit flex-col gap-10">
             <Logo />
             <div className="flex flex-col gap-30px">
-              <h3 className="font-bold text-19px">Community</h3>
+              <h3 className="font-bold text-subtitle">Community</h3>
               <div className="grid grid-cols-4 gap-4 [&>svg]:cursor-pointer [&>svg]:transition-all hover:[&>svg]:scale-110 hover:[&>svg]:opacity-80">
                 <GoogleWhite />
                 <TikTok />
@@ -58,12 +58,12 @@ export const Footer = () => {
               <div className="flex flex-col gap-3">
                 <button className="p-4 bg-white text-black rounded-lg gap-6 flex items-center">
                   <FaGlobe size={20} />
-                  <span className="text-15px">English</span>
+                  <span className="text-body">English</span>
                   <IoIosArrowDown size={20} />
                 </button>
                 <div className="flex items-center gap-2">
                   <Dollar />
-                  <span className="text-15px">USD-$</span>
+                  <span className="text-body">USD-$</span>
                 </div>
               </div>
             </div>
@@ -73,17 +73,17 @@ export const Footer = () => {
           </div>
         </div>
         <div className="flex max-[1130px]:justify-self-center flex-col gap-18px">
-          <h3 className="text-19px font-bold">Start Trading Now</h3>
+          <h3 className="text-subtitle font-bold">Start Trading Now</h3>
           <div className="flex flex-col gap-6px">
             <div className="flex flex-col">
               <div className="pt-5 px-5 pb-6px w-fit rounded-t-15px border-t border-t-primary border-x border-x-primary">
                 <Image src={QrScan} width={118} height={113} alt="qr" />
               </div>
-              <span className="text-white/55 self-center text-11px">
+              <span className="text-white/55 self-center text-micro">
                 Scan to download the app
               </span>
             </div>
-            <button className="bg-primary h-9 w-169px rounded-full text-11px">
+            <button className="bg-primary h-9 w-169px rounded-full text-micro">
               Register
             </button>
           </div>
@@ -94,10 +94,10 @@ export const Footer = () => {
       </div>
       <div className="border-t border-t-white/25 py-5">
         <div className="max-w-543px mx-auto w-full flex sm:flex-row flex-col items-center justify-between gap-3">
-          <span className="text-11px text-white/55">
+          <span className="text-micro text-white/55">
             &copy; {new Date().getFullYear()} Limiance.com. All rights reserved.
           </span>
-          <span className="text-11px text-white/55 hover:text-white transition-colors cursor-pointer">Terms of Service | Privacy Terms</span>
+          <span className="text-micro text-white/55 hover:text-white transition-colors cursor-pointer">Terms of Service | Privacy Terms</span>
         </div>
       </div>
     </div>

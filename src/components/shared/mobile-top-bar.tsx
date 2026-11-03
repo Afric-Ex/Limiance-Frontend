@@ -57,7 +57,7 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
 
       {/* Title */}
       {title && (
-        <h1 className="text-[15px] font-semibold text-white/90 flex-1 text-center">
+        <h1 className="text-body font-semibold text-white/90 flex-1 text-center">
           {title}
         </h1>
       )}
