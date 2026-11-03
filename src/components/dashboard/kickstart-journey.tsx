@@ -124,13 +124,13 @@ export const KickstartJourney: React.FC<KickstartJourneyProps> = ({
               {/* <div className="flex items-center -space-x-1.5">
                 <span
                   title="Binance / Bitcoin"
-                  className="w-6 h-6 rounded-full bg-[#f59e0b] text-[#0d1424] font-black text-[11px] flex items-center justify-center shadow-md ring-2 ring-[#0d1424]"
+                  className="w-6 h-6 rounded-full bg-[#f59e0b] text-[#0d1424] font-black text-micro flex items-center justify-center shadow-md ring-2 ring-[#0d1424]"
                 >
                   B
                 </span>
                 <span
                   title="Avalanche / Assets"
-                  className="w-6 h-6 rounded-full bg-[#e11d48] text-white font-black text-[11px] flex items-center justify-center shadow-md ring-2 ring-[#0d1424]"
+                  className="w-6 h-6 rounded-full bg-[#e11d48] text-white font-black text-micro flex items-center justify-center shadow-md ring-2 ring-[#0d1424]"
                 >
                   A
                 </span>

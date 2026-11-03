@@ -206,7 +206,7 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
       {noCollateral && (
         <div className="flex items-start gap-2 bg-[#f3ba2f]/10 border border-[#f3ba2f]/20 rounded-lg px-3 py-2.5">
           <MdWarning className="text-[#f3ba2f] mt-0.5 shrink-0" size={15} />
-          <p className="text-[11px] text-[#f3ba2f]/90 leading-relaxed">
+          <p className="text-micro text-[#f3ba2f]/90 leading-relaxed">
             You have no collateral in your Margin wallet. Use{" "}
             <strong>Transfer</strong> first to move funds from your Spot wallet.
           </p>
@@ -216,11 +216,11 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
       {/* Info row: collateral & max borrow (borrow tab only, has collateral) */}
       {isBorrowTab && totalAssetsUsd > 0 && (
         <div className="flex flex-col gap-1 bg-white/[0.02] border border-white/[0.05] rounded-lg px-3 py-2.5">
-          <div className="flex justify-between text-[11px]">
+          <div className="flex justify-between text-micro">
             <span className="text-white/40">Total Margin Collateral</span>
             <span className="font-mono text-white/80">${totalAssetsUsd.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
           </div>
-          <div className="flex justify-between text-[11px]">
+          <div className="flex justify-between text-micro">
             <span className="text-white/40 flex items-center gap-1">
               Max Borrowable
               <MdInfoOutline size={11} className="opacity-50" title={`Limited by Margin Level floor (1.3) or Max Leverage (${maxLeverage}x)`} />
@@ -235,11 +235,11 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
       {/* Info row: current debt & max repay (repay tab only) */}
       {!isBorrowTab && (
         <div className="flex flex-col gap-1 bg-white/[0.02] border border-white/[0.05] rounded-lg px-3 py-2.5">
-          <div className="flex justify-between text-[11px]">
+          <div className="flex justify-between text-micro">
             <span className="text-white/40">Current Debt</span>
             <span className="font-mono text-white/80">{currentBorrowed.toLocaleString("en-US", { maximumFractionDigits: 6 })} {selectedAsset}</span>
           </div>
-          <div className="flex justify-between text-[11px]">
+          <div className="flex justify-between text-micro">
             <span className="text-white/40">Free Balance</span>
             <span className="font-mono text-white/80">{marginBalance.toLocaleString("en-US", { maximumFractionDigits: 6 })} {selectedAsset}</span>
           </div>
@@ -251,7 +251,7 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
         <div className="flex items-center justify-between">
           <label className="text-xs text-white/50">Amount</label>
           {!isBorrowTab && (
-            <span className="text-[10px] text-white/40">
+            <span className="text-2xs text-white/40">
               Balance: {marginBalance.toLocaleString("en-US", { maximumFractionDigits: 6 })} {selectedAsset}
             </span>
           )}
@@ -274,7 +274,7 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
             <button
               onClick={() => setAmount(String(isBorrowTab ? maxBorrowable : maxRepayable))}
               disabled={(isBorrowTab && noCollateral) || (isBorrowTab && maxBorrowable === 0) || (!isBorrowTab && maxRepayable === 0)}
-              className="text-[10px] text-primary font-bold hover:text-primary/80 disabled:opacity-30"
+              className="text-2xs text-primary font-bold hover:text-primary/80 disabled:opacity-30"
             >
               MAX
             </button>
@@ -284,7 +284,7 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
 
         {/* Validation messages */}
         {exceedsMax && (
-          <p className="text-[11px] text-red-400 px-1 flex items-center gap-1">
+          <p className="text-micro text-red-400 px-1 flex items-center gap-1">
             <MdWarning size={12} />
             Exceeds max borrowable. Reduce to {maxBorrowable.toLocaleString("en-US", { maximumFractionDigits: 6 })} {selectedAsset}.
           </p>
@@ -293,7 +293,7 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
 
       {/* Projected Margin Level (borrow tab, valid amount, has collateral) */}
       {isBorrowTab && projectedMarginLevel !== null && enteredAmount > 0 && !exceedsMax && totalAssetsUsd > 0 && (
-        <div className="flex justify-between items-center px-3 py-2 bg-white/[0.02] rounded-lg border border-white/[0.05] text-[11px]">
+        <div className="flex justify-between items-center px-3 py-2 bg-white/[0.02] rounded-lg border border-white/[0.05] text-micro">
           <span className="text-white/40">Projected Margin Level</span>
           <span className={clsx(
             "font-mono font-semibold",
@@ -326,7 +326,7 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
         </Button>
       </div> 
       {noCollateral && (
-        <p className="text-center text-[11px] text-white/30">
+        <p className="text-center text-micro text-white/30">
           Close this modal and click <span className="text-primary font-semibold">Transfer</span> to add collateral.
         </p>
       )}

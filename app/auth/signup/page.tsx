@@ -32,7 +32,7 @@ function SignUp() {
           height={523}
         />
         <div className="flex flex-col max-w-460px w-full max-sm:mx-auto min-[1150px]:ml-auto gap-7 max-[1150px]:gap-6">
-          <h2 className="md:text-45px sm:text-36px text-2xl font-bold max-[1150px]:text-center">
+          <h2 className="md:text-display sm:text-4xl text-2xl font-bold max-[1150px]:text-center">
             Welcome to <span className="text-primary">Limiance</span>
           </h2>
           <form onSubmit={() => {}} className="flex flex-col gap-10">

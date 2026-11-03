@@ -90,7 +90,7 @@ export const SelectDepositMethod = (_props: { defaultSymbol?: string }) => {
                     </span>
                     {item.badge && (
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${item.badgeColor}`}
+                        className={`text-2xs font-semibold px-2 py-0.5 rounded-full ${item.badgeColor}`}
                       >
                         {item.badge}
                       </span>

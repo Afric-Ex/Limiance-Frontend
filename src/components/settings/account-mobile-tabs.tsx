@@ -42,7 +42,7 @@ export const AccountMobileTabs = () => {
               <div className="relative">
                 <tab.icon width={22} height={22} color={isActive ? "#4d77f0" : undefined} fillOpacity={isActive ? "1" : undefined} />
               </div>
-              <span className={clsx("whitespace-nowrap text-[10px]", isActive ? "font-bold text-primary" : "font-medium")}>
+              <span className={clsx("whitespace-nowrap text-2xs", isActive ? "font-bold text-primary" : "font-medium")}>
                 {tab.name}
               </span>
             </a>

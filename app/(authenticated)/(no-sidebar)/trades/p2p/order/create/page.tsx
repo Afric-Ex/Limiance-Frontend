@@ -184,14 +184,14 @@ function PreOrderScreenContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-white/[0.02] border border-white/[0.05] p-3 rounded-lg">
-                  <div className="text-white/35 text-[10px] uppercase tracking-wider mb-0.5">Price</div>
+                  <div className="text-white/35 text-2xs uppercase tracking-wider mb-0.5">Price</div>
                   <div className="text-base font-bold text-white font-mono tabular-nums">
                     {price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}{" "}
                     <span className="text-xs font-normal text-white/50">{ad.fiat.toUpperCase()}</span>
                   </div>
                 </div>
                 <div className="bg-white/[0.02] border border-white/[0.05] p-3 rounded-lg">
-                  <div className="text-white/35 text-[10px] uppercase tracking-wider mb-0.5">
+                  <div className="text-white/35 text-2xs uppercase tracking-wider mb-0.5">
                     {userAction === "Sell" ? "Buyer Target" : "Available"}
                   </div>
                   <div className="text-base font-bold text-white font-mono tabular-nums">
@@ -200,7 +200,7 @@ function PreOrderScreenContent() {
                   </div>
                 </div>
                 <div className="bg-white/[0.02] border border-white/[0.05] p-3 rounded-lg">
-                  <div className="text-white/35 text-[10px] uppercase tracking-wider mb-0.5">Order Limit</div>
+                  <div className="text-white/35 text-2xs uppercase tracking-wider mb-0.5">Order Limit</div>
                   <div className="text-xs font-medium text-white font-mono tabular-nums">
                     {minQty.toLocaleString()} – {maxQty.toLocaleString()}{" "}
                     <span className="text-white/50">
@@ -209,7 +209,7 @@ function PreOrderScreenContent() {
                   </div>
                 </div>
                 <div className="bg-white/[0.02] border border-white/[0.05] p-3 rounded-lg">
-                  <div className="text-white/35 text-[10px] uppercase tracking-wider mb-0.5">Payment Window</div>
+                  <div className="text-white/35 text-2xs uppercase tracking-wider mb-0.5">Payment Window</div>
                   <div className="text-xs font-medium text-white">{ad.paymentDuration ?? 15} Minutes</div>
                 </div>
               </div>
@@ -342,12 +342,12 @@ function PreOrderScreenContent() {
                               {pm.data?.bankName ?? pm.method}
                             </div>
                             {pm.data?.accountName && (
-                              <div className="text-white/50 text-[11px] truncate">
+                              <div className="text-white/50 text-micro truncate">
                                 {pm.data.accountName}
                               </div>
                             )}
                             {pm.data?.accountNumber && (
-                              <div className="text-white/35 font-mono text-[11px]">
+                              <div className="text-white/35 font-mono text-micro">
                                 {pm.data.accountNumber}
                               </div>
                             )}
@@ -392,7 +392,7 @@ function PreOrderScreenContent() {
                             {pm.data?.bankName ?? pm.method}
                           </div>
                           {pm.data?.accountNumber && (
-                            <div className="text-white/40 text-[11px]">
+                            <div className="text-white/40 text-micro">
                               {pm.data.accountName} · {pm.data.accountNumber}
                             </div>
                           )}
@@ -413,7 +413,7 @@ function PreOrderScreenContent() {
                 {userAction} {ad.asset.toUpperCase()}
               </Button>
 
-              <p className="text-white/30 text-[11px] text-center leading-normal">
+              <p className="text-white/30 text-micro text-center leading-normal">
                 Cryptocurrency is held in platform escrow until payment verification is confirmed by both parties.
               </p>
             </div>

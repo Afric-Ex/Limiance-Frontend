@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { ImageLightbox } from "./image-lightbox";
 import { MdDoneAll } from "react-icons/md";
+import { formatChatTime } from "@/src/lib/chat-date";
 
 interface ChatMessageProps {
   message: {
@@ -28,17 +29,14 @@ export const ChatMessage = ({ message, isOwn, delivered }: ChatMessageProps) => 
   if (isSystem) {
     return (
       <div className="flex justify-center my-2">
-        <div className="bg-white/[0.04] border border-white/[0.06] px-3 py-1 rounded-md text-[11px] text-white/50 text-center">
+        <div className="bg-white/[0.04] border border-white/[0.06] px-3 py-1 rounded-md text-micro text-white/50 text-center">
           {message.content}
         </div>
       </div>
     );
   }
 
-  const formatTime = (isoString: string) => {
-    if (!isoString) return "";
-    return new Date(isoString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  };
+  const formatTime = (value: unknown) => formatChatTime(value) || "—";
 
   return (
     <>
@@ -68,7 +66,7 @@ export const ChatMessage = ({ message, isOwn, delivered }: ChatMessageProps) => 
             )}
 
             <div
-              className={`text-[10px] font-mono mt-1 flex items-center gap-1 ${
+              className={`text-2xs font-mono mt-1 flex items-center gap-1 ${
                 isOwn ? "justify-end text-white/70" : "justify-start text-white/40"
               }`}
             >

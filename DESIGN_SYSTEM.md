@@ -99,21 +99,27 @@ exceptions and live in `scripts/audit-tokens.allowlist.json`.
 
 ## 3. Typography
 
-Font stack (system, no webfont): `-apple-system, BlinkMacSystemFont, "Segoe UI",
-Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif` plus emoji fallbacks.
+Primary UI font: **Inter**, loaded with `next/font` and exposed as
+`--font-inter`. Monospace data (addresses, hashes, API keys, order IDs) uses
+**JetBrains Mono** via `--font-jetbrains-mono`. Both are self-hosted by Next.js
+at build time so rendering is identical across operating systems.
 
 The type ramp is **inferred** (the original spec lists typography as
 unconfirmed). Treat it as an ordering contract, not final Figma values.
 
 | Token | Size | Typical use |
 |---|---|---|
-| `--text-display` | 48px | Marketing display |
-| `--text-heading` | 32px | Page/section headings |
-| `--text-title` | 24px | Card and modal titles |
-| `--text-subtitle` | 19px | Section subtitles, input labels |
-| `--text-body` | 15px | Body copy |
-| `--text-caption` | 13px | Captions, table meta |
-| `--text-micro` | 11px | Badges, overlines |
+| `text-display` / `--text-display` | 48px | Marketing display |
+| `text-heading` / `--text-heading` | 32px | Page/section headings |
+| `text-title` / `--text-title` | 24px | Card and modal titles |
+| `text-subtitle` / `--text-subtitle` | 19px | Section subtitles, input labels |
+| `text-body` / `--text-body` | 15px | Body copy |
+| `text-caption` / `--text-caption` | 13px | Captions, table meta |
+| `text-micro` / `--text-micro` | 11px | Badges, overlines |
+| `text-2xs` | 10px | Dense table meta, keyboard hints |
+
+Prefer these tokens over arbitrary `text-[Npx]` values so typography stays
+consistent across pages.
 
 Additional Tailwind sizes exist for legacy pixel-perfect layouts
 (`text-38px`, `text-32px`, `text-19px`, etc.). Prefer the ramp for new work.

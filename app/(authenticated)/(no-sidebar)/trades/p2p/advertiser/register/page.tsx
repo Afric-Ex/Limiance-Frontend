@@ -141,7 +141,7 @@ function AdvertiserRegisterPageInner() {
                 <div className="flex items-center justify-between p-3.5 bg-white/[0.02] rounded-lg border border-white/[0.06]">
                   <div className="flex flex-col">
                     <span className="font-medium text-white text-xs">KYC Level 2 Verification</span>
-                    <span className="text-[11px] text-white/45 mt-0.5">
+                    <span className="text-micro text-white/45 mt-0.5">
                       {requirements.kycLevel2
                         ? "Identity verified"
                         : kycStatus?.status === "pending"
@@ -173,7 +173,7 @@ function AdvertiserRegisterPageInner() {
                 <div className="flex items-center justify-between p-3.5 bg-white/[0.02] rounded-lg border border-white/[0.06]">
                   <div className="flex flex-col">
                     <span className="font-medium text-white text-xs">Account Age ≥ 30 Days</span>
-                    <span className="text-[11px] text-white/45 mt-0.5">
+                    <span className="text-micro text-white/45 mt-0.5">
                       Your account must be registered for at least 30 days.
                     </span>
                   </div>
@@ -187,7 +187,7 @@ function AdvertiserRegisterPageInner() {
                 <div className="flex items-center justify-between p-3.5 bg-white/[0.02] rounded-lg border border-white/[0.06]">
                   <div className="flex flex-col">
                     <span className="font-medium text-white text-xs">Funding Account Balance</span>
-                    <span className="text-[11px] text-white/45 mt-0.5">
+                    <span className="text-micro text-white/45 mt-0.5">
                       You must hold active funds in your Funding Account.
                     </span>
                   </div>

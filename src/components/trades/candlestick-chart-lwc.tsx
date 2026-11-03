@@ -1514,7 +1514,7 @@ export function LwcCandlestickChart({
       <div ref={containerRef} className={`absolute inset-0 ${drawing ? "cursor-crosshair" : ""}`} />
 
       {shown && (
-        <div className="pointer-events-none absolute top-1 left-2 z-10 flex flex-wrap items-center gap-x-2 text-[10px] font-mono">
+        <div className="pointer-events-none absolute top-1 left-2 z-10 flex flex-wrap items-center gap-x-2 text-2xs font-mono">
           <span className="font-bold text-white/90">{legendTitle}</span>
           <span className="flex flex-wrap gap-x-2 text-white/50">
             <span>O <span className={barTone}>{formatPrice(shown.o)}</span></span>
@@ -1535,7 +1535,7 @@ export function LwcCandlestickChart({
           ~26px time axis), so the label sits at 80% of that height. */}
       {indicators.showVolume && shown && (
         <div
-          className="pointer-events-none absolute left-2 z-10 flex items-center gap-2 text-[10px] font-mono text-white/50"
+          className="pointer-events-none absolute left-2 z-10 flex items-center gap-2 text-2xs font-mono text-white/50"
           style={{ top: "calc((100% - 26px) * 0.8 + 2px)" }}
         >
           <span>Volume {indicators.showVolumeSma ? `SMA ${VOLUME_SMA_PERIOD}` : ""}</span>
@@ -1593,8 +1593,8 @@ export function LwcCandlestickChart({
             className="pointer-events-none absolute top-0 left-0 z-20 flex items-stretch rounded border border-white/15 bg-[#181a20]/95 shadow-lg shadow-black/40"
           >
             <div className="flex min-w-0 flex-col justify-center px-1.5 py-0.5">
-              <span className="text-[9px] leading-tight text-white/45">{DRAWING_LABELS[selectedDrawing.tool]}</span>
-              <span className="whitespace-nowrap font-mono text-[10px] leading-tight text-white/90">
+              <span className="text-2xs leading-tight text-white/45">{DRAWING_LABELS[selectedDrawing.tool]}</span>
+              <span className="whitespace-nowrap font-mono text-2xs leading-tight text-white/90">
                 {selectedDrawing.points.map((p) => formatPrice(p.price)).join(" → ")}
               </span>
             </div>

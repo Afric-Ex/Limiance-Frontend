@@ -87,9 +87,9 @@ export function LandingNav() {
         {open && (
           <nav id="mobile-menu" aria-label="Mobile" className="border-t border-white/[0.08] px-4 pb-4 lg:hidden">
             {LINKS.map(([id, label]) => (
-              <button key={id} onClick={() => { setOpen(false); goTo(id); }} className="block w-full border-b border-white/[0.06] py-3.5 text-left text-[15px] text-[#E6E8EE]">{label}</button>
+              <button key={id} onClick={() => { setOpen(false); goTo(id); }} className="block w-full border-b border-white/[0.06] py-3.5 text-left text-body text-[#E6E8EE]">{label}</button>
             ))}
-            {!user && <Link href="/auth/login" className="block py-3.5 text-[15px] text-[#E6E8EE]">Log in</Link>}
+            {!user && <Link href="/auth/login" className="block py-3.5 text-body text-[#E6E8EE]">Log in</Link>}
           </nav>
         )}
       </header>

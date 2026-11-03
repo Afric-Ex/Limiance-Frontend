@@ -213,19 +213,19 @@ function EditAdPageInner() {
         <StepCard num={1} title="Asset & Fiat Configuration">
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white/[0.02] border border-white/[0.05] rounded-lg p-3 flex flex-col gap-1">
-              <span className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Type</span>
+              <span className="text-micro font-medium text-white/40 uppercase tracking-wider">Type</span>
               <span className={clsx("text-sm font-bold", adMode === "BUY" ? "text-buy" : "text-sell")}>
                 {adMode}
               </span>
             </div>
             <div className="bg-white/[0.02] border border-white/[0.05] rounded-lg p-3 flex flex-col gap-1">
-              <span className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Asset / Fiat</span>
+              <span className="text-micro font-medium text-white/40 uppercase tracking-wider">Asset / Fiat</span>
               <span className="text-sm font-bold text-white font-mono">
                 {asset} / {fiat}
               </span>
             </div>
           </div>
-          <p className="text-[11px] text-white/40">
+          <p className="text-micro text-white/40">
             Base type, trading asset, and fiat currency are locked and cannot be changed after publication.
           </p>
         </StepCard>

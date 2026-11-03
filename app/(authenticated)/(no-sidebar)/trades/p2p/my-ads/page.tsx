@@ -163,12 +163,12 @@ function MyAdsPageInner() {
                       {coinIcon ? (
                         <img src={coinIcon} alt={String(ad.asset)} width={22} height={22} className="shrink-0" />
                       ) : (
-                        <span className="w-5 h-5 shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
+                        <span className="w-5 h-5 shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-2xs font-bold text-primary">
                           {String(ad.asset).charAt(0).toUpperCase()}
                         </span>
                       )}
                       <span
-                        className={`text-[11px] font-bold px-2 py-0.5 rounded border ${
+                        className={`text-micro font-bold px-2 py-0.5 rounded border ${
                           isBuy ? "bg-buy/10 border-buy/20 text-buy" : "bg-[#F6465D]/10 border-[#F6465D]/20 text-[#F6465D]"
                         }`}
                       >
@@ -177,7 +177,7 @@ function MyAdsPageInner() {
                       <span className="text-white font-semibold text-sm">{ad.asset}</span>
                       <span className="text-white/40 text-xs">/ {ad.fiat}</span>
                       <span
-                        className={`ml-auto shrink-0 text-[11px] px-2 py-0.5 rounded-md border font-semibold ${
+                        className={`ml-auto shrink-0 text-micro px-2 py-0.5 rounded-md border font-semibold ${
                           isActive
                             ? "text-buy bg-buy/10 border-buy/20"
                             : "text-white/40 bg-white/[0.05] border-white/[0.07]"
@@ -189,25 +189,25 @@ function MyAdsPageInner() {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
                       <div>
-                        <div className="text-white/35 text-[10px] mb-0.5 uppercase tracking-wider">Price</div>
+                        <div className="text-white/35 text-2xs mb-0.5 uppercase tracking-wider">Price</div>
                         <div className="text-white font-mono font-semibold">
                           {parseFloat(String(ad.price ?? 0)).toLocaleString()} {ad.fiat}
                         </div>
                       </div>
                       <div>
-                        <div className="text-white/35 text-[10px] mb-0.5 uppercase tracking-wider">Available</div>
+                        <div className="text-white/35 text-2xs mb-0.5 uppercase tracking-wider">Available</div>
                         <div className="text-white font-mono">
                           {parseFloat(String(ad.availableQuantity ?? 0)).toLocaleString()} {ad.asset}
                         </div>
                       </div>
                       <div>
-                        <div className="text-white/35 text-[10px] mb-0.5 uppercase tracking-wider">Limit</div>
+                        <div className="text-white/35 text-2xs mb-0.5 uppercase tracking-wider">Limit</div>
                         <div className="text-white font-mono">
                           {(ad.minQuantity ?? 0).toLocaleString()} – {(ad.maxQuantity ?? 0).toLocaleString()}
                         </div>
                       </div>
                       <div>
-                        <div className="text-white/35 text-[10px] mb-0.5 uppercase tracking-wider">Matched Orders</div>
+                        <div className="text-white/35 text-2xs mb-0.5 uppercase tracking-wider">Matched Orders</div>
                         <div className="text-white font-medium">{ad.orderMatchCount ?? 0}</div>
                       </div>
                     </div>

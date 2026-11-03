@@ -251,7 +251,7 @@ export const AssetTrendChart = () => {
         )}
       </div>
 
-      <div className="text-[10px] text-white/25 text-right">
+      <div className="text-2xs text-white/25 text-right">
         Last Updated: {dayjs().format("M/D/YYYY")}
       </div>
     </div>

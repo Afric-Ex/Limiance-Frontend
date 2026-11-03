@@ -27,7 +27,7 @@ export const ResetModal = () => {
 
       <div className="flex items-center flex-col gap-8 w-full px-2 mt-8">
         <div className="flex flex-col items-center gap-3 text-center">
-          <h2 className="text-[32px] tracking-tight font-bold text-white">Reset Password?</h2>
+          <h2 className="text-heading tracking-tight font-bold text-white">Reset Password?</h2>
           <div className="text-center text-white/50 text-base max-w-[380px] font-medium leading-relaxed">
             Hi, <span className="text-primary">{maskIdentifier(email)}</span>.<br/><br/>
             For your security, withdrawals, P2P selling, and payment services may be disabled for 24 hours after a password change.

@@ -32,7 +32,7 @@ const modalStyles = {
 
 const tableClassNames = {
   table: "min-w-max",
-  th: "!py-3 !px-3 first:!pl-5 !whitespace-nowrap !text-[11px] !font-medium !uppercase !tracking-wider !text-white/40 !border-b !border-white/[0.06] !bg-transparent",
+  th: "!py-3 !px-3 first:!pl-5 !whitespace-nowrap !text-micro !font-medium !uppercase !tracking-wider !text-white/40 !border-b !border-white/[0.06] !bg-transparent",
   tr: "!border-b !border-white/[0.06] last:!border-0 hover:!bg-white/[0.02] !transition-colors",
   td: "!py-4 !px-3 first:!pl-5 !text-sm",
 };
@@ -217,7 +217,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
         {/* Total Balance + PnL */}
         <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/40">Total Balance</span>
+            <span className="text-micro font-medium uppercase tracking-[0.08em] text-white/40">Total Balance</span>
             <div className="flex items-center gap-2">
               <BalanceRevealControl />
               <button
@@ -240,7 +240,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
             </div>
           )}
           <div className="mt-auto flex items-center gap-2">
-            <span className="text-[11px] font-medium text-white/40">Today&apos;s PnL</span>
+            <span className="text-micro font-medium text-white/40">Today&apos;s PnL</span>
             {balLoading ? (
               <Skeleton variant="text" width="90px" height="14px" />
             ) : (
@@ -263,7 +263,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
         <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <span className={clsx("w-2 h-2 rounded-full", marginLevelTone === "success" ? "bg-success-6" : marginLevelTone === "warning" ? "bg-warning-1" : "bg-error-1 animate-pulse")} />
-            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/40">Margin Level</span>
+            <span className="text-micro font-medium uppercase tracking-[0.08em] text-white/40">Margin Level</span>
           </div>
           {balLoading ? (
             <Skeleton variant="text" width="90px" height="30px" />
@@ -275,13 +275,13 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
               <span className="text-xs font-medium text-white/40">x</span>
             </div>
           )}
-          <span className="mt-auto text-[11px] font-medium text-white/30">{marginLevelNote}</span>
+          <span className="mt-auto text-micro font-medium text-white/30">{marginLevelNote}</span>
         </div>
 
         {/* Account Equity + Collateral */}
         <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/40">Account Equity</span>
+            <span className="text-micro font-medium uppercase tracking-[0.08em] text-white/40">Account Equity</span>
             <button
               type="button"
               onClick={refreshBalances}
@@ -300,7 +300,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
               <span className="text-xs font-medium text-white/40">USDT</span>
             </div>
           )}
-          <span className="mt-auto text-[11px] text-white/40">
+          <span className="mt-auto text-micro text-white/40">
             Collateral <span className="font-semibold text-white/70">{fmt(collateralUsd, 2)}</span> USDT
           </span>
         </div>
@@ -308,7 +308,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
         {/* Total Debt */}
         <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/40">Total Debt</span>
+            <span className="text-micro font-medium uppercase tracking-[0.08em] text-white/40">Total Debt</span>
             <button
               type="button"
               onClick={refreshBalances}
@@ -327,7 +327,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
               <span className="text-xs font-medium text-white/40">USDT</span>
             </div>
           )}
-          <span className="mt-auto text-[11px] text-white/40">Outstanding borrow + interest</span>
+          <span className="mt-auto text-micro text-white/40">Outstanding borrow + interest</span>
         </div>
       </div>
 
@@ -514,7 +514,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                       <TableTd><span className="text-white/70">{o.leverage ? `${o.leverage}x` : "—"}</span></TableTd>
                       <TableTd>
                         <span className={clsx(
-                          "text-[10px] font-bold px-2 py-0.5 rounded-full",
+                          "text-2xs font-bold px-2 py-0.5 rounded-full",
                           String(o.status).toLowerCase() === "filled"    ? "bg-success-6/15 text-success-6" :
                           String(o.status).toLowerCase() === "cancelled" ? "bg-error-1/15 text-error-1" :
                                                                             "bg-white/10 text-white/50"
@@ -560,7 +560,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                       <TableTd><span className="text-white/70 tabular-nums">{parseNum(o.price).toLocaleString("en-US", { minimumFractionDigits: 4 })}</span></TableTd>
                       <TableTd>
 <span className={clsx(
-                          "text-[10px] font-bold px-2 py-0.5 rounded-full capitalize",
+                          "text-2xs font-bold px-2 py-0.5 rounded-full capitalize",
 String(o.status) === "repaid" || String(o.status) === "completed" ? "bg-success-6/15 text-success-6" :
                                                                                           "bg-white/10 text-white/50"
                         )}>{o.status ?? "pending"}</span>

@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Popover, PopoverDropdown, PopoverTarget, TextInput } from "@mantine/core";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { Search } from "@/src/components/icons/search";
@@ -42,7 +42,7 @@ const fmt = (value: number | null, maxDigits = 2) =>
 function Stat({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[11px] text-white/40">{label}</span>
+      <span className="text-micro text-white/40">{label}</span>
       <span className="text-xs font-semibold tabular-nums text-white/90">{children}</span>
     </div>
   );
@@ -67,6 +67,20 @@ export function SpotPairHeader({
 }: SpotPairHeaderProps) {
   const icons = useTokenIconMap();
   const names = useTokenNameMap();
+
+  const [priceFlash, setPriceFlash] = useState<"up" | "down" | null>(null);
+  const prevPriceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const next = toNum(feed.price);
+    if (next === null) return;
+    const prev = prevPriceRef.current;
+    prevPriceRef.current = next;
+    if (prev === null || next === prev) return;
+    setPriceFlash(next > prev ? "up" : "down");
+    const t = setTimeout(() => setPriceFlash(null), 600);
+    return () => clearTimeout(t);
+  }, [feed.price]);
 
   const [base = "", quote = ""] = (selectedPair || "").includes("/")
     ? selectedPair.split("/")
@@ -119,7 +133,7 @@ export function SpotPairHeader({
                   <span className="text-lg font-bold text-white">{selectedPair}</span>
                   <MdKeyboardArrowDown className="text-white/50" size={20} />
                 </span>
-                {coinName && <span className="text-[11px] text-white/40">{coinName}</span>}
+                {coinName && <span className="text-micro text-white/40">{coinName}</span>}
               </span>
             </button>
           </PopoverTarget>
@@ -158,7 +172,7 @@ export function SpotPairHeader({
                           {m.base}
                           <span className="text-white/40">/{m.quote}</span>
                         </span>
-                        <span className="text-[10px] text-white/30">{m.symbol}</span>
+                        <span className="text-2xs text-white/30">{m.symbol}</span>
                       </div>
                       <span
                         className={clsx(
@@ -180,13 +194,20 @@ export function SpotPairHeader({
         {/* Last price + USD value */}
         <div className={clsx("flex flex-col gap-0.5 rounded px-2 transition-colors", flashClass)}>
           {price !== null ? (
-            <span className={clsx("text-xl font-bold leading-tight tabular-nums", tone)}>
+            <span
+              className={clsx(
+                "text-xl font-bold leading-tight tabular-nums transition-colors duration-300",
+                priceFlash === "up" && "text-[#25AB42]",
+                priceFlash === "down" && "text-[#F6465D]",
+                priceFlash === null && tone
+              )}
+            >
               {fmt(price)}
             </span>
           ) : (
             <Skeleton variant="text" width="80px" height="24px" />
           )}
-          <span className="text-[11px] tabular-nums text-white/50">
+          <span className="text-micro tabular-nums text-white/50">
             {showUsd ? `≈${fmt(price)} USD` : "\u00A0"}
           </span>
         </div>

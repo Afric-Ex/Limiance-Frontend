@@ -37,7 +37,7 @@ export const WalletDropdown = () => {
       {list.map((item) => (
         <span
           key={item.title}
-          className="text-10px hover:bg-gray-9/40 py-3 px-2 text-white/55 rounded cursor-pointer hover:text-primary font-semibold"
+          className="text-2xs hover:bg-gray-9/40 py-3 px-2 text-white/55 rounded cursor-pointer hover:text-primary font-semibold"
         >
           {item.title}
         </span>

@@ -24,7 +24,7 @@ export const WalletDropdown = ({
           onClick={toggle}
           className="flex items-center gap-1 cursor-pointer"
         >
-          <span className="font-medium text-gray-14 text-10px">
+          <span className="font-medium text-gray-14 text-2xs">
             {selected} Wallet
           </span>
           <MdKeyboardArrowRight />
@@ -40,7 +40,7 @@ export const WalletDropdown = ({
                 setSelected("Spot");
                 close();
               }}
-              className="h-full flex cursor-pointer items-center border-b border-b-gray-19 px-1 text-10px text-gray-14"
+              className="h-full flex cursor-pointer items-center border-b border-b-gray-19 px-1 text-2xs text-gray-14"
             >
               Spot Wallet
             </span>
@@ -50,7 +50,7 @@ export const WalletDropdown = ({
                 setSelected("Funding");
                 close();
               }}
-              className="h-full flex cursor-pointer items-center border-b border-b-gray-19 px-1 text-10px text-gray-14"
+              className="h-full flex cursor-pointer items-center border-b border-b-gray-19 px-1 text-2xs text-gray-14"
             >
               Funding Wallet
             </span>

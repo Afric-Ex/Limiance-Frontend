@@ -48,19 +48,19 @@ export function PlatformTabs() {
         {TABS.map((t, i) => (
           <button key={t.id} ref={(el) => { refs.current[i] = el; }} role="tab" id={`tab-${t.id}`} aria-selected={t.id === id} aria-controls="platform-panel" tabIndex={t.id === id ? 0 : -1}
             onClick={() => select(i)}
-            className={`-mb-px shrink-0 border-b-2 px-5 py-3 text-[15px] transition-colors ${t.id === id ? "border-[#4D77F0] text-white" : "border-transparent text-[#8A91A0] hover:text-white"}`}>{t.label}</button>
+            className={`-mb-px shrink-0 border-b-2 px-5 py-3 text-body transition-colors ${t.id === id ? "border-[#4D77F0] text-white" : "border-transparent text-[#8A91A0] hover:text-white"}`}>{t.label}</button>
         ))}
       </div>
 
       <div id="platform-panel" role="tabpanel" aria-labelledby={`tab-${id}`} className="grid grid-cols-[minmax(0,1fr)] items-center gap-10 pt-10 lg:grid-cols-2 lg:gap-16">
         <div className="flex min-w-0 flex-col gap-6">
-          <h3 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-white">{tab.title}</h3>
+          <h3 className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-white">{tab.title}</h3>
           <ul className="flex flex-col gap-3">
             {tab.points.map((p) => (
-              <li key={p} className="flex gap-3 text-[16px] text-[#C3C8D4]"><span className="mt-2.5 h-1 w-3 shrink-0 bg-[#4D77F0]" aria-hidden />{p}</li>
+              <li key={p} className="flex gap-3 text-base text-[#C3C8D4]"><span className="mt-2.5 h-1 w-3 shrink-0 bg-[#4D77F0]" aria-hidden />{p}</li>
             ))}
           </ul>
-          <Link href={cta.trade.href} className="w-fit text-[15px] font-medium text-[#8FAAFF] underline-offset-4 hover:underline">
+          <Link href={cta.trade.href} className="w-fit text-body font-medium text-[#8FAAFF] underline-offset-4 hover:underline">
             {cta.primary.label === "Create account" ? `Start with ${tab.label}` : `Open ${tab.label}`} {"\u2192"}
           </Link>
         </div>
@@ -75,7 +75,7 @@ export function PlatformTabs() {
                 ))}
               </div>
             ) : <span className="text-xs text-[#8A91A0]">Wallet swap</span>}
-            <span className="text-[11px] text-[#8A91A0]">Interface preview</span>
+            <span className="text-micro text-[#8A91A0]">Interface preview</span>
           </div>
           <div className="flex flex-col gap-2.5">
             {tab.fields.map(([label, unit]) => (

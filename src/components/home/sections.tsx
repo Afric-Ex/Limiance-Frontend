@@ -11,8 +11,8 @@ const wrap = `${sans.className} mx-auto w-full min-w-0 max-w-[1240px] scroll-mt-
 function Head({ title, intro }: { title: string; intro?: string }) {
   return (
     <div className="max-w-[620px]">
-      <h2 className="text-[30px] font-semibold leading-[1.1] tracking-[-0.025em] text-white md:text-[40px]">{title}</h2>
-      {intro && <p className="mt-4 text-[17px] leading-relaxed text-[#A7AEBD]">{intro}</p>}
+      <h2 className="text-3xl font-semibold leading-[1.1] tracking-[-0.025em] text-white md:text-4xl">{title}</h2>
+      {intro && <p className="mt-4 text-lg leading-relaxed text-[#A7AEBD]">{intro}</p>}
     </div>
   );
 }
@@ -88,7 +88,7 @@ export function SecuritySection() {
         <dl className="mt-10 border-b border-white/[0.08]">
           {SECURITY.map(([k, t, d]) => (
             <div key={k} className="grid gap-1 border-t border-white/[0.08] py-5 md:grid-cols-[180px_240px_1fr] md:gap-6">
-              <dt className={`${mono.className} text-[13px] text-[#8A91A0]`}>{k}</dt>
+              <dt className={`${mono.className} text-caption text-[#8A91A0]`}>{k}</dt>
               <dd className="font-medium text-white">{t}</dd>
               <dd className="text-[#A7AEBD]">{d}</dd>
             </div>
@@ -115,7 +115,7 @@ export function FaqSection() {
       <div className="mt-10 border-b border-white/[0.08]">
         {FAQ.map(([q, a]) => (
           <details key={q} className="group border-t border-white/[0.08]">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-[17px] font-medium text-white [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-lg font-medium text-white [&::-webkit-details-marker]:hidden">
               {q}
               <span aria-hidden className="text-xl text-[#8A91A0] transition-transform group-open:rotate-45">+</span>
             </summary>
@@ -134,8 +134,8 @@ export function ClosingSection() {
         <div aria-hidden className="absolute inset-0 bg-[radial-gradient(50%_80%_at_50%_0%,rgba(77,119,240,0.12),transparent)]" />
         <div className="relative mx-auto flex max-w-[560px] flex-col items-center gap-6 text-center">
           <Image src={Wordmark} alt="Limiance" width={180} height={45} className="h-auto w-[160px]" />
-          <h2 className="text-[32px] font-semibold leading-[1.1] tracking-[-0.025em] text-white md:text-[44px]">Open your Limiance account</h2>
-          <p className="text-[17px] text-[#A7AEBD]">Create an account, verify your identity and fund it in naira to start trading.</p>
+          <h2 className="text-heading font-semibold leading-[1.1] tracking-[-0.025em] text-white md:text-display">Open your Limiance account</h2>
+          <p className="text-lg text-[#A7AEBD]">Create an account, verify your identity and fund it in naira to start trading.</p>
           <div className="w-full"><HeroSignup /></div>
         </div>
       </div>

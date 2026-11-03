@@ -147,21 +147,21 @@ export const AdvertiserProfilePanel = ({
 
           <div className="grid grid-cols-2 gap-2.5">
             <div className="bg-white/[0.03] border border-white/[0.06] p-3 rounded-lg">
-              <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Completed Trades</div>
+              <div className="text-white/40 text-2xs uppercase tracking-wider mb-0.5">Completed Trades</div>
               <div className="text-lg font-bold text-white font-mono tabular-nums">{trades}</div>
             </div>
             <div className="bg-white/[0.03] border border-white/[0.06] p-3 rounded-lg">
-              <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Completion Rate</div>
+              <div className="text-white/40 text-2xs uppercase tracking-wider mb-0.5">Completion Rate</div>
               <div className="text-lg font-bold text-buy font-mono tabular-nums">{completionRate.toFixed(1)}%</div>
             </div>
             <div className="bg-white/[0.03] border border-white/[0.06] p-3 rounded-lg">
-              <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Average Rating</div>
+              <div className="text-white/40 text-2xs uppercase tracking-wider mb-0.5">Average Rating</div>
               <div className="text-sm font-semibold text-white mt-1">
                 {rating > 0 ? `${rating.toFixed(1)} / 5.0` : "No rating"}
               </div>
             </div>
             <div className="bg-white/[0.03] border border-white/[0.06] p-3 rounded-lg">
-              <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">30d Reviews</div>
+              <div className="text-white/40 text-2xs uppercase tracking-wider mb-0.5">30d Reviews</div>
               <div className="text-sm font-semibold text-white mt-1">{feedback.recent.length}</div>
             </div>
           </div>
@@ -201,7 +201,7 @@ export const AdvertiserProfilePanel = ({
                         {item.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="px-2 py-0.5 rounded bg-white/[0.05] text-[10px] text-white/50"
+                            className="px-2 py-0.5 rounded bg-white/[0.05] text-2xs text-white/50"
                           >
                             {tag}
                           </span>

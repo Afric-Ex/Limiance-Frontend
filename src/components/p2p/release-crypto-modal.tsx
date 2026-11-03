@@ -129,7 +129,7 @@ export function ReleaseCryptoModal({
                 </span>
                 to <span className="text-white font-semibold">{counterpartyName}</span>
               </div>
-              <div className="mt-3 text-white/50 text-[11px] text-left border-t border-white/[0.08] pt-2.5 space-y-1">
+              <div className="mt-3 text-white/50 text-micro text-left border-t border-white/[0.08] pt-2.5 space-y-1">
                 <p className="font-medium text-white/70">Please acknowledge:</p>
                 <ul className="list-disc pl-4 space-y-0.5">
                   <li>You have verified receipt of {fiatAmount.toLocaleString()} {fiat} in your bank account.</li>

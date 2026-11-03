@@ -181,7 +181,7 @@ export function LimBalanceCard() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-baseline gap-2">
-            <span className="text-[32px] leading-none font-bold text-[var(--color-text-primary)] tabular-nums">
+            <span className="text-heading leading-none font-bold text-[var(--color-text-primary)] tabular-nums">
               {isLoading ? (
                 <span className="skeleton inline-block h-8 w-40 rounded align-middle" />
               ) : (

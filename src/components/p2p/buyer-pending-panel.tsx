@@ -41,7 +41,7 @@ function CountdownTimer({ deadline }: { deadline: string }) {
       <div className="text-4xl font-mono font-bold tracking-tight">
         {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
       </div>
-      <div className="text-[11px] mt-1 uppercase tracking-widest text-white/35 font-medium">
+      <div className="text-micro mt-1 uppercase tracking-widest text-white/35 font-medium">
         minutes : seconds
       </div>
       {isUrgent && (
@@ -67,7 +67,7 @@ export function BuyerPendingPanel({
   return (
     <>
       <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 text-center mt-4">
-        <div className="text-white/45 text-[11px] mb-3 uppercase tracking-wider font-semibold">
+        <div className="text-white/45 text-micro mb-3 uppercase tracking-wider font-semibold">
           Pay Counterparty Within
         </div>
         <CountdownTimer deadline={deadlineStr} />

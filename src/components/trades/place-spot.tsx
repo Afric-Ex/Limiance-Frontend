@@ -1,5 +1,6 @@
-import { Tabs, TabsList, TabsTab, Slider, Loader } from "@mantine/core";
+import { Tabs, TabsList, TabsTab, Slider, Loader, Popover } from "@mantine/core";
 import { modals } from "@mantine/modals";
+import toast from "react-hot-toast";
 import { MarginBorrowRepayModal } from "./margin-borrow-repay-modal";
 import { MarginTransferModal } from "./margin-transfer-modal";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
@@ -42,6 +43,9 @@ interface Props {
     stopLoss?: number;
   }) => void;
 }
+
+type AdvancedTab = "tpsl" | "oco" | "conditional" | "trailing";
+type AdvancedOption = { value: AdvancedTab; label: string; disabled?: boolean };
 
 const PERCENT_MARKS = [
   { value: 0,   label: "0%" },
@@ -106,7 +110,7 @@ function FieldRow({
     return (
       <div className={clsx("flex h-11 items-center rounded-lg border border-transparent bg-white/[0.05] px-3 transition-colors", !readOnly && focusBorder, readOnly && "opacity-80")}>
         <div className="flex min-w-0 flex-1 flex-col justify-center">
-          <span className="text-[10px] leading-none text-white/40">{label}</span>
+          <span className="text-2xs leading-none text-white/40">{label}</span>
           <input
             type="text"
             inputMode="decimal"
@@ -145,7 +149,7 @@ function FieldRow({
         <button
           type="button"
           onClick={onMax}
-          className="text-[10px] font-bold text-primary hover:text-primary/80 transition-colors ml-1 shrink-0"
+          className="text-2xs font-bold text-primary hover:text-primary/80 transition-colors ml-1 shrink-0"
         >
           Max
         </button>
@@ -157,6 +161,18 @@ function FieldRow({
 
 export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLeverageChange, marketPrice, clickedPrice, compactSide, sideToggle = false, onLeverageChangeEnd, onTpslChange, onFill }: Props) => {
   const [activeTab, setActiveTab] = useState("limit");
+  const [advancedTab, setAdvancedTab] = useState<AdvancedTab | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [tpslTriggerType, setTpslTriggerType] = useState<"last" | "mark" | "index">("last");
+  const [tpslExecType, setTpslExecType] = useState<"limit" | "market">("limit");
+  const [buyTpslTrigger, setBuyTpslTrigger] = useState<number | string>("");
+  const [sellTpslTrigger, setSellTpslTrigger] = useState<number | string>("");
+  const [buyTpslPrice, setBuyTpslPrice] = useState<number | string>("");
+  const [sellTpslPrice, setSellTpslPrice] = useState<number | string>("");
+  const [buyTpslAmount, setBuyTpslAmount] = useState<number | string>("");
+  const [sellTpslAmount, setSellTpslAmount] = useState<number | string>("");
+  const [buyTpslPct, setBuyTpslPct] = useState(0);
+  const [sellTpslPct, setSellTpslPct] = useState(0);
   const [buyPrice, setBuyPrice] = useState<number | string>("");
   const [buyAmount, setBuyAmount] = useState<number | string>("");
   const [buyPct, setBuyPct] = useState(0);
@@ -181,6 +197,28 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
   const [sellStopPrice, setSellStopPrice] = useState<number | string>("");
   const [postOnly, setPostOnly] = useState(false);
   const [timeInForce, setTimeInForce] = useState<"GTC" | "IOC" | "FOK">("GTC");
+
+  const effectiveTab = advancedTab ?? activeTab;
+
+  const advancedLabels: Record<AdvancedTab, string> = {
+    tpsl: "TP/SL",
+    oco: "OCO",
+    conditional: "Conditional",
+    trailing: "Trailing Stop",
+  };
+
+  const advancedOptions: AdvancedOption[] =
+    mode === "spot"
+      ? [
+          { value: "tpsl", label: "TP/SL" },
+          { value: "conditional", label: "Conditional", disabled: true },
+        ]
+      : [
+          { value: "tpsl", label: "TP/SL" },
+          { value: "oco", label: "OCO" },
+          { value: "conditional", label: "Conditional", disabled: true },
+          { value: "trailing", label: "Trailing Stop", disabled: true },
+        ];
 
   const queryClient = useQueryClient();
 
@@ -497,13 +535,13 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           </span>
         </div>
 
-        {activeTab === "oco" ? (
+        {effectiveTab === "oco" ? (
           <>
             <FieldRow floating label="Price" value={isBuy ? buyOcoPrice : sellOcoPrice} onChange={isBuy ? setBuyOcoPrice : setSellOcoPrice} unit={quote} color={tone} />
             <FieldRow floating label="Stop" value={isBuy ? buyOcoStop : sellOcoStop} onChange={isBuy ? setBuyOcoStop : setSellOcoStop} unit={quote} color={tone} />
             <FieldRow floating label="Limit" value={isBuy ? buyOcoLimit : sellOcoLimit} onChange={isBuy ? setBuyOcoLimit : setSellOcoLimit} unit={quote} color={tone} />
           </>
-        ) : activeTab === "stop" ? (
+        ) : effectiveTab === "stop" ? (
           <>
             <FieldRow floating label="Stop Price" value={isBuy ? buyStopPrice : sellStopPrice} onChange={isBuy ? setBuyStopPrice : setSellStopPrice} unit={quote} color={tone} />
             <FieldRow
@@ -518,7 +556,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               color={tone}
             />
           </>
-        ) : activeTab !== "market" ? (
+        ) : effectiveTab !== "market" ? (
           <FieldRow
             floating
             label="Price"
@@ -555,7 +593,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               bar: sliderStyle.bar,
               thumb: sliderStyle.thumb,
               mark: sliderStyle.mark,
-              markLabel: "!text-[10px] !text-white/40 !mt-2",
+              markLabel: "!text-2xs !text-white/40 !mt-2",
             }}
             marks={STACKED_MARKS}
           />
@@ -584,7 +622,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           </>
         )}
 
-        {activeTab === "limit" && (
+        {effectiveTab === "limit" && (
           <div className="flex items-center justify-between text-xs text-white/60 px-0.5">
             <label className="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors">
               <input
@@ -596,14 +634,14 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               Post-Only
             </label>
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-white/40">TIF:</span>
+              <span className="text-2xs text-white/40">TIF:</span>
               {(["GTC", "IOC", "FOK"] as const).map((tif) => (
                 <button
                   key={tif}
                   type="button"
                   onClick={() => setTimeInForce(tif)}
                   className={clsx(
-                    "px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors",
+                    "px-1.5 py-0.5 rounded text-2xs font-semibold transition-colors",
                     timeInForce === tif ? "bg-primary/20 text-primary border border-primary/40" : "text-white/40 hover:text-white/70"
                   )}
                 >
@@ -623,6 +661,173 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           )}
         >
           {loading && <Loader size={13} color="white" />}
+          {isBuy ? "Buy" : "Sell"} {base}
+        </button>
+      </div>
+    );
+  };
+
+  const renderTpslForm = () => {
+    const isBuy = activeSide === "buy";
+    const tone = isBuy ? "buy" : "sell";
+    const trigger = isBuy ? buyTpslTrigger : sellTpslTrigger;
+    const setTrigger = isBuy ? setBuyTpslTrigger : setSellTpslTrigger;
+    const price = isBuy ? buyTpslPrice : sellTpslPrice;
+    const setPrice = isBuy ? setBuyTpslPrice : setSellTpslPrice;
+    const amount = isBuy ? buyTpslAmount : sellTpslAmount;
+    const setAmount = isBuy ? setBuyTpslAmount : setSellTpslAmount;
+    const pct = isBuy ? buyTpslPct : sellTpslPct;
+    const setPct = isBuy ? setBuyTpslPct : setSellTpslPct;
+    const refPrice = parseNum(
+      (tpslExecType === "limit" ? price : marketPrice) || marketPrice || 0
+    );
+    const total = refPrice * parseNum(amount);
+    const sliderStyle = STACKED_SLIDER[tone];
+
+    const showTpslToast = () => {
+      toast(
+        "TP/SL orders coming soon. Use the TP/SL checkbox on a Limit or Market order for now."
+      );
+    };
+
+    return (
+      <div className="flex flex-col gap-3">
+        {!sideToggle && (
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-white/[0.05] p-1">
+            {(["buy", "sell"] as const).map((side) => (
+              <button
+                key={side}
+                type="button"
+                onClick={() => setActiveSide(side)}
+                aria-pressed={activeSide === side}
+                className={clsx(
+                  "h-9 rounded-md text-sm font-bold capitalize transition-colors",
+                  activeSide === side
+                    ? side === "buy" ? "bg-buy text-white" : "bg-sell text-white"
+                    : "text-white/50 hover:text-white/80"
+                )}
+              >
+                {side}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-white/50">Trigger Type</span>
+          <div className="flex items-center gap-1 rounded-lg bg-white/[0.04] p-0.5">
+            {(["last", "mark", "index"] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setTpslTriggerType(type)}
+                className={clsx(
+                  "rounded-md px-2 py-1 text-2xs font-bold capitalize transition-colors",
+                  tpslTriggerType === type
+                    ? "bg-white/[0.08] text-white"
+                    : "text-white/40 hover:text-white/70"
+                )}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <FieldRow
+          floating
+          label="Trigger Price"
+          value={trigger}
+          onChange={setTrigger}
+          unit={quote}
+          color={tone}
+        />
+
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-white/50">Order Type</span>
+          <div className="flex items-center gap-1 rounded-lg bg-white/[0.04] p-0.5">
+            {(["limit", "market"] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setTpslExecType(type)}
+                className={clsx(
+                  "rounded-md px-2 py-1 text-2xs font-bold capitalize transition-colors",
+                  tpslExecType === type
+                    ? "bg-white/[0.08] text-white"
+                    : "text-white/40 hover:text-white/70"
+                )}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {tpslExecType === "limit" && (
+          <FieldRow
+            floating
+            label="Order Price"
+            value={price}
+            onChange={setPrice}
+            unit={quote}
+            color={tone}
+          />
+        )}
+
+        <FieldRow
+          floating
+          label="Quantity"
+          value={amount}
+          onChange={setAmount}
+          unit={base}
+          color={tone}
+        />
+
+        <div className="px-1.5 pb-5 pt-1">
+          <Slider
+            min={0}
+            max={100}
+            step={1}
+            label={(v) => `${v}%`}
+            value={pct}
+            onChange={(v) => {
+              setPct(v);
+              if (refPrice) {
+                if (isBuy) {
+                  setAmount(+(((rawQuote || 0) * v / 100) / refPrice).toFixed(8));
+                } else {
+                  setAmount(+(((rawBase || 0) * v / 100).toFixed(8)));
+                }
+              }
+            }}
+            classNames={{
+              track: "!h-1 before:!h-1 before:!bg-white/10",
+              bar: sliderStyle.bar,
+              thumb: sliderStyle.thumb,
+              mark: sliderStyle.mark,
+              markLabel: "!text-2xs !text-white/40 !mt-2",
+            }}
+            marks={STACKED_MARKS}
+          />
+        </div>
+
+        <FieldRow
+          floating
+          label="Order Value"
+          value={total ? +total.toFixed(8) : ""}
+          unit={quote}
+          readOnly
+        />
+
+        <button
+          type="button"
+          onClick={showTpslToast}
+          className={clsx(
+            "flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-white transition-all active:scale-95",
+            isBuy ? "bg-buy hover:bg-buy/90" : "bg-sell hover:bg-sell/90"
+          )}
+        >
           {isBuy ? "Buy" : "Sell"} {base}
         </button>
       </div>
@@ -655,14 +860,18 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
       {/* Order type tabs */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto custom-scrollbar pb-1">
-        <Tabs
-          classNames={{
-            tab: "!p-0 hover:!bg-transparent text-xs font-bold text-white/50 hover:!text-white/80 data-[active]:!text-white !border-0 whitespace-nowrap",
-            list: "!flex !items-center before:!border-0 !gap-4",
-          }}
-          value={activeTab}
-          onChange={(v) => setActiveTab(v ?? "limit")}
-        >
+        <div className="flex items-center gap-3 min-w-0">
+          <Tabs
+            classNames={{
+              tab: "!p-0 hover:!bg-transparent text-xs font-bold text-white/50 hover:!text-white/80 data-[active]:!text-white !border-0 whitespace-nowrap",
+              list: "!flex !items-center before:!border-0 !gap-4",
+            }}
+            value={advancedTab ? null : activeTab}
+            onChange={(v) => {
+              setActiveTab(v ?? "limit");
+              setAdvancedTab(null);
+            }}
+          >
             <TabsList>
               <TabsTab value="limit">Limit</TabsTab>
               <TabsTab value="market">Market</TabsTab>
@@ -671,9 +880,59 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                   Stop Limit <MdKeyboardArrowRight className="rotate-90 opacity-50" />
                 </span>
               </TabsTab>
-              <TabsTab value="oco">OCO</TabsTab>
             </TabsList>
           </Tabs>
+          <Popover
+            opened={moreOpen}
+            onChange={setMoreOpen}
+            position="bottom-start"
+            withArrow={false}
+            shadow="xl"
+          >
+            <Popover.Target>
+              <button
+                type="button"
+                onClick={() => setMoreOpen((o) => !o)}
+                aria-label="More order types"
+                className={clsx(
+                  "flex shrink-0 items-center gap-0.5 whitespace-nowrap text-xs font-bold transition-colors",
+                  advancedTab ? "text-primary" : "text-white/50 hover:text-white/80"
+                )}
+              >
+                {advancedTab ? `${advancedLabels[advancedTab]} ▾` : "▾"}
+              </button>
+            </Popover.Target>
+            <Popover.Dropdown className="!min-w-[160px] !rounded-xl !border !border-white/[0.08] !bg-[#1c1f28] !px-0 !py-1 !shadow-xl">
+              {advancedOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  disabled={opt.disabled}
+                  onClick={() => {
+                    if (opt.disabled) return;
+                    setActiveTab(opt.value);
+                    setAdvancedTab(opt.value);
+                    setMoreOpen(false);
+                  }}
+                  className={clsx(
+                    "flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors",
+                    opt.disabled
+                      ? "cursor-not-allowed text-white/30"
+                      : "text-white/80 hover:bg-white/[0.05]",
+                    advancedTab === opt.value && "bg-primary/[0.08] !text-primary"
+                  )}
+                >
+                  <span>{opt.label}</span>
+                  {opt.disabled && (
+                    <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wide text-white/40">
+                      Soon
+                    </span>
+                  )}
+                </button>
+              ))}
+            </Popover.Dropdown>
+          </Popover>
+        </div>
         <div className="flex items-center gap-2 shrink-0">
           {mode !== "spot" && (
             <span 
@@ -722,7 +981,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                   onLeverageChangeEnd?.(l);
                 }}
                 className={clsx(
-                  "flex-1 text-[10px] font-bold py-1 rounded transition-all",
+                  "flex-1 text-2xs font-bold py-1 rounded transition-all",
                   leverage === l
                     ? "bg-primary/20 text-primary"
                     : "bg-white/[0.04] text-white/40 hover:bg-white/[0.08] hover:text-white/70"
@@ -735,7 +994,9 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         </div>
       )}
 
-      {sideToggle ? (
+      {effectiveTab === "tpsl" ? (
+        renderTpslForm()
+      ) : sideToggle ? (
         renderStackedSide(activeSide)
       ) : (
       <div className={clsx("grid gap-x-4 gap-y-0", compactSide ? "grid-cols-1" : "grid-cols-2")}>
@@ -744,7 +1005,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <span className="text-white/40 text-xs">Avail</span>
-            <span className="flex items-center gap-1.5 text-[11px] text-white/90 font-semibold">
+            <span className="flex items-center gap-1.5 text-micro text-white/90 font-semibold">
               {availQuote} {quote}
               <button
                 type="button"
@@ -758,18 +1019,18 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             </span>
           </div>
 
-          {activeTab === "oco" ? (
+          {effectiveTab === "oco" ? (
             <>
               <FieldRow label="Price" value={buyOcoPrice} onChange={setBuyOcoPrice} unit={quote} color="buy" />
               <FieldRow label="Stop" value={buyOcoStop} onChange={setBuyOcoStop} unit={quote} color="buy" />
               <FieldRow label="Limit" value={buyOcoLimit} onChange={setBuyOcoLimit} unit={quote} color="buy" />
             </>
-          ) : activeTab === "stop" ? (
+          ) : effectiveTab === "stop" ? (
             <>
               <FieldRow label="Stop" value={buyStopPrice} onChange={setBuyStopPrice} unit={quote} color="buy" />
               <FieldRow label="Limit" value={buyPrice} onChange={(v) => { setBuyPriceEdited(true); setBuyPrice(v); }} unit={quote} color="buy" />
             </>
-          ) : activeTab !== "market" ? (
+          ) : effectiveTab !== "market" ? (
             <FieldRow label="Price" value={buyPrice} onChange={(v) => { setBuyPriceEdited(true); setBuyPrice(v); }} unit={quote} color="buy" />
           ) : null}
 
@@ -791,7 +1052,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 bar: "!bg-success-6",
                 thumb: "!border-2 !border-success-6 !bg-[#181a20] !w-3 !h-3",
                 mark: "!w-2 !h-2 !rounded-full !border-2 !border-success-6/40 !bg-[#181a20] !-mt-[3px]",
-                markLabel: "!text-[9px] !text-white/30 !mt-1",
+                markLabel: "!text-2xs !text-white/30 !mt-1",
               }}
               marks={PERCENT_MARKS}
             />
@@ -823,7 +1084,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <span className="text-white/40 text-xs">Avail</span>
-            <span className="flex items-center gap-1.5 text-[11px] text-white/90 font-semibold">
+            <span className="flex items-center gap-1.5 text-micro text-white/90 font-semibold">
               {availBase} {base}
               <button
                 type="button"
@@ -837,18 +1098,18 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             </span>
           </div>
 
-          {activeTab === "oco" ? (
+          {effectiveTab === "oco" ? (
             <>
               <FieldRow label="Price" value={sellOcoPrice} onChange={setSellOcoPrice} unit={quote} color="sell" />
               <FieldRow label="Stop" value={sellOcoStop} onChange={setSellOcoStop} unit={quote} color="sell" />
               <FieldRow label="Limit" value={sellOcoLimit} onChange={setSellOcoLimit} unit={quote} color="sell" />
             </>
-          ) : activeTab === "stop" ? (
+          ) : effectiveTab === "stop" ? (
             <>
               <FieldRow label="Stop" value={sellStopPrice} onChange={setSellStopPrice} unit={quote} color="sell" />
               <FieldRow label="Limit" value={sellPrice} onChange={(v) => { setSellPriceEdited(true); setSellPrice(v); }} unit={quote} color="sell" />
             </>
-          ) : activeTab !== "market" ? (
+          ) : effectiveTab !== "market" ? (
             <FieldRow label="Price" value={sellPrice} onChange={(v) => { setSellPriceEdited(true); setSellPrice(v); }} unit={quote} color="sell" />
           ) : null}
 
@@ -867,7 +1128,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 bar: "!bg-error-1",
                 thumb: "!border-2 !border-error-1 !bg-[#181a20] !w-3 !h-3",
                 mark: "!w-2 !h-2 !rounded-full !border-2 !border-error-1/40 !bg-[#181a20] !-mt-[3px]",
-                markLabel: "!text-[9px] !text-white/30 !mt-1",
+                markLabel: "!text-2xs !text-white/30 !mt-1",
               }}
               marks={PERCENT_MARKS}
             />
@@ -906,7 +1167,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             TP/SL
           </button>
 
-          {activeTab === "limit" && (
+          {effectiveTab === "limit" && (
             <div className="flex items-center gap-3 text-xs text-white/60">
               <label className="flex items-center gap-1 cursor-pointer hover:text-white transition-colors">
                 <input
@@ -918,14 +1179,14 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 Post-Only
               </label>
               <div className="flex items-center gap-1">
-                <span className="text-[10px] text-white/40">TIF:</span>
+                <span className="text-2xs text-white/40">TIF:</span>
                 {(["GTC", "IOC", "FOK"] as const).map((tif) => (
                   <button
                     key={tif}
                     type="button"
                     onClick={() => setTimeInForce(tif)}
                     className={clsx(
-                      "px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors",
+                      "px-1.5 py-0.5 rounded text-2xs font-semibold transition-colors",
                       timeInForce === tif ? "bg-primary/20 text-primary border border-primary/40" : "text-white/40 hover:text-white/70"
                     )}
                   >

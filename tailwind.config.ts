@@ -10,6 +10,7 @@ export default {
     extend: {
       fontFamily: {
         sans: [
+          "var(--font-inter)",
           "-apple-system",
           "BlinkMacSystemFont",
           "Segoe UI",
@@ -22,6 +23,17 @@ export default {
           "Segoe UI Emoji",
           "Segoe UI Symbol",
           "Noto Color Emoji",
+        ],
+        mono: [
+          "var(--font-jetbrains-mono)",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "Liberation Mono",
+          "Courier New",
+          "monospace",
         ],
       },
       colors: {
@@ -315,6 +327,14 @@ export default {
         "94px": "94px",
       },
       fontSize: {
+        "2xs": ["10px", { lineHeight: "14px" }],
+        micro: ["11px", { lineHeight: "15px" }],
+        caption: ["13px", { lineHeight: "18px" }],
+        body: ["15px", { lineHeight: "22px" }],
+        subtitle: ["19px", { lineHeight: "26px" }],
+        title: ["24px", { lineHeight: "30px" }],
+        heading: ["32px", { lineHeight: "38px" }],
+        display: ["48px", { lineHeight: "56px" }],
         "48px": "48px",
         "45px": "45px",
         "38px": "38px",

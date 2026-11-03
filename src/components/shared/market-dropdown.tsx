@@ -112,7 +112,7 @@ const PairRow = ({ market }: { market: any }) => {
         {iconUrl ? (
           <Image src={iconUrl} alt={base} width={16} height={16} className="rounded-full" />
         ) : (
-          <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[8px] text-white/70">{base?.slice(0,1)}</div>
+          <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-2xs text-white/70">{base?.slice(0,1)}</div>
         )}
         <span className="text-xs text-white/90">{base}/{quote}</span>
       </div>

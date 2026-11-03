@@ -66,7 +66,7 @@ const NotificationBell = () => {
     <span className="relative">
       <PiBellFill size={21} className={headerActionClasses} />
       {count > 0 && (
-        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center leading-none">
+        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-2xs font-bold flex items-center justify-center leading-none">
           {count > 9 ? "9+" : count}
         </span>
       )}

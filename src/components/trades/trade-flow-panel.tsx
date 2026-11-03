@@ -116,7 +116,7 @@ export function TradeFlowPanel({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-lg font-bold tabular-nums text-white">{(buyShare * 100).toFixed(1)}%</span>
-            <span className="text-[10px] text-white/40">buy share</span>
+            <span className="text-2xs text-white/40">buy share</span>
           </div>
         </div>
 

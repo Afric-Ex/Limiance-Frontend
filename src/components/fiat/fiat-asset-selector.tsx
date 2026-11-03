@@ -200,12 +200,12 @@ export const FiatAssetSelector = ({
 
           {isError ? (
             <div className="flex flex-col items-center gap-2 py-4">
-              <span className="text-[11px] text-white/40">Couldn&apos;t load assets</span>
+              <span className="text-micro text-white/40">Couldn&apos;t load assets</span>
               {onRetry && (
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-[11px] font-bold text-white/70"
+                  className="px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-micro font-bold text-white/70"
                 >
                   Try again
                 </button>

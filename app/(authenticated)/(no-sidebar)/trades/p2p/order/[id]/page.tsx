@@ -24,6 +24,7 @@ import { hasReviewForOrder, saveP2PReview } from "@/src/lib/p2p-user-actions";
 import { TotpGateModal } from "@/src/components/transactions/totp-gate-modal";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { P2PMatchStatus } from "@/src/lib/status-constants";
+import { parseDate } from "@/src/lib/parse-date";
 import { MdArrowBack, MdCheck, MdWarning, MdInfoOutline } from "react-icons/md";
 
 import { BuyerPendingPanel } from "@/src/components/p2p/buyer-pending-panel";
@@ -77,29 +78,72 @@ function OrderRoomPageInner() {
   });
   const originalOrder: any = (originalOrderData as any)?.data?.data;
 
-  // Derive useful values
+  // Derive useful values. Endpoints return ids and names either flat or nested
+  // (`advertiser`, `buyer`, `seller`, `matcher`), so normalise both shapes.
   const status: string = String(order?.status ?? "");
-  // The API returns `matcherId` but NOT `userId` or `advertiserId`
-  // Use matcherId to determine our role:
-  //   If matcherId === currentUserId → we are the Matcher
-  //   Otherwise → we are the Advertiser (creator of the ad)
-  // Role maps to Buyer/Seller based on ad type:
-  //   BUY ad:  Advertiser = Buyer (pays fiat),  Matcher = Seller (releases crypto)
-  //   SELL ad: Advertiser = Seller (releases crypto), Matcher = Buyer (pays fiat)
-  const adType: string = String(order?.type ?? "").toUpperCase();
+  const nestedId = (value: any): string => {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "string" || typeof value === "number") return String(value);
+    return String(value.id ?? value.userId ?? value.user_id ?? value._id ?? "");
+  };
+  const nestedName = (value: any): string => {
+    if (!value) return "";
+    if (typeof value === "string") return value.trim();
+    const full = [value.firstName, value.lastName].filter(Boolean).join(" ").trim();
+    return (
+      full ||
+      value.fullName ||
+      value.name ||
+      value.username ||
+      value.email ||
+      ""
+    );
+  };
   const currentUserId = user?.id != null ? String(user.id) : "";
-  const isMatcher = Boolean(
-    order?.matcherId && currentUserId && String(order.matcherId) === currentUserId
-  );
-  const isAdvertiser = !isMatcher && Boolean(order?.matcherId && currentUserId);
+  const adType = String(
+    order?.type ?? order?.orderType ?? order?.order_type ?? originalOrder?.type ?? ""
+  ).toUpperCase();
 
-  const isBuyer =
-    order?.buyerId && currentUserId
-      ? String(order.buyerId) === currentUserId
-      : isAdvertiser
-      ? adType === "BUY"
-      : adType === "SELL";
+  // The API returns `matcherId` but sometimes no flat buyer/seller/advertiser
+  // id — fall back to the nested user objects.
+  const buyerId = nestedId(order?.buyerId ?? order?.buyer_id ?? order?.buyer);
+  const sellerId = nestedId(order?.sellerId ?? order?.seller_id ?? order?.seller);
+  const advertiserId = nestedId(
+    order?.advertiserId ??
+      order?.advertiser_id ??
+      order?.advertiser ??
+      originalOrder?.advertiserId ??
+      originalOrder?.advertiser
+  );
+  const matcherId = nestedId(
+    order?.matcherId ?? order?.matcher_id ?? order?.matcher
+  );
+
+  const isMatcher = Boolean(matcherId && currentUserId && matcherId === currentUserId);
+  const isAdvertiser =
+    !isMatcher &&
+    Boolean(
+      currentUserId &&
+        ((advertiserId && advertiserId === currentUserId) ||
+          (matcherId && currentUserId) ||
+          (buyerId === currentUserId && adType === "BUY") ||
+          (sellerId === currentUserId && adType === "SELL"))
+    );
+
+  const isBuyer = Boolean(
+    currentUserId &&
+      (buyerId
+        ? buyerId === currentUserId
+        : isMatcher
+          ? adType === "SELL" // taker buying from a SELL ad
+          : isAdvertiser
+            ? adType === "BUY"
+            : adType === "SELL")
+  );
   const isSeller = !isBuyer;
+  // Side is always shown from the signed-in user's perspective: the buyer sees
+  // BUY and the seller sees SELL, regardless of the ad's own side.
+  const userSide: "BUY" | "SELL" = isBuyer ? "BUY" : "SELL";
 
   const normalizedStatus =
     status.toUpperCase() === "PARTIALLY_COMPLETED" || status.toUpperCase() === "FULFILLED"
@@ -109,66 +153,69 @@ function OrderRoomPageInner() {
   const asset = order?.asset ?? originalOrder?.asset ?? "";
   const fiat = String(order?.fiatCurrency ?? originalOrder?.currency ?? originalOrder?.fiat ?? "USD").toUpperCase();
   const quantity = parseFloat(String(order?.quantity ?? 0));
-  const price = parseFloat(String(originalOrder?.fixedPrice ?? originalOrder?.price ?? 0));
+  // Unit price comes from the advertisement's listed price. Realtime match
+  // snapshots omit it, so fall back through both the match and the original ad.
+  const firstPositivePrice = (...values: unknown[]): number => {
+    for (const value of values) {
+      const parsed = parseFloat(String(value ?? ""));
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return 0;
+  };
+  const price = firstPositivePrice(
+    originalOrder?.fixedPrice,
+    originalOrder?.price,
+    order?.fixedPrice,
+    order?.price,
+    order?.adPrice,
+    order?.unitPrice,
+    order?.rate
+  );
   const fiatAmount = order?.fiatAmount && order.fiatAmount > 0 ? order.fiatAmount : quantity * price;
   const paymentMethod = order?.paymentMethod;
-  // Fall back to the buyer/seller pair when the match does not expose the
-  // advertiser id. Never fall back to the signed-in user's own id.
+  // Resolve the counterparty from roles first, then names. Never fall back to
+  // the signed-in user's own name/id.
   const buyerSellerCounterpartyId =
-    order?.buyerId && currentUserId && String(order.buyerId) === currentUserId
-      ? order?.sellerId
-      : order?.sellerId && currentUserId && String(order.sellerId) === currentUserId
-        ? order?.buyerId
+    buyerId && currentUserId && buyerId === currentUserId
+      ? sellerId || undefined
+      : sellerId && currentUserId && sellerId === currentUserId
+        ? buyerId || undefined
         : undefined;
-  const rawCounterpartyId = isAdvertiser ? order?.matcherId : order?.advertiserId;
+  const roleCounterpartyId = isAdvertiser
+    ? matcherId || (isBuyer ? sellerId : buyerId)
+    : advertiserId || (isBuyer ? sellerId : buyerId);
   const counterpartyId =
-    rawCounterpartyId && (!currentUserId || String(rawCounterpartyId) !== currentUserId)
-      ? rawCounterpartyId
+    roleCounterpartyId && (!currentUserId || roleCounterpartyId !== currentUserId)
+      ? roleCounterpartyId
       : buyerSellerCounterpartyId;
+
   // A BUY ad has the advertiser as buyer and the matcher as seller; a SELL ad
   // is the reverse. Only use the name belonging to the counterparty's side so
-  // the review prompt can never show the signed-in user's own name.
-  const counterpartyName = isAdvertiser
-    ? order?.matcherName || order?.buyerName || order?.sellerName || "Trader"
-    : order?.advertiserName || order?.sellerName || order?.buyerName || "Advertiser";
+  // the screen can never show the signed-in user's own name.
+  const adOwnerNested =
+    nestedName(originalOrder?.advertiser) ||
+    nestedName(originalOrder?.creator) ||
+    nestedName(originalOrder?.user) ||
+    nestedName(order?.advertiser);
+  const orderBuyerName =
+    order?.buyerName || nestedName(order?.buyer) || nestedName(order?.buyerUser);
+  const orderSellerName =
+    order?.sellerName || nestedName(order?.seller) || nestedName(order?.sellerUser);
+  const orderAdvertiserName =
+    order?.advertiserName || nestedName(order?.advertiser) || adOwnerNested;
+  const orderMatcherName = isAdvertiser
+    ? order?.matcherName || nestedName(order?.matcher) || nestedName(order?.matcherUser)
+    : "";
+  const counterpartyName = isBuyer
+    ? orderSellerName || orderMatcherName || (!isAdvertiser ? orderAdvertiserName : "") || "Seller"
+    : orderBuyerName || orderMatcherName || (!isAdvertiser ? orderAdvertiserName : "") || "Buyer";
 
   const existingFeedbackSubmitted = !!order?.review || hasReviewForOrder(orderId) || feedbackSubmitted;
 
-  // Helper: parse Go backend's non-standard UTC date format
-  // e.g. "2026-06-10 11:34:54.503001 +0000 UTC" → valid JS Date
-  // Values can arrive as strings, numbers (unix seconds/millis) or Date objects
-  // depending on whether they came from REST or the realtime match room.
-  const parseBackendDate = (value: unknown): Date | null => {
-    if (value === null || value === undefined || value === "") return null;
-    if (value instanceof Date) {
-      return isNaN(value.getTime()) ? null : value;
-    }
-    if (typeof value === "number") {
-      const millis = value > 1e12 ? value : value * 1000;
-      const fromNumber = new Date(millis);
-      return isNaN(fromNumber.getTime()) ? null : fromNumber;
-    }
-    const dateStr = String(value);
-    if (!dateStr || dateStr.startsWith("0001")) return null;
-    const match = dateStr
-      .trim()
-      .match(
-        /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:\s*([+-]\d{2}):?(\d{2}))?/
-      );
-    if (match) {
-      const [, year, month, day, hour, minute, second, fraction, offsetHour, offsetMinute] = match;
-      const millis = fraction ? Number(fraction.padEnd(3, "0").slice(0, 3)) : 0;
-      const offset = offsetHour
-        ? (offsetHour.startsWith("-") ? -1 : 1) *
-          (Math.abs(Number(offsetHour)) * 60 + Number(offsetMinute ?? 0))
-        : 0;
-      return new Date(
-        Date.UTC(+year, +month - 1, +day, +hour, +minute, +second, millis) - offset * 60000
-      );
-    }
-    const parsed = new Date(dateStr);
-    return isNaN(parsed.getTime()) ? null : parsed;
-  };
+  // Parses the Go backend's non-standard UTC format as well as ISO strings and
+  // unix timestamps, regardless of whether the value came from REST or WS.
+  const parseBackendDate = (value: unknown): Date | null =>
+    parseDate(value instanceof Date ? value.toISOString() : value);
 
   const deadlineDate = parseBackendDate(order?.expiryTime ?? "");
   const deadlineStr = deadlineDate
@@ -404,7 +451,7 @@ function OrderRoomPageInner() {
           <div className="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
             <button
               onClick={() => router.push("/trades/p2p/orders")}
-              className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3.5 text-[13px] font-medium text-white/65 transition-colors hover:bg-white/[0.07] hover:text-white"
+              className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3.5 text-caption font-medium text-white/65 transition-colors hover:bg-white/[0.07] hover:text-white"
             >
               <MdArrowBack size={16} />
               <span>Orders</span>
@@ -414,7 +461,16 @@ function OrderRoomPageInner() {
                 Order <span className="font-mono text-white/50">#{orderId.slice(-8).toUpperCase()}</span>
               </h1>
               <span
-                className={`inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase leading-none tracking-wider ${statusInfo.color}`}
+                className={`inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-md border px-2.5 py-1 text-micro font-semibold uppercase leading-none tracking-wider ${
+                  userSide === "BUY"
+                    ? "text-buy bg-buy/10 border-buy/20"
+                    : "text-[#F6465D] bg-[#F6465D]/10 border-[#F6465D]/20"
+                }`}
+              >
+                {userSide}
+              </span>
+              <span
+                className={`inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-md border px-2.5 py-1 text-micro font-semibold uppercase leading-none tracking-wider ${statusInfo.color}`}
               >
                 {statusInfo.label}
               </span>
@@ -485,19 +541,19 @@ function OrderRoomPageInner() {
 
               {/* Order Summary */}
               <div className="mb-6 rounded-lg border border-white/[0.05] bg-white/[0.02] p-5">
-                <div className="mb-4 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                <div className="mb-4 text-micro font-semibold uppercase tracking-wider text-white/40">
                   Transaction Summary
                 </div>
-                <div className="grid grid-cols-2 gap-x-5 gap-y-5 text-[13px]">
+                <div className="grid grid-cols-2 gap-x-5 gap-y-5 text-caption">
                   <div className="flex min-w-0 flex-col gap-1.5">
                     <div className="text-white/45">{isBuyer ? "You Receive" : "Locked in Escrow"}</div>
-                    <div className="font-mono text-[15px] font-semibold text-white">
+                    <div className="font-mono text-body font-semibold text-white">
                       {quantity.toLocaleString()} <span className="font-sans text-xs text-white/50">{asset}</span>
                     </div>
                   </div>
                   <div className="flex min-w-0 flex-col gap-1.5">
                     <div className="text-white/45">{isBuyer ? "You Pay" : "You Receive"}</div>
-                    <div className="font-mono text-[15px] font-semibold text-buy">
+                    <div className="font-mono text-body font-semibold text-buy">
                       {fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}{" "}
                       <span className="font-sans text-xs text-buy/60">{fiat}</span>
                     </div>
@@ -515,7 +571,15 @@ function OrderRoomPageInner() {
                   <div className="col-span-2 flex flex-col gap-1.5">
                     <div className="text-white/45">Order Timestamp</div>
                     <div className="text-white/70">
-                      {parseBackendDate(order.createdAt ?? "")?.toLocaleString() ?? "—"}
+                      {parseBackendDate(
+                        order.createdAt ??
+                          order.created_at ??
+                          order.updatedAt ??
+                          order.updated_at ??
+                          originalOrder?.createdAt ??
+                          originalOrder?.created_at ??
+                          ""
+                      )?.toLocaleString() ?? "—"}
                     </div>
                   </div>
                 </div>
@@ -655,7 +719,7 @@ function OrderRoomPageInner() {
       >
         <div className="flex flex-col gap-4 pt-2">
           <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-4 text-xs">
-            <div className="text-white/40 uppercase tracking-wider text-[10px] mb-1.5">You are confirming payment of:</div>
+            <div className="text-white/40 uppercase tracking-wider text-2xs mb-1.5">You are confirming payment of:</div>
             <div className="text-white font-bold text-xl font-mono">
               {fiatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}{" "}
               <span className="text-white/60 text-sm font-sans">{fiat}</span>

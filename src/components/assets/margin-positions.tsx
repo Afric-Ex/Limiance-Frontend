@@ -27,7 +27,7 @@ export const MarginPositions = () => {
         <Table
           classNames={{
             table: "min-w-[700px]",
-            th: "!text-white/40 !uppercase !tracking-wider !text-[10px] !font-bold !border-b !border-white/[0.06] !py-4 !bg-[#181a20]",
+            th: "!text-white/40 !uppercase !tracking-wider !text-2xs !font-bold !border-b !border-white/[0.06] !py-4 !bg-[#181a20]",
             td: "!text-sm !py-4 !border-b !border-white/[0.04] !font-medium",
             tr: "hover:!bg-white/[0.02] !transition-colors group",
           }}
@@ -78,7 +78,7 @@ export const MarginPositions = () => {
                           </span>
                           <span
                             className={clsx(
-                              "text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md",
+                              "text-2xs font-bold uppercase px-1.5 py-0.5 rounded-md",
                               pos.side === "buy" || pos.side === "BUY"
                                 ? "bg-emerald-400/10 text-emerald-400"
                                 : "bg-red-400/10 text-red-400"

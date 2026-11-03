@@ -58,7 +58,7 @@ export const DisputePanel = ({ isOpen, onClose, orderMatchId, onSuccess }: Dispu
     >
       <div className="flex flex-col gap-5 pt-3">
         <div className="bg-white/[0.03] p-3 rounded-lg border border-white/[0.06]">
-          <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Order Match ID</div>
+          <div className="text-white/40 text-2xs uppercase tracking-wider mb-0.5">Order Match ID</div>
           <div className="font-mono text-white text-xs truncate">{orderMatchId}</div>
         </div>
 
@@ -85,7 +85,7 @@ export const DisputePanel = ({ isOpen, onClose, orderMatchId, onSuccess }: Dispu
               input: "!bg-white/[0.04] !border-white/[0.08] !text-white focus:!border-primary/50 !rounded-lg !text-xs !p-3",
             }}
           />
-          <div className="text-right text-[10px] text-white/35 mt-1">
+          <div className="text-right text-2xs text-white/35 mt-1">
             {description.length} characters (min 20)
           </div>
         </div>
@@ -104,12 +104,12 @@ export const DisputePanel = ({ isOpen, onClose, orderMatchId, onSuccess }: Dispu
                 "!bg-white/[0.04] !border-white/[0.08] !text-white hover:!border-white/[0.14] focus:!border-primary/50 !h-10 !rounded-lg !text-xs cursor-pointer",
             }}
           />
-          <div className="text-[10px] text-white/35 mt-1">Max 5 files, up to 5MB each</div>
+          <div className="text-2xs text-white/35 mt-1">Max 5 files, up to 5MB each</div>
 
           {files.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {files.map((file, i) => (
-                <div key={i} className="bg-white/[0.05] border border-white/[0.07] text-[11px] text-white/70 px-2 py-0.5 rounded">
+                <div key={i} className="bg-white/[0.05] border border-white/[0.07] text-micro text-white/70 px-2 py-0.5 rounded">
                   {file.name}
                 </div>
               ))}

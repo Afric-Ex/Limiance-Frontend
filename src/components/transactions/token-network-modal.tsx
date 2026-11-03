@@ -323,7 +323,7 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
                     <span className="flex items-center gap-2">
                       <span className="text-sm font-bold text-white/90">{chain.symbol}</span>
                       {chain.standard && (
-                        <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded uppercase tracking-wide">
+                        <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-2xs font-bold rounded uppercase tracking-wide">
                           {chain.standard}
                         </span>
                       )}

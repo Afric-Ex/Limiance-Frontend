@@ -22,10 +22,10 @@ export function Hero() {
         <div className="flex min-w-0 flex-col gap-8">
           <Image src={Wordmark} alt="Limiance Exchange" priority width={240} height={60} className="h-auto w-[200px] sm:w-[240px]" />
           <div className="flex flex-col gap-5">
-            <h1 className={`${sans.className} text-[40px] font-semibold leading-[1.04] tracking-[-0.03em] text-white sm:text-[56px]`}>
+            <h1 className={`${sans.className} text-4xl font-semibold leading-[1.04] tracking-[-0.03em] text-white sm:text-display`}>
               Trade crypto with precision.
             </h1>
-            <p className="max-w-[46ch] text-[17px] leading-relaxed text-[#A7AEBD]">
+            <p className="max-w-[46ch] text-lg leading-relaxed text-[#A7AEBD]">
               Spot, futures, margin and P2P markets with live charts and order books. Deposit and withdraw naira by bank transfer.
             </p>
           </div>
@@ -42,7 +42,7 @@ export function Hero() {
             </div>
           </div>
 
-          <ul className={`${mono.className} flex flex-wrap gap-x-5 gap-y-1 border-t border-white/[0.08] pt-5 text-[13px] text-[#8A91A0]`}>
+          <ul className={`${mono.className} flex flex-wrap gap-x-5 gap-y-1 border-t border-white/[0.08] pt-5 text-caption text-[#8A91A0]`}>
             {MARKETS.map((m) => <li key={m} className="flex items-center gap-2"><span className="h-1 w-1 bg-[#4D77F0]" aria-hidden />{m}</li>)}
           </ul>
         </div>

@@ -95,7 +95,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span
       className={clsx(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold leading-4 whitespace-nowrap",
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-2xs font-semibold leading-4 whitespace-nowrap",
         st.className
       )}
     >
@@ -158,7 +158,7 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
         />
 
         {!valid && !isPending && (
-          <p className="text-[11px] text-[var(--color-text-secondary)] -mt-1">
+          <p className="text-micro text-[var(--color-text-secondary)] -mt-1">
             Subject needs 4+ characters and description 10+ characters
           </p>
         )}
@@ -271,7 +271,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
           <div className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
             {thread.subject}
           </div>
-          <div className="text-[11px] text-[var(--color-text-secondary)] mt-0.5 truncate">
+          <div className="text-micro text-[var(--color-text-secondary)] mt-0.5 truncate">
             #{thread.id}
             {thread.category ? ` · ${thread.category}` : ""}
           </div>
@@ -312,19 +312,19 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
                   >
                     <div
                       className={clsx(
-                        "flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider mb-1",
+                        "flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider mb-1",
                         isAdmin ? "text-white/40" : "text-white/85"
                       )}
                     >
                       {isAdmin && <MdOutlineSupportAgent size={12} />}
                       {isAdmin ? "Support Team" : "You"}
                     </div>
-                    <p className="text-[13px] leading-relaxed break-words whitespace-pre-wrap">
+                    <p className="text-caption leading-relaxed break-words whitespace-pre-wrap">
                       {msg.message}
                     </p>
                     <div
                       className={clsx(
-                        "text-[10px] mt-1.5",
+                        "text-2xs mt-1.5",
                         isAdmin ? "text-white/35" : "text-white/75"
                       )}
                     >
@@ -341,7 +341,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
       {open ? (
         <div className="border-t border-line p-3 flex flex-col gap-2 flex-shrink-0 bg-black/20">
           {peerTyping && (
-            <div className="px-1 text-[11px] text-[var(--color-text-secondary)]">
+            <div className="px-1 text-micro text-[var(--color-text-secondary)]">
               Support is typing…
             </div>
           )}
@@ -414,7 +414,7 @@ function TicketItem({ ticket, isActive, onClick }: { ticket: SupportTicket; isAc
       <div className="flex items-start justify-between gap-2">
         <span
           className={clsx(
-            "flex-1 text-[13px] font-semibold truncate",
+            "flex-1 text-caption font-semibold truncate",
             isActive
               ? "text-primary"
               : "text-[var(--color-neutral-off-white)]"
@@ -424,10 +424,10 @@ function TicketItem({ ticket, isActive, onClick }: { ticket: SupportTicket; isAc
         </span>
         <StatusBadge status={ticket.status} />
       </div>
-      <span className="text-[11px] text-[var(--color-text-secondary)]">
+      <span className="text-micro text-[var(--color-text-secondary)]">
         {ticket.category ?? "General"}
       </span>
-      <span className="text-[10px] text-[var(--color-text-disabled)]">
+      <span className="text-2xs text-[var(--color-text-disabled)]">
         {timeAgo(ticket.updated_at || ticket.created_at)}
       </span>
     </div>
@@ -472,7 +472,7 @@ function SupportPageInner() {
             <RiCustomerService2Line size={22} />
           </div>
           <div className="min-w-0">
-            <h1 className="text-[20px] font-bold text-[var(--color-text-primary)] leading-tight truncate">
+            <h1 className="text-xl font-bold text-[var(--color-text-primary)] leading-tight truncate">
               Support Center
             </h1>
             <p className="text-xs text-[var(--color-text-secondary)] truncate">
@@ -501,7 +501,7 @@ function SupportPageInner() {
           )}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-line flex-shrink-0">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
+            <span className="text-micro font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
               Your Tickets ({tickets.length})
             </span>
           </div>
@@ -550,7 +550,7 @@ function SupportPageInner() {
                 <RiCustomerService2Line size={32} />
               </div>
               <div>
-                <p className="text-[15px] font-semibold text-white/60 m-0">
+                <p className="text-body font-semibold text-white/60 m-0">
                   Select a ticket
                 </p>
                 <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
@@ -564,7 +564,7 @@ function SupportPageInner() {
                 ].map(({ icon, label }) => (
                   <span
                     key={label}
-                    className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-secondary)]"
+                    className="flex items-center gap-1.5 text-micro text-[var(--color-text-secondary)]"
                   >
                     {icon} {label}
                   </span>

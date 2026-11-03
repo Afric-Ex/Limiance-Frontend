@@ -120,7 +120,7 @@ export const EARN_PRODUCTS: EarnProduct[] = [
 ];
 
 const ComingSoonBadge = () => (
-  <span className="shrink-0 rounded-full border border-amber-400/20 bg-amber-400/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-400">
+  <span className="shrink-0 rounded-full border border-amber-400/20 bg-amber-400/10 px-2.5 py-0.5 text-2xs font-bold uppercase tracking-widest text-amber-400">
     Coming soon
   </span>
 );
@@ -173,7 +173,7 @@ const ProductPreview = ({ product }: { product: EarnProduct }) => {
         {product.features.map((feature) => (
           <span
             key={feature}
-            className="rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1 text-[11px] font-semibold text-white/60"
+            className="rounded-full border border-white/[0.06] bg-white/[0.04] px-3 py-1 text-micro font-semibold text-white/60"
           >
             {feature}
           </span>
@@ -183,7 +183,7 @@ const ProductPreview = ({ product }: { product: EarnProduct }) => {
       <div className="mt-5 grid grid-cols-1 gap-4 border-t border-white/[0.06] pt-4 sm:grid-cols-3">
         {product.preview.map((stat) => (
           <div key={stat.label} className="min-w-0">
-            <div className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+            <div className="text-2xs font-medium uppercase tracking-wider text-white/40">
               {stat.label}
             </div>
             <div className="mt-0.5 truncate text-sm font-semibold text-[var(--color-text-primary)]">

@@ -160,7 +160,7 @@ function ApiKeysPageInner() {
                   <TableTd>
                     <div className="flex gap-1.5 flex-wrap">
                       {(k.permissions ?? []).map((p: string) => (
-                        <span key={p} className={clsx("px-2 py-0.5 text-[11px] font-semibold rounded-full capitalize", permColor[p] ?? "bg-white/10 text-white/50")}>
+                        <span key={p} className={clsx("px-2 py-0.5 text-micro font-semibold rounded-full capitalize", permColor[p] ?? "bg-white/10 text-white/50")}>
                           {p}
                         </span>
                       ))}

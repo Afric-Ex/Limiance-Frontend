@@ -67,7 +67,7 @@ export function BuyLimReviewStep({
         </div>
       </dl>
 
-      <p className="text-[11px] leading-relaxed text-white/30">
+      <p className="text-micro leading-relaxed text-white/30">
         The final amount is set by the platform when the conversion executes.
         If the rate moves more than 0.5% by then, you&apos;ll be asked to
         confirm the updated rate before anything is executed.

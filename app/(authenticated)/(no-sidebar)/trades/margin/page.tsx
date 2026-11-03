@@ -299,7 +299,7 @@ function MarginTrades() {
                   className="flex items-center gap-1 px-1 py-0.5 rounded tap-scale"
                 >
                   <IoSwapHorizontal size={16} className="text-white/40 shrink-0" />
-                  <span className="text-[15px] font-bold text-white/90">{selectedPair}</span>
+                  <span className="text-body font-bold text-white/90">{selectedPair}</span>
                   <MdKeyboardArrowDown className="text-white/40" size={16} />
                 </button>
               </PopoverTarget>
@@ -333,7 +333,7 @@ function MarginTrades() {
                             <span className="text-xs font-bold text-white/90">
                               {m.base}<span className="text-white/40">/{m.quote}</span>
                             </span>
-                            <span className="text-[10px] text-white/30">{m.symbol}</span>
+                            <span className="text-2xs text-white/30">{m.symbol}</span>
                           </div>
                           <span className={clsx("text-xs font-semibold", m.percent_change >= 0 ? "text-success-2" : "text-error-1")}>
                             {m.percent_change >= 0 ? "+" : ""}{m.percent_change}%
@@ -357,7 +357,7 @@ function MarginTrades() {
               {feed.price !== null ? formatPrice(feed.price) : "—"}
             </span>
             <span className={clsx(
-              "text-[10px] font-semibold px-1.5 py-0.5 rounded",
+              "text-2xs font-semibold px-1.5 py-0.5 rounded",
               isPositive ? "bg-success-6/10 text-success-6" : "bg-error-1/10 text-error-1"
             )}>
               {feed.changePercent24h !== null ? `${isPositive ? "+" : ""}${feed.changePercent24h.toFixed(2)}%` : "—"}
@@ -494,23 +494,23 @@ function MarginTrades() {
       <div className="min-[1150px]:hidden flex flex-col flex-1 pb-[80px] min-h-0 relative">
         {/* Mobile market stats strip */}
         <div className="shrink-0 grid grid-cols-2 gap-x-3 gap-y-1.5 bg-[#181a20] border-b border-white/[0.06] px-4 py-2.5">
-          <div className="flex justify-between items-center text-[11px]">
+          <div className="flex justify-between items-center text-micro">
             <span className="text-white/40">24h High</span>
             <span className="text-white/90 font-semibold tabular-nums">{formatPrice(feed.high24h) ?? "—"}</span>
           </div>
-          <div className="flex justify-between items-center text-[11px]">
+          <div className="flex justify-between items-center text-micro">
             <span className="text-white/40">24h Low</span>
             <span className="text-white/90 font-semibold tabular-nums">{formatPrice(feed.low24h) ?? "—"}</span>
           </div>
-          <div className="flex justify-between items-center text-[11px]">
+          <div className="flex justify-between items-center text-micro">
             <span className="text-white/40">24h Vol({base})</span>
             <span className="text-white/90 font-semibold tabular-nums">{feed.volume24h !== null ? feed.volume24h.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—"}</span>
           </div>
-          <div className="flex justify-between items-center text-[11px]">
+          <div className="flex justify-between items-center text-micro">
             <span className="text-white/40">24h Vol({quote})</span>
             <span className="text-white/90 font-semibold tabular-nums">{feed.volume24h !== null && feed.price !== null ? (feed.volume24h * feed.price).toLocaleString("en-US", { maximumFractionDigits: 0 }) : "—"}</span>
           </div>
-          <div className="flex justify-between items-center text-[11px] col-span-2">
+          <div className="flex justify-between items-center text-micro col-span-2">
             <span className="text-white/40">24h Change</span>
             <span className={`font-semibold tabular-nums ${changeColor}`}>
               {feed.change24h !== null ? formatPrice(feed.change24h) : "—"}

@@ -192,7 +192,7 @@ export const MarginTransferModal = ({
                   )}
                 >
                   {a.symbol}
-                  <span className={clsx("text-[10px] font-medium", active ? "text-primary/80" : "text-white/30")}>
+                  <span className={clsx("text-2xs font-medium", active ? "text-primary/80" : "text-white/30")}>
                     {fmtBalance(a.fromBal)}
                   </span>
                 </button>

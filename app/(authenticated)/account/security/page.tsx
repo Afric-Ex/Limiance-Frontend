@@ -519,7 +519,7 @@ function SecurityPageInner() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{session.device || "Unknown Device"}</span>
                       {session.isCurrent && (
-                        <span className="px-2 py-0.5 bg-success-6/20 text-success-6 text-[10px] font-bold rounded-full">CURRENT SESSION</span>
+                        <span className="px-2 py-0.5 bg-success-6/20 text-success-6 text-2xs font-bold rounded-full">CURRENT SESSION</span>
                       )}
                     </div>
                     <span className="text-xs text-white/40">{session.location || "Unknown Location"} • {session.ip || "Unknown IP"}</span>

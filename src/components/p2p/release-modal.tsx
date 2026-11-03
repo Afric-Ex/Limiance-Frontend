@@ -59,7 +59,7 @@ export const ReleaseModal = ({ isOpen, onClose, onCodeVerified }: ReleaseModalPr
       <div className="flex flex-col items-center gap-5 py-3 text-center">
         <div>
           <p className="text-white/80 text-xs mb-1">Enter the 6-digit code sent to your email or mobile device.</p>
-          <p className="text-white/40 text-[11px]">This verification is required before releasing cryptocurrency from escrow.</p>
+          <p className="text-white/40 text-micro">This verification is required before releasing cryptocurrency from escrow.</p>
         </div>
 
         <PinInput

@@ -146,7 +146,7 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
       {/* Messages Area */}
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 flex flex-col relative min-h-[300px]">
         <div className="flex justify-center mb-3">
-          <div className="bg-white/[0.03] border border-white/[0.05] px-3 py-1 rounded-md text-[11px] text-white/50 text-center">
+          <div className="bg-white/[0.03] border border-white/[0.05] px-3 py-1 rounded-md text-micro text-white/50 text-center">
             {connected
               ? "Encrypted order chat connected. Real-time messages active."
               : "Connecting to secure order chat…"}
@@ -168,7 +168,7 @@ export const ChatWindow = ({ chatId, currentUserId }: ChatWindowProps) => {
           <div className="flex flex-col items-center justify-center flex-1 text-white/30 text-xs gap-1.5 py-8">
             <MdOutlineChat size={28} className="text-white/20 mb-1" />
             <p className="text-white/60 font-medium">No messages yet</p>
-            <p className="text-[11px] text-white/30 text-center max-w-xs">
+            <p className="text-micro text-white/30 text-center max-w-xs">
               Coordinate payment details or ask questions directly with the counterparty.
             </p>
           </div>

@@ -33,7 +33,7 @@ function Row({ p, href }: { p: Pair; href: string }) {
     <tr className="group border-t border-white/[0.06] transition-colors hover:bg-white/[0.03]">
       <td className="py-3.5 pl-4">
         <div className="flex items-center gap-3">
-          <span className={`${mono.className} hidden h-8 w-8 place-items-center rounded-full border border-white/10 text-[10px] text-[#A7AEBD] sm:grid`}>{base.slice(0, 3)}</span>
+          <span className={`${mono.className} hidden h-8 w-8 place-items-center rounded-full border border-white/10 text-2xs text-[#A7AEBD] sm:grid`}>{base.slice(0, 3)}</span>
           <span className="text-white">{base}<span className="text-[#8A91A0]">/{quote}</span></span>
         </div>
       </td>

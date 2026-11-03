@@ -55,7 +55,7 @@ export const LanguageDropdown = ({ isMobile }: { isMobile?: boolean }) => {
         defaultValue="language"
         classNames={{
           root: "!flex !flex-col gap-4",
-          tabLabel: "!text-10px !font-semibold",
+          tabLabel: "!text-2xs !font-semibold",
         }}
       >
         <TabsList>
@@ -77,7 +77,7 @@ export const LanguageDropdown = ({ isMobile }: { isMobile?: boolean }) => {
                   fill="white"
                 />
               </svg>
-              <span className="text-8px max-w-[257px] text-white/55">
+              <span className="text-2xs max-w-[257px] text-white/55">
                 Your chosen langauage will be apply to your Limiance email,SMS,
                 in-app notifications, and all devices you&apos;re logged into.
               </span>
@@ -91,7 +91,7 @@ export const LanguageDropdown = ({ isMobile }: { isMobile?: boolean }) => {
                       defaultLanguage === label
                         ? "font-semibold text-primary"
                         : "text-gray-9 hover:text-white cursor-pointer",
-                      "text-10px"
+                      "text-2xs"
                     )}
                     key={label}
                   >
@@ -119,7 +119,7 @@ export const LanguageDropdown = ({ isMobile }: { isMobile?: boolean }) => {
                     defaultCurrency === item
                       ? "font-semibold text-primary"
                       : "text-gray-9 hover:text-white cursor-pointer",
-                    "text-10px"
+                    "text-2xs"
                   )}
                   key={item}
                 >

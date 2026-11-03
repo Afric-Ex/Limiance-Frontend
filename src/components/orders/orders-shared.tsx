@@ -85,7 +85,7 @@ export const StatusPill = ({
   const key = String(status).toLowerCase();
   const tone = STATUS_TONES[key] ?? "neutral";
   return (
-    <span className={`inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full border uppercase tracking-wide ${TONE_CLASSES[tone]}`}>
+    <span className={`inline-flex text-micro font-semibold px-2.5 py-1 rounded-full border uppercase tracking-wide ${TONE_CLASSES[tone]}`}>
       {status}
     </span>
   );
@@ -93,7 +93,7 @@ export const StatusPill = ({
 
 export const tableClassNames = {
   table: "min-w-[880px]",
-  th: "!py-3 !px-4 first:!pl-5 !text-[11px] !font-medium !uppercase !tracking-wider !text-white/40 !border-b !border-white/[0.06] !bg-transparent !whitespace-nowrap",
+  th: "!py-3 !px-4 first:!pl-5 !text-micro !font-medium !uppercase !tracking-wider !text-white/40 !border-b !border-white/[0.06] !bg-transparent !whitespace-nowrap",
   tr: "!border-b !border-white/[0.06] last:!border-0 hover:!bg-white/[0.02] !transition-colors",
   td: "!py-4 !px-4 first:!pl-5 !text-sm !whitespace-nowrap !text-white/80 !font-medium",
 };

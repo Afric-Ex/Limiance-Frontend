@@ -392,7 +392,10 @@ export const p2p = {
   },
 
   getMatchedOrder: async (id: string): Promise<ApiResponse<unknown>> => {
-    return withRestFallback(
+    // Prefer REST: the WS `p2p_match_state` snapshot is partial (no createdAt,
+    // price, names or amounts), which made those fields blank or incorrect.
+    return withWsFallback(
+      () => getWithRootFallback(`trading/p2p/matched_order/${id}`),
       async () => {
         const { getP2PMatchWs, normalizeWsP2PMatchResponse } =
           await loadP2PWs();
@@ -400,8 +403,7 @@ export const p2p = {
         return {
           data: normalizeWsP2PMatchResponse(payload),
         } as unknown as ApiResponse<unknown>;
-      },
-      () => getWithRootFallback(`trading/p2p/matched_order/${id}`)
+      }
     );
   },
 
@@ -415,7 +417,10 @@ export const p2p = {
     end_date?: string;
     status?: string;
   }): Promise<ApiResponse<unknown>> => {
-    return withRestFallback(
+    // Prefer REST for the full row (type, names, amount, timestamps); fall back
+    // to the WS match history only when REST is unavailable.
+    return withWsFallback(
+      () => api.get(`trading/p2p/all_matched_orders`, { params }),
       async () => {
         const { getUserP2PMatchesWs, normalizeWsUserMatchesResponse } =
           await loadP2PWs();
@@ -428,8 +433,7 @@ export const p2p = {
         return {
           data: normalizeWsUserMatchesResponse(payload),
         } as unknown as ApiResponse<unknown>;
-      },
-      () => api.get(`trading/p2p/all_matched_orders`, { params })
+      }
     );
   },
 
@@ -446,8 +450,10 @@ export const p2p = {
           data.status
         );
         return { data: payload } as unknown as ApiResponse<unknown>;
-      } catch (error) {
-        if (!shouldFallbackToRest(error)) throw error;
+      } catch {
+        // The WS status frame carries only the status. Disputes also send a
+        // reason/description, and some deployments reject DISPUTED over the
+        // socket, so always retry through REST before surfacing an error.
       }
     }
 
@@ -463,8 +469,9 @@ export const p2p = {
         const { requestP2PReleaseCodeWs } = await loadP2PWs();
         const payload = await requestP2PReleaseCodeWs(id);
         return { data: payload } as unknown as ApiResponse<unknown>;
-      } catch (error) {
-        if (!shouldFallbackToRest(error)) throw error;
+      } catch {
+        // Any socket-level rejection (bad action mapping, auth, timeout) must
+        // still try REST so the release code is actually emailed.
       }
     }
 

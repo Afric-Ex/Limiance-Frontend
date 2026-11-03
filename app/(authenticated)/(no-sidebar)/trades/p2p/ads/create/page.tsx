@@ -77,7 +77,7 @@ const inputClass =
   "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !rounded-lg !h-11 !text-white !text-xs !transition-all !duration-150 placeholder:!text-white/20 font-mono";
 const selectClass =
   "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !rounded-lg !h-11 !text-white !text-xs !transition-all !duration-150 placeholder:!text-white/20";
-const descriptionClass = "!text-[11px] !text-white/40 !mt-1";
+const descriptionClass = "!text-micro !text-white/40 !mt-1";
 const dropdownClass = "!bg-[#181a20] !border !border-white/[0.1] !shadow-2xl !rounded-lg";
 const optionClass =
   "hover:!bg-white/5 data-[combobox-selected]:!bg-primary/20 data-[combobox-selected]:!text-primary !rounded-md !mx-1 !my-0.5 !text-xs !transition-colors";
@@ -489,7 +489,7 @@ function CreateAdPageInner() {
                   rightSection={
                     adMode === "SELL" && balanceAvailable ? (
                       <button
-                        className="text-[11px] font-bold text-primary hover:text-primary/80 pr-2"
+                        className="text-micro font-bold text-primary hover:text-primary/80 pr-2"
                         onClick={() => setTotalAmount(fundingBalance)}
                       >
                         MAX

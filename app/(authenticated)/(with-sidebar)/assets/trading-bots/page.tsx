@@ -24,7 +24,7 @@ function BotCard({ bot, onStop, stopping }: { bot: any; onStop: () => void; stop
           <span className="font-bold text-base text-white">{bot.pair}</span>
           <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded w-fit">{bot.strategy}</span>
         </div>
-        <span className={clsx("text-[10px] uppercase font-bold px-2 py-1 rounded-md",
+        <span className={clsx("text-2xs uppercase font-bold px-2 py-1 rounded-md",
           bot.status === "active" ? "bg-success-6/10 text-success-5" : "bg-white/[0.05] text-white/40"
         )}>
           {bot.status}
@@ -33,17 +33,17 @@ function BotCard({ bot, onStop, stopping }: { bot: any; onStop: () => void; stop
 
       <div className="grid grid-cols-3 gap-3 bg-white/[0.02] rounded-lg p-3 border border-white/[0.02]">
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] text-white/40 font-medium">Invested</span>
+          <span className="text-2xs text-white/40 font-medium">Invested</span>
           <span className="font-mono text-sm font-bold text-white/90">${bot.investmentAmount?.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] text-white/40 font-medium">ROI</span>
+          <span className="text-2xs text-white/40 font-medium">ROI</span>
           <span className={clsx("font-mono text-sm font-bold", isProfit ? "text-success-5" : "text-error-1")}>
             {isProfit ? "+" : ""}{(bot.roi ?? 0).toFixed(2)}%
           </span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] text-white/40 font-medium">PnL</span>
+          <span className="text-2xs text-white/40 font-medium">PnL</span>
           <span className={clsx("font-mono text-sm font-bold flex items-center gap-1", isProfit ? "text-success-5" : "text-error-1")}>
             {isProfit ? <MdTrendingUp size={12} /> : <MdTrendingDown size={12} />}
             {isProfit ? "+" : ""}{(bot.pnl ?? 0).toFixed(2)}
@@ -52,7 +52,7 @@ function BotCard({ bot, onStop, stopping }: { bot: any; onStop: () => void; stop
       </div>
 
       <div className="flex items-center justify-between pt-1">
-        <span className="text-[10px] text-white/30 font-medium">
+        <span className="text-2xs text-white/30 font-medium">
           {bot.asset} · Started {new Date(bot.createdAt).toLocaleDateString()}
         </span>
         <button
@@ -120,7 +120,7 @@ function BotTab({ type }: { type: BotType }) {
             <span className={clsx("text-2xl font-mono font-bold", (stat as any).positive === false ? "text-error-1" : (stat as any).positive === true ? "text-success-5" : "text-white")}>
               {stat.value}
             </span>
-            <span className="text-[10px] text-white/30 font-medium">{stat.sub}</span>
+            <span className="text-2xs text-white/30 font-medium">{stat.sub}</span>
           </div>
         ))}
       </div>

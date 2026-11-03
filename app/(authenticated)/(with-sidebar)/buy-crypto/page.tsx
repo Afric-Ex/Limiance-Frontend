@@ -81,8 +81,8 @@ function BuyCryptoInner() {
           <div className="bg-gradient-to-r from-primary/[0.08] to-primary/[0.02] border border-primary/20 rounded-2xl p-6 max-[1150px]:p-4 flex max-[1150px]:flex-col items-center justify-between gap-6 max-[1150px]:gap-4">
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-warning-1/20 text-warning-1 text-[10px] font-bold rounded uppercase tracking-wider">Trading Event</span>
-                <span className="text-[10px] text-success-5 font-medium">● Ongoing</span>
+                <span className="px-2 py-0.5 bg-warning-1/20 text-warning-1 text-2xs font-bold rounded uppercase tracking-wider">Trading Event</span>
+                <span className="text-2xs text-success-5 font-medium">● Ongoing</span>
               </div>
               <h3 className="text-base font-bold text-white">New User Welcome Bonus</h3>
               <p className="text-xs text-white/50 leading-relaxed">
@@ -189,7 +189,7 @@ function BuyCryptoInner() {
                   className="flex-1 bg-transparent text-sm text-white placeholder:text-white/20 outline-none w-full min-w-0"
                 />
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.06] rounded-lg cursor-pointer hover:bg-white/[0.1] transition-colors shrink-0">
-                  <span className="w-4 h-4 rounded-full bg-success-5 flex items-center justify-center text-[8px] font-bold text-white">₮</span>
+                  <span className="w-4 h-4 rounded-full bg-success-5 flex items-center justify-center text-2xs font-bold text-white">₮</span>
                   <span className="text-xs font-bold text-white">USDT</span>
                   <IoSparklesOutline size={10} className="text-white/40" />
                 </div>
