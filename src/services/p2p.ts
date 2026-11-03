@@ -400,18 +400,22 @@ export const p2p = {
   },
 
   getMatchedOrder: async (id: string): Promise<ApiResponse<unknown>> => {
-    // Prefer REST: the WS `p2p_match_state` snapshot is partial (no createdAt,
-    // price, names or amounts), which made those fields blank or incorrect.
-    return withWsFallback(
-      () => getWithRootFallback(`trading/p2p/matched_order/${id}`),
+    // Primary: fetch order match over WebSocket via get_p2p_match with fallback to HTTP REST
+    return withRestFallback(
       async () => {
         const { getP2PMatchWs, normalizeWsP2PMatchResponse } =
           await loadP2PWs();
         const payload = await getP2PMatchWs(id);
+        const normalized = normalizeWsP2PMatchResponse(payload);
+        if (!normalized?.data?.id) {
+          throw new Error("Invalid or empty match details returned from WebSocket");
+        }
         return {
-          data: normalizeWsP2PMatchResponse(payload),
+          data: normalized,
         } as unknown as ApiResponse<unknown>;
-      }
+      },
+      () => getWithRootFallback(`trading/p2p/matched_order/${id}`),
+      { fallbackOnAnyError: true }
     );
   },
 

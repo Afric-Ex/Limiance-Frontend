@@ -136,13 +136,17 @@ function OrderRoomPageInner() {
             (adType === "BUY" && sameId(buyerId, currentUserId))))
     );
 
-  const isBuyer = Boolean(
-    currentUserId &&
-      (sameId(buyerId, currentUserId) ||
-        (!buyerId && sameId(matcherId, currentUserId) && adType === "SELL") ||
-        (!buyerId && sameId(advertiserId, currentUserId) && adType === "BUY") ||
-        (!buyerId && !matcherId && !advertiserId && adType === "SELL"))
-  );
+  const isBuyer = matchedAs === "BUY"
+    ? true
+    : matchedAs === "SELL"
+    ? false
+    : Boolean(
+        currentUserId &&
+          (sameId(buyerId, currentUserId) ||
+            (!buyerId && sameId(matcherId, currentUserId) && adType === "SELL") ||
+            (!buyerId && sameId(advertiserId, currentUserId) && adType === "BUY") ||
+            (!buyerId && !matcherId && !advertiserId && adType === "SELL"))
+      );
   const isSeller = !isBuyer;
   // Side is always shown from the signed-in user's perspective: the buyer sees
   // BUY and the seller sees SELL, regardless of the ad's own side.
@@ -236,21 +240,26 @@ function OrderRoomPageInner() {
         name.trim().toLowerCase() === currentUserName.trim().toLowerCase()
     );
   const counterpartyName = (() => {
-    const matchedSideName =
+    // When the current user is selling ("matchedAs": "SELL"), the counterparty is the BUYER.
+    // When the current user is buying ("matchedAs": "BUY"), the counterparty is the SELLER.
+    const counterpartySideName =
       matchedAs === "SELL"
-        ? orderSellerName
+        ? orderBuyerName
         : matchedAs === "BUY"
-          ? orderBuyerName
-          : "";
-    if (matchedSideName && !isCurrentUserName(matchedSideName)) {
-      return matchedSideName;
+          ? orderSellerName
+          : isBuyer
+            ? orderSellerName
+            : orderBuyerName;
+
+    if (counterpartySideName && !isCurrentUserName(counterpartySideName)) {
+      return counterpartySideName;
     }
 
     const direct = counterpartyId ? nameById.get(counterpartyId) : "";
     if (direct && !isCurrentUserName(direct)) return direct;
     const resolved = [
-      orderBuyerName,
-      orderSellerName,
+      isBuyer ? orderSellerName : orderBuyerName,
+      isBuyer ? orderBuyerName : orderSellerName,
       orderMatcherName,
       orderAdvertiserName,
     ].find((name) => name && !isCurrentUserName(name));
@@ -691,6 +700,7 @@ function OrderRoomPageInner() {
                   quantity={quantity}
                   asset={asset}
                   updatedAt={updatedAtStr}
+                  deadlineStr={deadlineStr}
                   onDisputeOpen={() => setDisputeOpen(true)}
                 />
               )}

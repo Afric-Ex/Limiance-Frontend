@@ -896,12 +896,24 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 type="button"
                 onClick={() => setMoreOpen((o) => !o)}
                 aria-label="More order types"
+                aria-expanded={moreOpen}
                 className={clsx(
-                  "flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded px-1 py-1.5 text-xs font-bold transition-colors",
-                  advancedTab ? "text-primary" : "text-white/50 hover:text-white/80"
+                  "flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-xs font-bold transition-colors hover:bg-white/[0.07]",
+                  advancedTab ? "!border-primary/30 text-primary" : "text-white/70 hover:text-white"
                 )}
               >
-                {advancedTab ? `${advancedLabels[advancedTab]} ▾` : "▾"}
+                {advancedTab ? (
+                  <span>{advancedLabels[advancedTab]}</span>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">More</span>
+                    <span className="sm:hidden">Order Type</span>
+                  </>
+                )}
+                <MdExpandMore
+                  size={16}
+                  className={clsx("shrink-0 transition-transform", moreOpen && "rotate-180")}
+                />
               </button>
             </Popover.Target>
             <Popover.Dropdown className="!min-w-[160px] !rounded-xl !border !border-white/[0.08] !bg-[#1c1f28] !px-0 !py-1 !shadow-xl">
