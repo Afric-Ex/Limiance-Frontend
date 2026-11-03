@@ -5,25 +5,17 @@ import { OrderHistory } from "@/src/components/orders/order-history";
 import { OrderDetails } from "@/src/components/orders/order-details";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { SpotOrdersSkeleton } from "@/src/components/skeletons/orders";
+import { OrdersPageHeader } from "@/src/components/orders/orders-page-header";
 import { MdOutlineReceiptLong } from "react-icons/md";
 
 function SpotOrdersInner() {
   return (
-    <main className="flex flex-col gap-6 px-5 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-4 mt-2">
-      {/* Page header */}
-      <div className="flex items-center gap-3.5">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-          <MdOutlineReceiptLong size={22} />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)] leading-tight">
-            Spot Orders
-          </h1>
-          <p className="text-xs text-[var(--color-text-secondary)]">
-            Open orders, order history and trade fills on the spot market
-          </p>
-        </div>
-      </div>
+    <main className="flex flex-col gap-8 px-5 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-6 mt-2">
+      <OrdersPageHeader
+        icon={<MdOutlineReceiptLong size={24} />}
+        title="Spot Orders"
+        description="Open orders, order history and trade fills on the spot market"
+      />
 
       <Tabs classNames={classes} defaultValue="open">
         <TabsList>

@@ -10,13 +10,16 @@ import { useRouter } from "next/navigation";
 
 export const MarginPositions = () => {
   const router = useRouter();
-  const { data: positions = [], isLoading } = useQuery({
+  const { data: rawPositions = [], isLoading } = useQuery({
     queryKey: ["margin-positions"],
     queryFn: () => tradingService.marginPositions(),
     staleTime: 30_000,
     throwOnError: false,
     retry: false,
   });
+
+  // Normalize positions data - handle both array and object with data property
+  const positions = Array.isArray(rawPositions) ? rawPositions : Array.isArray((rawPositions as any)?.data) ? (rawPositions as any).data : [];
 
   if (isLoading) return <InlineLoading />;
 
@@ -42,7 +45,7 @@ export const MarginPositions = () => {
             </TableTr>
           </thead>
           <tbody>
-            {!positions?.length ? (
+            {!positions.length ? (
               <TableTr>
                 <TableTd colSpan={6}>
                   <div className="flex flex-col items-center justify-center py-12 gap-3 text-white/25">

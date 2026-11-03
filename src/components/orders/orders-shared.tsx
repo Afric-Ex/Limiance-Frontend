@@ -93,9 +93,9 @@ export const StatusPill = ({
 
 export const tableClassNames = {
   table: "min-w-[880px]",
-  th: "!py-3 !px-4 first:!pl-5 !text-micro !font-medium !uppercase !tracking-wider !text-white/40 !border-b !border-white/[0.06] !bg-transparent !whitespace-nowrap",
-  tr: "!border-b !border-white/[0.06] last:!border-0 hover:!bg-white/[0.02] !transition-colors",
-  td: "!py-4 !px-4 first:!pl-5 !text-sm !whitespace-nowrap !text-white/80 !font-medium",
+  th: "!py-3.5 !px-5 !text-micro !font-semibold !uppercase !tracking-wider !text-white/40 !border-b !border-white/[0.08] !bg-transparent !whitespace-nowrap",
+  tr: "!border-b !border-white/[0.04] last:!border-0 hover:!bg-white/[0.03] !transition-colors",
+  td: "!py-4 !px-5 !text-sm !whitespace-nowrap !text-white/80 !font-medium",
 };
 
 export const selectStyles = {
@@ -117,7 +117,7 @@ export const searchInputClass = {
 };
 
 export const FilterBar = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
+  <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-5 rounded-2xl bg-gradient-to-br from-white/[0.02] to-white/[0.005] border border-white/[0.08] backdrop-blur-sm">
     {children}
   </div>
 );
@@ -166,7 +166,7 @@ export const TableCard = ({
 }) => {
   if (loading) {
     return (
-      <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] overflow-hidden">
+      <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.02] to-white/[0.005] overflow-hidden backdrop-blur-sm">
         <div className="flex flex-col gap-4 p-6">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-12 w-full" />
@@ -179,10 +179,10 @@ export const TableCard = ({
   if (!hasData) {
     return (
       <div
-        className="rounded-2xl border border-white/[0.06] bg-[#181a20] flex flex-col items-center justify-center gap-4 opacity-70"
+        className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.02] to-white/[0.005] flex flex-col items-center justify-center gap-4 opacity-70 backdrop-blur-sm"
         style={{ minHeight }}
       >
-        <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] flex items-center justify-center">
           <EmptyTable />
         </div>
         <span className="text-sm font-semibold text-white/40">{emptyTitle}</span>
@@ -191,7 +191,7 @@ export const TableCard = ({
   }
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] overflow-hidden">
+    <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.02] to-white/[0.005] overflow-hidden backdrop-blur-sm">
       <div className="overflow-x-auto custom-scrollbar">{children}</div>
     </div>
   );
