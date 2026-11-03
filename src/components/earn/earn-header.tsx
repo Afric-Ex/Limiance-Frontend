@@ -7,7 +7,7 @@ import { FaArrowRight } from "react-icons/fa6";
 
 export function EarnHeader() {
   return (
-    <header className="earn-hero relative isolate overflow-hidden rounded-2xl border border-white/[0.08] bg-[#14171d] px-6 py-7 sm:px-8 sm:py-9">
+    <header className="earn-hero relative isolate overflow-hidden rounded-2xl border border-white/[0.08] bg-surface px-6 py-7 sm:px-8 sm:py-9">
       <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[46%] border-l border-white/[0.035] lg:block" />
       <div className="relative z-10 flex flex-col gap-8 lg:min-h-[218px] lg:flex-row lg:items-center lg:justify-between">
         <div className="flex max-w-2xl flex-col items-start gap-4">
@@ -43,7 +43,7 @@ export function EarnHeader() {
           </div>
         </div>
 
-        <div className="relative flex min-h-[130px] min-w-0 items-center justify-between gap-5 overflow-hidden rounded-xl border border-white/[0.08] bg-[#101319] p-5 sm:p-6 lg:min-w-[330px] lg:max-w-[390px]">
+        <div className="relative flex min-h-[130px] min-w-0 items-center justify-between gap-5 overflow-hidden rounded-xl border border-white/[0.08] bg-surface p-5 sm:p-6 lg:min-w-[330px] lg:max-w-[390px]">
           <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full border border-white/[0.045]" />
           <div className="pointer-events-none absolute -right-5 -top-8 h-32 w-32 rounded-full border border-white/[0.045]" />
           <div className="relative flex flex-col gap-2">
