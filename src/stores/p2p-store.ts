@@ -117,7 +117,7 @@ export const useP2PStore = create<P2PStore>((set, _get) => ({
   adFilters: {
     type: "BUY",
     asset: "USDT",
-    fiat: "USD",
+    fiat: "NGN",
     amount: "",
     paymentMethod: "All",
   },

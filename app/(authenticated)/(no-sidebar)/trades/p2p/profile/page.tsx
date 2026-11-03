@@ -2,7 +2,7 @@
 
 import React from "react";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
-import { useAdvertiserInfo } from "@/src/hooks/p2p/use-p2p";
+import { useAdvertiserInfo, useAdvertiserReviews } from "@/src/hooks/p2p/use-p2p";
 import { useUserStore } from "@/src/stores/user-store";
 import {
   MdVerified,
@@ -17,6 +17,7 @@ import {
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2PProfileSkeleton } from "@/src/components/skeletons/p2p";
+import type { P2PAdvertiserReview } from "@/src/types/p2p";
 
 const CARD_CLASS = "rounded-xl border border-white/[0.07] bg-[#181a20]";
 
@@ -27,9 +28,78 @@ function formatJoined(v: string | number | undefined): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+function formatReviewDate(v: string | number | undefined): string {
+  if (!v) return "";
+  const d = new Date(typeof v === "number" && v > 1e10 ? v : Number(v));
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function ReviewCard({ review }: { review: P2PAdvertiserReview }) {
+  const isPositive = review.rating === "POSITIVE";
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {/* Avatar */}
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+            {(review.reviewerName ?? "?").charAt(0).toUpperCase()}
+          </div>
+          <span className="text-sm font-semibold text-white/80">
+            {review.reviewerName ?? "Anonymous"}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+              isPositive
+                ? "bg-buy/10 text-buy border border-buy/20"
+                : "bg-[#F6465D]/10 text-[#F6465D] border border-[#F6465D]/20"
+            }`}
+          >
+            {isPositive ? (
+              <MdOutlineThumbUp size={10} />
+            ) : (
+              <MdOutlineThumbDown size={10} />
+            )}
+            {isPositive ? "Positive" : "Negative"}
+          </span>
+          <span className="text-[10px] text-white/30">
+            {formatReviewDate(review.createdAt)}
+          </span>
+        </div>
+      </div>
+      {review.review && (
+        <p className="text-xs leading-relaxed text-white/55 pl-9">{review.review}</p>
+      )}
+      {Array.isArray(review.tags) && review.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 pl-9">
+          {review.tags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full border border-white/[0.07] bg-white/[0.04] px-2 py-0.5 text-[10px] text-white/40"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MyAdvertiserProfilePageInner() {
   const { data: advertiserData, isLoading } = useAdvertiserInfo();
   const { user } = useUserStore();
+
+  const advertiser = advertiserData?.data?.data;
+
+  // Fetch reviews using the advertiser's own ID
+  const { data: reviewsData, isLoading: reviewsLoading } = useAdvertiserReviews(
+    advertiser?.id ?? null,
+    1,
+    20
+  );
 
   if (isLoading) {
     return (
@@ -40,8 +110,6 @@ function MyAdvertiserProfilePageInner() {
       </P2PLayout>
     );
   }
-
-  const advertiser = advertiserData?.data?.data;
 
   if (!advertiser || !advertiser.id) {
     return (
@@ -62,14 +130,15 @@ function MyAdvertiserProfilePageInner() {
   const name = [advertiser.firstName, advertiser.lastName].filter(Boolean).join(" ") || "Merchant";
   const trades = Math.floor(Number(advertiser.totalOrdersCompleted ?? 0));
   const completionRate = Number(advertiser.completionPercentage ?? 0);
-  const rating = Number(advertiser.rating ?? 0);
   const revealPhoto = advertiser.photo && advertiser.photo.length > 1;
 
-  const feedback = {
-    recent: [] as any[],
-    positive: 0,
-    negative: 0,
-  };
+  // Use live review data from the API
+  const reviewsPayload = reviewsData?.data as any;
+  const reviews: P2PAdvertiserReview[] = reviewsPayload?.reviews ?? [];
+  const positiveCount = reviewsPayload?.positiveCount ?? 0;
+  const negativeCount = reviewsPayload?.negativeCount ?? 0;
+  const averageRating = reviewsPayload?.averageRating ?? Number(advertiser.rating ?? 0);
+  const totalRecords = reviewsPayload?.totalRecords ?? 0;
 
   const statCards = [
     {
@@ -86,13 +155,13 @@ function MyAdvertiserProfilePageInner() {
     },
     {
       label: "Average Rating",
-      value: rating > 0 ? `${rating.toFixed(1)} / 5.0` : "N/A",
+      value: averageRating > 0 ? `${Number(averageRating).toFixed(1)} / 5.0` : "N/A",
       icon: <MdOutlineStarOutline size={16} />,
       accent: "text-[#FBA42A]",
     },
     {
       label: "30d Reviews",
-      value: String(feedback.recent.length),
+      value: String(totalRecords),
       icon: <MdOutlineThumbUp size={16} />,
       accent: "text-[#4d77f0]",
     },
@@ -172,20 +241,38 @@ function MyAdvertiserProfilePageInner() {
             </div>
 
             <div className={`${CARD_CLASS} p-5`}>
-              <h3 className="text-sm font-semibold text-white mb-4">Feedback (30d)</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-white">Feedback (30d)</h3>
+                {totalRecords > 0 && (
+                  <span className="text-xs text-white/35">{totalRecords} total</span>
+                )}
+              </div>
 
               <div className="flex gap-3 mb-4 pb-4 border-b border-white/[0.06]">
                 <div className="flex items-center gap-2 text-buy bg-buy/[0.08] border border-buy/20 px-3 py-1.5 rounded-lg text-xs font-semibold">
                   <MdOutlineThumbUp size={14} />
-                  <span>{feedback.positive} Positive</span>
+                  <span>{positiveCount} Positive</span>
                 </div>
                 <div className="flex items-center gap-2 text-[#F6465D] bg-[#F6465D]/[0.08] border border-[#F6465D]/20 px-3 py-1.5 rounded-lg text-xs font-semibold">
                   <MdOutlineThumbDown size={14} />
-                  <span>{feedback.negative} Negative</span>
+                  <span>{negativeCount} Negative</span>
                 </div>
               </div>
 
-              {feedback.recent.length === 0 ? (
+              {/* Reviews list */}
+              {reviewsLoading ? (
+                <div className="flex flex-col gap-3">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex flex-col gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3.5">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="w-7 h-7 rounded-full" />
+                        <Skeleton className="w-28 h-3 rounded" />
+                      </div>
+                      <Skeleton className="w-full h-3 rounded ml-9" />
+                    </div>
+                  ))}
+                </div>
+              ) : reviews.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-white/40 text-center">
                   <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center text-white/30 mb-2.5">
                     <MdOutlineChatBubbleOutline size={18} />
@@ -196,9 +283,9 @@ function MyAdvertiserProfilePageInner() {
                   </span>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {feedback.recent.map((_, i) => (
-                    <div key={i} />
+                <div className="flex flex-col gap-2">
+                  {reviews.map((review) => (
+                    <ReviewCard key={review.id} review={review} />
                   ))}
                 </div>
               )}
