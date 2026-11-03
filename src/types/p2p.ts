@@ -288,3 +288,31 @@ export interface AddP2PReviewPayload {
   rating: number;
   review?: string;
 }
+
+
+export interface P2PAdvertiserReview {
+  id: string;
+  advertiserId: string;
+  createdAt: number | string;
+  orderMatchId: string;
+  numericRating: number;
+  rating: "POSITIVE" | "NEGATIVE";
+  review: string;
+  reviewerId: string;
+  reviewerName: string;
+  tags: string[] | null;
+}
+
+export interface P2PAdvertiserReviewsResponse {
+  averageRating: number;
+  currentPage: number;
+  error: string;
+  message: string;
+  negativeCount: number;
+  positiveCount: number;
+  reviews: P2PAdvertiserReview[];
+  statusCode: number;
+  success: boolean;
+  totalPages: number;
+  totalRecords: number;
+}

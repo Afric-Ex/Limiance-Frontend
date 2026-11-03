@@ -28,6 +28,20 @@ export const useUserAds = (params: any) => {
   });
 };
 
+export const useAdvertiserReviews = (
+  advertiserId?: string | null,
+  page = 1,
+  limit = 10
+) => {
+  const id = advertiserId?.trim() ?? "";
+  return useQuery({
+    queryKey: p2pKey.advertiserReviews(id, page, limit),
+    queryFn: () => p2p.getAdvertiserReviews(id, { page, limit }),
+    enabled: !!id,
+    staleTime: 30_000,
+  });
+};
+
 export const useAdvertiserInfo = () => {
   return useQuery({
     queryKey: p2pKey.advertiserInfo,
