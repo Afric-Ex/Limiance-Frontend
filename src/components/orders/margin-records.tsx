@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 import {
   fmtDateTime,
   fmtNum,
@@ -22,6 +23,7 @@ const filters = ["Cross", "Isolated"];
 export const MarginRecords = () => {
   const [filter, setFilter] = useState("Cross");
   const [pair, setPair] = useState("");
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
 
   const { data: records, isLoading } = useQuery({
     queryKey: tradingKeys.marginOrderHistory,
@@ -36,6 +38,10 @@ export const MarginRecords = () => {
 
   return (
     <div className="flex flex-col gap-6">
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+      />
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
         <ChipToggle value={filter} options={filters} onChange={setFilter} />
         <div className="flex items-center gap-4">
@@ -68,7 +74,11 @@ export const MarginRecords = () => {
           </TableThead>
           <TableTbody>
             {filtered.map((rec: any, idx: number) => (
-              <TableTr key={rec.id ?? idx}>
+              <TableTr
+                key={rec.id ?? idx}
+                onClick={() => setSelectedTransaction(rec)}
+                className="cursor-pointer hover:!bg-white/[0.03]"
+              >
                 <TableTd className="pl-5 !text-white !font-bold">{getPair(rec)}</TableTd>
                 <TableTd className={sideTone(rec.side)}>{rec.side ?? "—"}</TableTd>
                 <TableTd className="text-white/50">{fmtDateTime(rec.createdAt)}</TableTd>

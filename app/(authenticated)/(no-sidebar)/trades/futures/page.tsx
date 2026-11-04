@@ -40,7 +40,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { MdKeyboardArrowDown, MdMoreVert, MdRefresh } from 'react-icons/md';
 import { MobileTopBar } from '@/src/components/shared/mobile-top-bar';
-import { SidebarMenuButton } from '@/src/components/shared/sidebar-menu';
 import { IoChevronDown, IoChevronUp, IoSwapHorizontal, IoBarChartOutline, IoListOutline } from 'react-icons/io5';
 import { MobileBottomSheet } from '@/src/components/shared/mobile-bottom-sheet';
 import { MobileBottomNav } from '@/src/components/shared/mobile-bottom-nav';
@@ -676,7 +675,6 @@ function FuturesTradesInner() {
         title=""
         leftElement={
           <div className="flex items-center gap-1">
-            <SidebarMenuButton className="-ml-1 h-9 w-9" />
             <Popover width={300} position="bottom-start" shadow="md" opened={pairMenuOpen} onChange={setPairMenuOpen}>
               <PopoverTarget>
                 <button

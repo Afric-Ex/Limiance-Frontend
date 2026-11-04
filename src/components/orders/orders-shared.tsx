@@ -46,11 +46,11 @@ export const OrdersPageFrame = ({
 );
 
 export const ordersTabsClassNames = {
-  root: "flex flex-col",
-  list: "!flex !w-full !min-w-0 !flex-nowrap !items-stretch gap-1 overflow-x-auto border-b border-white/[0.08] scrollbar-none",
-  tab: "!h-11 !shrink-0 !rounded-none !border-b-2 !border-transparent !px-4 !text-xs !font-semibold !text-white/45 transition-colors hover:!bg-transparent hover:!text-white/75 data-[active]:!border-primary data-[active]:!text-white sm:!px-5 sm:!text-sm",
+  root: "flex flex-col gap-3",
+  list: "!flex !w-full !min-w-0 !flex-nowrap !items-stretch gap-1 overflow-x-auto !rounded-xl !border !border-white/[0.08] !bg-[#181a20] !p-1 scrollbar-none",
+  tab: "!h-10 !shrink-0 !rounded-lg !border-0 !px-4 !text-xs !font-semibold !text-white/45 transition-colors hover:!bg-white/[0.04] hover:!text-white/75 data-[active]:!bg-white/[0.08] data-[active]:!text-white sm:!px-5 sm:!text-sm",
   tabLabel: "!whitespace-nowrap",
-  panel: "pt-5 max-[640px]:pt-4",
+  panel: "!overflow-hidden !rounded-xl !border !border-white/[0.08] !bg-[#181a20]",
 };
 
 export const toNumber = (value: unknown): number | null => {
@@ -213,7 +213,7 @@ export const TableCard = ({
 }) => {
   if (loading) {
     return (
-      <div className="overflow-hidden border-y border-white/[0.08]">
+      <div className="overflow-hidden">
         <div className="flex flex-col gap-3 py-5">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-12 w-full" />
@@ -226,7 +226,7 @@ export const TableCard = ({
   if (!hasData) {
     return (
       <div
-        className="flex flex-col items-center justify-center gap-3 border-y border-white/[0.08] py-12 text-center"
+        className="flex flex-col items-center justify-center gap-3 py-12 text-center"
         style={{ minHeight }}
       >
         <FiActivity aria-hidden="true" size={24} className="text-primary/75" strokeWidth={1.5} />
@@ -236,7 +236,7 @@ export const TableCard = ({
   }
 
   return (
-    <div className="overflow-hidden border-y border-white/[0.08]">
+    <div className="overflow-hidden">
       <div className="overflow-x-auto custom-scrollbar">{children}</div>
     </div>
   );

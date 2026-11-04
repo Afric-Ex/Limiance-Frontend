@@ -138,7 +138,7 @@ function DepositInner() {
   });
 
   return (
-    <div className="flex flex-col gap-10 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-6">
+    <div className="flex flex-col gap-10 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-6">
       <TokenNetworkModal
         opened={modalOpened}
         onClose={closeModal}
@@ -426,7 +426,7 @@ function DepositInner() {
                     onClick={() => setSelectedTransaction(item)}
                     className="cursor-pointer"
                   >
-                    <TableTd className="pl-6 !text-white/40">{fmtDate(item.completedAt || item.createdAt)}</TableTd>
+                    <TableTd className="pl-6 !whitespace-nowrap !text-white/40">{fmtDate(item.completedAt || item.createdAt)}</TableTd>
                     <TableTd>
                       <span className="flex items-center gap-2">
                         {(() => {
@@ -441,7 +441,9 @@ function DepositInner() {
                             </span>
                           );
                         })()}
-                        <span className="text-xs font-bold uppercase">{item.asset}</span>
+                        <span className="max-w-[180px] truncate text-xs font-bold uppercase" title={item.asset}>
+                          {item.asset?.length > 16 ? truncateCryptoAddress(item.asset) : item.asset}
+                        </span>
                       </span>
                     </TableTd>
                     <TableTd className="!text-white !font-bold">{item.amount}</TableTd>

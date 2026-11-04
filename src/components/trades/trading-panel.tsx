@@ -74,11 +74,18 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
 
   // Order History: unified endpoint returns all markets or just this market based on the filter.
   const historyMarketType = selectedMarket;
+  const historyDateWindow = useMemo(() => {
+    const to = new Date();
+    const from = new Date(to.getTime() - historyDays * 86_400_000);
+    return { from: from.toISOString(), to: to.toISOString() };
+  }, [historyDays]);
   const { data: historyPages = [], isLoading: orderHistoryLoading } = useOrderHistory({
     enabled: activeMainTab === "order_history",
     marketType: historyMarketType,
     page: historyPage,
     status: historyStatus === "all" ? undefined : historyStatus,
+    from: historyDateWindow.from,
+    to: historyDateWindow.to,
   });
   const allHistoryRows = useMemo(() => buildOrderHistoryRows(historyPages), [historyPages]);
   const historyTotalPages = historyPages[0]?.totalPages ?? 1;
@@ -404,21 +411,20 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
             </SubTab>
           </div>
           {activeMainTab === "order_history" && (
-            <div className="ml-3 flex shrink-0 items-center gap-1">
-              {DATE_RANGES.map((range) => (
-                <button
-                  key={range.days}
-                  type="button"
-                  onClick={() => setHistoryDays(range.days)}
-                  aria-pressed={historyDays === range.days}
-                  className={clsx(
-                    "whitespace-nowrap rounded px-2 py-1 text-xs font-semibold transition-colors",
-                    historyDays === range.days ? "text-white" : "text-white/40 hover:text-white/80"
-                  )}
-                >
-                  {range.label}
-                </button>
-              ))}
+            <div className="ml-3 shrink-0">
+              <select
+                aria-label="Order history date range"
+                value={historyDays}
+                onChange={(event) => {
+                  setHistoryDays(Number(event.currentTarget.value));
+                  setHistoryPage(1);
+                }}
+                className="h-8 max-w-[126px] rounded border border-white/10 bg-white/[0.05] px-2 text-xs font-semibold text-white/80 outline-none"
+              >
+                {DATE_RANGES.map((range) => (
+                  <option key={range.days} value={range.days}>{range.label}</option>
+                ))}
+              </select>
             </div>
           )}
         </div>
@@ -509,23 +515,17 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
       {/* Trade History filter bar */}
       {activeMainTab === "trade_history" && (
         <div className="flex flex-col border-b border-white/[0.06] shrink-0">
-          {/* Date chips row */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.04]">
-            <div className="flex items-center gap-1">
+            <select
+              aria-label="Trade history date range"
+              value={tradeHistoryDays}
+              onChange={(event) => setTradeHistoryDays(Number(event.currentTarget.value))}
+              className="h-8 max-w-[126px] rounded border border-white/10 bg-white/[0.05] px-2 text-xs font-semibold text-white/80 outline-none"
+            >
               {DATE_RANGES.map((range) => (
-                <button
-                  key={range.days}
-                  type="button"
-                  onClick={() => setTradeHistoryDays(range.days)}
-                  className={clsx(
-                    "whitespace-nowrap rounded px-2 py-1 text-xs font-semibold transition-colors",
-                    tradeHistoryDays === range.days ? "text-white" : "text-white/40 hover:text-white/80"
-                  )}
-                >
-                  {range.label}
-                </button>
+                <option key={range.days} value={range.days}>{range.label}</option>
               ))}
-            </div>
+            </select>
             <button
               type="button"
               className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors font-semibold shrink-0"
@@ -1263,33 +1263,73 @@ function PnLPanel({ selectedPair, market = "spot" }: { selectedPair?: string; ma
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-xs">
+      <table className="w-full min-w-[1120px] text-left text-xs">
         <thead className="border-b border-white/[0.06] bg-white/[0.02]">
           <tr>
             <TableHeader>Date</TableHeader>
             <TableHeader>Pair</TableHeader>
             <TableHeader>Side</TableHeader>
-            <TableHeader align="right">Price</TableHeader>
-            <TableHeader align="right">Quantity</TableHeader>
+            <TableHeader align="right">Entry Price</TableHeader>
+            <TableHeader align="right">Exit Price</TableHeader>
+            <TableHeader align="right">Closed Qty</TableHeader>
+            <TableHeader align="right">Entry Value</TableHeader>
+            <TableHeader align="right">Exit Value</TableHeader>
+            <TableHeader align="right">Fee</TableHeader>
             <TableHeader align="right">Realized PnL</TableHeader>
+            <TableHeader>Status</TableHeader>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/[0.04]">
           {pnlData.map((row: any, i: number) => {
-            const pnl = Number(row.pnl ?? row.realizedPnl ?? row.profit ?? 0);
-            const isProfit = pnl >= 0;
+            const rawPnl = row.closedPnl ?? row.pnl ?? row.realizedPnl ?? row.profit;
+            const parsedPnl = rawPnl === null || rawPnl === undefined || rawPnl === "" ? NaN : Number(rawPnl);
+            const pnl = Number.isFinite(parsedPnl) ? parsedPnl : null;
+            const isProfit = (pnl ?? 0) >= 0;
+            const date = parseDate(row.createdAt ?? row.updatedAt ?? row.time);
+            const pair = row.pair || row.symbol || (row.base && row.quote ? `${row.base}/${row.quote}` : "—");
+            const entryPrice = row.avgEntryPrice ?? row.entryPrice;
+            const exitPrice = row.avgExitPrice ?? row.avgPrice ?? row.price;
+            const closedQuantity = row.closedSize ?? row.cumExecQty ?? row.quantity ?? row.amount;
+            const entryValue = row.cumEntryValue;
+            const exitValue = row.cumExitValue ?? row.cumExecValue;
+            const fee = row.cumExecFee ?? row.fee;
+            const feeCurrency = row.feeCurrency || row.quote || "";
+            const status = row.orderStatus || row.status || row.execType || "—";
+            const formatNumber = (value: unknown, digits = 8) => {
+              if (value === null || value === undefined || value === "") return "—";
+              const number = Number(value);
+              return Number.isFinite(number)
+                ? number.toLocaleString(undefined, { maximumFractionDigits: digits })
+                : "—";
+            };
             return (
               <tr key={row.id ?? i} className="hover:bg-white/[0.02]">
-                <td className="px-3 py-2 text-white/50">{row.time || row.createdAt || "—"}</td>
-                <td className="px-3 py-2 text-white font-medium">{row.pair || row.symbol}</td>
-                <td className={clsx("px-3 py-2 font-bold", String(row.side).toUpperCase() === "BUY" ? "text-buy" : "text-sell")}>
-                  {String(row.side).toUpperCase()}
+                <td className="whitespace-nowrap px-3 py-2 text-white/50">
+                  {date ? date.toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                 </td>
-                <td className="px-3 py-2 text-right font-mono text-white/90">{row.price}</td>
-                <td className="px-3 py-2 text-right font-mono text-white/90">{row.quantity || row.amount}</td>
-                <td className={clsx("px-3 py-2 text-right font-mono font-bold", isProfit ? "text-buy" : "text-sell")}>
-                  {isProfit ? `+${pnl}` : pnl}
+                <td className="whitespace-nowrap px-3 py-2 font-medium text-white">{pair}</td>
+                <td className={clsx("px-3 py-2 font-bold", String(row.side ?? "").toUpperCase() === "BUY" ? "text-buy" : "text-sell")}>
+                  {String(row.side ?? "—").toUpperCase()}
                 </td>
+                <td className="px-3 py-2 text-right font-mono text-white/90">{formatNumber(entryPrice, 2)}</td>
+                <td className="px-3 py-2 text-right font-mono text-white/90">{formatNumber(exitPrice, 2)}</td>
+                <td className="px-3 py-2 text-right font-mono text-white/90">
+                  {formatNumber(closedQuantity)} <span className="text-white/40">{row.base || ""}</span>
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-white/90">
+                  {formatNumber(entryValue, 2)} <span className="text-white/40">{row.quote || ""}</span>
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-white/90">
+                  {formatNumber(exitValue, 2)} <span className="text-white/40">{row.quote || ""}</span>
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-white/70">
+                  {formatNumber(fee, 8)} <span className="text-white/40">{feeCurrency}</span>
+                </td>
+                <td className={clsx("whitespace-nowrap px-3 py-2 text-right font-mono font-bold", pnl === null ? "text-white/50" : isProfit ? "text-buy" : "text-sell")}>
+                  {pnl === null ? "—" : `${isProfit ? "+" : ""}${formatNumber(pnl)}`}
+                  {pnl !== null && <span className="ml-1 text-white/40">{row.quote || ""}</span>}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2 text-white/60">{status}</td>
               </tr>
             );
           })}

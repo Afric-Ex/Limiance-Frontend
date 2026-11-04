@@ -25,7 +25,7 @@ export function ModalShell({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -35,11 +35,11 @@ export function ModalShell({
         aria-modal="true"
         aria-labelledby={labelledBy}
         className={clsx(
-          "w-full max-w-[460px] bg-elevated border border-line rounded-xl shadow-[var(--shadow-card)] flex flex-col overflow-hidden",
+          "w-full max-w-[460px] max-[640px]:max-w-none bg-elevated border border-line rounded-xl shadow-[var(--shadow-card)] flex flex-col overflow-hidden",
           className
         )}
       >
-        <div className="flex items-start justify-between gap-4 p-6 pb-0">
+        <div className="flex items-start justify-between gap-4 p-6 pb-0 max-[640px]:px-4">
           <div className="flex items-center gap-3 min-w-0">
             {icon && <div className="flex-shrink-0">{icon}</div>}
             {title && (
@@ -59,10 +59,10 @@ export function ModalShell({
             </svg>
           </button>
         </div>
-        <div className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[70vh]">
+        <div className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[70vh] max-[640px]:px-4">
           {children}
         </div>
-        {footer && <div className="p-6 pt-0">{footer}</div>}
+        {footer && <div className="p-6 pt-0 max-[640px]:px-4">{footer}</div>}
       </div>
     </div>
   );

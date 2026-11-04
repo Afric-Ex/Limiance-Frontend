@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { GlobalP2PNotification } from "./global-p2p-notification";
+import { SidebarMenuButton } from "@/src/components/shared/sidebar-menu";
 import { useAllMatchedOrders, useAdvertiserInfo } from "@/src/hooks/p2p/use-p2p";
 import { useP2PGlobalEvents } from "@/src/hooks/p2p/use-p2p-realtime";
 
@@ -45,6 +46,7 @@ export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
     <div className="flex flex-col h-full w-full">
       {/* P2P Header Nav */}
       <nav className="flex items-center gap-6 max-[600px]:gap-5 border-b border-white/[0.06] mb-6 px-4 overflow-x-auto whitespace-nowrap w-full max-w-7xl mx-auto min-h-10">
+        <SidebarMenuButton className="hidden min-[1150px]:grid h-8 w-8 rounded-md" />
         {navLinks.map((item) => {
           const isActive = pathname === item.link || (item.link !== "/trades/p2p" && pathname.startsWith(item.link));
           return (

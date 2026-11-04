@@ -5,6 +5,7 @@ import { Loader } from "@mantine/core";
 import clsx from "clsx";
 import { MdContentCopy } from "react-icons/md";
 import { successNotification } from "@/src/lib/notification-handler";
+import { parseDate } from "@/src/lib/parse-date";
 import type { HistoryMarket, MarketHistoryPage } from "@/src/hooks/use-order-history";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -95,7 +96,7 @@ function toRow(raw: any, market: HistoryMarket, index: number): OrderHistoryRow 
     (avgPrice && filledQuantity ? avgPrice * filledQuantity : null);
 
   const timeRaw = text(firstDefined(raw?.createdAt, raw?.created_at, raw?.timestamp, raw?.time));
-  const parsed = timeRaw ? new Date(/^\d+$/.test(timeRaw) ? Number(timeRaw) : timeRaw).getTime() : NaN;
+  const parsed = parseDate(timeRaw)?.getTime() ?? NaN;
   const id = text(firstDefined(raw?.id, raw?.orderId, raw?.order_id));
 
   const hasValue = (v: unknown) => v !== undefined && v !== null && v !== "" && Number(v) !== 0;
@@ -154,7 +155,7 @@ export function filterOrderHistoryRows(rows: readonly OrderHistoryRow[], f: Orde
         return false;
       }
     }
-    if (row.timeMs !== null && row.timeMs < cutoff) return false;
+    if (row.timeMs === null || row.timeMs < cutoff) return false;
     if (f.instrument !== "all" && !row.pair.includes(f.instrument)) return false;
     if (f.hideOtherPairs && current && normalizePair(row.pair) !== current) return false;
     return true;
