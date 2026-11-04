@@ -179,7 +179,7 @@ function OrderHistoryPageInner() {
         {/* Page header */}
         <div className="flex items-center justify-between gap-4 mb-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 text-primary">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <MdOutlineReceiptLong size={20} />
             </div>
             <div>
