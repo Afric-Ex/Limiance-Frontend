@@ -20,6 +20,7 @@ import {
   sideTone,
   TableCard,
   tableClassNames,
+  ResponsiveFilters,
 } from "./orders-shared";
 
 export const OpenTab = () => {
@@ -64,27 +65,29 @@ export const OpenTab = () => {
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
-        <div role="group" aria-label="Filter open orders by side" className="inline-flex shrink-0 items-center gap-0.5 rounded-lg bg-white/[0.035] p-1">
-          {["All", "Buy", "Sell"].map((item) => (
-            <button
-              key={item}
-              type="button"
-              aria-pressed={side === item}
-              onClick={() => setSide(item)}
-              className={clsx(
-                "h-8 rounded-md px-3 text-xs font-semibold transition-colors",
-                side === item
-                  ? clsx(
-                      "bg-white/[0.09]",
-                      item === "Buy" ? "text-buy" : item === "Sell" ? "text-sell" : "text-white"
-                    )
-                  : "text-white/45 hover:text-white/80"
-              )}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
+        <ResponsiveFilters>
+          <div role="group" aria-label="Filter open orders by side" className="inline-flex shrink-0 items-center gap-0.5 rounded-lg bg-white/[0.035] p-1">
+            {["All", "Buy", "Sell"].map((item) => (
+              <button
+                key={item}
+                type="button"
+                aria-pressed={side === item}
+                onClick={() => setSide(item)}
+                className={clsx(
+                  "h-8 rounded-md px-3 text-xs font-semibold transition-colors",
+                  side === item
+                    ? clsx(
+                        "bg-white/[0.09]",
+                        item === "Buy" ? "text-buy" : item === "Sell" ? "text-sell" : "text-white"
+                      )
+                    : "text-white/45 hover:text-white/80"
+                )}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </ResponsiveFilters>
         <div className="min-w-[150px] flex-1">
           <TextInput
             classNames={searchInputClass}

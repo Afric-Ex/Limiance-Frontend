@@ -17,6 +17,8 @@ import { CheckMark } from "@/src/components/icons/check-mark";
 import { isKycApproved } from "@/src/lib/normalize-kyc-status";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountProfileSkeleton } from "@/src/components/skeletons/account";
+import { AccountPageHeader } from "@/src/components/settings/account-page-header";
+import { MdPersonOutline } from "react-icons/md";
 
 const kycBadge: Record<string, { label: string; color: string }> = {
   pending:       { label: "Pending",    color: "bg-yellow-500/20 text-yellow-400" },
@@ -196,14 +198,15 @@ function ProfilePageInner() {
   if (!mounted || (!user && userLoading)) return <AccountProfileSkeleton />;
 
   return (
-    <main className="flex flex-col gap-8 max-w-5xl">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold">Personal Information</h1>
-        <p className="text-sm text-white/50">Review your account information and update the editable fields below.</p>
-      </div>
+    <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 pb-8 page-enter max-[1150px]:pb-[100px]">
+      <AccountPageHeader
+        title="Personal profile"
+        description="Your identity and personal details, all in one place."
+        icon={<MdPersonOutline size={23} />}
+      />
 
       {/* Section A — Avatar & Identity */}
-      <div className="account-card flex flex-col sm:flex-row items-center sm:items-start gap-6">
+      <div className="account-card relative flex flex-col items-center gap-5 overflow-hidden sm:flex-row sm:items-start sm:gap-6">
         <label className="relative cursor-pointer group shrink-0">
           <div className="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden bg-primary/20 border-2 border-white/10 group-hover:border-primary/50 transition-colors">
             {photoDraft || (user?.photo && !imgError) ? (
@@ -237,9 +240,9 @@ function ProfilePageInner() {
           />
         </label>
 
-        <div className="flex flex-col gap-3 items-center sm:items-start flex-1">
+        <div className="flex min-w-0 flex-1 flex-col items-center gap-3 sm:items-start">
           <div className="flex flex-col gap-1 items-center sm:items-start">
-            <h2 className="text-xl font-semibold">{user?.username || user?.firstName || "User"}</h2>
+            <h2 className="max-w-full truncate text-xl font-semibold">{user?.username || user?.firstName || "User"}</h2>
             <div className="flex items-center gap-2 text-sm text-white/50">
               <span>UID: {user?.id?.split("-")?.at(-1)}</span>
               <CopyButton text={user?.id as string} />
@@ -262,7 +265,7 @@ function ProfilePageInner() {
       </div>
 
       {/* Section B — Edit Profile Form */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1.3fr_0.9fr] gap-6">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.8fr)]">
         <div className="account-card flex flex-col gap-6">
           <div>
             <h3 className="text-lg font-semibold">Profile Details</h3>
@@ -271,11 +274,11 @@ function ProfilePageInner() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {accountDetails.map((item) => (
               <div
                 key={item.label}
-                className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                className="rounded-xl border border-white/[0.07] bg-black/15 p-4 transition-colors hover:border-white/[0.13]"
               >
                 <div className="text-xs uppercase tracking-wide text-white/45 mb-2">
                   {item.label}
@@ -302,11 +305,11 @@ function ProfilePageInner() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {accountStatus.map((item) => (
               <div
                 key={item.label}
-                className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3"
+                className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.07] bg-black/15 px-4 py-3"
               >
                 <span className="text-sm text-white/60">{item.label}</span>
                 <span className={`text-sm font-semibold ${item.tone}`}>
@@ -319,7 +322,10 @@ function ProfilePageInner() {
       </div>
 
       <div className="account-card flex flex-col gap-6">
-        <h3 className="text-lg font-semibold">Edit Profile</h3>
+        <div>
+          <h3 className="text-lg font-semibold">Edit profile</h3>
+          <p className="mt-1 text-sm text-white/45">Keep your contact information up to date.</p>
+        </div>
         <form onSubmit={form.onSubmit((values) => updateProfile(values))} className="flex flex-col gap-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <TextInput

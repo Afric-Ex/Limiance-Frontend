@@ -3,6 +3,7 @@ import { normalizeUser } from "../lib/normalize-user";
 import { normalizeKycStatus } from "../lib/normalize-kyc-status";
 import { wsClient } from "../lib/websocket-client";
 import { ApiResponse } from "../types/api";
+import { UserSettings } from "../types/user";
 
 export const userKeys = {
   userDetails: ["user-details"] as const,
@@ -123,12 +124,12 @@ export const userService = {
     return response.data;
   },
   deleteApiKey: async (keyId: string): Promise<ApiResponse<any>> => {
-    const response = await api.delete(`users/api_keys/${keyId}`);
+    const response = await api.delete(`users/api_keys/${encodeURIComponent(keyId)}`);
     return response.data;
   },
 
   // Settings
-  getSettings: async (): Promise<ApiResponse<any>> => {
+  getSettings: async (): Promise<ApiResponse<UserSettings>> => {
     const response = await api.get("users/settings");
     return response.data;
   },

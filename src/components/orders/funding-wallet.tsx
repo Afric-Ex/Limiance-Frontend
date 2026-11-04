@@ -12,6 +12,7 @@ import {
   StatusPill,
   TableCard,
   tableClassNames,
+  ResponsiveFilters,
 } from "./orders-shared";
 
 export const FundingWallet = () => {
@@ -34,24 +35,26 @@ export const FundingWallet = () => {
         onClose={() => setSelectedTransaction(null)}
       />
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
-        <Select
-          label="Time"
-          data={["All", "Last 7 Days", "Last 30 Days", "Last 3 Months"]}
-          classNames={selectStyles}
-          className="w-[160px]"
-        />
-        <Select
-          label="Coin"
-          data={["All", "USDT", "BTC", "ETH"]}
-          classNames={selectStyles}
-          className="w-[140px]"
-        />
-        <Select
-          label="Transaction Type"
-          data={["All", "Deposit", "Withdrawal", "P2P Buy", "P2P Sell"]}
-          classNames={selectStyles}
-          className="w-[170px]"
-        />
+        <ResponsiveFilters>
+          <Select
+            label="Time"
+            data={["All", "Last 7 Days", "Last 30 Days", "Last 3 Months"]}
+            classNames={selectStyles}
+            className="w-[160px]"
+          />
+          <Select
+            label="Coin"
+            data={["All", "USDT", "BTC", "ETH"]}
+            classNames={selectStyles}
+            className="w-[140px]"
+          />
+          <Select
+            label="Transaction Type"
+            data={["All", "Deposit", "Withdrawal", "P2P Buy", "P2P Sell"]}
+            classNames={selectStyles}
+            className="w-[170px]"
+          />
+        </ResponsiveFilters>
       </div>
 
       <TableCard loading={isLoading} hasData={allRecords.length > 0} emptyTitle="No funding transactions found.">

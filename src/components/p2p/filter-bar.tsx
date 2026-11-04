@@ -7,6 +7,7 @@ import { useP2PStore } from "@/src/stores/p2p-store";
 import { asset, assetKeys } from "@/src/services/asset";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { fiatKeys, fiatService } from "@/src/services/fiat";
+import { ResponsiveFilters } from "@/src/components/shared/responsive-filters";
 
 const selectClassNames = {
   input:
@@ -187,6 +188,7 @@ export const FilterBar = () => {
 
   return (
     <div className="flex flex-wrap items-center gap-3 bg-[#181a20] border border-white/[0.07] p-3 rounded-xl mb-5">
+      <ResponsiveFilters>
       {/* Buy/Sell Tabs */}
       <div className="flex bg-white/[0.03] rounded-lg p-0.5 border border-white/[0.07] max-[1150px]:w-full">
         <button
@@ -267,6 +269,7 @@ export const FilterBar = () => {
           classNames={selectClassNames}
         />
       </div>
+      </ResponsiveFilters>
     </div>
   );
 };

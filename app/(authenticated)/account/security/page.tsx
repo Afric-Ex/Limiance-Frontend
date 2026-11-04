@@ -15,6 +15,8 @@ import { BiCheck } from "react-icons/bi";
 import { CopyButton } from "@/src/components/shared/copy-button";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountSecuritySkeleton } from "@/src/components/skeletons/account";
+import { AccountPageHeader } from "@/src/components/settings/account-page-header";
+import { MdShield } from "react-icons/md";
 import QRCode from "react-qr-code";
 
 type TwoFASetupData = {
@@ -83,23 +85,16 @@ const normalizeTwoFASetup = (res: unknown): TwoFASetupData => {
   };
 };
 
-const toArray = (value: unknown): SecurityRecord[] => {
-  if (Array.isArray(value)) return value as SecurityRecord[];
-  return [];
-};
-
-const extractPayloadList = (res: any, nestedKey?: string): SecurityRecord[] => {
+const extractPayloadList = (res: any, ...nestedKeys: string[]): SecurityRecord[] => {
   const candidates = [
     res?.data,
     res?.data?.data,
-    nestedKey ? res?.data?.[nestedKey] : undefined,
-    nestedKey ? res?.[nestedKey] : undefined,
+    ...nestedKeys.flatMap((key) => [res?.data?.[key], res?.[key]]),
     res,
   ];
 
   for (const candidate of candidates) {
-    const list = toArray(candidate);
-    if (list.length > 0) return list;
+    if (Array.isArray(candidate)) return candidate as SecurityRecord[];
   }
 
   return [];
@@ -282,41 +277,56 @@ function SecurityPageInner() {
   };
 
   // Sessions
-  const { data: sessions = [], isLoading: sessionsLoading } = useQuery<any, Error, SessionItem[]>({
+  const {
+    data: sessions = [],
+    isLoading: sessionsLoading,
+    isError: sessionsError,
+    refetch: refetchSessions,
+  } = useQuery<any, Error, SessionItem[]>({
     queryKey: userKeys.sessions,
-    queryFn: async () => {
-      try {
-        return await userService.getActiveSessions();
-      } catch (error: any) {
-        const backendMessage = String(
-          error?.response?.data?.error ||
-          error?.response?.data?.message ||
-          error?.message ||
-          ""
-        ).toLowerCase();
-
-        const canFallback =
-          error?.response?.status === 500 &&
-          (backendMessage.includes("unimplemented") || backendMessage.includes("getactivesessions"));
-
-        if (!canFallback) throw error;
-
-        return await userService.getLoginLogs({ page: 1, limit: 5 });
-      }
-    },
+    queryFn: () => userService.getActiveSessions(),
     select: (res: any) => {
-      const rawSessions = extractPayloadList(res, "user_login_log");
-      const isFallbackSource = !Array.isArray(res?.data) && rawSessions.length > 0;
+      const rawSessions = extractPayloadList(
+        res,
+        "sessions",
+        "active_sessions",
+        "activeSessions"
+      );
 
-      return rawSessions.map((session: SecurityRecord, index: number) => ({
-        id: getStringField(session, ["id", "_id", "sessionId", "session_id"]) || `session-${index}`,
-        device: getStringField(session, ["device", "browser", "userAgent", "user_agent"]),
-        ip: getStringField(session, ["ip", "IP"]),
-        location: getStringField(session, ["location", "country", "city"]),
-        lastActive: normalizeDateValue(getDateField(session, ["lastActive", "createdAt", "created_at", "loginAt", "login_at"])),
-        isCurrent: typeof session?.isCurrent === "boolean" ? session.isCurrent : index === 0,
-        canRevoke: !isFallbackSource,
-      }));
+      return rawSessions.map((session: SecurityRecord) => {
+        const id = getStringField(session, [
+          "id",
+          "_id",
+          "sessionId",
+          "session_id",
+          "sessionKey",
+          "session_key",
+        ]);
+        const isCurrent =
+          session?.isCurrent === true || session?.is_current === true;
+
+        return {
+          id,
+          device: getStringField(session, ["device", "browser", "userAgent", "user_agent"]),
+          ip: getStringField(session, ["ip", "IP"]),
+          location: getStringField(session, ["location", "country", "city"]),
+          lastActive: normalizeDateValue(
+            getDateField(session, [
+              "lastActive",
+              "last_active",
+              "createdAt",
+              "created_at",
+              "loginAt",
+              "login_at",
+            ])
+          ),
+          isCurrent,
+          canRevoke:
+            session?.canRevoke === false || session?.can_revoke === false
+              ? false
+              : !isCurrent && Boolean(id),
+        };
+      });
     },
   });
 
@@ -353,11 +363,13 @@ function SecurityPageInner() {
   if (!mounted) return <AccountSecuritySkeleton />;
 
   return (
-    <main className="flex flex-col gap-8 max-[1150px]:gap-4 max-w-4xl max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold">Security</h1>
-        <p className="text-sm text-white/50">Manage your password, 2FA, and active sessions.</p>
-      </div>
+    <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 pb-8 page-enter max-[1150px]:pb-[100px]">
+      <AccountPageHeader
+        title="Security & access"
+        description="Protect your account with strong authentication and monitor where you’re signed in."
+        icon={<MdShield size={23} />}
+        eyebrow="Account protection"
+      />
 
       {/* Card 1 — Two-Factor Authentication (2FA) */}
       <div className="account-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 max-[1150px]:gap-4">
@@ -443,7 +455,10 @@ function SecurityPageInner() {
 
       {/* Card 2 — Change Password */}
       <div className="account-card flex flex-col gap-6 max-[1150px]:gap-4">
-        <h3 className="text-lg font-semibold">Change Password</h3>
+        <div>
+          <h3 className="text-lg font-semibold">Change password</h3>
+          <p className="mt-1 text-sm text-white/45">Use a unique password you don’t use on other sites.</p>
+        </div>
         <div className="flex flex-col gap-5 max-w-md">
           <TextInput
             label="Current Password"
@@ -507,6 +522,17 @@ function SecurityPageInner() {
         <h3 className="text-lg font-semibold">Active Sessions</h3>
         {sessionsLoading ? (
           <div className="flex justify-center py-6"><Loader color="blue" /></div>
+        ) : sessionsError ? (
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-sm text-white/55">Unable to load active sessions.</p>
+            <Button
+              variant="subtle"
+              size="xs"
+              onClick={() => void refetchSessions()}
+            >
+              Retry
+            </Button>
+          </div>
         ) : sessions?.length > 0 ? (
           <div className="flex flex-col gap-4">
             {sessions.map((session: any) => (
@@ -551,11 +577,6 @@ function SecurityPageInner() {
           </div>
         ) : (
           <p className="text-sm text-white/40 italic">No other active sessions</p>
-        )}
-        {sessions.length > 0 && sessions.some((session) => !session.canRevoke) && (
-          <p className="text-xs text-white/40">
-            Active sessions are temporarily being derived from recent login activity because the live session endpoint is unavailable.
-          </p>
         )}
       </div>
 

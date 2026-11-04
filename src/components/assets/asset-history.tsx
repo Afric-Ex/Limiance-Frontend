@@ -23,6 +23,7 @@ import { TransactionDetailsModal } from "@/src/components/transactions/transacti
 import { InfiniteScrollTrigger } from "@/src/components/shared/infinite-scroll-trigger";
 import {
   FilterBar,
+  ResponsiveFilters,
   fmtDateTime,
   fmtNum,
   selectStyles,
@@ -202,6 +203,7 @@ const HistoryTable = ({ tab }: { tab: WalletFlowTab }) => {
 
       {withFilters && (
         <FilterBar>
+          <ResponsiveFilters>
           <div className="flex flex-wrap items-end gap-4">
             <Select
               label="Token"
@@ -241,6 +243,7 @@ const HistoryTable = ({ tab }: { tab: WalletFlowTab }) => {
               </button>
             )}
           </div>
+          </ResponsiveFilters>
         </FilterBar>
       )}
 

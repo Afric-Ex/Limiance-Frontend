@@ -17,6 +17,7 @@ import {
   TableCard,
   tableClassNames,
   ChipToggle,
+  ResponsiveFilters,
 } from "./orders-shared";
 import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 
@@ -59,7 +60,7 @@ export const MarginOrderDetails = () => {
     />
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
-        <div className="flex flex-wrap gap-4 items-end">
+        <ResponsiveFilters>
           <Select
             label="Order"
             data={["Limit / Market"]}
@@ -67,7 +68,7 @@ export const MarginOrderDetails = () => {
             className="w-[150px]"
           />
           <ChipToggle value={filter} options={filters} onChange={setFilter} />
-        </div>
+        </ResponsiveFilters>
         <div className="flex items-center gap-4">
           <TextInput
             classNames={searchInputClass}

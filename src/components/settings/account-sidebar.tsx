@@ -25,11 +25,12 @@ export const AccountSidebar = () => {
   const pathname = usePathname();
 
   return (
-    <div className="flex flex-col gap-1 w-full rounded-2xl border border-white/[0.06] bg-[#181a20] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+    <div className="flex w-full flex-col gap-1.5 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#1a1d25] to-[#13151b] p-3 shadow-[0_16px_40px_rgba(0,0,0,0.22)]">
       {/* Header */}
-      <div className="px-3 pb-4 mb-1 border-b border-white/[0.06]">
-        <h2 className="text-base font-bold text-white">Account</h2>
-        <p className="text-micro text-white/40 mt-1">Manage your account settings</p>
+      <div className="mb-1 border-b border-white/[0.07] px-3 pb-4">
+        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Personal hub</p>
+        <h2 className="text-base font-bold text-white">Account center</h2>
+        <p className="mt-1 text-xs text-white/40">Profile, security & preferences</p>
       </div>
 
       {/* Nav Links */}
@@ -40,7 +41,7 @@ export const AccountSidebar = () => {
             {/* Active accent bar */}
             <span
               className={clsx(
-                "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full transition-all duration-300",
+                "absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-r-full transition-all duration-300",
                 isActive
                   ? "h-6 bg-primary shadow-[0_0_8px_2px_rgba(59,130,246,0.45)]"
                   : "h-0"
@@ -50,9 +51,9 @@ export const AccountSidebar = () => {
               href={item.link}
               aria-current={isActive ? "page" : undefined}
               className={clsx(
-                "group flex items-center justify-between w-full ml-[3px] rounded-xl px-3 py-2.5 transition-all duration-200 text-left",
+                "group ml-[3px] flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition-all duration-200",
                 isActive
-                  ? "bg-white/[0.07] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
+                  ? "bg-primary/[0.12] text-white shadow-[inset_0_0_0_1px_rgba(77,119,240,0.15)]"
                   : "bg-transparent hover:bg-white/[0.04] text-white/45 hover:text-white"
               )}
             >

@@ -5,7 +5,7 @@ import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { readList } from "@/src/lib/api-response";
-import { OrdersEmptyState, TableCard, tableClassNames } from "./orders-shared";
+import { OrdersEmptyState, ResponsiveFilters, TableCard, tableClassNames } from "./orders-shared";
 
 export const ConvertTable = () => {
   const { data: history, isLoading } = useQuery({
@@ -22,7 +22,7 @@ export const ConvertTable = () => {
     <div className="flex flex-col gap-6">
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
-        <div className="flex flex-wrap gap-4 items-end">
+        <ResponsiveFilters>
           <Select
             label="Coin"
             data={["All", "BTC", "USDT"]}
@@ -41,7 +41,7 @@ export const ConvertTable = () => {
             classNames={{ input: "!h-10 !rounded-lg !border-white/[0.09] !bg-elevated !text-white", label: "!text-xs !font-semibold !text-white/45", dropdown: "!bg-elevated !border-white/[0.08]" }}
             className="w-[140px]"
           />
-        </div>
+        </ResponsiveFilters>
 
         <div className="flex items-center gap-4">
           <TextInput

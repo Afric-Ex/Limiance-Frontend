@@ -254,15 +254,23 @@ button {
 
 /* Account surfaces use the same quiet panel language as the dashboard. */
 .account-card {
-  background: #181a20;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: var(--radius-card);
-  padding: 32px;
+  background: linear-gradient(145deg, rgba(28, 31, 40, 0.98), rgba(20, 22, 29, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 20px;
+  padding: 26px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.16);
 }
 
 @media (max-width: 1149px) {
   .account-card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 639px) {
+  .account-card {
     padding: 16px;
+    border-radius: 16px;
   }
 }
 

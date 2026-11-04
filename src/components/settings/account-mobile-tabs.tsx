@@ -13,20 +13,20 @@ import { Wallet } from "@/src/components/icons/wallet";
 
 const accountNavLinks = [
   { name: "Profile", link: "/account/profile", icon: Account },
-  { name: "Verification", link: "/account/kyc", icon: Authorization },
+  { name: "Verification", mobileName: "Verify", link: "/account/kyc", icon: Authorization },
   { name: "Security", link: "/account/security", icon: Secure },
   { name: "API Keys", link: "/account/api-keys", icon: UserKey },
-  { name: "Whitelisted Wallets", link: "/account/whitelisted-wallets", icon: Wallet },
+  { name: "Whitelisted Wallets", mobileName: "Wallets", link: "/account/whitelisted-wallets", icon: Wallet },
   { name: "Settings", link: "/account/settings", icon: Settings },
-  { name: "Payments", link: "/account/payment-methods", icon: BusinessCard },
+  { name: "Payments", mobileName: "Payments", link: "/account/payment-methods", icon: BusinessCard },
 ];
 
 export const AccountMobileTabs = () => {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[9999] min-[1150px]:hidden bg-[#181a20]/90 backdrop-blur-xl border-t border-white/[0.06] pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.4)] pointer-events-auto">
-      <div className="px-4 py-2 flex flex-nowrap justify-start items-center overflow-x-auto no-scrollbar gap-2 w-full">
+    <nav aria-label="Account navigation" className="fixed bottom-0 left-0 right-0 z-[9999] border-t border-white/[0.08] bg-[#111319]/95 pb-safe shadow-[0_-12px_36px_rgba(0,0,0,0.4)] backdrop-blur-xl pointer-events-auto min-[1150px]:hidden">
+      <div className="mx-auto flex w-full max-w-2xl items-center gap-1 overflow-x-auto px-2 py-2 no-scrollbar">
         {accountNavLinks.map((tab) => {
           const isActive = pathname === tab.link || pathname.startsWith(`${tab.link}/`);
           return (
@@ -35,15 +35,15 @@ export const AccountMobileTabs = () => {
               href={tab.link}
               aria-current={isActive ? "page" : undefined}
               className={clsx(
-                "flex flex-none flex-col items-center justify-center gap-1.5 p-2 transition-all min-w-[64px] relative z-10 cursor-pointer active:scale-95 tap-scale rounded-xl touch-manipulation",
-                isActive ? "text-primary bg-primary/10" : "text-white/55 hover:text-white hover:bg-white/5"
+                "relative z-10 flex min-w-[68px] flex-none touch-manipulation flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 transition-all active:scale-95",
+                isActive ? "bg-primary/[0.12] text-[#9bb4ff]" : "text-white/45 hover:bg-white/[0.04] hover:text-white"
               )}
             >
               <div className="relative">
                 <tab.icon width={22} height={22} color={isActive ? "#4d77f0" : undefined} fillOpacity={isActive ? "1" : undefined} />
               </div>
               <span className={clsx("whitespace-nowrap text-2xs", isActive ? "font-bold text-primary" : "font-medium")}>
-                {tab.name}
+                {tab.mobileName ?? tab.name}
               </span>
             </a>
           );

@@ -14,6 +14,7 @@ import {
   StatusPill,
   TableCard,
   tableClassNames,
+  ResponsiveFilters,
 } from "./orders-shared";
 
 export const FiatDeposit = () => {
@@ -33,7 +34,7 @@ export const FiatDeposit = () => {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end gap-3 border-y border-white/[0.08] py-3">
-        <div className="flex flex-wrap items-end gap-3">
+        <ResponsiveFilters>
           <Select
             label="Coin"
             data={["All"]}
@@ -46,7 +47,7 @@ export const FiatDeposit = () => {
             classNames={selectStyles}
             className="w-[130px]"
           />
-        </div>
+        </ResponsiveFilters>
         <div className="flex min-w-0 flex-1 items-end gap-3">
           <TextInput
             classNames={searchInputClass}

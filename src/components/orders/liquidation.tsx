@@ -15,6 +15,7 @@ import {
   TableCard,
   tableClassNames,
   ChipToggle,
+  ResponsiveFilters,
 } from "./orders-shared";
 
 const filters = ["Liquidation Orders", "Liquidation History"];
@@ -33,7 +34,7 @@ export const Liquidation = () => {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
-        <div className="flex flex-wrap gap-4 items-end">
+        <ResponsiveFilters>
           <ChipToggle value={filter} options={filters} onChange={setFilter} />
           <Select
             label="Trading Pair"
@@ -41,7 +42,7 @@ export const Liquidation = () => {
             classNames={selectStyles}
             className="w-[140px]"
           />
-        </div>
+        </ResponsiveFilters>
         <div className="flex items-center gap-4">
           <TextInput
             classNames={searchInputClass}

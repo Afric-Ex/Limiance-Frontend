@@ -12,6 +12,7 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2POrdersSkeleton } from "@/src/components/skeletons/p2p";
 import { useUserStore } from "@/src/stores/user-store";
 import { parseDate } from "@/src/lib/parse-date";
+import { ResponsiveFilters } from "@/src/components/shared/responsive-filters";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "text-[#FBA42A] bg-[#FBA42A]/10 border-[#FBA42A]/20",
@@ -225,21 +226,25 @@ function OrderHistoryPageInner() {
             />
           </div>
 
-          <div className="flex gap-1 p-0.5 bg-white/[0.03] border border-white/[0.07] rounded-lg max-w-full scroll-x-hidden">
-            {["ALL", "Buy", "Sell"].map((t) => (
-              <button
-                key={t}
-                onClick={() => setFilterType(t)}
-                className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                  filterType === t
-                    ? "bg-primary text-white"
-                    : "text-white/50 hover:text-white"
-                }`}
-              >
-                {t === "ALL" ? "All Types" : `${t} Orders`}
-              </button>
-            ))}
-          </div>
+          <ResponsiveFilters>
+            <div className="flex max-w-full gap-1 rounded-lg border border-white/[0.07] bg-white/[0.03] p-0.5 scroll-x-hidden">
+              {["ALL", "Buy", "Sell"].map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={filterType === t}
+                  onClick={() => setFilterType(t)}
+                  className={`shrink-0 whitespace-nowrap rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                    filterType === t
+                      ? "bg-primary text-white"
+                      : "text-white/50 hover:text-white"
+                  }`}
+                >
+                  {t === "ALL" ? "All Types" : `${t} Orders`}
+                </button>
+              ))}
+            </div>
+          </ResponsiveFilters>
         </div>
 
         {/* Orders list */}

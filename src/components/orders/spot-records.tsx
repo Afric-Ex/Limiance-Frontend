@@ -5,7 +5,7 @@ import { useState } from "react";
 import { DateInput } from "@mantine/dates";
 import { useQuery } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
-import { OrdersEmptyState, parseDate } from "./orders-shared";
+import { OrdersEmptyState, parseDate, ResponsiveFilters } from "./orders-shared";
 import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 
 const selectStyles = {
@@ -37,25 +37,27 @@ export const SpotRecords = () => {
         onClose={() => setSelectedTransaction(null)}
       />
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
-        <DateInput label="Date" classNames={dateStyles} className="w-[160px]" />
-        <Select
-          label="Time"
-          data={["Last 7 Days", "Last 30 Days"]}
-          classNames={selectStyles}
-          className="w-[140px]"
-        />
-        <Select
-          label="Coin"
-          data={["All", "BTC", "ETH"]}
-          classNames={selectStyles}
-          className="w-[120px]"
-        />
-        <Select
-          label="Side"
-          data={["All", "Buy", "Sell"]}
-          classNames={selectStyles}
-          className="w-[140px]"
-        />
+        <ResponsiveFilters>
+          <DateInput label="Date" classNames={dateStyles} className="w-[160px]" />
+          <Select
+            label="Time"
+            data={["Last 7 Days", "Last 30 Days"]}
+            classNames={selectStyles}
+            className="w-[140px]"
+          />
+          <Select
+            label="Coin"
+            data={["All", "BTC", "ETH"]}
+            classNames={selectStyles}
+            className="w-[120px]"
+          />
+          <Select
+            label="Side"
+            data={["All", "Buy", "Sell"]}
+            classNames={selectStyles}
+            className="w-[140px]"
+          />
+        </ResponsiveFilters>
       </div>
       <div className="min-h-[260px] overflow-hidden border-y border-white/[0.08] flex flex-col">
         <div className="overflow-x-auto custom-scrollbar flex-1">

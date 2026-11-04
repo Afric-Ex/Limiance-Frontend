@@ -1,9 +1,8 @@
 "use client";
 
-import { Popover, PopoverDropdown, PopoverTarget, Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput, Skeleton } from "@mantine/core";
+import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput, Skeleton } from "@mantine/core";
 import React, { useState } from "react";
 import clsx from "clsx";
-import { MdTune } from "react-icons/md";
 import { Search } from "../icons/search";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
@@ -11,7 +10,7 @@ import { readList } from "@/src/lib/api-response";
 import { cancelMarginOrderWs } from "@/src/lib/order-ws";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
-import { OrdersEmptyState } from "./orders-shared";
+import { OrdersEmptyState, ResponsiveFilters } from "./orders-shared";
 
 const selectStyles = {
   input: "!h-10 !rounded-lg !border !border-white/[0.09] hover:!border-white/[0.16] focus:!border-primary/50 !text-white !bg-elevated !text-sm !font-medium !transition-colors",
@@ -131,23 +130,10 @@ export const MarginOpenOrders = () => {
     <div className="flex flex-col gap-6">
       {/* Top Filter Bar */}
       <div className="flex flex-wrap items-end gap-3 border-y border-white/[0.08] py-3">
-        <div className="hidden min-[768px]:flex flex-wrap items-end gap-3">
+        <ResponsiveFilters>
           {filterControls}
           {modeToggle}
-        </div>
-        <div className="min-[768px]:hidden">
-          <Popover position="bottom-start" shadow="md">
-            <PopoverTarget>
-              <button type="button" className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/[0.09] bg-elevated px-3 text-sm font-semibold text-white/75"><MdTune size={16} />Filters</button>
-            </PopoverTarget>
-            <PopoverDropdown className="!bg-[#181a20] !border-white/[0.08] !p-3">
-              <div className="flex w-[min(320px,calc(100vw-48px))] flex-col gap-3">
-                {filterControls}
-                {modeToggle}
-              </div>
-            </PopoverDropdown>
-          </Popover>
-        </div>
+        </ResponsiveFilters>
         <div className="flex min-w-0 flex-1 items-end gap-3">
             <TextInput
               classNames={{

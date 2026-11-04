@@ -15,6 +15,8 @@ import { MdVisibility, MdVisibilityOff, MdClose } from "react-icons/md";
 import clsx from "clsx";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountApiKeysSkeleton } from "@/src/components/skeletons/account";
+import { AccountPageHeader } from "@/src/components/settings/account-page-header";
+import { MdVpnKey } from "react-icons/md";
 
 const PERMISSIONS = [
   { id: "read",     label: "Read",     desc: "View balances and orders" },
@@ -28,14 +30,48 @@ const permColor: Record<string, string> = {
   withdraw: "bg-warning-1/20 text-warning-1 border border-warning-1/30",
 };
 
+const unwrapPayload = (value: any): any => {
+  let payload = value;
+  for (let depth = 0; depth < 3; depth += 1) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload) || !("data" in payload)) {
+      break;
+    }
+    payload = payload.data;
+  }
+  return payload;
+};
+
+const normalizeApiKeys = (response: any): any[] => {
+  const candidates = [
+    response?.data?.data,
+    response?.data?.api_keys,
+    response?.data?.apiKeys,
+    response?.data,
+    response?.api_keys,
+    response?.apiKeys,
+    response,
+  ];
+  const records = candidates.find(Array.isArray);
+  if (!records) return [];
+
+  return records.map((record: any) => ({
+    ...record,
+    id: record.id ?? record.keyId ?? record.key_id ?? record._id,
+    apiKey: record.apiKey ?? record.api_key ?? record.key,
+    createdAt: record.createdAt ?? record.created_at,
+    lastUsed: record.lastUsed ?? record.last_used,
+    permissions: Array.isArray(record.permissions) ? record.permissions : [],
+  }));
+};
+
 function ApiKeysPageInner() {
   const queryClient = useQueryClient();
 
   // Queries
-  const { data: apiKeys, isLoading } = useQuery({
+  const { data: apiKeys = [], isLoading, isError, refetch } = useQuery({
     queryKey: userKeys.apiKeys,
     queryFn: () => userService.listApiKeys(),
-    select: (res: any) => res.data ?? [],
+    select: normalizeApiKeys,
   });
 
   // Create key state
@@ -69,10 +105,10 @@ function ApiKeysPageInner() {
   const { mutate: createKey, isPending: createLoading } = useMutation({
     mutationFn: () => userService.createApiKey({ label, permissions: selectedPerms }),
     onSuccess: (res: any) => {
-      const data = res.data ?? res;
+      const data = unwrapPayload(res);
       setNewKey({
-        apiKey: data.apiKey ?? data.key ?? data.api_key ?? "—",
-        secretKey: data.secretKey ?? data.secret ?? data.secret_key ?? "—",
+        apiKey: data?.apiKey ?? data?.api_key ?? data?.key ?? data?.fullKey ?? "—",
+        secretKey: data?.secretKey ?? data?.secret_key ?? data?.secret ?? "—",
         label,
       });
       setLabel(""); setSelectedPerms([]); setConfirmedCopy(false); setSecretVisible(false);
@@ -106,21 +142,23 @@ function ApiKeysPageInner() {
   };
 
   return (
-    <main className="flex flex-col gap-8 max-[1150px]:gap-4 max-w-5xl max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter">
-      {/* Header */}
-      <div className="flex flex-col min-[1150px]:flex-row min-[1150px]:items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold">API Management</h1>
-          <p className="text-sm text-white/50">Create and manage API keys for programmatic access.</p>
-        </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-5 py-3 bg-primary rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all active:scale-[0.98] shrink-0"
-        >
-          <Add />
-          Create API Key
-        </button>
-      </div>
+    <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 pb-8 page-enter max-[1150px]:pb-[100px]">
+      <AccountPageHeader
+        title="API access"
+        description="Create and manage keys for trusted applications and trading tools."
+        icon={<MdVpnKey size={22} />}
+        eyebrow="Developer access"
+        action={
+          <button
+            type="button"
+            onClick={openCreate}
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(77,119,240,0.2)] transition-all hover:bg-primary/90 active:scale-[0.98]"
+          >
+            <Add />
+            Create API key
+          </button>
+        }
+      />
 
       {/* Info Banner */}
       {!bannerDismissed && (
@@ -135,9 +173,20 @@ function ApiKeysPageInner() {
       )}
 
       {/* Keys Table */}
-      <div className="account-card !p-0 overflow-hidden">
+      <div className="account-card !overflow-hidden !p-0">
         {isLoading ? (
           <div className="flex justify-center py-16"><Loader color="blue" /></div>
+        ) : isError ? (
+          <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+            <p className="text-sm text-white/60">Unable to load API keys.</p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="rounded-lg border border-white/15 px-4 py-2 text-sm text-white/80 transition-colors hover:bg-white/[0.05]"
+            >
+              Retry
+            </button>
+          </div>
         ) : apiKeys?.length > 0 ? (
           <div className="overflow-x-auto">
             <Table classNames={{ th: "!text-white/50 !text-xs !font-semibold !py-4 !px-5 !bg-black/20", td: "!py-4 !px-5 !border-b !border-white/[0.04]" }}>
@@ -149,8 +198,8 @@ function ApiKeysPageInner() {
                 <TableTh>Last Used</TableTh>
                 <TableTh>Action</TableTh>
               </TableTr>
-              {apiKeys.map((k: any) => (
-                <TableTr key={k.id} className="hover:bg-white/[0.02] transition-colors">
+              {apiKeys.map((k: any, index: number) => (
+                <TableTr key={k.id ?? `${k.apiKey ?? "api-key"}-${index}`} className="hover:bg-white/[0.02] transition-colors">
                   <TableTd><span className="font-medium text-sm">{k.label}</span></TableTd>
                   <TableTd>
                     <span className="font-mono text-xs text-white/60">
@@ -173,13 +222,13 @@ function ApiKeysPageInner() {
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-white/60 whitespace-nowrap">Sure?</span>
                         <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-white/50 hover:text-white px-2 py-1 rounded border border-white/20 hover:border-white/40 transition-all">Cancel</button>
-                        <button onClick={() => deleteKey(k.id)} disabled={deleteLoading} className="text-xs text-error-1 px-2 py-1 rounded border border-error-1/40 hover:bg-error-1/10 transition-all flex items-center gap-1">
+                        <button onClick={() => deleteKey(k.id)} disabled={deleteLoading || !k.id} className="text-xs text-error-1 px-2 py-1 rounded border border-error-1/40 hover:bg-error-1/10 transition-all flex items-center gap-1">
                           {deleteLoading && <Loader size={10} />}
                           Confirm
                         </button>
                       </div>
                     ) : (
-                      <button onClick={() => setDeleteConfirmId(k.id)} className="p-2 text-white/40 hover:text-error-1 transition-colors rounded-lg hover:bg-error-1/10">
+                      <button onClick={() => setDeleteConfirmId(k.id)} disabled={!k.id} aria-label={`Delete ${k.label ?? "API key"}`} className="p-2 text-white/40 hover:text-error-1 transition-colors rounded-lg hover:bg-error-1/10 disabled:cursor-not-allowed disabled:opacity-30">
                         <Trash />
                       </button>
                     )}

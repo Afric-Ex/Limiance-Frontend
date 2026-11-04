@@ -18,6 +18,7 @@ import {
   StatusPill,
   TableCard,
   tableClassNames,
+  ResponsiveFilters,
 } from "./orders-shared";
 
 export const OrderHistory = () => {
@@ -66,6 +67,24 @@ export const OrderHistory = () => {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
+        <ResponsiveFilters>
+          <Select
+            aria-label="Filter order history by side"
+            data={["All", "Buy", "Sell"]}
+            value={side}
+            onChange={(value) => setSide(value ?? "All")}
+            classNames={selectStyles}
+            className="w-[116px] shrink-0"
+          />
+          <Select
+            aria-label="Filter order history by status"
+            data={["All", "Filled", "Cancelled", "Expired", "Rejected"]}
+            value={status}
+            onChange={(value) => setStatus(value ?? "All")}
+            classNames={selectStyles}
+            className="w-[132px] shrink-0"
+          />
+        </ResponsiveFilters>
         <TextInput
           aria-label="Search order history by pair"
           classNames={searchInputClass}
@@ -74,22 +93,6 @@ export const OrderHistory = () => {
           leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
           onChange={(event) => setQuery(event.currentTarget.value)}
           className="min-w-[180px] flex-1"
-        />
-        <Select
-          aria-label="Filter order history by side"
-          data={["All", "Buy", "Sell"]}
-          value={side}
-          onChange={(value) => setSide(value ?? "All")}
-          classNames={selectStyles}
-          className="w-[116px] shrink-0"
-        />
-        <Select
-          aria-label="Filter order history by status"
-          data={["All", "Filled", "Cancelled", "Expired", "Rejected"]}
-          value={status}
-          onChange={(value) => setStatus(value ?? "All")}
-          classNames={selectStyles}
-          className="w-[132px] shrink-0"
         />
         {(query || side !== "All" || status !== "All") && (
           <button

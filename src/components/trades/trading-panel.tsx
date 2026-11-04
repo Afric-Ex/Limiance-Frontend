@@ -28,6 +28,7 @@ import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { MarginBorrowRepayModal } from "@/src/components/trades/margin-borrow-repay-modal";
 import { MarginTransferModal } from "@/src/components/trades/margin-transfer-modal";
+import { ResponsiveFilters } from "@/src/components/shared/responsive-filters";
 import clsx from "clsx";
 import { MdMoreVert, MdCalculate, MdInfo, MdContentCopy } from "react-icons/md";
 
@@ -476,6 +477,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
       {/* Filters Bar */}
       {(activeMainTab === "open_orders" || activeMainTab === "positions" || activeMainTab === "order_history") && (
         <div className="flex items-center gap-3 px-4 py-2 border-b border-white/[0.06] shrink-0">
+          <ResponsiveFilters>
           <select
             value={selectedMarket}
             onChange={(e) => {
@@ -521,6 +523,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
               <option value="REJECTED">Rejected</option>
             </select>
           )}
+          </ResponsiveFilters>
 
           {activeMainTab === "open_orders" && openOrderCount > 0 && (
             <button
