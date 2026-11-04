@@ -81,7 +81,7 @@ export const WalletCard = ({
 
   const pnlDisplay = (pnl >= 0 ? "+" : "") + pnl.toFixed(2);
   const pnlPctDisplay = (pnlPct >= 0 ? "+" : "") + pnlPct.toFixed(2) + "%";
-  const isPnlUp = pnl >= 0;
+  const isPnlUp = pnlPct >= 0;
 
   const balance = { inUsd: totalUsd, inBtc: totalBtc };
 

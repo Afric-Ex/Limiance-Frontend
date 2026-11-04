@@ -32,8 +32,8 @@ export const FiatDeposit = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
-        <div className="flex flex-wrap gap-4 items-end">
+      <div className="flex flex-wrap items-end gap-3 border-y border-white/[0.08] py-3">
+        <div className="flex flex-wrap items-end gap-3">
           <Select
             label="Coin"
             data={["All"]}
@@ -47,12 +47,13 @@ export const FiatDeposit = () => {
             className="w-[130px]"
           />
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 flex-1 items-end gap-3">
           <TextInput
             classNames={searchInputClass}
             placeholder="Search order no."
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
             onChange={(e) => setQuery(e.currentTarget.value)}
+            className="min-w-[220px] flex-1"
           />
           <button
             className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"

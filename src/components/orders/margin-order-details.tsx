@@ -13,16 +13,19 @@ import {
   selectStyles,
   searchInputClass,
   sideTone,
+  StatusPill,
   TableCard,
   tableClassNames,
   ChipToggle,
 } from "./orders-shared";
+import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 
 const filters = ["Cross", "Isolated"];
 
 export const MarginOrderDetails = () => {
   const [filter, setFilter] = useState("Cross");
   const [pair, setPair] = useState("");
+  const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
 
   const { data: records, isLoading } = useQuery({
     queryKey: tradingKeys.marginOrderHistory,
@@ -36,9 +39,24 @@ export const MarginOrderDetails = () => {
     : allRecords;
 
   const fee = (r: any) =>
-    r.fee ?? r.commission ?? (r.feeAmount !== undefined ? r.feeAmount : null);
+    [r.cumExecFee, r.fillFee, r.fee, r.commission, r.feeAmount].find(
+      (value) => value !== null && value !== undefined && value !== ""
+    );
+  const filled = (r: any) =>
+    [r.cumExecQty, r.filled, r.filledQuantity].find(
+      (value) => value !== null && value !== undefined && value !== ""
+    );
+  const total = (r: any) =>
+    [r.cumExecValue, r.total].find(
+      (value) => value !== null && value !== undefined && value !== ""
+    ) ?? (r.price && r.quantity ? r.price * r.quantity : null);
 
   return (
+    <>
+    <TransactionDetailsModal
+      transaction={selectedRecord}
+      onClose={() => setSelectedRecord(null)}
+    />
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
         <div className="flex flex-wrap gap-4 items-end">
@@ -67,33 +85,42 @@ export const MarginOrderDetails = () => {
       </div>
 
       <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No margin trade records found.">
-        <Table classNames={tableClassNames}>
+        <Table classNames={{ ...tableClassNames, table: "!min-w-[1120px] !table-fixed" }}>
           <TableThead>
             <TableTr>
-              <TableTh className="pl-5">Date</TableTh>
-              <TableTh>Trading Pair</TableTh>
-              <TableTh>Side</TableTh>
-              <TableTh>Price</TableTh>
-              <TableTh>Filled</TableTh>
-              <TableTh>Fee</TableTh>
-              <TableTh>Total</TableTh>
+              <TableTh className="w-[18%] pl-5">Date</TableTh>
+              <TableTh className="w-[14%]">Trading Pair</TableTh>
+              <TableTh className="w-[9%]">Side</TableTh>
+              <TableTh className="w-[13%] text-right">Price</TableTh>
+              <TableTh className="w-[12%] text-right">Filled</TableTh>
+              <TableTh className="w-[12%] text-right">Fee</TableTh>
+              <TableTh className="w-[13%] text-right">Total</TableTh>
+              <TableTh className="w-[9%]">Status</TableTh>
             </TableTr>
           </TableThead>
           <TableTbody>
             {filtered.map((r: any) => (
-              <TableTr key={r.id}>
+              <TableTr
+                key={r.id}
+                onClick={() => setSelectedRecord(r)}
+                className="cursor-pointer"
+              >
                 <TableTd className="pl-5 text-white/50">{fmtDate(r.createdAt)}</TableTd>
                 <TableTd className="!text-white !font-bold">{getPair(r)}</TableTd>
                 <TableTd className={sideTone(r.side)}>{String(r.side ?? "—").toUpperCase()}</TableTd>
-                <TableTd>{fmtNum(r.price)}</TableTd>
-                <TableTd>{fmtNum(r.filled ?? getAmount(r))}</TableTd>
-                <TableTd>{fmtNum(fee(r))}</TableTd>
-                <TableTd>{fmtNum(r.total ?? (r.price && r.quantity ? r.price * r.quantity : null))}</TableTd>
+                <TableTd className="whitespace-nowrap text-right font-mono tabular-nums">{fmtNum(r.price)}</TableTd>
+                <TableTd className="whitespace-nowrap text-right font-mono tabular-nums">{fmtNum(filled(r) ?? getAmount(r))}</TableTd>
+                <TableTd className="whitespace-nowrap text-right font-mono tabular-nums">
+                  {fmtNum(fee(r))} <span className="text-white/40">{r.feeCurrency || r.quote || ""}</span>
+                </TableTd>
+                <TableTd className="whitespace-nowrap text-right font-mono tabular-nums">{fmtNum(total(r))}</TableTd>
+                <TableTd><StatusPill status={r.orderStatus ?? r.status} /></TableTd>
               </TableTr>
             ))}
           </TableTbody>
         </Table>
       </TableCard>
     </div>
+    </>
   );
 };

@@ -259,6 +259,7 @@ export const EarnTab = ({
       <Modal
         opened={stakeOpen}
         onClose={closeStake}
+        centered
         classNames={{ content: "!bg-gray-7", header: "!bg-gray-7" }}
         withCloseButton={false}
       >
