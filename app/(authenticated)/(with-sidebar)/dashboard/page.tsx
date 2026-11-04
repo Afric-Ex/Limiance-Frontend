@@ -454,13 +454,13 @@ function DashboardInner() {
               >
                 <thead>
                   <TableTr>
-                    <TableTh className="!w-[31%] max-[768px]:!w-[37%] !text-white/40 uppercase tracking-wider text-2xs !pl-4 max-[768px]:!pl-2 !pr-1">Coin</TableTh>
-                    <TableTh className="!w-[22%] max-[768px]:!w-[24%] !text-white/40 uppercase tracking-wider text-2xs !px-1 max-[768px]:!text-right">Price</TableTh>
-                    <TableTh className="!w-[23%] max-[768px]:!w-[25%] !text-white/40 uppercase tracking-wider text-2xs !px-1 max-[768px]:!text-right">
+                    <TableTh className="!w-[31%] max-[768px]:!w-[25%] !text-white/40 uppercase tracking-wider text-2xs !pl-4 max-[768px]:!pl-2 !pr-1">Coin</TableTh>
+                    <TableTh className="!w-[22%] max-[768px]:!w-[27%] !text-white/40 uppercase tracking-wider text-2xs !px-1 max-[768px]:!text-right">Price</TableTh>
+                    <TableTh className="!w-[23%] max-[768px]:!w-[28%] !text-white/40 uppercase tracking-wider text-2xs !px-1 max-[768px]:!text-right">
                       <span>{item === "Holding" ? "Balance" : "24h Volume"}</span>
                     </TableTh>
                     <TableTh className="!w-[12%] !text-white/40 uppercase tracking-wider text-2xs max-[768px]:hidden">24h Change</TableTh>
-                    <TableTh className="!w-[12%] max-[768px]:!w-[14%] !text-white/40 uppercase tracking-wider text-2xs !text-right !pr-3 max-[768px]:!pr-2">Action</TableTh>
+                    <TableTh className="!w-[12%] max-[768px]:!w-[20%] !text-white/40 uppercase tracking-wider text-2xs !text-right !pr-3 max-[768px]:!pr-2">Action</TableTh>
                   </TableTr>
                 </thead>
                 <tbody>

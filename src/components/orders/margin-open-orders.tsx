@@ -1,11 +1,13 @@
 "use client";
 
-import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput, Skeleton } from "@mantine/core";
+import { Popover, PopoverDropdown, PopoverTarget, Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput, Skeleton } from "@mantine/core";
 import React, { useState } from "react";
 import clsx from "clsx";
+import { MdTune } from "react-icons/md";
 import { Search } from "../icons/search";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { readList } from "@/src/lib/api-response";
 import { cancelMarginOrderWs } from "@/src/lib/order-ws";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -63,12 +65,18 @@ const getOrderLevels = (order: any) => {
 
 export const MarginOpenOrders = () => {
   const [filter, setFilter] = useState("Cross");
+  const [orderType, setOrderType] = useState("All");
+  const [baseAsset, setBaseAsset] = useState("All");
+  const [quoteAsset, setQuoteAsset] = useState("All");
+  const [tradeSide, setTradeSide] = useState("All");
+  const [pairSearch, setPairSearch] = useState("");
   const queryClient = useQueryClient();
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: tradingKeys.marginOpenOrders,
     queryFn: () =>
       tradingService.fetchMarginOpenOrders(),
+    select: (res: unknown) => readList<Record<string, any>>(res),
   });
 
   const { mutate: cancelOrder } = useMutation({
@@ -82,68 +90,76 @@ export const MarginOpenOrders = () => {
     onError: (e: any) => errorMessageHandler(e),
   });
 
-  const hasOrders = orders && orders.length > 0;
+  const filteredOrders = orders.filter((order: any) => {
+    const symbol = getOrderSymbol(order);
+    const [pairBase = "", pairQuote = ""] = symbol.includes("/")
+      ? symbol.split("/")
+      : [String(order.base ?? ""), String(order.quote ?? "")];
+    const type = String(order.orderType ?? order.order_type ?? order.type ?? "").toLowerCase();
+    const side = String(order.side ?? order.order_side ?? "").toLowerCase();
+    const mode = String(order.marginMode ?? order.margin_mode ?? order.tradeMode ?? "").toLowerCase();
+    if (orderType !== "All" && !type.includes(orderType.toLowerCase())) return false;
+    if (baseAsset !== "All" && pairBase.toUpperCase() !== baseAsset) return false;
+    if (quoteAsset !== "All" && pairQuote.toUpperCase() !== quoteAsset) return false;
+    if (tradeSide !== "All" && side !== tradeSide.toLowerCase()) return false;
+    if (pairSearch && !symbol.toUpperCase().includes(pairSearch.toUpperCase())) return false;
+    if (mode && mode !== filter.toLowerCase()) return false;
+    return true;
+  });
+  const hasOrders = filteredOrders.length > 0;
+
+  const filterControls = (
+    <>
+      <Select label="Order Type" data={["All", "Limit", "Market", "Stop Loss", "Take Profit"]} value={orderType} onChange={(value) => setOrderType(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[140px]" />
+      <Select label="Base Asset" data={["All", "BTC", "ETH"]} value={baseAsset} onChange={(value) => setBaseAsset(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[120px]" />
+      <Select label="Quote Asset" data={["All", "USDT", "USDC"]} value={quoteAsset} onChange={(value) => setQuoteAsset(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[120px]" />
+      <Select label="Trade Side" data={["All", "Buy", "Sell"]} value={tradeSide} onChange={(value) => setTradeSide(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[120px]" />
+    </>
+  );
+
+  const modeToggle = (
+    <div className="flex shrink-0 self-end rounded-lg border border-white/[0.06] bg-white/[0.04] p-1">
+      {filters.map((item) => (
+        <button key={item} type="button" onClick={() => setFilter(item)} className={clsx("rounded-md px-4 py-1.5 text-xs font-semibold transition-colors", filter === item ? "bg-primary text-white" : "text-white/50 hover:bg-white/[0.04] hover:text-white")}>
+          {item}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-6">
       {/* Top Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
-        <div className="flex flex-wrap gap-4 items-end">
-          <Select
-            label="Order Type"
-            data={["Limit", "Market", "Stop Loss", "Take Profit"]}
-            classNames={selectStyles}
-            className="w-[140px]"
-          />
-          <Select
-            label="Base Asset"
-            data={["All", "BTC", "ETH"]}
-            classNames={selectStyles}
-            className="w-[120px]"
-          />
-          <span className="text-white/40 mb-1 font-bold">-</span>
-          <Select
-            label="Quote Asset"
-            data={["All", "USDT", "USDC"]}
-            classNames={selectStyles}
-            className="w-[120px]"
-          />
-          <Select
-            label="Trade Side"
-            data={["All", "Buy", "Sell"]}
-            classNames={selectStyles}
-            className="w-[120px]"
-          />
+      <div className="flex flex-wrap items-end gap-3 border-y border-white/[0.08] py-3">
+        <div className="hidden min-[768px]:flex flex-wrap items-end gap-3">
+          {filterControls}
+          {modeToggle}
         </div>
-
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-4">
+        <div className="min-[768px]:hidden">
+          <Popover position="bottom-start" shadow="md">
+            <PopoverTarget>
+              <button type="button" className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/[0.09] bg-elevated px-3 text-sm font-semibold text-white/75"><MdTune size={16} />Filters</button>
+            </PopoverTarget>
+            <PopoverDropdown className="!bg-[#181a20] !border-white/[0.08] !p-3">
+              <div className="flex w-[min(320px,calc(100vw-48px))] flex-col gap-3">
+                {filterControls}
+                {modeToggle}
+              </div>
+            </PopoverDropdown>
+          </Popover>
+        </div>
+        <div className="flex min-w-0 flex-1 items-end gap-3">
             <TextInput
               classNames={{
                 input: "!h-11 !bg-white/[0.04] hover:!bg-white/[0.06] focus:!bg-white/[0.08] !border !border-white/[0.08] focus:!border-primary/50 focus:!shadow-[0_0_10px_rgba(77,119,240,0.12)] !w-full sm:!w-[280px] !rounded-xl !transition-all placeholder:!text-white/20",
               }}
               placeholder="Search pair..."
               leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
+              value={pairSearch}
+              onChange={(event) => setPairSearch(event.currentTarget.value)}
+              className="min-w-0 flex-1"
             />
-            <button className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2">Reset</button>
-          </div>
-          
-          <div className="flex self-end bg-white/[0.04] p-1 rounded-lg border border-white/[0.06]">
-            {filters.map((item) => (
-              <button
-                key={item}
-                onClick={() => setFilter(item)}
-                className={clsx(
-                  "py-1.5 px-5 text-sm font-semibold rounded-md transition-all",
-                  filter === item
-                    ? "bg-primary text-white shadow-md cursor-default pointer-events-none"
-                    : "text-white/50 hover:text-white hover:bg-white/[0.04]"
-                )}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
+            <button type="button" className="h-10 shrink-0 px-2 text-sm font-semibold text-white/40 hover:text-white transition-colors" onClick={() => { setOrderType("All"); setBaseAsset("All"); setQuoteAsset("All"); setTradeSide("All"); setPairSearch(""); setFilter("Cross"); }}>Reset</button>
         </div>
       </div>
 
@@ -179,7 +195,7 @@ export const MarginOpenOrders = () => {
                 </TableTr>
               </TableThead>
               <TableTbody>
-                {orders.map((order: any, index: number) => {
+                {filteredOrders.map((order: any, index: number) => {
                   const orderId = getOrderId(order);
                   const levels = getOrderLevels(order);
                   const side = String(order.side ?? order.order_side ?? "").toUpperCase();
