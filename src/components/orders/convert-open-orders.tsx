@@ -10,6 +10,7 @@ import {
   StatusPill,
   TableCard,
   tableClassNames,
+  ResponsiveFilters,
 } from "./orders-shared";
 
 const TERMINAL = new Set(["completed", "success", "successful", "filled", "cancelled", "canceled", "rejected", "failed", "expired"]);
@@ -27,12 +28,14 @@ export const ConvertOpenOrders = () => {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
-        <Select
-          label="Wallet"
-          data={["All", "Spot", "Funding"]}
-          classNames={selectStyles}
-          className="w-[140px]"
-        />
+        <ResponsiveFilters>
+          <Select
+            label="Wallet"
+            data={["All", "Spot", "Funding"]}
+            classNames={selectStyles}
+            className="w-[140px]"
+          />
+        </ResponsiveFilters>
       </div>
 
       <TableCard loading={isLoading} hasData={openRecords.length > 0} emptyTitle="No open conversions right now.">

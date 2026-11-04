@@ -25,6 +25,8 @@ import {
   truncateWhitelistAddress,
   type WhitelistedAddress,
 } from "@/src/lib/whitelist";
+import { AccountPageHeader } from "@/src/components/settings/account-page-header";
+import { MdOutlineAccountBalanceWallet } from "react-icons/md";
 
 function toChainList(value: unknown): any[] {
   if (Array.isArray(value)) return value;
@@ -126,46 +128,60 @@ export default function WhitelistedWalletsPage() {
   const addresses = whitelistQuery.data ?? [];
 
   return (
-    <main className="flex flex-col gap-6 max-[1150px]:pb-[90px] page-enter">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Whitelisted Wallets</h1>
-          <p className="mt-1 text-sm text-white/45">
-            Manage wallet addresses approved for withdrawals.
-          </p>
-        </div>
-        <Button onClick={openModal} disabled={!selectedChain}>
-          Add whitelisted account
-        </Button>
-      </header>
-
-      <section className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 max-[640px]:p-4">
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-          <Select
-            label="Network"
-            placeholder={chainsQuery.isLoading ? "Loading networks..." : "Select network"}
-            data={networks.map(({ chain, label }) => ({ value: chain, label }))}
-            value={selectedChain}
-            onChange={setSelectedChain}
-            searchable
-            disabled={chainsQuery.isLoading || chainsQuery.isError || !networks.length}
-            className="w-full max-w-sm"
-            classNames={{
-              label: "!mb-2 !text-xs !font-semibold !text-white/50",
-              input: "!border-white/[0.08] !bg-white/[0.03] !text-white",
-              dropdown: "!border-white/[0.08] !bg-[#181a20]",
-              option: "!text-white hover:!bg-white/[0.06]",
-            }}
-          />
-          <ActionIcon
-            variant="subtle"
-            aria-label="Refresh whitelisted wallets"
-            onClick={() => void whitelistQuery.refetch()}
-            disabled={!selectedChain || whitelistQuery.isFetching}
-            className="!text-white/55 hover:!text-white"
+    <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 pb-8 page-enter max-[1150px]:pb-[100px]">
+      <AccountPageHeader
+        title="Withdrawal addresses"
+        description="Manage approved crypto addresses and networks for secure withdrawals."
+        icon={<MdOutlineAccountBalanceWallet size={23} />}
+        eyebrow="Withdrawal security"
+        action={
+          <Button
+            onClick={openModal}
+            disabled={!selectedChain}
+            className="!rounded-xl !bg-primary !px-5 !py-3 !text-sm !font-semibold hover:!bg-primary/90"
           >
-            <FiRefreshCw className={whitelistQuery.isFetching ? "animate-spin" : ""} />
-          </ActionIcon>
+            Add wallet address
+          </Button>
+        }
+      />
+
+      <section className="account-card !p-4 sm:!p-6">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-white/[0.07] pb-5">
+          <div>
+            <h2 className="text-base font-semibold text-white">Approved addresses</h2>
+            <p className="mt-1 text-xs text-white/45">
+              {whitelistQuery.isLoading
+                ? "Loading addresses..."
+                : `${addresses.length} ${addresses.length === 1 ? "address" : "addresses"} on ${activeNetwork?.label ?? "selected network"}`}
+            </p>
+          </div>
+          <div className="flex items-end gap-2">
+            <Select
+              label="Network"
+              placeholder={chainsQuery.isLoading ? "Loading networks..." : "Select network"}
+              data={networks.map(({ chain, label }) => ({ value: chain, label }))}
+              value={selectedChain}
+              onChange={setSelectedChain}
+              searchable
+              disabled={chainsQuery.isLoading || chainsQuery.isError || !networks.length}
+              className="w-full max-w-sm"
+              classNames={{
+                label: "!mb-2 !text-xs !font-semibold !text-white/50",
+                input: "!border-white/[0.08] !bg-white/[0.03] !text-white",
+                dropdown: "!border-white/[0.08] !bg-[#181a20]",
+                option: "!text-white hover:!bg-white/[0.06]",
+              }}
+            />
+            <ActionIcon
+              variant="subtle"
+              aria-label="Refresh whitelisted wallets"
+              onClick={() => void whitelistQuery.refetch()}
+              disabled={!selectedChain || whitelistQuery.isFetching}
+              className="!text-white/55 hover:!text-white"
+            >
+              <FiRefreshCw className={whitelistQuery.isFetching ? "animate-spin" : ""} />
+            </ActionIcon>
+          </div>
         </div>
 
         {chainsQuery.isError ? (
@@ -208,7 +224,7 @@ export default function WhitelistedWalletsPage() {
           <div className="overflow-x-auto">
             <Table classNames={{
               table: "min-w-[680px]",
-              th: "!border-b !border-white/[0.06] !bg-[#181a20] !py-3 !text-2xs !font-bold !uppercase !tracking-wider !text-white/40",
+              th: "!border-b !border-white/[0.06] !bg-transparent !py-3 !text-2xs !font-bold !uppercase !tracking-wider !text-white/40",
               td: "!border-b !border-white/[0.04] !py-4 !text-sm !text-white/75",
             }}>
               <TableThead>
@@ -224,9 +240,9 @@ export default function WhitelistedWalletsPage() {
               <TableTbody>
                 {addresses.length ? addresses.map((entry, index) => (
                   <TableTr key={`${entry.address}-${index}`}>
-                    <TableTd>{entry.name || "—"}</TableTd>
+                    <TableTd className="!font-medium !text-white">{entry.name || "—"}</TableTd>
                     <TableTd>
-                      <span title={entry.address} className="font-mono">
+                      <span title={entry.address} className="font-mono text-xs text-white/65">
                         {truncateWhitelistAddress(entry.address)}
                       </span>
                     </TableTd>

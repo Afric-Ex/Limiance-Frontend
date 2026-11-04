@@ -37,15 +37,15 @@ export const SettingsItemContainer = ({
   isGroup?: boolean;
 }) => {
   return (
-    <div className="bg-[#181a20] border border-white/[0.06] rounded-2xl overflow-hidden transition-colors duration-300 hover:border-white/[0.12]">
+    <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-br from-[#1a1d25] to-[#14161c] shadow-[0_12px_36px_rgba(0,0,0,0.16)] transition-colors duration-300 hover:border-white/[0.12]">
       {isGroup ? (
-        <div className="divide-y divide-white/[0.06]">
+        <div className="divide-y divide-white/[0.07]">
           {React.Children.map(children, (child) => (
-            <div className="p-6 max-[1150px]:p-4">{child}</div>
+            <div className="p-6 max-[1150px]:p-5 max-[640px]:p-4">{child}</div>
           ))}
         </div>
       ) : (
-        <div className="p-6 max-[1150px]:p-4">{children}</div>
+        <div className="p-6 max-[1150px]:p-5 max-[640px]:p-4">{children}</div>
       )}
     </div>
   );
@@ -61,19 +61,26 @@ const Setting = ({
   modal,
 }: Props) => {
   return (
-    <div className="flex justify-between items-center gap-7 max-[1150px]:flex-col max-[1150px]:items-start max-[1150px]:gap-4">
-      <div className="flex flex-col gap-4 max-[1150px]:gap-2">
-        <h2 className="text-base font-bold text-white/90">{title}</h2>
-        <p className={clsx(descMaxWidth, "text-sm text-white/55 max-[1150px]:max-w-full")}>
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(150px,auto)_auto] items-center gap-x-8 gap-y-4 max-[900px]:grid-cols-[minmax(0,1fr)_auto] max-[900px]:gap-x-5 max-[640px]:grid-cols-1 max-[640px]:gap-3">
+      <div className="flex min-w-0 flex-col gap-2">
+        <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-white/95">{title}</h2>
+        <p className={clsx(descMaxWidth, "text-[13px] leading-5 text-white/50 max-[1150px]:max-w-full")}>
           {description}
         </p>
       </div>
-      <div className="flex items-center gap-7 max-[1150px]:w-full max-[1150px]:justify-between max-[1150px]:gap-4">
-        {rightSection}
+      <div className="flex min-w-0 items-center justify-start max-[640px]:order-2">
+        {rightSection && (
+          <div className="max-w-[280px] text-sm font-medium leading-5 text-white/75 max-[640px]:max-w-full">
+            {rightSection}
+          </div>
+        )}
+      </div>
+      <div className="flex items-center justify-end max-[640px]:order-3 max-[640px]:justify-start">
         <Button
           variant="primary"
           size="small"
-          className="shrink-0"
+          className="min-w-[76px] shrink-0"
+          aria-label={`${buttonText} ${title}`}
           onClick={() =>
             modals.open({
               children: (

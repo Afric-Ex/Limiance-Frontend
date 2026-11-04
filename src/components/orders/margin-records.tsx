@@ -16,6 +16,7 @@ import {
   TableCard,
   tableClassNames,
   ChipToggle,
+  ResponsiveFilters,
 } from "./orders-shared";
 
 const filters = ["Cross", "Isolated"];
@@ -43,7 +44,9 @@ export const MarginRecords = () => {
         onClose={() => setSelectedTransaction(null)}
       />
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
-        <ChipToggle value={filter} options={filters} onChange={setFilter} />
+        <ResponsiveFilters>
+          <ChipToggle value={filter} options={filters} onChange={setFilter} />
+        </ResponsiveFilters>
         <div className="flex items-center gap-4">
           <TextInput
             classNames={searchInputClass}

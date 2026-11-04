@@ -18,6 +18,7 @@ import { useUserStore } from "@/src/stores/user-store";
 import { getKycAccessToken, isKycApproved } from "@/src/lib/normalize-kyc-status";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountKycSkeleton } from "@/src/components/skeletons/account";
+import { AccountPageHeader } from "@/src/components/settings/account-page-header";
 
 function KycPageInner() {
   const queryClient = useQueryClient();
@@ -116,8 +117,16 @@ function KycPageInner() {
 
   if (isLoading) {
     return (
-      <main className="flex justify-center py-20">
-        <Loader color="blue" />
+      <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 pb-8 page-enter max-[1150px]:pb-[100px]">
+        <AccountPageHeader
+          title="Identity verification"
+          description="Complete verification to unlock more of Limiance and keep your account protected."
+          icon={<MdShield size={23} />}
+          eyebrow="Verification"
+        />
+        <div className="account-card flex min-h-56 items-center justify-center">
+          <Loader color="blue" />
+        </div>
       </main>
     );
   }
@@ -160,7 +169,14 @@ function KycPageInner() {
   if (!mounted) return <AccountKycSkeleton />;
 
   return (
-    <main className="flex flex-col gap-6 max-w-2xl mx-auto w-full">
+    <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 pb-8 page-enter max-[1150px]:pb-[100px]">
+      <AccountPageHeader
+        title="Identity verification"
+        description="Verify your identity to unlock higher limits, more trading features, and a safer account."
+        icon={<MdShield size={23} />}
+        eyebrow="Verification"
+      />
+
       {showBanner && (
         <div className="p-3 bg-success-6/10 border border-success-6/30 rounded-lg text-success-6 text-sm text-center font-medium animate-fade-in">
           Documents submitted successfully. We&apos;re processing your verification now.
@@ -183,7 +199,7 @@ function KycPageInner() {
       )}
 
       {!activeToken && (isNotStarted || isRejected) && (
-        <div className="account-card !p-10 flex flex-col items-center text-center gap-8">
+        <div className="account-card relative flex flex-col items-center gap-8 overflow-hidden !p-6 text-center sm:!p-10">
           <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center">
             <MdShield size={40} className="text-primary" />
           </div>
@@ -195,7 +211,7 @@ function KycPageInner() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-6 w-full max-w-sm text-left">
+          <div className="grid w-full max-w-3xl grid-cols-1 gap-5 text-left sm:grid-cols-2">
             <div className="flex flex-col gap-3">
               <span className="text-sm font-semibold text-white/90 uppercase tracking-wider">Benefits</span>
               <div className="flex items-center gap-3 text-sm text-white/70">
@@ -243,7 +259,7 @@ function KycPageInner() {
       )}
 
       {!activeToken && isPending && (
-        <div className="account-card !p-10 flex flex-col items-center text-center gap-8">
+        <div className="account-card flex flex-col items-center gap-8 !p-6 text-center sm:!p-10">
           <div className="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center">
             <MdHourglassEmpty size={40} className="text-yellow-500 animate-pulse" />
           </div>
@@ -271,7 +287,7 @@ function KycPageInner() {
 
       {!activeToken && isApproved && (
         <div className="flex flex-col gap-6">
-          <div className="account-card flex flex-col sm:flex-row justify-between items-center text-center sm:text-left gap-6">
+          <div className="account-card flex flex-col items-center justify-between gap-6 text-center sm:flex-row sm:text-left">
             <div className="flex items-center gap-6 flex-col sm:flex-row">
               <div className="w-16 h-16 rounded-full bg-success-6/20 flex items-center justify-center">
                 <MdCheckCircle size={32} className="text-success-6" />
@@ -285,7 +301,7 @@ function KycPageInner() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             {/* Tier 1 Limits */}
             <div className="p-6 bg-white/5 border border-white/10 rounded-2xl flex flex-col gap-4">
               <h3 className="text-lg font-semibold text-white/90 border-b border-white/10 pb-3">Tier 1 Limits</h3>

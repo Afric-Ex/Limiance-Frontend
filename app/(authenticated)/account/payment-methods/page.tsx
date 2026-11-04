@@ -14,6 +14,7 @@ import { MdVisibility, MdVisibilityOff, MdAccountBalance } from "react-icons/md"
 import clsx from "clsx";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountPaymentMethodsSkeleton } from "@/src/components/skeletons/account";
+import { AccountPageHeader } from "@/src/components/settings/account-page-header";
 
 type Step = 1 | 2;
 
@@ -111,29 +112,37 @@ function PaymentMethodsPageInner() {
   };
 
   return (
-    <main className="flex flex-col gap-8 max-[1150px]:gap-4 max-w-3xl max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter">
-      {/* Header */}
-      <div className="flex flex-col min-[1150px]:flex-row min-[1150px]:items-start justify-between gap-4 max-[1150px]:gap-3">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold">Payment Methods</h1>
-          <p className="text-sm text-white/50">Manage bank accounts for P2P trading.</p>
-        </div>
-        {!atLimit && (
-          <button
-            onClick={openModal}
-            className="flex items-center gap-2 px-5 py-3 bg-primary rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all active:scale-[0.98] shrink-0"
-          >
-            <Add />
-            Add Payment Method
-          </button>
-        )}
-      </div>
+    <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 pb-8 page-enter max-[1150px]:pb-[100px]">
+      <AccountPageHeader
+        title="Payment methods"
+        description="Manage the bank accounts you use to send and receive payments on P2P."
+        icon={<MdAccountBalance size={23} />}
+        eyebrow="P2P payments"
+        action={
+          !atLimit ? (
+            <button
+              type="button"
+              onClick={openModal}
+              className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(77,119,240,0.2)] transition-all hover:bg-primary/90 active:scale-[0.98]"
+            >
+              <Add />
+              Add payment method
+            </button>
+          ) : undefined
+        }
+      />
 
       {/* Context Banner */}
-      <div className="p-4 bg-blue-3/30 border border-blue-2/30 rounded-xl">
-        <p className="text-sm text-white/70">
-          Payment methods are used for P2P trading. Add your bank account details so buyers and sellers can send and receive fiat payments.
-        </p>
+      <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/[0.06] p-4 sm:p-5">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+          <MdAccountBalance size={18} />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-white/90">Your P2P payout methods</p>
+          <p className="mt-1 text-sm leading-6 text-white/55">
+            These bank details are shared with your P2P trade counterparties when needed. Account numbers stay masked until you choose to reveal them.
+          </p>
+        </div>
       </div>
 
       {/* Limit Notice */}
@@ -154,9 +163,9 @@ function PaymentMethodsPageInner() {
             const revealed = revealedIds.has(id);
             const acctNum = method.data?.accountNumber ?? method.accountNumber ?? method.account_number ?? "";
             return (
-              <div key={id} className="account-card !p-6 max-[1150px]:!p-4 flex flex-col min-[1150px]:flex-row justify-between items-start min-[1150px]:items-center gap-5 max-[1150px]:gap-4">
+              <div key={id} className="account-card flex flex-col items-start justify-between gap-5 !p-5 min-[1150px]:flex-row min-[1150px]:items-center sm:!p-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/[0.12] text-primary">
                     <MdAccountBalance size={24} />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -195,7 +204,7 @@ function PaymentMethodsPageInner() {
         </div>
       ) : (
         <div className="account-card flex flex-col items-center justify-center gap-5 !py-20 !px-8">
-          <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/[0.12] text-primary">
             <MdAccountBalance size={32} />
           </div>
           <div className="flex flex-col items-center gap-2 text-center">

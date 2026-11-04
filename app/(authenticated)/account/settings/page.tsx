@@ -6,14 +6,77 @@ import { api } from "@/src/lib/axios";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Loader } from "@mantine/core";
-import { MdCheck } from "react-icons/md";
+import {
+  MdAccessTime,
+  MdCheck,
+  MdErrorOutline,
+  MdOutlineNotificationsActive,
+  MdOutlinePalette,
+  MdOutlineSettings,
+} from "react-icons/md";
 import clsx from "clsx";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountSettingsSkeleton } from "@/src/components/skeletons/account";
+import { AccountPageHeader } from "@/src/components/settings/account-page-header";
 
 const CURRENCIES = ["USD", "EUR", "GBP", "NGN", "USDT"];
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+const preferenceGroups = [
+  {
+    key: "notificationPreference",
+    title: "Account notifications",
+    description: "Account activity and important platform updates.",
+    options: [
+      { key: "activities", label: "Account activity", detail: "Deposits, withdrawals and account events" },
+      { key: "tradeNotification", label: "Trade updates", detail: "Order fills and P2P activity" },
+      { key: "news", label: "Product news", detail: "Announcements and new listings" },
+      { key: "systemMessages", label: "System messages", detail: "Security alerts and account notices" },
+    ],
+  },
+  {
+    key: "priceAlerts",
+    title: "Price alerts",
+    description: "Control price notifications across your watchlist.",
+    options: [
+      { key: "priceOn", label: "Price alerts", detail: "Notify me when an alert is triggered" },
+      { key: "notificationOn", label: "Alert notifications", detail: "Show price alerts in the app" },
+    ],
+  },
+  {
+    key: "transactionNotifications",
+    title: "Trading notifications",
+    description: "Choose which market activity notifications are enabled.",
+    options: [
+      { key: "spotTradingNotification", label: "Spot trading", detail: "Spot order activity" },
+      { key: "spotNotificationSound", label: "Spot sounds", detail: "Play sounds for spot activity" },
+      { key: "futuresTradingNotification", label: "Futures trading", detail: "Futures order activity" },
+      { key: "futuresNotificationSound", label: "Futures sounds", detail: "Play sounds for futures activity" },
+    ],
+  },
+  {
+    key: "tradeOrdersNotificationReminder",
+    title: "Order confirmations",
+    description: "Get a reminder before submitting selected order types.",
+    options: [
+      { key: "limitOrder", label: "Limit orders" },
+      { key: "marketOrder", label: "Market orders" },
+      { key: "stopOrder", label: "Stop orders" },
+      { key: "autoBorrowRepayMargin", label: "Margin borrow and repay" },
+    ],
+  },
+  {
+    key: "tradeFeeDeductions",
+    title: "Fee deductions",
+    description: "Choose whether to use BNB to pay eligible trading fees.",
+    options: [
+      { key: "useBNBToPayFees", label: "Spot trading fees" },
+      { key: "useBNBToPayMarginFees", label: "Margin fees" },
+      { key: "useBNBToPayFuturesFees", label: "Futures fees" },
+    ],
+  },
+] as const;
 
 function SettingsPageInner() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -21,14 +84,19 @@ function SettingsPageInner() {
   const prevValuesRef = useRef<Record<string, any>>({});
 
   // Load settings
-  const { data: settings, isLoading: settingsLoading } = useQuery({
+  const {
+    data: settings,
+    isLoading: settingsLoading,
+    isError: settingsError,
+    refetch: refetchSettings,
+  } = useQuery({
     queryKey: userKeys.settings,
     queryFn: () => userService.getSettings(),
     select: (res: any) => res.data ?? res,
   });
 
   // Load languages
-  const { data: languages, isLoading: langsLoading } = useQuery({
+  const { data: languages, isLoading: langsLoading, isError: langsError } = useQuery({
     queryKey: ["languages"],
     queryFn: async () => {
       const res = await api.get("/languages");
@@ -37,7 +105,7 @@ function SettingsPageInner() {
   });
 
   // Load timezones
-  const { data: timezones, isLoading: tzsLoading } = useQuery({
+  const { data: timezones, isLoading: tzsLoading, isError: tzsError } = useQuery({
     queryKey: ["timezones"],
     queryFn: async () => {
       const res = await api.get("/timezones");
@@ -61,7 +129,12 @@ function SettingsPageInner() {
     if (settings.currency) setCurrency(settings.currency);
     if (settings.language) setLanguage(settings.language);
     if (settings.timezone) setTimezone(settings.timezone);
-    prevValuesRef.current = { theme: settings.theme ?? "dark", currency: settings.currency ?? "USD", language: settings.language ?? "en" };
+    prevValuesRef.current = {
+      theme: settings.theme ?? "dark",
+      currency: settings.currency ?? "USD",
+      language: settings.language ?? "en",
+      timezone: settings.timezone ?? "UTC",
+    };
   }, [settings]);
 
   // Close tz dropdown on outside click
@@ -75,7 +148,11 @@ function SettingsPageInner() {
 
   const { mutate: saveSettings } = useMutation({
     mutationFn: (data: Record<string, any>) => userService.saveSettings(data),
-    onSuccess: () => setSaveStatus("saved"),
+    onSuccess: (_response, data) => {
+      prevValuesRef.current = { ...prevValuesRef.current, ...data };
+      setSaveStatus("saved");
+      void refetchSettings();
+    },
     onError: (e: any) => {
       errorMessageHandler(e);
       setSaveStatus("error");
@@ -83,6 +160,7 @@ function SettingsPageInner() {
       setTheme(prevValuesRef.current.theme ?? "dark");
       setCurrency(prevValuesRef.current.currency ?? "USD");
       setLanguage(prevValuesRef.current.language ?? "en");
+      setTimezone(prevValuesRef.current.timezone ?? "UTC");
     },
   });
 
@@ -90,7 +168,6 @@ function SettingsPageInner() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setSaveStatus("saving");
     debounceRef.current = setTimeout(() => {
-      prevValuesRef.current = data;
       saveSettings(data);
       setTimeout(() => setSaveStatus("idle"), 2500);
     }, 500);
@@ -98,17 +175,36 @@ function SettingsPageInner() {
 
   const handleThemeChange = (val: "dark" | "light") => {
     setTheme(val);
-    debouncedSave({ theme: val, currency, language });
+    debouncedSave({ theme: val, currency, language, timezone });
   };
 
   const handleCurrencyChange = (val: string) => {
     setCurrency(val);
-    debouncedSave({ theme, currency: val, language });
+    debouncedSave({ theme, currency: val, language, timezone });
   };
 
   const handleLanguageChange = (val: string) => {
     setLanguage(val);
-    debouncedSave({ theme, currency, language: val });
+    debouncedSave({ theme, currency, language: val, timezone });
+  };
+
+  const handleTimezoneChange = (val: string) => {
+    setTimezone(val);
+    setTzDropOpen(false);
+    setTzSearch("");
+    debouncedSave({ theme, currency, language, timezone: val });
+  };
+
+  const togglePreference = (group: string, key: string, enabled: boolean) => {
+    setSaveStatus("saving");
+    const currentGroup = settings?.[group as keyof typeof settings];
+    if (!currentGroup || typeof currentGroup !== "object") return;
+    saveSettings({
+      [group]: {
+        ...currentGroup,
+        [key]: !enabled,
+      },
+    });
   };
 
   const filteredTz = (timezones ?? []).filter((tz: any) =>
@@ -118,181 +214,266 @@ function SettingsPageInner() {
   const tzLabel = (tz: any) => typeof tz === "string" ? tz : tz.label ?? tz.name ?? tz.value ?? "";
 
   const isLoading = settingsLoading;
+  const isPreferenceEnabled = (group: string, key: string) =>
+    Boolean((settings as any)?.[group]?.[key]);
 
   return (
-    <main className="flex flex-col gap-8 max-[1150px]:gap-4 max-w-3xl max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold">Preferences</h1>
-          <p className="text-sm text-white/50">Customise your trading experience.</p>
+    <main className="page-enter mx-auto flex w-full max-w-[1180px] flex-col gap-5 pb-8 max-[1150px]:pb-[100px]">
+      <AccountPageHeader
+        title="Account settings"
+        description="Personalize how Limiance looks, keeps you informed, and displays your trading activity."
+        icon={<MdOutlineSettings size={23} />}
+        eyebrow="Preferences"
+        action={
+          saveStatus !== "idle" ? (
+            <span
+              role="status"
+              className={clsx(
+                "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold",
+                saveStatus === "error"
+                  ? "border-red-400/20 bg-red-400/[0.07] text-red-300"
+                  : saveStatus === "saved"
+                    ? "border-emerald-400/20 bg-emerald-400/[0.07] text-emerald-300"
+                    : "border-white/[0.08] bg-white/[0.03] text-white/65"
+              )}
+            >
+              {saveStatus === "saving" ? (
+                <Loader size={14} color="blue" />
+              ) : saveStatus === "error" ? (
+                <MdErrorOutline size={17} />
+              ) : (
+                <MdCheck size={17} />
+              )}
+              {saveStatus === "saving"
+                ? "Saving changes"
+                : saveStatus === "error"
+                  ? "Save failed"
+                  : "Changes saved"}
+            </span>
+          ) : undefined
+        }
+      />
+
+      {settingsError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-100/80"
+        >
+          <span>We couldn’t load your saved preferences.</span>
+          <button
+            type="button"
+            onClick={() => void refetchSettings()}
+            className="font-semibold text-amber-200 underline underline-offset-4"
+          >
+            Try again
+          </button>
         </div>
-        {/* Saved Indicator */}
-        <div className={clsx("flex items-center gap-1.5 text-sm font-medium transition-all duration-300", saveStatus === "saved" ? "opacity-100 text-success-6" : "opacity-0 text-success-6")}>
-          {saveStatus === "saving" ? <Loader size={14} color="blue" /> : <MdCheck size={18} />}
-          {saveStatus === "saving" ? "Saving…" : "Saved"}
+      )}
+
+      {isLoading ? (
+        <div className="account-card flex min-h-64 items-center justify-center">
+          <Loader color="blue" />
         </div>
-      </div>
-
-      {/* Section A — Display Preferences */}
-      <div className="account-card flex flex-col gap-6 max-[1150px]:gap-4">
-
-        {isLoading ? (
-          <div className="flex justify-center py-6"><Loader color="blue" /></div>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {/* Theme */}
-            <div className="flex items-center justify-between max-[1150px]:flex-col max-[1150px]:items-start max-[1150px]:gap-4">
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Theme</span>
-                <span className="text-xs text-white/50">Choose your preferred colour scheme</span>
-              </div>
-              <div className="flex items-center gap-1 p-1 bg-black/30 border border-white/[0.08] rounded-xl max-[1150px]:w-full max-[1150px]:justify-between">
-                {(["dark", "light"] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => handleThemeChange(t)}
-                    className={clsx(
-                      "px-5 py-2 rounded-lg text-sm font-medium capitalize transition-all",
-                      theme === t ? "bg-primary text-white shadow-md" : "text-white/50 hover:text-white"
-                    )}
-                  >
-                    {t}
-                  </button>
-                ))}
+      ) : (
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <section className="account-card flex flex-col gap-5 !p-5 sm:!p-6">
+            <div className="flex items-start gap-3 border-b border-white/[0.07] pb-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.1] text-primary">
+                <MdOutlinePalette size={20} />
+              </span>
+              <div>
+                <h2 className="text-base font-semibold text-white">Display & region</h2>
+                <p className="mt-1 text-xs leading-5 text-white/45">
+                  Set the appearance and regional formats used across your account.
+                </p>
               </div>
             </div>
 
-            <div className="h-px bg-white/[0.05]" />
-
-            {/* Display Currency */}
-            <div className="flex items-center justify-between max-[1150px]:flex-col max-[1150px]:items-start max-[1150px]:gap-4">
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Display Currency</span>
-                <span className="text-xs text-white/50">Prices and balances shown in this currency</span>
-              </div>
-              <select
-                value={currency}
-                onChange={(e) => handleCurrencyChange(e.target.value)}
-                className="bg-gray-1 border border-gray-9/40 text-white text-sm rounded-xl px-4 py-2 outline-none focus:border-primary transition-colors cursor-pointer max-[1150px]:w-full"
-              >
-                {CURRENCIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="h-px bg-white/[0.05]" />
-
-            {/* Language */}
-            <div className="flex items-center justify-between max-[1150px]:flex-col max-[1150px]:items-start max-[1150px]:gap-4">
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Language</span>
-                <span className="text-xs text-white/50">Interface display language</span>
-              </div>
-              <select
-                value={language}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-                disabled={langsLoading}
-                className="bg-gray-1 border border-gray-9/40 text-white text-sm rounded-xl px-4 py-2 outline-none focus:border-primary transition-colors cursor-pointer disabled:opacity-50 max-[1150px]:w-full"
-              >
-                {langsLoading ? (
-                  <option>Loading…</option>
-                ) : (languages ?? []).length > 0 ? (
-                  (languages ?? []).map((l: any) => {
-                    const val = typeof l === "string" ? l : l.code ?? l.value ?? l.id ?? l;
-                    const lbl = typeof l === "string" ? l : l.name ?? l.label ?? val;
-                    return <option key={val} value={val}>{lbl}</option>;
-                  })
-                ) : (
-                  <>
-                    <option value="en">English</option>
-                    <option value="fr">French</option>
-                    <option value="es">Spanish</option>
-                    <option value="pt">Portuguese</option>
-                    <option value="zh">Chinese</option>
-                  </>
-                )}
-              </select>
-            </div>
-
-            <div className="h-px bg-white/[0.05]" />
-
-            {/* Timezone — searchable dropdown */}
-            <div className="flex items-center justify-between gap-4 flex-wrap max-[1150px]:flex-col max-[1150px]:items-start">
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Timezone</span>
-                <span className="text-xs text-white/50">Used for displaying dates and times</span>
-              </div>
-
-              <div className="relative min-w-[220px] max-[1150px]:w-full" ref={tzDropRef}>
-                <button
-                  onClick={() => setTzDropOpen(!tzDropOpen)}
-                  className="w-full flex items-center justify-between gap-2 bg-gray-1 border border-gray-9/40 text-white text-sm rounded-xl px-4 py-2 outline-none focus:border-primary transition-colors cursor-pointer hover:border-white/40"
-                >
-                  <span className="truncate">{timezone}</span>
-                  <svg className={clsx("w-4 h-4 text-white/40 transition-transform shrink-0", tzDropOpen && "rotate-180")} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
-                </button>
-                {tzDropOpen && (
-                  <div className="absolute right-0 mt-2 w-72 bg-gray-7 border border-white/[0.08] rounded-xl shadow-2xl z-50 overflow-hidden">
-                    <div className="p-2 border-b border-white/[0.06]">
-                      <input
-                        type="text"
-                        value={tzSearch}
-                        onChange={(e) => setTzSearch(e.target.value)}
-                        placeholder="Search timezone…"
-                        className="w-full px-3 py-2 bg-black/30 border border-white/[0.08] rounded-lg text-sm text-white outline-none focus:border-primary transition-colors"
-                        autoFocus
-                      />
-                    </div>
-                    <div className="max-h-52 overflow-y-auto">
-                      {tzsLoading ? (
-                        <div className="flex justify-center py-4"><Loader size="sm" /></div>
-                      ) : filteredTz.length > 0 ? (
-                        filteredTz.slice(0, 50).map((tz: any) => {
-                          const label = tzLabel(tz);
-                          return (
-                            <button
-                              key={label}
-                              onClick={() => { setTimezone(label); setTzDropOpen(false); setTzSearch(""); }}
-                              className={clsx("w-full px-4 py-2.5 text-left text-sm hover:bg-primary/10 transition-colors", timezone === label && "text-primary bg-primary/10")}
-                            >
-                              {label}
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <p className="text-sm text-white/40 text-center py-4">No timezones found</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Section B — Notifications (conditional) */}
-      {settings && Object.keys(settings).some((k) => k.toLowerCase().includes("notif") || k.toLowerCase().includes("alert") || k.toLowerCase().includes("email")) && (
-        <div className="account-card flex flex-col gap-6 max-[1150px]:gap-4">
-          <div className="flex flex-col gap-4">
-            {Object.entries(settings)
-              .filter(([k]) => k.toLowerCase().includes("notif") || k.toLowerCase().includes("alert") || k.toLowerCase().includes("email"))
-              .map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between py-2">
-                  <span className="text-sm capitalize">{key.replace(/_/g, " ").replace(/([A-Z])/g, " $1").trim()}</span>
-                  <button
-                    onClick={() => {
-                      debouncedSave({ [key]: !value });
-                    }}
-                    className={clsx("relative w-11 h-6 rounded-full transition-colors", value ? "bg-primary" : "bg-white/20")}
-                  >
-                    <span className={clsx("absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all", value ? "left-6" : "left-1")} />
-                  </button>
+            <div className="flex flex-col divide-y divide-white/[0.06]">
+              <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-white/85">Theme</p>
+                  <p className="mt-1 text-xs text-white/40">Choose your preferred colour scheme.</p>
                 </div>
-              ))}
-          </div>
+                <div className="flex w-full rounded-xl border border-white/[0.07] bg-black/20 p-1 sm:w-auto">
+                  {(["dark", "light"] as const).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      aria-pressed={theme === option}
+                      onClick={() => handleThemeChange(option)}
+                      className={clsx(
+                        "min-h-9 flex-1 rounded-lg px-4 text-sm font-semibold capitalize transition-colors sm:flex-none",
+                        theme === option
+                          ? "bg-primary text-white shadow-[0_4px_14px_rgba(77,119,240,0.2)]"
+                          : "text-white/45 hover:text-white"
+                      )}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <label className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  <span className="block text-sm font-semibold text-white/85">Display currency</span>
+                  <span className="mt-1 block text-xs text-white/40">Currency used to show prices and balances.</span>
+                </span>
+                <select
+                  value={currency}
+                  onChange={(event) => handleCurrencyChange(event.target.value)}
+                  className="min-h-10 w-full rounded-xl border border-white/[0.08] bg-elevated px-3 text-sm text-white outline-none transition-colors focus:border-primary/60 sm:w-40"
+                >
+                  {CURRENCIES.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  <span className="block text-sm font-semibold text-white/85">Language</span>
+                  <span className="mt-1 block text-xs text-white/40">Language used across the interface.</span>
+                </span>
+                <select
+                  value={language}
+                  onChange={(event) => handleLanguageChange(event.target.value)}
+                  disabled={langsLoading || langsError}
+                  className="min-h-10 w-full rounded-xl border border-white/[0.08] bg-elevated px-3 text-sm text-white outline-none transition-colors focus:border-primary/60 disabled:cursor-not-allowed disabled:opacity-50 sm:w-40"
+                >
+                  {langsLoading ? (
+                    <option value={language}>Loading languages…</option>
+                  ) : Array.isArray(languages) && languages.length > 0 ? (
+                    languages.map((entry: any) => {
+                      const value = typeof entry === "string" ? entry : entry.code ?? entry.value ?? entry.id;
+                      const label = typeof entry === "string" ? entry : entry.name ?? entry.label ?? value;
+                      return <option key={value} value={value}>{label}</option>;
+                    })
+                  ) : (
+                    <>
+                      <option value="en">English</option>
+                      <option value="fr">French</option>
+                      <option value="es">Spanish</option>
+                      <option value="pt">Portuguese</option>
+                      <option value="zh">Chinese</option>
+                    </>
+                  )}
+                </select>
+              </label>
+
+              <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-white/85">Timezone</p>
+                  <p className="mt-1 text-xs text-white/40">Timezone used to display dates and times.</p>
+                </div>
+                <div className="relative w-full sm:w-64" ref={tzDropRef}>
+                  <button
+                    type="button"
+                    aria-expanded={tzDropOpen}
+                    onClick={() => setTzDropOpen((open) => !open)}
+                    className="flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-elevated px-3 text-left text-sm text-white outline-none transition-colors hover:border-white/[0.15] focus:border-primary/60"
+                  >
+                    <span className="flex min-w-0 items-center gap-2 truncate">
+                      <MdAccessTime className="shrink-0 text-white/40" size={16} />
+                      {timezone}
+                    </span>
+                    <span className={clsx("text-white/40 transition-transform", tzDropOpen && "rotate-180")}>⌄</span>
+                  </button>
+                  {tzDropOpen && (
+                    <div className="absolute right-0 z-30 mt-2 w-full overflow-hidden rounded-xl border border-white/[0.08] bg-[#181a20] shadow-2xl">
+                      <div className="border-b border-white/[0.06] p-2">
+                        <input
+                          type="search"
+                          value={tzSearch}
+                          onChange={(event) => setTzSearch(event.target.value)}
+                          placeholder="Search timezone"
+                          aria-label="Search timezones"
+                          className="min-h-9 w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-primary/60"
+                        />
+                      </div>
+                      <div className="max-h-56 overflow-y-auto p-1">
+                        {tzsLoading ? (
+                          <div className="flex justify-center py-5"><Loader size="sm" /></div>
+                        ) : tzsError ? (
+                          <p className="px-3 py-4 text-center text-xs text-red-300">Unable to load timezones.</p>
+                        ) : filteredTz.length ? (
+                          filteredTz.slice(0, 100).map((entry: any) => {
+                            const label = tzLabel(entry);
+                            return (
+                              <button
+                                key={label}
+                                type="button"
+                                onClick={() => handleTimezoneChange(label)}
+                                className={clsx(
+                                  "w-full rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/[0.05]",
+                                  timezone === label && "bg-primary/10 text-primary"
+                                )}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <p className="px-3 py-4 text-center text-xs text-white/40">No matching timezones.</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-4">
+            <div className="flex items-center gap-2 px-1">
+              <MdOutlineNotificationsActive className="text-primary" size={18} />
+              <h2 className="text-sm font-semibold text-white/85">Notifications & trading</h2>
+              <span className="h-px flex-1 bg-white/[0.07]" />
+            </div>
+
+            {preferenceGroups.map((group) => (
+              <article key={group.key} className="account-card !p-0">
+                <div className="border-b border-white/[0.06] px-4 py-4 sm:px-5">
+                  <h3 className="text-sm font-semibold text-white">{group.title}</h3>
+                  <p className="mt-1 text-xs leading-5 text-white/40">{group.description}</p>
+                </div>
+                <div className="divide-y divide-white/[0.05] px-4 sm:px-5">
+                  {group.options.map((option) => {
+                    const enabled = isPreferenceEnabled(group.key, option.key);
+                    return (
+                      <div key={option.key} className="flex items-center justify-between gap-4 py-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-white/80">{option.label}</p>
+                          {"detail" in option && (
+                            <p className="mt-0.5 text-xs text-white/40">{option.detail}</p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={enabled}
+                          aria-label={`${option.label} ${enabled ? "enabled" : "disabled"}`}
+                          onClick={() => togglePreference(group.key, option.key, enabled)}
+                          className={clsx(
+                            "relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#181a20]",
+                            enabled ? "bg-primary" : "bg-white/[0.16]"
+                          )}
+                        >
+                          <span
+                            className={clsx(
+                              "absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                              enabled ? "translate-x-6" : "translate-x-1"
+                            )}
+                          />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
+            ))}
+          </section>
         </div>
       )}
     </main>

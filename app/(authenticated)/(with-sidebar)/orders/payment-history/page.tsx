@@ -24,6 +24,7 @@ import {
   StatusPill,
   TableCard,
   tableClassNames,
+  ResponsiveFilters,
 } from "@/src/components/orders/orders-shared";
 
 function PaymentHistoryInner() {
@@ -60,22 +61,24 @@ function PaymentHistoryInner() {
     <OrdersPageFrame title="Payment history" description="A clear record of account deposits, withdrawals and transfers." actionLabel={null}>
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
-          <Select
-            data={["All", "Deposit", "Withdrawal", "Transfer"]}
-            value={type}
-            onChange={(value) => setType(value ?? "All")}
-            classNames={selectStyles}
-            aria-label="Filter payments by type"
-            className="w-[130px] shrink-0"
-          />
-          <Select
-            aria-label="Filter payments by date"
-            data={["All", "Last 7 Days", "Last 30 Days"]}
-            value={timeRange}
-            onChange={(value) => setTimeRange(value ?? "All")}
-            classNames={selectStyles}
-            className="w-[150px] shrink-0"
-          />
+          <ResponsiveFilters>
+            <Select
+              data={["All", "Deposit", "Withdrawal", "Transfer"]}
+              value={type}
+              onChange={(value) => setType(value ?? "All")}
+              classNames={selectStyles}
+              aria-label="Filter payments by type"
+              className="w-[130px] shrink-0"
+            />
+            <Select
+              aria-label="Filter payments by date"
+              data={["All", "Last 7 Days", "Last 30 Days"]}
+              value={timeRange}
+              onChange={(value) => setTimeRange(value ?? "All")}
+              classNames={selectStyles}
+              className="w-[150px] shrink-0"
+            />
+          </ResponsiveFilters>
           <TextInput
             classNames={searchInputClass}
             placeholder="Search order no."

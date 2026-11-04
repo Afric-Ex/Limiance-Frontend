@@ -6,20 +6,20 @@ import { FCMInitializer } from "@/src/components/shared/fcm-initializer";
 
 export default function AccountLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col min-h-[calc(100vh-84px)]">
+    <div className="flex min-h-[calc(100vh-84px)] flex-col">
       <FCMInitializer />
-      <div className="w-full px-4 min-[1150px]:px-8 pt-2">
+      <div className="w-full px-4 pt-3 min-[1150px]:px-8">
         <BackButton href="/dashboard" />
       </div>
 
-      <div className="grid grid-cols-1 min-[1150px]:grid-cols-[220px_1fr] flex-1 max-w-[1200px] w-full mx-auto px-4 min-[1150px]:px-8 pb-24 min-[1150px]:pb-8 gap-10 relative">
+      <div className="relative mx-auto grid w-full max-w-[1480px] flex-1 grid-cols-1 gap-5 px-4 pb-24 pt-3 min-[1150px]:grid-cols-[248px_minmax(0,1fr)] min-[1150px]:gap-8 min-[1150px]:px-8 min-[1150px]:pb-10 min-[1150px]:pt-5">
         {/* Desktop Sidebar */}
-        <aside className="hidden min-[1150px]:flex sticky top-4 self-start h-fit max-h-[calc(100vh-6rem)] overflow-y-auto pr-6">
+        <aside className="sticky top-5 hidden h-fit max-h-[calc(100vh-7rem)] self-start overflow-y-auto min-[1150px]:flex">
           <AccountSidebar />
         </aside>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto min-h-0">
+        <div className="min-h-0 min-w-0">
           {children}
         </div>
       </div>

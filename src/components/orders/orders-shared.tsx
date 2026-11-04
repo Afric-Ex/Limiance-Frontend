@@ -5,6 +5,7 @@ import { Skeleton } from "@/src/components/shared/skeleton";
 import { parseDate } from "@/src/lib/parse-date";
 import Link from "next/link";
 import { FiActivity, FiArrowUpRight } from "react-icons/fi";
+export { ResponsiveFilters } from "../shared/responsive-filters";
 
 export { parseDate };
 

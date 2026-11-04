@@ -13,6 +13,7 @@ import {
   TableCard,
   tableClassNames,
   ChipToggle,
+  ResponsiveFilters,
 } from "./orders-shared";
 import { truncateCryptoAddress, isZeroAddress } from "@/src/utils/truncate-address";
 import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
@@ -56,7 +57,9 @@ export const Crypto = () => {
         onClose={() => setSelectedTransaction(null)}
       />
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
-        <ChipToggle value={type} options={["Deposit", "Withdrawal"]} onChange={(v) => setType(v as "Deposit" | "Withdrawal")} />
+        <ResponsiveFilters>
+          <ChipToggle value={type} options={["Deposit", "Withdrawal"]} onChange={(v) => setType(v as "Deposit" | "Withdrawal")} />
+        </ResponsiveFilters>
         <div className="flex items-center gap-4">
           <TextInput
             classNames={searchInputClass}
