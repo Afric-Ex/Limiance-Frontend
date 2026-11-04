@@ -11,7 +11,7 @@ function FiatOrdersInner() {
       title="Fiat orders"
       description="Review fiat purchases, sales, deposits and withdrawals."
       actionLabel="Buy crypto"
-      actionHref="/buy-crypto"
+      actionHref="/transactions/fiat-deposit"
     >
       <Tabs classNames={ordersTabsClassNames} defaultValue="buy">
         <TabsList>

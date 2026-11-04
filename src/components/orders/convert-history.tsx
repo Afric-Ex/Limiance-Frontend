@@ -4,6 +4,7 @@ import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextI
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { readList } from "@/src/lib/api-response";
 import { OrdersEmptyState, TableCard, tableClassNames } from "./orders-shared";
 
 export const ConvertTable = () => {
@@ -11,9 +12,11 @@ export const ConvertTable = () => {
     queryKey: tradingKeys.convertHistory,
     queryFn: () =>
       tradingService.convertHistory(),
+    select: (res) => readList<any>(res),
   });
 
-  const hasHistory = history && history.length > 0;
+  const allHistory = Array.isArray(history) ? history : [];
+  const hasHistory = allHistory.length > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -68,7 +71,7 @@ export const ConvertTable = () => {
                 </TableTr>
               </TableThead>
               <TableTbody>
-                {history.map((item: any) => (
+                {allHistory.map((item: any) => (
                   <TableTr key={item.id}>
                     <TableTd className="pl-6 text-white/50">{new Date(item.createdAt).toLocaleString(undefined, {
                       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'

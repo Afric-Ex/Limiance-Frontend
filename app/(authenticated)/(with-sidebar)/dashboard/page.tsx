@@ -403,7 +403,7 @@ function DashboardInner() {
       </div>
 
       {/* Markets Section */}
-      <div className="animate-fade-up stagger-3 rounded-card border border-white/[0.06] bg-[#181a20] p-6 flex flex-col gap-4">
+      <div className="animate-fade-up stagger-3 min-w-0 rounded-card border border-white/[0.06] bg-[#181a20] p-6 max-[768px]:p-4 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold text-white/90">Markets</span>
           <Link href="/markets" className="flex items-center gap-1 text-xs font-medium text-white/50 hover:text-white transition-colors">
@@ -411,6 +411,7 @@ function DashboardInner() {
           </Link>
         </div>
         <Tabs
+          className="min-w-0"
           classNames={{
             tabLabel: classes.tab_tabLabel,
             list: classes.tab_list,
@@ -438,13 +439,14 @@ function DashboardInner() {
           </TabsList>
           {marketTabs.map((item) => (
             <TabsPanel
-              className="!w-full !overflow-auto pt-2"
+              className="!w-full !min-w-0 !overflow-hidden pt-2"
               key={item}
               value={item}
             >
+              <div className="w-full overflow-x-auto overscroll-x-contain">
               <Table
                 classNames={{
-                  table: classes.table_table,
+                  table: clsx(classes.table_table, "!min-w-[680px]"),
                   th: classes.table_th,
                   tr: classes.table_tr,
                   td: classes.table_td,
@@ -537,6 +539,7 @@ function DashboardInner() {
                   ))}
                 </tbody>
               </Table>
+              </div>
             </TabsPanel>
           ))}
         </Tabs>

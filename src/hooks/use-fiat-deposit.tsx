@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "@mantine/form";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fiatKeys, fiatService } from "../services/fiat";
-import { tradingKeys, tradingService } from "../services/trading";
+import { tradingService } from "../services/trading";
 import { TemporaryDepositAccount } from "../types/fiat";
 import { errorMessageHandler } from "../lib/error-handler";
 import { errorNotification, successNotification } from "../lib/notification-handler";
@@ -54,7 +54,7 @@ export const useFiatCoinSymbols = (search?: string) => {
     // pages — filtering must happen server-side, otherwise a coin sitting on
     // an unfetched page (e.g. BTC at #11 with limit 10) wrongly reports
     // "no assets found".
-    queryKey: tradingKeys.listedTokens(trimmedSearch ? { query: trimmedSearch } : undefined),
+    queryKey: ["fiat-deposit-listed-tokens", trimmedSearch],
     limit: FIAT_SYMBOLS_PAGE_SIZE,
     filters: trimmedSearch ? { query: trimmedSearch } : {},
     fetchPage: ({ page, limit, query }) =>

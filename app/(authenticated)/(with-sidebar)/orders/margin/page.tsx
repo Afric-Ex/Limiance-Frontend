@@ -7,7 +7,7 @@ import { DebtHistory } from "@/src/components/orders/debt-history";
 import { Liquidation } from "@/src/components/orders/liquidation";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { MarginOrdersSkeleton } from "@/src/components/skeletons/orders";
-import { OrdersPageFrame, ordersTabsClassNames } from "@/src/components/orders/orders-shared";
+import { OrdersEmptyState, OrdersPageFrame, ordersTabsClassNames } from "@/src/components/orders/orders-shared";
 
 function MarginOrdersInner() {
   return (
@@ -45,6 +45,12 @@ function MarginOrdersInner() {
         </TabsPanel>
         <TabsPanel value="liquidation">
           <Liquidation />
+        </TabsPanel>
+        <TabsPanel value="others">
+          <OrdersEmptyState
+            title="No other margin activity"
+            description="Additional margin account activity will appear here when available."
+          />
         </TabsPanel>
       </Tabs>
     </OrdersPageFrame>

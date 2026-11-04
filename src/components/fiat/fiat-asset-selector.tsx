@@ -11,7 +11,7 @@ import { useTokenIconMap } from "@/src/hooks/use-token-icons";
 interface FiatAssetSelectorProps {
   value: string;
   onChange: (value: string) => void;
-  assets: string[];
+  assets?: string[];
   assetImages?: Record<string, string>;
   isLoading?: boolean;
   isLoadingMore?: boolean;
@@ -45,7 +45,7 @@ const targetClass =
 export const FiatAssetSelector = ({
   value,
   onChange,
-  assets,
+  assets = [],
   assetImages = {},
   isLoading,
   isLoadingMore,
@@ -68,7 +68,7 @@ export const FiatAssetSelector = ({
 
   const filteredAssets = useMemo(() => {
     const search = query.trim().toUpperCase();
-    const uniqueAssets = uniqueFiatAssetSymbols(assets);
+    const uniqueAssets = uniqueFiatAssetSymbols(Array.isArray(assets) ? assets : []);
     return search
       ? uniqueAssets.filter((asset) => asset.toUpperCase().includes(search))
       : uniqueAssets;

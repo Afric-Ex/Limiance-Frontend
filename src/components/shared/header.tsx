@@ -88,9 +88,6 @@ export default function Header() {
   const { handleOpenDepositModal } = useAssets();
   const [authHydrated, setAuthHydrated] = useState(false);
   const isPublicRoute = pathname === "/" || pathname.startsWith("/auth");
-  const hideMobileMenu = ["/trades/p2p", "/trades/spot", "/trades/margin", "/trades/futures"].some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
 
   useEffect(() => {
     setAuthHydrated(true);
@@ -268,14 +265,12 @@ export default function Header() {
             </PopoverWrapper>
           </>
         )}
-        {!hideMobileMenu && (
-          <CiMenuBurger
-            className="cursor-pointer"
-            size="24"
-            color="white"
-            onClick={open}
-          />
-        )}
+        <CiMenuBurger
+          className="cursor-pointer"
+          size="24"
+          color="white"
+          onClick={open}
+        />
       </div>
       <MobileSideDrawer open={opened} onClose={close} />
       <NotificationDetailModal />
