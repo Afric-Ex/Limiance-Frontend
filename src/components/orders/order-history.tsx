@@ -31,7 +31,7 @@ export const OrderHistory = () => {
     select: (res) => res?.data ?? [],
   });
 
-  const orders: any[] = Array.isArray(response) ? response : [];
+  const orders: any[] = useMemo(() => (Array.isArray(response) ? response : []), [response]);
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toUpperCase();
     return orders.filter((order) => {
