@@ -1,10 +1,12 @@
 "use client";
 
 import { Select, Table, TableTh, TableTr, TableTd, TableTbody, Skeleton } from "@mantine/core";
+import { useState } from "react";
 import { DateInput } from "@mantine/dates";
 import { useQuery } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { OrdersEmptyState, parseDate } from "./orders-shared";
+import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 
 const selectStyles = {
   input: "!h-10 !rounded-lg !border !border-white/[0.09] hover:!border-white/[0.16] focus:!border-primary/50 !text-white !bg-elevated !text-sm !font-medium !transition-colors",
@@ -21,6 +23,7 @@ const dateStyles = {
 };
 
 export const SpotRecords = () => {
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const { data: records, isLoading } = useQuery({
     queryKey: tradingKeys.orderHistory(),
     queryFn: () => tradingService.spotOrderHistory(),
@@ -29,6 +32,10 @@ export const SpotRecords = () => {
 
   return (
     <div className="flex flex-col gap-6">
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+      />
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
         <DateInput label="Date" classNames={dateStyles} className="w-[160px]" />
         <Select
@@ -78,7 +85,11 @@ export const SpotRecords = () => {
                   records.map((rec: any, idx: number) => {
                     const isBuy = rec.side?.toLowerCase() === 'buy';
                     return (
-                      <TableTr key={rec.id || idx}>
+                      <TableTr
+                        key={rec.id || idx}
+                        onClick={() => setSelectedTransaction(rec)}
+                        className="cursor-pointer hover:!bg-white/[0.03]"
+                      >
                         <TableTd className="pl-6 font-bold text-white">{rec.pair || `${rec.base || ''}/${rec.quote || ''}`}</TableTd>
                         <TableTd>
                           <span className={isBuy ? "text-emerald-400" : "text-red-400"}>{rec.side}</span>

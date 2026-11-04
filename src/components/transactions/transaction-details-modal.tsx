@@ -259,7 +259,7 @@ const accountLabel = (value: string): string => {
   if (!value || isZeroAddress(value)) return "";
   const known = BALANCE_LABELS[value.toLowerCase()];
   if (known) return known;
-  if (value.startsWith("0x")) return truncateCryptoAddress(value);
+  if (value.startsWith("0x") || value.length > 32) return truncateCryptoAddress(value);
   return humanize(value);
 };
 
@@ -305,6 +305,7 @@ export const TransactionDetailsModal = ({
     tx.symbol,
     tx.toAsset,
     tx.fromAsset,
+    tx.base,
     readMeta("asset")
   ).toUpperCase();
   const fiatAmount = firstText(tx.fiatAmount);
@@ -376,6 +377,7 @@ export const TransactionDetailsModal = ({
   ).toUpperCase();
 
   const transactionId = firstText(tx.id, tx.transactionId, tx.txId);
+  const walletId = firstText(tx.walletId, tx.wallet_id);
   const reference = firstText(
     tx.reference,
     tx.transactionReference,
@@ -384,9 +386,27 @@ export const TransactionDetailsModal = ({
   const orderId = readMeta("order_id");
   const orderMatchId = readMeta("order_match_id");
   const network = firstText(tx.chain, tx.network).toUpperCase();
-  const wallet = firstAddress(tx.wallet, tx.fromWallet, tx.fromAddress);
+  const wallet = firstAddress(
+    tx.wallet,
+    tx.walletAddress,
+    tx.wallet_address,
+    readMeta("depositAddress"),
+    readMeta("withdrawalAddress"),
+    tx.toBalance,
+    tx.fromBalance,
+    tx.fromWallet,
+    tx.fromAddress
+  );
   const hash = firstAddress(tx.hash, tx.transactionHash, tx.txHash);
-  const address = firstAddress(tx.destination, tx.address, tx.toAddress);
+  const address = firstAddress(
+    tx.destination,
+    tx.address,
+    tx.toAddress,
+    readMeta("destination"),
+    readMeta("withdrawalAddress"),
+    tx.toBalance,
+    readMeta("depositAddress")
+  );
 
   const bankName = firstText(tx.bankName, tx.bank);
   const accountName = firstText(tx.accountName);
@@ -416,6 +436,33 @@ export const TransactionDetailsModal = ({
   const toAsset = firstText(tx.toAsset, tx.asset, readMeta("asset")).toUpperCase();
   const fromAmount = firstText(tx.fromAmount);
   const toAmount = firstText(tx.toAmount);
+  const orderType = firstText(tx.orderType, tx.order_type);
+  const orderMarket = firstText(tx.marketType, tx.market_type, tx.market);
+  const orderSide = firstText(tx.side);
+  const orderPrice = firstText(tx.price);
+  const averagePrice = firstText(tx.avgPrice, tx.averagePrice, tx.avg_price);
+  const filledQuantity = firstText(
+    tx.cumExecQty,
+    tx.filledQuantity,
+    tx.executedQty,
+    tx.fillQty
+  );
+  const remainingQuantity = firstText(tx.leavesQty, tx.remainingQty);
+  const executionValue = firstText(tx.cumExecValue, tx.executedValue);
+  const executionFee = firstText(tx.cumExecFee, tx.fillFee);
+  const executionFeeCurrency = firstText(tx.feeCurrency, tx.feeAsset, tx.quote);
+  const closedPnl = firstText(tx.closedPnl);
+  const orderStatus = firstText(tx.orderStatus, tx.status);
+  const clientOrderId = firstText(tx.clientOrderId, tx.client_order_id);
+  const timeInForce = firstText(tx.timeInForce, tx.time_in_force);
+  const pair = firstText(tx.pair, tx.symbol) ||
+    [firstText(tx.base), firstText(tx.quote)].filter(Boolean).join("/");
+  const hasOrderDetails = Boolean(
+    orderType || orderMarket || orderSide || orderPrice || averagePrice || amount ||
+    filledQuantity || remainingQuantity || executionValue || executionFee || closedPnl ||
+    orderStatus || clientOrderId || timeInForce || tx.postOnly !== undefined ||
+    tx.reduceOnly !== undefined || tx.stopLoss || tx.takeProfit
+  );
   const showFromAmount = Boolean(fromAmount);
   const showToAmount = Boolean(toAmount);
   const hasTransfer = Boolean(
@@ -516,6 +563,41 @@ export const TransactionDetailsModal = ({
     "fromasset",
     "toasset",
     "metadata",
+    "pair",
+    "base",
+    "quote",
+    "walletid",
+    "wallet_id",
+    "ordertype",
+    "order_type",
+    "markettype",
+    "market_type",
+    "market",
+    "side",
+    "price",
+    "avgprice",
+    "averageprice",
+    "avg_price",
+    "filledquantity",
+    "executedqty",
+    "fillqty",
+    "leavesqty",
+    "remainingqty",
+    "cumexecqty",
+    "cumexecvalue",
+    "executedvalue",
+    "cumexecfee",
+    "fillfee",
+    "closedpnl",
+    "orderstatus",
+    "clientorderid",
+    "client_order_id",
+    "timeinforce",
+    "time_in_force",
+    "postonly",
+    "reduceonly",
+    "stoploss",
+    "takeprofit",
   ]);
   const otherEntries = Object.entries(tx).filter(([key, value]) => {
     if (renderedKeys.has(key.toLowerCase())) return false;
@@ -669,6 +751,12 @@ export const TransactionDetailsModal = ({
                 </DetailRow>
               )}
 
+              {pair && (
+                <DetailRow label="Pair">
+                  <span>{pair}</span>
+                </DetailRow>
+              )}
+
               {!isFiat && amountText(amount) && (
                 <DetailRow label="Amount">
                   <span className="tabular-nums">
@@ -758,6 +846,29 @@ export const TransactionDetailsModal = ({
                   </span>
                 </DetailRow>
               )}
+            </Section>
+          )}
+
+          {hasOrderDetails && (
+            <Section title="Order Details">
+              {orderMarket && <DetailRow label="Market"><span className="capitalize">{orderMarket}</span></DetailRow>}
+              {orderType && <DetailRow label="Order Type"><span className="capitalize">{orderType}</span></DetailRow>}
+              {orderSide && <DetailRow label="Side"><span className="uppercase">{orderSide}</span></DetailRow>}
+              {orderStatus && <DetailRow label="Order Status"><span className="capitalize">{orderStatus}</span></DetailRow>}
+              {orderPrice && <DetailRow label="Order Price"><span className="tabular-nums">{amountText(orderPrice)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
+              {averagePrice && <DetailRow label="Average Price"><span className="tabular-nums">{amountText(averagePrice)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
+              {amount && <DetailRow label="Order Quantity"><span className="tabular-nums">{amountText(amount)} {firstText(tx.base).toUpperCase()}</span></DetailRow>}
+              {filledQuantity && <DetailRow label="Filled Quantity"><span className="tabular-nums">{amountText(filledQuantity)} {firstText(tx.base).toUpperCase()}</span></DetailRow>}
+              {remainingQuantity && <DetailRow label="Remaining Quantity"><span className="tabular-nums">{amountText(remainingQuantity)} {firstText(tx.base).toUpperCase()}</span></DetailRow>}
+              {executionValue && <DetailRow label="Execution Value"><span className="tabular-nums">{amountText(executionValue)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
+              {executionFee && <DetailRow label="Execution Fee"><span className="tabular-nums">{amountText(executionFee)} {executionFeeCurrency.toUpperCase()}</span></DetailRow>}
+              {closedPnl && <DetailRow label="Closed P&amp;L"><span className="tabular-nums">{amountText(closedPnl)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
+              {timeInForce && <DetailRow label="Time in Force"><span>{timeInForce}</span></DetailRow>}
+              {clientOrderId && <DetailRow label="Client Order ID"><IdValue value={clientOrderId} /></DetailRow>}
+              {tx.postOnly !== undefined && <DetailRow label="Post Only"><span>{tx.postOnly ? "Yes" : "No"}</span></DetailRow>}
+              {tx.reduceOnly !== undefined && <DetailRow label="Reduce Only"><span>{tx.reduceOnly ? "Yes" : "No"}</span></DetailRow>}
+              {tx.stopLoss && <DetailRow label="Stop Loss"><span className="tabular-nums">{amountText(tx.stopLoss)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
+              {tx.takeProfit && <DetailRow label="Take Profit"><span className="tabular-nums">{amountText(tx.takeProfit)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
             </Section>
           )}
 
@@ -881,6 +992,12 @@ export const TransactionDetailsModal = ({
                 </DetailRow>
               )}
 
+              {walletId && (
+                <DetailRow label="Wallet ID">
+                  <IdValue value={walletId} />
+                </DetailRow>
+              )}
+
               {address && address !== wallet && (
                 <DetailRow label="Address">
                   <IdValue value={address} />
@@ -954,7 +1071,11 @@ export const TransactionDetailsModal = ({
                     {isId ? (
                       <IdValue value={text} />
                     ) : (
-                      <span className="break-words">{text}</span>
+                      <span className="break-words" title={text}>
+                        {/address|token|hash|wallet/i.test(key) && text.length > 32
+                          ? truncateCryptoAddress(text)
+                          : text}
+                      </span>
                     )}
                   </DetailRow>
                 );

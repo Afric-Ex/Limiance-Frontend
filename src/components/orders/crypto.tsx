@@ -17,6 +17,26 @@ import {
 import { truncateCryptoAddress, isZeroAddress } from "@/src/utils/truncate-address";
 import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 
+const readMetadata = (value: unknown): Record<string, any> => {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, any>;
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+};
+
+const displayAddress = (value: unknown) => {
+  const address = String(value ?? "").trim();
+  return address.length > 16 ? truncateCryptoAddress(address) : address;
+};
+
 export const Crypto = () => {
   const [type, setType] = useState<"Deposit" | "Withdrawal">("Deposit");
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
@@ -70,37 +90,64 @@ export const Crypto = () => {
             </TableTr>
           </TableThead>
           <TableTbody>
-            {allHistory.map((tx: any, idx: number) => (
+            {allHistory.map((tx: any, idx: number) => {
+              const metadata = readMetadata(tx.metadata);
+              const isWithdrawal = String(tx.type ?? type).toLowerCase().includes("withdraw");
+              const wallet = String(
+                tx.walletAddress ??
+                  tx.wallet_address ??
+                  tx.wallet ??
+                  (isWithdrawal
+                    ? tx.fromBalance ?? tx.fromAddress
+                    : tx.toBalance ?? metadata.depositAddress) ??
+                  ""
+              ).trim();
+              const destination = String(
+                tx.destination ??
+                  tx.address ??
+                  tx.toAddress ??
+                  metadata.destination ??
+                  metadata.withdrawalAddress ??
+                  metadata.depositAddress ??
+                  tx.toBalance ??
+                  ""
+              ).trim();
+              const coin = String(
+                metadata.asset ?? tx.coin ?? tx.asset ?? metadata.symbol ?? metadata.token ?? ""
+              ).trim();
+
+              return (
               <TableTr
                 key={tx.id ?? idx}
                 onClick={() => setSelectedTransaction(tx)}
-                className="cursor-pointer"
+                className="cursor-pointer hover:!bg-white/[0.03]"
               >
                 <TableTd className="pl-5 text-white/50">{fmtDateTime(tx.createdAt)}</TableTd>
                 <TableTd className="capitalize">{tx.type ?? type}</TableTd>
                 <TableTd>
                   {(() => {
-                    const wallet = String(tx.wallet ?? "").trim();
                     if (!wallet || isZeroAddress(wallet)) return "—";
-                    return <span title={wallet}>{truncateCryptoAddress(wallet)}</span>;
+                    return <span title={wallet}>{displayAddress(wallet)}</span>;
                   })()}
                 </TableTd>
-                <TableTd className="!text-white !font-bold">{tx.coin ?? tx.asset ?? "—"}</TableTd>
+                <TableTd className="!text-white !font-bold">
+                  <span title={coin}>{coin ? displayAddress(coin) : "—"}</span>
+                </TableTd>
                 <TableTd className="tabular-nums !text-white">{fmtNum(tx.amount)}</TableTd>
                 <TableTd className="font-mono text-xs !text-white/60">
                   {(() => {
-                    const destination = String(tx.destination ?? tx.address ?? "").trim();
                     // The all-zero address is the backend's "not set" placeholder —
                     // printing 42 zeroes wraps the row and means nothing to users.
                     if (!destination || isZeroAddress(destination)) return "—";
                     return (
-                      <span title={destination}>{truncateCryptoAddress(destination)}</span>
+                      <span title={destination}>{displayAddress(destination)}</span>
                     );
                   })()}
                 </TableTd>
                 <TableTd><StatusPill status={tx.status} /></TableTd>
               </TableTr>
-            ))}
+              );
+            })}
           </TableTbody>
         </Table>
       </TableCard>
