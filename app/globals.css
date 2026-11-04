@@ -9,6 +9,8 @@
 :root {
   --background: #000000;
   --foreground: #ffffff;
+  --font-inter: Inter;
+  --font-jetbrains-mono: "JetBrains Mono";
 
   --primary: #4d77f0;
 
