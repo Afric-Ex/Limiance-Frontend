@@ -1,21 +1,75 @@
 "use client";
 
-import { Switch } from "@mantine/core";
+import { Loader } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { ModalClose } from "../icons/modal-close";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { userKeys, userService } from "@/src/services/user";
+import { successNotification } from "@/src/lib/notification-handler";
+import { errorMessageHandler } from "@/src/lib/error-handler";
 
 const settings = [
   {
+    key: "notificationOn",
     title: "Notification On",
-    desc: "rephrase Once open auto price alert, you will receive notifications on price changes for major and holding cryptos on website",
+    desc: "Receive notifications on price changes for major and holding cryptos on website",
   },
   {
+    key: "priceOn",
     title: "Sound On",
     desc: "Notification sound synchronized with price alerts.",
   },
 ];
 
 export const PriceAlert = () => {
+  const queryClient = useQueryClient();
+  
+  // Fetch current settings from backend
+  const { data: settingsData, isLoading: settingsLoading } = useQuery({
+    queryKey: userKeys.settings,
+    queryFn: () => userService.getSettings(),
+    select: (res: any) => res.data ?? res,
+  });
+
+  const [priceAlerts, setPriceAlerts] = useState({
+    notificationOn: false,
+    priceOn: false,
+  });
+
+  // Initialize from backend data
+  useEffect(() => {
+    if (settingsData?.priceAlerts) {
+      setPriceAlerts(settingsData.priceAlerts);
+    }
+  }, [settingsData]);
+
+  const toggle = (key: string) => {
+    setPriceAlerts((prev) => ({
+      ...prev,
+      [key]: !prev[key as keyof typeof prev],
+    }));
+  };
+
+  const { mutate: saveAlerts, isPending } = useMutation({
+    mutationFn: (): Promise<any> =>
+      userService.updateSettings({ priceAlerts }),
+    onSuccess: () => {
+      successNotification("Price alerts updated");
+      queryClient.invalidateQueries({ queryKey: userKeys.settings });
+      modals.closeAll();
+    },
+    onError: (e: any) => errorMessageHandler(e),
+  });
+
+  if (settingsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader color="blue" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
@@ -24,18 +78,32 @@ export const PriceAlert = () => {
       </div>
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-6">
-          {settings.map(({ title, desc }) => (
-            <div
-              key={title}
-              className="p-5 gap-11px flex justify-between items-center border-gray-9/40 border rounded-20px"
-            >
-              <div className="flex flex-col gap-13px">
-                <span className="text-base font-medium">{title}</span>
-                <span className="text-xs text-gray-9">{desc}</span>
+          {settings.map(({ key, title, desc }) => {
+            const isOn = priceAlerts[key as keyof typeof priceAlerts];
+            return (
+              <div
+                key={key}
+                className="p-5 gap-11px flex justify-between items-center border-gray-9/40 border rounded-20px"
+              >
+                <div className="flex flex-col gap-13px">
+                  <span className="text-base font-medium">{title}</span>
+                  <span className="text-xs text-gray-9">{desc}</span>
+                </div>
+                <button
+                  onClick={() => toggle(key)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${
+                    isOn ? "bg-primary" : "bg-white/20"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${
+                      isOn ? "left-6" : "left-1"
+                    }`}
+                  />
+                </button>
               </div>
-              <Switch />
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <button
@@ -45,9 +113,11 @@ export const PriceAlert = () => {
             Cancel
           </button>
           <button
-            className="bg-gray-9 rounded-xl disabled:text-white/20 py-18px text-base font-medium disabled:bg-gray-9"
-            disabled
+            onClick={() => saveAlerts()}
+            disabled={isPending}
+            className="bg-primary hover:bg-primary/90 rounded-xl py-18px text-base font-medium disabled:opacity-50 flex items-center justify-center gap-2"
           >
+            {isPending && <Loader size="xs" color="white" />}
             Confirm
           </button>
         </div>

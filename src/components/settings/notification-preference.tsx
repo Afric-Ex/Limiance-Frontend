@@ -3,39 +3,65 @@
 import { Loader } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { MdOutlineClose, MdOutlineNotificationsActive } from "react-icons/md";
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 
 const preference = [
-  { key: "Activities", label: "Activities", description: "Trade executions, deposits, withdrawals" },
-  { key: "Trade Notification", label: "Trade Notifications", description: "Order fills, price alerts, P2P updates" },
-  { key: "Limiance News", label: "Limiance News", description: "Platform announcements and new listings" },
-  { key: "System Messages", label: "System Messages", description: "Security alerts and account notices" },
+  { key: "activities", label: "Activities", description: "Trade executions, deposits, withdrawals" },
+  { key: "tradeNotification", label: "Trade Notifications", description: "Order fills, price alerts, P2P updates" },
+  { key: "news", label: "Limiance News", description: "Platform announcements and new listings" },
+  { key: "systemMessages", label: "System Messages", description: "Security alerts and account notices" },
 ];
 
 export const NotificationPreference = () => {
-  const [selected, setSelected] = useState<string[]>(["Activities", "Trade Notification", "Limiance News", "System Messages"]);
   const queryClient = useQueryClient();
+  
+  // Fetch current settings from backend
+  const { data: settingsData, isLoading: settingsLoading } = useQuery({
+    queryKey: userKeys.settings,
+    queryFn: () => userService.getSettings(),
+    select: (res: any) => res.data ?? res,
+  });
+
+  const [selected, setSelected] = useState<Record<string, boolean>>({
+    activities: false,
+    tradeNotification: false,
+    news: false,
+    systemMessages: false,
+  });
+
+  // Initialize from backend data
+  useEffect(() => {
+    if (settingsData?.notificationPreference) {
+      setSelected(settingsData.notificationPreference);
+    }
+  }, [settingsData]);
 
   const toggle = (key: string) => {
-    setSelected((prev) =>
-      prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key]
-    );
+    setSelected((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
   };
 
   const toggleAll = () => {
-    const allKeys = preference.map((p) => p.key);
-    setSelected((prev) => (prev.length === allKeys.length ? [] : allKeys));
+    const allValues = Object.values(selected);
+    const allEnabled = allValues.every((v) => v === true);
+    const newState: Record<string, boolean> = {};
+    preference.forEach((p) => {
+      newState[p.key] = !allEnabled;
+    });
+    setSelected(newState);
   };
 
-  const isAllSelected = selected.length === preference.length;
+  const isAllSelected = Object.values(selected).every((v) => v === true);
 
   const { mutate: saveNotifications, isPending } = useMutation({
     mutationFn: (): Promise<any> =>
-      userService.saveSettings({ notificationPreference: selected }),
+      userService.updateSettings({ notificationPreference: selected }),
     onSuccess: () => {
       successNotification("Notification preferences saved");
       queryClient.invalidateQueries({ queryKey: userKeys.settings });
@@ -43,6 +69,14 @@ export const NotificationPreference = () => {
     },
     onError: (e: any) => errorMessageHandler(e),
   });
+
+  if (settingsLoading) {
+    return (
+      <div className="w-full max-w-[480px] flex items-center justify-center bg-[#181a20] rounded-2xl p-8 border border-white/[0.06] min-h-[400px]">
+        <Loader color="blue" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[480px] flex flex-col gap-6 bg-[#181a20] rounded-2xl p-8 border border-white/[0.06]">
@@ -86,7 +120,7 @@ export const NotificationPreference = () => {
         <div className="h-px bg-white/[0.06] my-1" />
 
         {preference.map((item) => {
-          const isOn = selected.includes(item.key);
+          const isOn = selected[item.key] || false;
           return (
             <button
               key={item.key}
