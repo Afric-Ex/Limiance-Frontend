@@ -353,3 +353,10 @@ button {
   overflow: hidden;
   transition: transform 0.3s ease;
 }
+
+@media (max-width: 640px) {
+  .mantine-Modal-content {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+  }
+}

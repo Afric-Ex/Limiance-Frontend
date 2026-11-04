@@ -8,6 +8,7 @@ import { FCMInitializer } from "@/src/components/shared/fcm-initializer";
 export default function NoSidebarLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const showMenu =
+    !pathname?.startsWith("/trades/p2p") &&
     !pathname?.startsWith("/trades/margin") &&
     !pathname?.startsWith("/trades/futures") &&
     !pathname?.startsWith("/trades/spot");

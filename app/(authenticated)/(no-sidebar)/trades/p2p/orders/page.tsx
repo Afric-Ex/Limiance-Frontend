@@ -27,7 +27,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 const fieldLabel = "text-2xs font-medium uppercase tracking-wider text-white/35";
 
-type OrderTab = "PROCESSING" | "EXPIRED" | "CANCELLED" | "ALL";
+type OrderTab = "PROCESSING" | "DISPUTED" | "EXPIRED" | "CANCELLED" | "ALL";
 
 const FINAL_STATUSES = new Set([
   "COMPLETED",
@@ -41,7 +41,9 @@ const getOrderStatus = (order: any) =>
   String(order?.status ?? "").toUpperCase();
 
 const isProcessingOrder = (order: any) =>
-  !FINAL_STATUSES.has(getOrderStatus(order));
+  !FINAL_STATUSES.has(getOrderStatus(order)) && getOrderStatus(order) !== "DISPUTED";
+
+const isDisputedOrder = (order: any) => getOrderStatus(order) === "DISPUTED";
 
 const isExpiredOrder = (order: any) => getOrderStatus(order) === "EXPIRED";
 
@@ -106,7 +108,11 @@ const resolveUserSide = (order: any, userId: string): "BUY" | "SELL" => {
 const EMPTY_STATE: Record<OrderTab, { title: string; body: string }> = {
   PROCESSING: {
     title: "No orders in progress",
-    body: "Orders awaiting payment, escrow release, or dispute resolution will appear here.",
+    body: "Orders awaiting payment or escrow release will appear here.",
+  },
+  DISPUTED: {
+    title: "No disputed orders",
+    body: "Orders under dispute review will appear here.",
   },
   EXPIRED: {
     title: "No expired orders",
@@ -143,12 +149,14 @@ function OrderHistoryPageInner() {
 
   const displayOrders = allOrders.filter((o) => {
     if (activeTab === "PROCESSING") return isProcessingOrder(o);
+    if (activeTab === "DISPUTED") return isDisputedOrder(o);
     if (activeTab === "EXPIRED") return isExpiredOrder(o);
     if (activeTab === "CANCELLED") return isCancelledOrder(o);
     return true;
   });
 
   const processingCount = allOrders.filter(isProcessingOrder).length;
+  const disputedCount = allOrders.filter(isDisputedOrder).length;
   const expiredCount = allOrders.filter(isExpiredOrder).length;
   const cancelledCount = allOrders.filter(isCancelledOrder).length;
 
@@ -201,6 +209,7 @@ function OrderHistoryPageInner() {
               className="w-max whitespace-nowrap"
               options={[
                 { value: "PROCESSING", label: `In Progress (${processingCount})` },
+                { value: "DISPUTED", label: `Disputes (${disputedCount})` },
                 { value: "EXPIRED", label: `Expired (${expiredCount})` },
                 { value: "CANCELLED", label: `Cancelled (${cancelledCount})` },
                 {

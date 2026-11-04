@@ -80,7 +80,7 @@ function ChangeCell({ value, mobile }: { value: number; mobile?: boolean }) {
     <span className={clsx(
       "font-semibold px-2 py-0.5 rounded inline-flex items-center justify-center gap-1 min-w-[72px]",
       isUp ? "bg-success-2/10 text-success-2" : "bg-error-1/10 text-error-1",
-      mobile ? "text-xs min-[769px]:hidden" : "text-sm max-[768px]:hidden"
+      mobile ? "text-2xs min-w-[60px] px-1.5 min-[769px]:hidden" : "text-sm max-[768px]:hidden"
     )}>
       {!mobile && (isUp ? <MdTrendingUp size={14} /> : <MdTrendingDown size={14} />)}
       {isUp ? "+" : ""}{numValue.toFixed(2)}%
@@ -99,6 +99,7 @@ const marketTabs = [
 
 function DashboardInner() {
   const user = useUserStore((state) => state.user);
+  const userHydrated = useUserStore((state) => state.hydrated);
 
   const [activeMarketTab, setActiveMarketTab] = useState("Holding");
   const { handleOpenDepositModal } = useAssets();
@@ -109,7 +110,7 @@ function DashboardInner() {
   // the overall USD/BTC totals from get_portfolio_balance.
   const { coins: wsPortfolio } = usePortfolioWs({ coins: true });
 
-  const { data: kycStatus, refetch: refetchKycStatus } = useQuery({
+  const { data: kycStatus, isLoading: isKycStatusLoading, refetch: refetchKycStatus } = useQuery({
     queryKey: userKeys.kycStatus,
     queryFn: () => userService.getKycStatus(),
     select: (res) => res?.data?.status,
@@ -119,6 +120,7 @@ function DashboardInner() {
   });
 
   const isKycComplete = Boolean(user?.isIDverified || isKycApproved(kycStatus));
+  const canShowKickstart = userHydrated && !isKycStatusLoading && !isKycComplete;
 
   const feed = useMarketFeed("BTC/USDT");
 
@@ -335,7 +337,7 @@ function DashboardInner() {
       </div>
 
       {/* Kick Start Your Journey KYC Section - Only shown for users who haven't completed KYC */}
-      {!isKycComplete && (
+      {canShowKickstart && (
         <KickstartJourney
           kycStatus={kycStatus}
           onRefreshStatus={() => refetchKycStatus()}
@@ -450,13 +452,13 @@ function DashboardInner() {
               >
                 <thead>
                   <TableTr>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-2xs pl-4 max-[768px]:pl-2">Coin</TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-2xs max-[768px]:text-right max-[768px]:pr-2">Price</TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-2xs max-[768px]:text-right max-[768px]:pr-2">
+                    <TableTh className="!w-[31%] max-[768px]:!w-[37%] !text-white/40 uppercase tracking-wider text-2xs !pl-4 max-[768px]:!pl-2 !pr-1">Coin</TableTh>
+                    <TableTh className="!w-[22%] max-[768px]:!w-[24%] !text-white/40 uppercase tracking-wider text-2xs !px-1 max-[768px]:!text-right">Price</TableTh>
+                    <TableTh className="!w-[23%] max-[768px]:!w-[25%] !text-white/40 uppercase tracking-wider text-2xs !px-1 max-[768px]:!text-right">
                       <span>{item === "Holding" ? "Balance" : "24h Volume"}</span>
                     </TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-2xs max-[768px]:hidden">24h Change</TableTh>
-                    <TableTh className="!text-white/40 uppercase tracking-wider text-2xs text-right pr-4 max-[768px]:hidden">Action</TableTh>
+                    <TableTh className="!w-[12%] !text-white/40 uppercase tracking-wider text-2xs max-[768px]:hidden">24h Change</TableTh>
+                    <TableTh className="!w-[12%] max-[768px]:!w-[14%] !text-white/40 uppercase tracking-wider text-2xs !text-right !pr-3 max-[768px]:!pr-2">Action</TableTh>
                   </TableTr>
                 </thead>
                 <tbody>
@@ -475,10 +477,10 @@ function DashboardInner() {
                       </TableTd>
                     </TableTr>
                   ) : filteredTokens.map((token: any) => (
-                    <TableTr key={token.pair} className="row-hover border-b border-transparent transition-colors">
-                      <TableTd className="py-1.5 pl-4 max-[768px]:pl-2 max-[768px]:py-4">
-                        <span className="flex items-center gap-2.5 max-[768px]:gap-2.5">
-                          <span className="relative inline-flex w-6 h-6 max-[768px]:w-9 max-[768px]:h-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5 text-2xs max-[768px]:text-sm font-bold text-white/80">
+                    <TableTr key={token.pair} className="row-hover border-b border-white/[0.04] transition-colors hover:bg-white/[0.025]">
+                      <TableTd className="!py-3 !pl-4 !pr-1 max-[768px]:!pl-2">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="relative inline-flex w-6 h-6 max-[768px]:w-7 max-[768px]:h-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5 text-2xs font-bold text-white/80">
                             <span aria-hidden="true">{String(token.symbol || "?").charAt(0)}</span>
                             {token.image && (
                               <img
@@ -493,45 +495,40 @@ function DashboardInner() {
                               />
                             )}
                           </span>
-                          <span className="flex items-baseline max-[768px]:flex-col max-[768px]:items-start gap-1.5 max-[768px]:gap-0">
-                            <span className="text-caption max-[768px]:text-base font-bold text-white/90">
+                          <span className="flex min-w-0 items-baseline gap-1 whitespace-nowrap">
+                            <span className="truncate text-caption max-[768px]:text-sm font-bold text-white/90">
                               {token.symbol}
                             </span>
-                            <span className="text-2xs max-[768px]:text-xs font-medium text-white/30 max-[768px]:text-white/40">{token.pair.split('/')[1]}</span>
-                            <button
-                              type="button"
-                              onClick={() => openConvertModal(token.symbol)}
-                              className="min-[769px]:hidden mt-1 text-primary hover:text-white transition-colors py-1 rounded font-semibold text-xs active:scale-95"
-                            >
-                              Convert
-                            </button>
+                            <span className="text-2xs max-[768px]:text-[10px] font-medium text-white/35">/{token.pair.split('/')[1]}</span>
                           </span>
                         </span>
                       </TableTd>
-                      <TableTd className="max-[768px]:text-right max-[768px]:pr-2 py-1.5 max-[768px]:py-4">
-                        <span className="flex flex-col min-[769px]:block max-[768px]:items-end gap-1">
+                      <TableTd className="!px-1 !py-3 max-[768px]:!text-right">
+                        <span className="flex flex-col items-start max-[768px]:items-end gap-1 overflow-hidden">
                           <PriceCell value={token.price} change={token.changePercent24h} />
                           <ChangeCell value={token.changePercent24h} mobile={true} />
                         </span>
                       </TableTd>
-                      <TableTd className="py-1.5 max-[768px]:text-right max-[768px]:pr-2">
-                        <span className="text-caption font-medium text-white/90 tabular-nums">
+                      <TableTd className="!px-1 !py-3 max-[768px]:!text-right">
+                        <span className="block truncate whitespace-nowrap text-caption max-[768px]:text-xs font-medium text-white/90 tabular-nums" title={item === "Holding" && token.balance != null
+                          ? `${Number(token.balance).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${token.symbol}`
+                          : `$${formatVolume(token.volume24h * token.price)}`
+                        }>
                           {item === "Holding" && token.balance != null
                             ? `${Number(token.balance).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${token.symbol}`
-                            : `$${formatVolume(token.volume24h * token.price)}`
-                          }
+                            : `$${formatVolume(token.volume24h * token.price)}`}
                         </span>
                       </TableTd>
-                      <TableTd className="max-[768px]:hidden py-1.5">
+                      <TableTd className="max-[768px]:hidden !py-3">
                         <ChangeCell value={token.changePercent24h} />
                       </TableTd>
-                      <TableTd className="text-right pr-4 max-[768px]:hidden py-1.5">
+                      <TableTd className="!text-right !pr-3 !py-3 max-[768px]:!pr-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             openConvertModal(token.symbol);
                           }}
-                          className="text-primary hover:text-white transition-colors duration-200 py-1 px-2 rounded font-semibold text-xs active:scale-95"
+                          className="whitespace-nowrap text-primary hover:text-white transition-colors duration-200 py-1 px-1 sm:px-2 rounded font-semibold text-[10px] sm:text-xs active:scale-95"
                         >
                           Convert
                         </button>

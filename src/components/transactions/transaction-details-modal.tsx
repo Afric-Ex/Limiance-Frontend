@@ -191,7 +191,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 const Section = ({ title, children }: { title: string; children: ReactNode }) => (
-  <section className="border-t border-white/[0.06] px-6 py-4">
+  <section className="border-t border-white/[0.06] px-4 py-4">
     <h3 className="mb-1.5 flex items-center gap-2 text-2xs font-bold uppercase tracking-[0.16em] text-white/30">
       <span className="h-3 w-0.5 rounded-full bg-primary/70" />
       {title}
@@ -213,7 +213,7 @@ const DetailRow = ({
     <span className="shrink-0 pt-px text-xs font-medium text-white/40">
       {label}
     </span>
-    <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right text-caption font-semibold text-white/85">
+    <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right text-caption font-semibold text-white/85 [overflow-wrap:anywhere]">
       {children}
     </div>
   </div>
@@ -317,6 +317,12 @@ export const TransactionDetailsModal = ({
     tx.toAsset,
     readMeta("asset")
   ).toUpperCase();
+  const displayAssetSymbol =
+    assetSymbol.length > 16 ? truncateCryptoAddress(assetSymbol) : assetSymbol;
+  const displayReceivedSymbol =
+    receivedSymbol.length > 16
+      ? truncateCryptoAddress(receivedSymbol)
+      : receivedSymbol;
   const isFiat = !!(fiatAmount || currency);
 
   const metaRole = readMeta("role");
@@ -352,7 +358,7 @@ export const TransactionDetailsModal = ({
         : "border-primary/25 bg-primary/10 text-primary";
 
   const primaryAmount = isFiat ? amountText(fiatAmount) : amountText(amount);
-  const primarySymbol = isFiat ? currency : assetSymbol;
+  const primarySymbol = isFiat ? currency : displayAssetSymbol;
 
   const createdAt = formatTimestamp(firstText(tx.createdAt, tx.created_at));
   const completedAt = formatTimestamp(
@@ -573,7 +579,7 @@ export const TransactionDetailsModal = ({
         content:
           "!bg-[#181a20] !border !border-white/[0.08] !rounded-2xl !overflow-hidden !shadow-[0_24px_64px_-24px_rgba(0,0,0,0.9)]",
         header:
-          "!bg-[#181a20] !border-b !border-white/[0.06] !px-5 !py-4",
+          "!bg-[#181a20] !border-b !border-white/[0.06] !px-4 !py-4",
         title: "!text-white !font-bold",
         close:
           "!text-white/40 hover:!text-white hover:!bg-white/[0.06] !rounded-lg",
@@ -584,7 +590,7 @@ export const TransactionDetailsModal = ({
       {transaction && (
         <div className="flex flex-col">
           {/* Hero: direction, type, amount, status */}
-          <div className="relative overflow-hidden px-6 pb-6 pt-6">
+          <div className="relative overflow-hidden px-4 pb-6 pt-6">
             <div className="pointer-events-none absolute -top-28 left-1/2 h-56 w-64 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl" />
             <div className="relative flex flex-col items-center text-center">
               <div
@@ -659,7 +665,7 @@ export const TransactionDetailsModal = ({
 
               {assetSymbol && (
                 <DetailRow label="Asset">
-                  <span className="uppercase">{assetSymbol}</span>
+                  <span className="uppercase">{displayAssetSymbol}</span>
                 </DetailRow>
               )}
 
@@ -668,7 +674,7 @@ export const TransactionDetailsModal = ({
                   <span className="tabular-nums">
                     {amountText(amount)}
                     {assetSymbol && (
-                      <span className="ml-1 text-white/45">{assetSymbol}</span>
+                      <span className="ml-1 text-white/45">{displayAssetSymbol}</span>
                     )}
                   </span>
                 </DetailRow>
@@ -699,7 +705,7 @@ export const TransactionDetailsModal = ({
                 <DetailRow label="Received">
                   <span className="tabular-nums">
                     {amountText(receivedAmount)}{" "}
-                    <span className="text-white/45">{receivedSymbol}</span>
+                    <span className="text-white/45">{displayReceivedSymbol}</span>
                   </span>
                 </DetailRow>
               )}
