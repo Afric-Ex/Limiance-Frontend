@@ -1,5 +1,4 @@
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@mantine/core";
-import classes from "@/src/styles/assets-margin.module.css";
 import { MarginOpenOrders } from "@/src/components/orders/margin-open-orders";
 import { MarginOrderHistory } from "@/src/components/orders/margin-order-history";
 import { MarginOrderDetails } from "@/src/components/orders/margin-order-details";
@@ -8,19 +7,17 @@ import { DebtHistory } from "@/src/components/orders/debt-history";
 import { Liquidation } from "@/src/components/orders/liquidation";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { MarginOrdersSkeleton } from "@/src/components/skeletons/orders";
-import { OrdersPageHeader } from "@/src/components/orders/orders-page-header";
-import { MdOutlineAccountBalanceWallet } from "react-icons/md";
+import { OrdersPageFrame, ordersTabsClassNames } from "@/src/components/orders/orders-shared";
 
 function MarginOrdersInner() {
   return (
-    <main className="flex flex-col gap-8 page-enter max-[1150px]:gap-6">
-      <OrdersPageHeader
-        icon={<MdOutlineAccountBalanceWallet size={24} />}
-        title="Margin Orders"
-        description="Margin positions, capital flow, debt and liquidation history"
-      />
-
-      <Tabs classNames={classes} defaultValue="open">
+    <OrdersPageFrame
+      title="Margin orders"
+      description="Manage margin orders, positions and account activity."
+      actionLabel="Trade margin"
+      actionHref="/trades/margin"
+    >
+      <Tabs classNames={ordersTabsClassNames} defaultValue="open">
         <TabsList>
           <TabsTab value="open">Open Orders</TabsTab>
           <TabsTab value="history">Order History</TabsTab>
@@ -50,7 +47,7 @@ function MarginOrdersInner() {
           <Liquidation />
         </TabsPanel>
       </Tabs>
-    </main>
+    </OrdersPageFrame>
   );
 }
 

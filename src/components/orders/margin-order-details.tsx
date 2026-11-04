@@ -40,7 +40,7 @@ export const MarginOrderDetails = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 p-4 rounded-2xl bg-[#181a20] border border-white/[0.06]">
+      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
         <div className="flex flex-wrap gap-4 items-end">
           <Select
             label="Order"
