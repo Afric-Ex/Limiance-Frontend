@@ -21,6 +21,23 @@ export type ErrorType = {
 export const errorMessageHandler = (obj: ErrorType) => {
   const formatErrorString = (errStr: string): string => {
     if (typeof errStr !== "string") return String(errStr);
+    if (
+      errStr.includes("web3-engine returned") ||
+      errStr.includes("web3engine:") ||
+      errStr.includes("ContractRevert") ||
+      errStr.includes("comtractreverted") ||
+      errStr.includes("contractreverted") ||
+      errStr.includes("unknown revert")
+    ) {
+      const lower = errStr.toLowerCase();
+      if (lower.includes("insufficient balance") || lower.includes("exceeds balance")) {
+        return "Withdrawal temporarily unavailable: hot wallet liquidity is currently depleted. Please try again shortly.";
+      }
+      if (lower.includes("paused")) {
+        return "Withdrawal rejected: transfers for this token are currently paused on-chain.";
+      }
+      return "Smart contract transaction reverted on-chain. Please verify destination address or contract requirements.";
+    }
     if (errStr.includes("Error:Field validation for")) {
       const lines = errStr.split("\\n");
       const formatted = lines.map((line) => {
