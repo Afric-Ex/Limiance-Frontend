@@ -23,9 +23,11 @@ import {
   type StatusFilter,
 } from "@/src/components/trades/order-history-table";
 import { useOrderHistory, ORDER_HISTORY_QUERY_KEY } from "@/src/hooks/use-order-history";
-import { Loader, Checkbox, Popover, PopoverTarget, PopoverDropdown } from "@mantine/core";
+import { Loader, Checkbox, NumberInput, Popover, PopoverTarget, PopoverDropdown } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
+import { MarginBorrowRepayModal } from "@/src/components/trades/margin-borrow-repay-modal";
+import { MarginTransferModal } from "@/src/components/trades/margin-transfer-modal";
 import clsx from "clsx";
 import { MdMoreVert, MdCalculate, MdInfo, MdContentCopy } from "react-icons/md";
 
@@ -38,6 +40,44 @@ interface TradingPanelProps {
 
 type MainTab = "open_orders" | "positions" | "order_history" | "trade_history" | "assets" | "borrowings" | "tools" | "pnl";
 type OrderTypeTab = "limit_market" | "conditional" | "tpsl" | "trailing_stop" | "oco" | "mmr_close" | "spread_trading";
+const MARGIN_TOOL_MODAL_STYLES = {
+  content: { backgroundColor: "#181a20", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "16px" },
+  header: { backgroundColor: "#181a20", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "16px 20px" },
+  body: { backgroundColor: "#181a20", padding: "16px 20px 20px" },
+};
+
+function TradingCalculatorModal({ pair }: { pair: string }) {
+  const [price, setPrice] = useState<number | string>("");
+  const [quantity, setQuantity] = useState<number | string>("");
+  const [leverage, setLeverage] = useState<number | string>(1);
+  const [feePercent, setFeePercent] = useState<number | string>("");
+  const [base, quote = "USDT"] = pair.split("/");
+  const orderValue = (Number(price) || 0) * (Number(quantity) || 0);
+  const requiredMargin = orderValue / Math.max(Number(leverage) || 1, 1);
+  const estimatedFee = orderValue * ((Number(feePercent) || 0) / 100);
+
+  const inputClassNames = {
+    input: "!h-10 !bg-white/[0.04] !border-white/[0.08] !text-white !text-sm !tabular-nums",
+  };
+
+  return (
+    <div className="flex w-full min-w-0 flex-col gap-4 text-white">
+      <div className="grid grid-cols-2 gap-3">
+        <NumberInput label="Entry price" value={price} onChange={setPrice} min={0} hideControls classNames={inputClassNames} />
+        <NumberInput label={`Quantity (${base})`} value={quantity} onChange={setQuantity} min={0} hideControls classNames={inputClassNames} />
+        <NumberInput label="Leverage" value={leverage} onChange={setLeverage} min={1} max={100} hideControls suffix="x" classNames={inputClassNames} />
+        <NumberInput label="Fee rate" value={feePercent} onChange={setFeePercent} min={0} hideControls suffix="%" classNames={inputClassNames} />
+      </div>
+      <div className="flex flex-col gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+        <div className="flex justify-between gap-3 text-xs"><span className="text-white/45">Pair</span><span className="font-semibold">{pair}</span></div>
+        <div className="flex justify-between gap-3 text-xs"><span className="text-white/45">Order value</span><span className="font-mono tabular-nums">{orderValue.toLocaleString(undefined, { maximumFractionDigits: 8 })} {quote}</span></div>
+        <div className="flex justify-between gap-3 text-xs"><span className="text-white/45">Estimated margin</span><span className="font-mono tabular-nums">{requiredMargin.toLocaleString(undefined, { maximumFractionDigits: 8 })} {quote}</span></div>
+        <div className="flex justify-between gap-3 text-xs"><span className="text-white/45">Estimated fee</span><span className="font-mono tabular-nums">{estimatedFee.toLocaleString(undefined, { maximumFractionDigits: 8 })} {quote}</span></div>
+      </div>
+      <p className="text-2xs leading-relaxed text-white/35">Estimates only. Actual margin and fees depend on your account and the executed order.</p>
+    </div>
+  );
+}
 
 export function TradingPanel({ selectedPair, market = "spot", className, mobile = false }: TradingPanelProps) {
   const [activeMainTab, setActiveMainTab] = useState<MainTab>("open_orders");
@@ -295,39 +335,36 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const handleCalculator = () => {
     modals.open({
       ...DEFAULT_MODAL_SETTINGS,
+      size: "md",
+      centered: true,
+      withCloseButton: true,
+      styles: MARGIN_TOOL_MODAL_STYLES,
       title: "Trading Calculator",
-      children: (
-        <div className="p-4 text-white/80 text-sm">
-          <p>Order value, fees, and profit/loss calculations.</p>
-          <p className="mt-2 text-white/40 text-xs">Calculator functionality coming soon.</p>
-        </div>
-      ),
+      children: <TradingCalculatorModal pair={selectedPair} />,
     });
   };
 
-  const handleBorrowTrade = () => {
+  const openBorrowRepay = (initialTab: "borrow" | "repay") => {
     modals.open({
       ...DEFAULT_MODAL_SETTINGS,
-      title: "Borrow / Trade",
-      children: (
-        <div className="p-4 text-white/80 text-sm">
-          <p>Borrow assets to trade on margin.</p>
-          <p className="mt-2 text-white/40 text-xs">Margin trading is available when you select a margin trading pair.</p>
-        </div>
-      ),
+      size: "md",
+      centered: true,
+      withCloseButton: true,
+      styles: MARGIN_TOOL_MODAL_STYLES,
+      title: "Borrow / Repay Margin",
+      children: <MarginBorrowRepayModal pair={selectedPair} tradeMode="cross" initialTab={initialTab} onClose={() => modals.closeAll()} />,
     });
   };
 
-  const handleManualRepay = () => {
+  const handleTransferCollateral = () => {
     modals.open({
       ...DEFAULT_MODAL_SETTINGS,
-      title: "Manual Repay",
-      children: (
-        <div className="p-4 text-white/80 text-sm">
-          <p>Repay borrowed assets manually.</p>
-          <p className="mt-2 text-white/40 text-xs">Repayment functionality available in the margin account panel.</p>
-        </div>
-      ),
+      size: "md",
+      centered: true,
+      withCloseButton: true,
+      styles: MARGIN_TOOL_MODAL_STYLES,
+      title: "Transfer Assets",
+      children: <MarginTransferModal pair={selectedPair} initialMode="cross" onClose={() => modals.closeAll()} />,
     });
   };
 
@@ -335,19 +372,25 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
     <div className={clsx("flex flex-col bg-[#181a20] rounded overflow-hidden", className)}>
       {/* Margin Trading Info Bar */}
       {market === "margin" && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] text-xs">
-          <div className="flex items-center gap-2 text-white/60">
-            <span>Margin trading steps: Transfer collateral →</span>
-            <button onClick={handleBorrowTrade} className="text-primary hover:underline">
+        <div className="flex min-w-0 items-center gap-3 border-b border-white/[0.06] px-3 py-2.5 text-xs sm:px-4">
+          <div className="min-w-0 flex-1 overflow-x-auto scrollbar-none">
+            <div className="flex w-max items-center gap-1.5 whitespace-nowrap text-[10px] text-white/60 sm:gap-2 sm:text-xs">
+            <span className="font-semibold text-white/45">Margin steps</span>
+            <button onClick={handleTransferCollateral} className="text-primary hover:underline">
+              Transfer collateral
+            </button>
+            <span aria-hidden="true">›</span>
+            <button onClick={() => openBorrowRepay("borrow")} className="text-primary hover:underline">
               Borrow/Trade &gt;
             </button>
-            <button onClick={handleManualRepay} className="text-white/60 hover:text-white">
+            <button onClick={() => openBorrowRepay("repay")} className="text-white/60 hover:text-white">
               Manual repay
             </button>
+            </div>
           </div>
-          <button onClick={handleCalculator} className="flex items-center gap-1 text-white/60 hover:text-white">
+          <button type="button" onClick={handleCalculator} aria-label="Open trading calculator" title="Calculator" className="flex shrink-0 items-center gap-1 text-white/60 hover:text-white">
             <MdCalculate size={16} />
-            <span>Calculator</span>
+            <span className="hidden sm:inline">Calculator</span>
           </button>
         </div>
       )}

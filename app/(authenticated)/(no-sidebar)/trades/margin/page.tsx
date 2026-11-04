@@ -65,6 +65,7 @@ function MarginTrades() {
   const [chartExpanded, setChartExpanded] = useState(false);
   const [, setOrderBookOpen] = useState(false);
   const [mobileMode, setMobileMode] = useState<"trade" | "chart">("trade");
+  const [mobileTradePanel, setMobileTradePanel] = useState<"order" | "book">("order");
   const [quickOrderOpen, setQuickOrderOpen] = useState(false);
   const [quickOrderSide, setQuickOrderSide] = useState<"buy" | "sell">("buy");
   const [tpslPreview, setTpslPreview] = useState<TpslPreview>({});
@@ -579,8 +580,13 @@ function MarginTrades() {
           </div>
         ) : (
           // --- TRADE VIEW ---
-          <div className="flex flex-col flex-1 overflow-auto custom-scrollbar pb-[65px]">
-            <div className="flex bg-[#181a20] shrink-0">
+          <div className="flex flex-col flex-1 min-h-0 bg-[#181a20] pb-[65px]">
+            <div className="flex flex-1 min-h-[360px] flex-col gap-2 p-3 overflow-hidden min-[480px]:flex-row min-[480px]:gap-3">
+              <div role="tablist" aria-label="Trading panels" className="grid shrink-0 grid-cols-2 rounded-lg border border-white/[0.06] bg-white/[0.03] p-1 min-[480px]:hidden">
+                <button type="button" role="tab" aria-selected={mobileTradePanel === "order"} onClick={() => setMobileTradePanel("order")} className={clsx("rounded-md px-3 py-2 text-xs font-semibold transition-colors", mobileTradePanel === "order" ? "bg-white/[0.08] text-white" : "text-white/45")}>Place Order</button>
+                <button type="button" role="tab" aria-selected={mobileTradePanel === "book"} onClick={() => setMobileTradePanel("book")} className={clsx("rounded-md px-3 py-2 text-xs font-semibold transition-colors", mobileTradePanel === "book" ? "bg-white/[0.08] text-white" : "text-white/45")}>Order Book</button>
+              </div>
+            <div className={clsx("min-h-0 min-w-0 flex-1 flex-col overflow-y-auto rounded-xl border border-white/[0.06] bg-[#181a20]", mobileTradePanel === "order" ? "flex" : "hidden", "min-[480px]:flex min-[480px]:flex-[1.5]")}>
               {/* Left Side: Trade Form */}
               <div className="w-full">
                 <Tabs
@@ -606,9 +612,9 @@ function MarginTrades() {
               </div>
             </div>
 
+            <div className={clsx("min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.06]", mobileTradePanel === "book" ? "flex" : "hidden", "min-[480px]:flex min-[480px]:flex-1")}>
             <OrderBookTabs
-              className="min-[1150px]:hidden shrink-0"
-              fixedHeight={320}
+              className="flex-1 min-h-0"
               buyOrders={orderBook.buyOrders}
               sellOrders={orderBook.sellOrders}
               recentTrades={recentTrades}
@@ -622,6 +628,8 @@ function MarginTrades() {
               lastUpdated={orderBook.lastUpdated}
               onSelectPrice={setClickedPrice}
             />
+            </div>
+            </div>
 
             {/* Mobile trading panel */}
             <TradingPanel selectedPair={selectedPair} market="margin" mobile className="rounded mt-2 min-h-[420px]" />

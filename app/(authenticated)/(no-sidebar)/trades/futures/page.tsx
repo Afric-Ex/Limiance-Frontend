@@ -91,6 +91,7 @@ function FuturesTradesInner() {
   const [chartExpanded, setChartExpanded] = useState(false);
   const [, setOrderBookOpen] = useState(false);
   const [mobileMode, setMobileMode] = useState<"trade" | "chart">("trade");
+  const [mobileTradePanel, setMobileTradePanel] = useState<"order" | "book">("order");
   // Last placed trade — shown as an orange FILL tag on the chart
   const [placedFill, setPlacedFill] = useState<{
     side: string;
@@ -1010,16 +1011,20 @@ function FuturesTradesInner() {
           </div>
         ) : (
           // --- TRADE VIEW ---
-          <div className="flex flex-col flex-1 overflow-auto custom-scrollbar pb-[65px]">
-            <div className="flex bg-[#181a20] shrink-0">
-              <div className="w-full px-3 py-4">
-                {tradeFormPanel}
+          <div className="flex flex-col flex-1 min-h-0 bg-[#181a20] pb-[65px]">
+            <div className="flex flex-1 min-h-[360px] flex-col gap-2 p-3 overflow-hidden min-[480px]:flex-row min-[480px]:gap-3">
+              <div role="tablist" aria-label="Trading panels" className="grid shrink-0 grid-cols-2 rounded-lg border border-white/[0.06] bg-white/[0.03] p-1 min-[480px]:hidden">
+                <button type="button" role="tab" aria-selected={mobileTradePanel === "order"} onClick={() => setMobileTradePanel("order")} className={clsx("rounded-md px-3 py-2 text-xs font-semibold transition-colors", mobileTradePanel === "order" ? "bg-white/[0.08] text-white" : "text-white/45")}>Place Order</button>
+                <button type="button" role="tab" aria-selected={mobileTradePanel === "book"} onClick={() => setMobileTradePanel("book")} className={clsx("rounded-md px-3 py-2 text-xs font-semibold transition-colors", mobileTradePanel === "book" ? "bg-white/[0.08] text-white" : "text-white/45")}>Order Book</button>
               </div>
-            </div>
-
+              <div className={clsx("min-h-0 min-w-0 flex-1 flex-col overflow-y-auto rounded-xl border border-white/[0.06] bg-[#181a20]", mobileTradePanel === "order" ? "flex" : "hidden", "min-[480px]:flex min-[480px]:flex-[1.5]")}>
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#181a20]">
+                  <div className="w-full px-3 py-4">{tradeFormPanel}</div>
+                </div>
+              </div>
+              <div className={clsx("min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.06]", mobileTradePanel === "book" ? "flex" : "hidden", "min-[480px]:flex min-[480px]:flex-1")}>
             <OrderBookTabs
-              className="min-[1150px]:hidden shrink-0"
-              fixedHeight={320}
+              className="flex-1 min-h-0"
               buyOrders={orderBook.buyOrders}
               sellOrders={orderBook.sellOrders}
               recentTrades={recentTrades}
@@ -1036,6 +1041,8 @@ function FuturesTradesInner() {
                 priceUserEditedRef.current = true;
               }}
             />
+              </div>
+            </div>
 
             {/* Mobile trading panel */}
             <TradingPanel selectedPair={selectedPair} market="futures" mobile className="rounded mt-2 min-h-[420px]" />
