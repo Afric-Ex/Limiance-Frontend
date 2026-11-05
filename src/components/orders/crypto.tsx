@@ -56,7 +56,7 @@ export const Crypto = () => {
         transaction={selectedTransaction}
         onClose={() => setSelectedTransaction(null)}
       />
-      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
+      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
           <ChipToggle value={type} options={["Deposit", "Withdrawal"]} onChange={(v) => setType(v as "Deposit" | "Withdrawal")} />
         </ResponsiveFilters>

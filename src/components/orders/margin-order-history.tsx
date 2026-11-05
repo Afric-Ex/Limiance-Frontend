@@ -66,7 +66,7 @@ export const MarginOrderHistory = () => {
     <>
     <TransactionDetailsModal transaction={selectedOrder} onClose={() => setSelectedOrder(null)} />
     <div className="flex flex-col gap-6">
-    <div className="flex flex-wrap items-end gap-3 border-y border-white/[0.08] py-3">
+    <div className="flex flex-wrap items-end gap-3 border-y border-white/[0.08] px-5 py-3">
       <ResponsiveFilters>
         {filterControls}
       </ResponsiveFilters>

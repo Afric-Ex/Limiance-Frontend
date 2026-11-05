@@ -165,7 +165,7 @@ export const searchInputClass = {
 };
 
 export const FilterBar = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex flex-col justify-between gap-3 border-y border-white/[0.08] py-3 sm:flex-row sm:items-center">
+  <div className="flex flex-col justify-between gap-3 border-y border-white/[0.08] px-5 py-3 sm:flex-row sm:items-center">
     {children}
   </div>
 );

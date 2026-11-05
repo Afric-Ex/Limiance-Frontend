@@ -42,10 +42,10 @@ export default function RootLayout({
               <QueryProvider>
                 <ModalsProvider>
                   <NotificationsProvider />
-                  <AppContainer>
+                  <div className="flex h-[100dvh] flex-col overflow-hidden">
                     <Header />
-                    {children}
-                  </AppContainer>
+                    <AppContainer>{children}</AppContainer>
+                  </div>
                 </ModalsProvider>
               </QueryProvider>
             </Providers>

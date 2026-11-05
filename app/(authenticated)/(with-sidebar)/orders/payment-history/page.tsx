@@ -59,8 +59,8 @@ function PaymentHistoryInner() {
 
   return (
     <OrdersPageFrame title="Payment history" description="A clear record of account deposits, withdrawals and transfers." actionLabel={null}>
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
+      <section className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#181a20]">
+        <div className="flex flex-wrap items-center gap-3 border-b border-white/[0.08] px-5 py-3">
           <ResponsiveFilters>
             <Select
               data={["All", "Deposit", "Withdrawal", "Transfer"]}
@@ -133,7 +133,7 @@ function PaymentHistoryInner() {
             </Table>
           </TableCard>
         ) : (
-          <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 border-y border-white/[0.08] py-10 text-center">
+          <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 px-5 py-10 text-center">
             <p className="text-base font-semibold text-white">{allHistory.length ? "No payments match these filters" : "No payment activity yet"}</p>
             <p className="max-w-sm text-sm leading-6 text-white/45">
               {allHistory.length

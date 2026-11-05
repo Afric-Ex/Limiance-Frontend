@@ -34,7 +34,7 @@ export const FundingWallet = () => {
         transaction={selectedTransaction}
         onClose={() => setSelectedTransaction(null)}
       />
-      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
+      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
           <Select
             label="Time"

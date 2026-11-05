@@ -214,6 +214,9 @@ export const useMarketFeed = (
     // exactly once instead of once per documented response type.
     const unsubscribes: Array<() => void> = [
       wsClient.subscribe("market_data", marketDataRequest, applyMarkets),
+      // Deployed backend pushes tickers on `spot_margin_markets`; the docs call
+      // the same stream `market_data`. Listen to both.
+      wsClient.subscribe("spot_margin_markets", null, applyMarkets),
       wsClient.subscribe("spot_margin_stream_started", null, applyMarkets),
     ];
 

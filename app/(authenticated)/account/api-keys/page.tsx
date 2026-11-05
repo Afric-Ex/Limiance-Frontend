@@ -322,17 +322,19 @@ function ApiKeysPageInner() {
         }
         overlayProps={{ backgroundOpacity: 0.72, blur: 4 }}
         classNames={{
-          content: "!overflow-hidden !rounded-2xl !border !border-white/[0.08] !bg-[#181a20] !text-white shadow-2xl",
-          header: "!border-b !border-white/[0.07] !bg-[#181a20] !px-5 !py-4 sm:!px-6",
+          content:
+            "!flex !flex-col !overflow-hidden !rounded-2xl !border !border-white/[0.08] !bg-[#181a20] !text-white shadow-2xl max-[728px]:!m-0 max-[728px]:!h-[100dvh] max-[728px]:!max-h-[100dvh] max-[728px]:!rounded-none",
+          header:
+            "!shrink-0 !border-b !border-white/[0.07] !bg-[#181a20] !px-5 !py-4 sm:!px-6 max-[728px]:!pt-[calc(1rem+env(safe-area-inset-top,0px))]",
           title: "!w-full",
           close: "!text-white/50 hover:!bg-white/[0.06] hover:!text-white",
-          body: "!p-0",
+          body: "!flex !min-h-0 !flex-1 !flex-col !overflow-hidden !p-0",
         }}
         size="md"
         centered
       >
-        <div className="flex max-h-[min(76vh,680px)] flex-col">
-          <div className="flex flex-col gap-5 overflow-y-auto p-5 sm:gap-6 sm:p-6">
+        <div className="flex max-h-[min(76vh,680px)] flex-col max-[728px]:max-h-none max-[728px]:min-h-0 max-[728px]:flex-1">
+          <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5 sm:gap-6 sm:p-6">
             <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/[0.06] p-3.5">
               <MdOutlineSecurity className="mt-0.5 shrink-0 text-primary" size={18} />
               <p className="text-xs leading-5 text-white/55">
@@ -448,7 +450,7 @@ function ApiKeysPageInner() {
             </fieldset>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 border-t border-white/[0.07] bg-black/[0.08] px-5 py-4 sm:px-6">
+          <div className="grid shrink-0 grid-cols-2 gap-3 border-t border-white/[0.07] bg-black/[0.08] px-5 py-4 sm:px-6 max-[728px]:!pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
             <button
               type="button"
               onClick={closeCreate}
