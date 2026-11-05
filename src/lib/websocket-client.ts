@@ -74,6 +74,7 @@ class WebSocketClient {
    *  known upfront and must not require a fake subscription. */
   private globalHandlers = new Set<WsMessageHandler>();
   private intentionalClose = false;
+  private reconnectAfterClose = false;
   private idleCloseTimeout: NodeJS.Timeout | null = null;
   /** Set on auth-rejection close codes to prevent futile reconnect loops. */
   private authFailed = false;
@@ -134,15 +135,44 @@ class WebSocketClient {
       subscriptionsCount: this.subscriptions.size,
     });
 
+    const hasActiveWork = this.subscriptions.size > 0 || this.shouldMaintainConnection;
+    const hasConnection = this.isConnected || this.isConnecting;
+    const shouldReplaceConnection =
+      hasConnection && (!this.connectedWithTicket || changed);
+    const shouldStartConnection =
+      changed && !hasConnection && hasActiveWork;
+
     // If the socket already connected as an unauthenticated guest viewer before
     // login / user hydration completed, reconnect immediately to upgrade it.
-    if ((this.isConnected || this.isConnecting) && (!this.connectedWithTicket || changed)) {
+    if (shouldReplaceConnection) {
       console.log("[WebSocketClient] Reconnecting to upgrade authentication");
-      const hadSubs = this.subscriptions.size > 0;
-      this.disconnect();
-      if (hadSubs) {
-        this.connect();
+      if (this.reconnectTimeout) {
+        clearTimeout(this.reconnectTimeout);
+        this.reconnectTimeout = null;
       }
+      this.retryCount = 0;
+      this.reconnectAfterClose = hasActiveWork;
+      this.intentionalClose = true;
+      this.stopHeartbeat();
+
+      if (this.ws) {
+        this.ws.close();
+      } else {
+        this.isConnecting = false;
+        this.notifyStatus(false);
+        if (hasActiveWork) {
+          this.intentionalClose = false;
+          this.connect();
+        }
+      }
+    } else if (shouldStartConnection) {
+      console.log("[WebSocketClient] Starting connection with updated authentication");
+      if (this.reconnectTimeout) {
+        clearTimeout(this.reconnectTimeout);
+        this.reconnectTimeout = null;
+      }
+      this.retryCount = 0;
+      this.connect();
     }
   }
 
@@ -402,6 +432,16 @@ class WebSocketClient {
         this.stopHeartbeat();
         this.ws = null;
 
+        const reconnectWithUpdatedAuth = this.reconnectAfterClose;
+        this.reconnectAfterClose = false;
+        if (reconnectWithUpdatedAuth) {
+          this.intentionalClose = false;
+          if (this.subscriptions.size > 0 || this.shouldMaintainConnection) {
+            this.connect();
+          }
+          return;
+        }
+
         // Server rejected the session. `handleLogout` runs synchronously through
         // the session coordinator (which also closes this socket and clears
         // local state), so the latch is set *after* it — otherwise the
@@ -428,7 +468,10 @@ class WebSocketClient {
           return;
         }
 
-        if (!this.intentionalClose && this.subscriptions.size > 0) {
+        if (
+          !this.intentionalClose &&
+          (this.subscriptions.size > 0 || this.shouldMaintainConnection)
+        ) {
           this.scheduleReconnect();
         }
       };
@@ -598,6 +641,7 @@ class WebSocketClient {
 
   public disconnect() {
     this.intentionalClose = true;
+    this.reconnectAfterClose = false;
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;

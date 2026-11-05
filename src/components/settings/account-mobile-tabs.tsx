@@ -25,7 +25,7 @@ export const AccountMobileTabs = () => {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Account navigation" className="fixed bottom-0 left-0 right-0 z-[9999] border-t border-white/[0.08] bg-surface/95 pb-safe shadow-[0_-12px_36px_rgba(0,0,0,0.4)] backdrop-blur-xl pointer-events-auto min-[1150px]:hidden">
+    <nav aria-label="Account navigation" className="fixed bottom-0 left-0 right-0 z-[100] border-t border-white/[0.08] bg-surface/95 pb-safe shadow-[0_-12px_36px_rgba(0,0,0,0.4)] backdrop-blur-xl pointer-events-auto min-[1150px]:hidden">
       <div className="mx-auto flex w-full max-w-2xl items-center gap-1 overflow-x-auto px-2 py-2 no-scrollbar">
         {accountNavLinks.map((tab) => {
           const isActive = pathname === tab.link || pathname.startsWith(`${tab.link}/`);

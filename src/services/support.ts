@@ -77,8 +77,17 @@ export const supportService = {
  * UI model so status chips, dates and messages render correctly.
  */
 
-const toIso = (value?: string): string | undefined => {
-  if (!value) return undefined;
+const toIso = (value?: unknown): string | undefined => {
+  if (typeof value === "number" || (typeof value === "string" && /^\d+$/.test(value.trim()))) {
+    const timestamp = Number(value);
+    if (!Number.isFinite(timestamp)) return undefined;
+    const milliseconds = Math.abs(timestamp) < 1_000_000_000_000
+      ? timestamp * 1000
+      : timestamp;
+    const date = new Date(milliseconds);
+    return Number.isFinite(date.getTime()) ? date.toISOString() : undefined;
+  }
+  if (typeof value !== "string" || !value.trim()) return undefined;
   const src = value.trim();
   const iso = src
     .replace(/ \+0000 UTC$/, "Z")
