@@ -45,7 +45,7 @@ export const DebtHistory = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
+      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
           <ChipToggle value={filter} options={filters} onChange={setFilter} />
           <Select

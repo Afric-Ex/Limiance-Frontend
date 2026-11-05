@@ -64,7 +64,7 @@ export const OpenTab = () => {
           {isLoading ? "Loading" : `${filtered.length} active`}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
+      <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
           <div role="group" aria-label="Filter open orders by side" className="inline-flex shrink-0 items-center gap-0.5 rounded-lg bg-white/[0.035] p-1">
             {["All", "Buy", "Sell"].map((item) => (

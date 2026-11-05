@@ -40,7 +40,7 @@ export const AppContainer = ({ children }: { children: ReactNode }) => {
       ref={scrollRef}
       className={clsx(
         bgImagePages.some((each) => pathname.includes(each)) && "bg-landing",
-        "flex flex-col overflow-auto h-screen"
+        "flex min-h-0 flex-1 flex-col overflow-auto"
       )}
     >
       {children}

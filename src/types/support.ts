@@ -20,6 +20,7 @@ export interface SupportMessage {
 export interface CreateTicketPayload {
   subject: string;
   message: string;
+  permission: string[];
 }
 
 export interface ReplyTicketPayload {
