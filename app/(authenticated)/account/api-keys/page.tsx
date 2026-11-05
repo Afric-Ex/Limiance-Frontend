@@ -11,7 +11,16 @@ import { Modal, Loader, Checkbox, Table, TableTr, TableTh, TableTd } from "@mant
 import { useDisclosure } from "@mantine/hooks";
 import { useState } from "react";
 import { CopyButton } from "@/src/components/shared/copy-button";
-import { MdVisibility, MdVisibilityOff, MdClose } from "react-icons/md";
+import {
+  MdVisibility,
+  MdVisibilityOff,
+  MdClose,
+  MdOutlineKey,
+  MdOutlineLock,
+  MdOutlineSecurity,
+  MdOutlineShowChart,
+  MdOutlineSwapHoriz,
+} from "react-icons/md";
 import clsx from "clsx";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountApiKeysSkeleton } from "@/src/components/skeletons/account";
@@ -19,9 +28,27 @@ import { AccountPageHeader } from "@/src/components/settings/account-page-header
 import { MdVpnKey } from "react-icons/md";
 
 const PERMISSIONS = [
-  { id: "read",     label: "Read",     desc: "View balances and orders" },
-  { id: "trade",    label: "Trade",    desc: "Place and cancel orders" },
-  { id: "withdraw", label: "Withdraw", desc: "Initiate withdrawals" },
+  {
+    id: "read",
+    label: "Read",
+    desc: "View balances, account information and order history.",
+    icon: MdOutlineShowChart,
+    level: "Read only",
+  },
+  {
+    id: "trade",
+    label: "Trade",
+    desc: "Place, manage and cancel trading orders.",
+    icon: MdOutlineSwapHoriz,
+    level: "Trading",
+  },
+  {
+    id: "withdraw",
+    label: "Withdraw",
+    desc: "Request withdrawals from your account.",
+    icon: MdOutlineLock,
+    level: "Sensitive",
+  },
 ];
 
 const permColor: Record<string, string> = {
@@ -103,7 +130,7 @@ function ApiKeysPageInner() {
 
   // Mutations
   const { mutate: createKey, isPending: createLoading } = useMutation({
-    mutationFn: () => userService.createApiKey({ label, permissions: selectedPerms }),
+    mutationFn: () => userService.createApiKey({ label: label.trim(), permissions: selectedPerms }),
     onSuccess: (res: any) => {
       const data = unwrapPayload(res);
       setNewKey({
@@ -256,58 +283,168 @@ function ApiKeysPageInner() {
       <Modal
         opened={createOpen}
         onClose={closeCreate}
-        title={<span className="font-bold text-lg">Create API Key</span>}
-        classNames={{ content: "!bg-gray-7", header: "!bg-gray-7" }}
+        title={
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.12] text-primary">
+              <MdOutlineKey size={21} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+                Developer access
+              </p>
+              <h2 className="mt-0.5 text-base font-semibold leading-tight text-white sm:text-lg">
+                Create API key
+              </h2>
+            </div>
+          </div>
+        }
+        overlayProps={{ backgroundOpacity: 0.72, blur: 4 }}
+        classNames={{
+          content: "!overflow-hidden !rounded-2xl !border !border-white/[0.08] !bg-[#181a20] !text-white shadow-2xl",
+          header: "!border-b !border-white/[0.07] !bg-[#181a20] !px-5 !py-4 sm:!px-6",
+          title: "!w-full",
+          close: "!text-white/50 hover:!bg-white/[0.06] hover:!text-white",
+          body: "!p-0",
+        }}
         size="md"
         centered
       >
-        <div className="flex flex-col gap-6 py-2">
-          {/* Label */}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-white/70">Label <span className="text-error-1">*</span></label>
-            <input
-              type="text"
-              value={label}
-              onChange={(e) => { setLabel(e.target.value.slice(0, 50)); setLabelError(""); }}
-              placeholder="e.g. My Trading Bot"
-              className={clsx("w-full px-4 py-3 rounded-xl bg-gray-1 border text-sm text-white outline-none transition-all", labelError ? "border-error-1" : "border-gray-9/40 focus:border-primary")}
-            />
-            <div className="flex justify-between items-center">
-              {labelError && <span className="text-xs text-error-1">{labelError}</span>}
-              <span className={clsx("text-xs ml-auto", label.length >= 45 ? "text-warning-1" : "text-white/30")}>{label.length}/50</span>
+        <div className="flex max-h-[min(76vh,680px)] flex-col">
+          <div className="flex flex-col gap-5 overflow-y-auto p-5 sm:gap-6 sm:p-6">
+            <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/[0.06] p-3.5">
+              <MdOutlineSecurity className="mt-0.5 shrink-0 text-primary" size={18} />
+              <p className="text-xs leading-5 text-white/55">
+                API keys can access your account based on the permissions you select. Only grant the access your application needs.
+              </p>
             </div>
-          </div>
 
-          {/* Permissions */}
-          <div className="flex flex-col gap-3">
-            <label className="text-sm font-medium text-white/70">Permissions <span className="text-error-1">*</span></label>
             <div className="flex flex-col gap-2">
-              {PERMISSIONS.map((perm) => (
-                <label key={perm.id} className={clsx("flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all", selectedPerms.includes(perm.id) ? "border-primary/60 bg-primary/10" : "border-white/[0.08] bg-black/20 hover:border-white/20")}>
-                  <Checkbox
-                    checked={selectedPerms.includes(perm.id)}
-                    onChange={() => togglePerm(perm.id)}
-                    color="blue"
-                    size="sm"
-                  />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-semibold capitalize">{perm.label}</span>
-                    <span className="text-xs text-white/50">{perm.desc}</span>
-                  </div>
-                </label>
-              ))}
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <label htmlFor="api-key-label" className="text-sm font-semibold text-white/85">
+                    Key label <span className="text-error-1">*</span>
+                  </label>
+                  <p className="mt-1 text-xs text-white/40">
+                    Use a name that helps you recognize this integration.
+                  </p>
+                </div>
+                <span className={clsx("text-xs tabular-nums", label.length >= 45 ? "text-warning-1" : "text-white/35")}>
+                  {label.length}/50
+                </span>
+              </div>
+              <input
+                id="api-key-label"
+                type="text"
+                value={label}
+                onChange={(event) => {
+                  setLabel(event.target.value.slice(0, 50));
+                  setLabelError("");
+                }}
+                placeholder="e.g. Portfolio tracker"
+                aria-invalid={Boolean(labelError)}
+                aria-describedby={labelError ? "api-key-label-error" : undefined}
+                maxLength={50}
+                className={clsx(
+                  "min-h-12 w-full rounded-xl border bg-black/20 px-4 text-sm text-white outline-none transition-colors placeholder:text-white/25",
+                  labelError
+                    ? "border-error-1/70 focus:border-error-1"
+                    : "border-white/[0.09] focus:border-primary/60"
+                )}
+              />
+              {labelError && (
+                <span id="api-key-label-error" className="text-xs text-error-1">
+                  {labelError}
+                </span>
+              )}
             </div>
-            {permsError && <span className="text-xs text-error-1">{permsError}</span>}
+
+            <fieldset className="flex flex-col gap-3">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <legend className="text-sm font-semibold text-white/85">
+                    Permissions <span className="text-error-1">*</span>
+                  </legend>
+                  <p className="mt-1 text-xs text-white/40">
+                    Select only the capabilities this key requires.
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-white/50">
+                  {selectedPerms.length} selected
+                </span>
+              </div>
+              <div className="grid gap-2.5">
+                {PERMISSIONS.map((perm) => {
+                  const selected = selectedPerms.includes(perm.id);
+                  const PermissionIcon = perm.icon;
+                  return (
+                    <label
+                      key={perm.id}
+                      className={clsx(
+                        "flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors sm:gap-4 sm:p-4",
+                        selected
+                          ? "border-primary/40 bg-primary/[0.07]"
+                          : "border-white/[0.07] bg-white/[0.015] hover:border-white/[0.14] hover:bg-white/[0.03]"
+                      )}
+                    >
+                      <Checkbox
+                        checked={selected}
+                        onChange={() => togglePerm(perm.id)}
+                        color="blue"
+                        size="sm"
+                        aria-label={`${perm.label} permission`}
+                        className="mt-0.5"
+                      />
+                      <span className={clsx(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border",
+                        selected
+                          ? "border-primary/20 bg-primary/10 text-primary"
+                          : "border-white/[0.07] bg-white/[0.03] text-white/45"
+                      )}>
+                        <PermissionIcon size={18} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-white/90">{perm.label}</span>
+                          <span className={clsx(
+                            "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                            perm.id === "withdraw"
+                              ? "bg-warning-1/10 text-warning-1"
+                              : "bg-white/[0.05] text-white/40"
+                          )}>
+                            {perm.level}
+                          </span>
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-white/45">
+                          {perm.desc}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {permsError && <span className="text-xs text-error-1">{permsError}</span>}
+            </fieldset>
           </div>
 
-          <button
-            onClick={handleCreate}
-            disabled={createLoading}
-            className="w-full py-3 bg-primary rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {createLoading && <Loader size="xs" color="white" />}
-            Create Key
-          </button>
+          <div className="grid grid-cols-2 gap-3 border-t border-white/[0.07] bg-black/[0.08] px-5 py-4 sm:px-6">
+            <button
+              type="button"
+              onClick={closeCreate}
+              disabled={createLoading}
+              className="min-h-11 rounded-xl border border-white/[0.09] bg-white/[0.025] text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={createLoading}
+              className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(77,119,240,0.18)] transition-all hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {createLoading ? <Loader size="xs" color="white" /> : <Add />}
+              {createLoading ? "Creating key…" : "Create API key"}
+            </button>
+          </div>
         </div>
       </Modal>
 

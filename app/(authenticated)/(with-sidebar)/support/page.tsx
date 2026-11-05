@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { ActionIcon, Button, Modal, TextInput, Textarea } from "@mantine/core";
@@ -19,14 +19,20 @@ import {
   RiArrowLeftLine,
   RiTimeLine,
   RiCheckDoubleLine,
+  RiSearchLine,
+  RiRefreshLine,
 } from "react-icons/ri";
-import { MdOutlineSupportAgent } from "react-icons/md";
+import {
+  MdOutlineSecurity,
+  MdOutlineSupportAgent,
+} from "react-icons/md";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { SupportPageSkeleton } from "@/src/components/skeletons/with-sidebar";
 import { useChatWs, useTypingIndicator } from "@/src/hooks/use-chat-ws";
 import { useUserStore } from "@/src/stores/user-store";
 import type { ChatWsMessage } from "@/src/lib/chat-ws";
+import { AccountPageHeader } from "@/src/components/settings/account-page-header";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -112,7 +118,11 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
   const [message, setMessage] = useState("");
 
   const { mutate: create, isPending } = useMutation({
-    mutationFn: () => supportService.createTicket({ subject, message }),
+    mutationFn: () =>
+      supportService.createTicket({
+        subject: subject.trim(),
+        message: message.trim(),
+      }),
     onSuccess: () => {
       successNotification("Support ticket created!");
       qc.invalidateQueries({ queryKey: supportKeys.tickets() });
@@ -127,52 +137,97 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
     <Modal
       opened
       onClose={onClose}
-      title="New Support Ticket"
+      title={
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.12] text-primary">
+            <RiCustomerService2Line size={20} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+              Support center
+            </p>
+            <h2 className="mt-0.5 text-base font-semibold leading-tight text-white sm:text-lg">
+              Create a support ticket
+            </h2>
+          </div>
+        </div>
+      }
       centered
+      size="md"
+      overlayProps={{ backgroundOpacity: 0.72, blur: 4 }}
       classNames={{
-        content: "bg-elevated border border-line text-[var(--color-text-primary)] shadow-[var(--shadow-card)]",
-        header: "bg-elevated border-b border-line",
-        title: "text-[var(--text-title)] font-semibold text-[var(--color-text-primary)]",
-        close: "text-[var(--color-text-secondary)] hover:bg-muted hover:text-[var(--color-text-primary)]",
+        content: "!overflow-hidden !rounded-2xl !border !border-white/[0.08] !bg-elevated !text-white shadow-2xl",
+        header: "!border-b !border-white/[0.07] !bg-elevated !px-5 !py-4 sm:!px-6",
+        title: "!w-full",
+        close: "!text-white/50 hover:!bg-white/[0.06] hover:!text-white",
+        body: "!p-0",
       }}
     >
-      <div className="flex flex-col gap-4 pt-2">
-        <TextInput
-          label="Subject"
-          placeholder="Briefly describe your issue…"
-          maxLength={80}
-          value={subject}
-          onChange={(e) => setSubject(e.currentTarget.value)}
-          classNames={inputClassNames}
-        />
+      <div className="flex max-h-[min(78vh,700px)] flex-col">
+        <div className="flex flex-col gap-5 overflow-y-auto p-5 sm:gap-6 sm:p-6">
+          <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/[0.06] p-3.5">
+            <MdOutlineSecurity className="mt-0.5 shrink-0 text-primary" size={18} />
+            <p className="text-xs leading-5 text-white/55">
+              Tell us what happened and include any relevant details. Never share your password, verification codes, or API secrets.
+            </p>
+          </div>
 
-        <Textarea
-          label="Description"
-          placeholder="Please describe your issue in detail…"
-          minRows={4}
-          maxRows={7}
-          autosize
-          value={message}
-          onChange={(e) => setMessage(e.currentTarget.value)}
-          classNames={inputClassNames}
-        />
+          <TextInput
+            label="Subject"
+            description="A short summary helps our team route your request."
+            placeholder="e.g. I need help with a deposit"
+            maxLength={80}
+            value={subject}
+            onChange={(e) => setSubject(e.currentTarget.value)}
+            classNames={{
+              ...inputClassNames,
+              input: "!min-h-12 !rounded-xl !bg-black/20 !border-white/[0.09] !text-white placeholder:!text-white/25 focus:!border-primary/60",
+              description: "!mt-1 !text-xs !text-white/40",
+            }}
+          />
 
-        {!valid && !isPending && (
-          <p className="text-micro text-[var(--color-text-secondary)] -mt-1">
-            Subject needs 4+ characters and description 10+ characters
+          <Textarea
+            label="How can we help?"
+            description="Include steps you have already tried, if applicable."
+            placeholder="Describe the issue in detail…"
+            minRows={5}
+            maxRows={8}
+            autosize
+            value={message}
+            onChange={(e) => setMessage(e.currentTarget.value)}
+            classNames={{
+              ...inputClassNames,
+              input: "!rounded-xl !bg-black/20 !border-white/[0.09] !text-white placeholder:!text-white/25 focus:!border-primary/60",
+              description: "!mt-1 !text-xs !text-white/40",
+            }}
+          />
+
+          <p className="text-xs leading-5 text-white/40">
+            Please provide at least 4 characters in the subject and 11 characters in the description.
           </p>
-        )}
+        </div>
 
-        <Button
-          size="md"
-          fullWidth
-          disabled={!valid}
-          loading={isPending}
-          onClick={() => create()}
-          classNames={{ root: "bg-primary-strong hover:bg-primary-strong/90" }}
-        >
-          {isPending ? "Submitting…" : "Submit Ticket"}
-        </Button>
+        <div className="grid grid-cols-2 gap-3 border-t border-white/[0.07] bg-black/[0.08] px-5 py-4 sm:px-6">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="min-h-11 rounded-xl border border-white/[0.09] bg-white/[0.025] text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <Button
+            size="md"
+            disabled={!valid}
+            loading={isPending}
+            onClick={() => create()}
+            classNames={{
+              root: "!min-h-11 !rounded-xl !bg-primary !text-sm !font-semibold hover:!bg-primary/90",
+            }}
+          >
+            {isPending ? "Submitting…" : "Submit ticket"}
+          </Button>
+        </div>
       </div>
     </Modal>
   );
@@ -216,7 +271,12 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
     onTyping,
   });
 
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: supportKeys.ticket(ticket.id),
     queryFn: async () => {
       // Primary: chat history over the socket. The ticket REST call still
@@ -259,35 +319,54 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
   return (
     <div className="flex h-full flex-col min-h-0">
       {/* Thread header */}
-      <div className="flex items-center gap-3 px-4 py-3.5 border-b border-line flex-shrink-0">
+      <div className="flex flex-shrink-0 items-center gap-3 border-b border-white/[0.06] bg-white/[0.015] px-4 py-3.5">
         <button
+          type="button"
           onClick={onBack}
           aria-label="Back to tickets"
-          className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-line transition-colors"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03] text-white/55 transition-colors hover:bg-white/[0.07] hover:text-white lg:hidden"
         >
           <RiArrowLeftLine size={18} />
         </button>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-semibold text-white">
             {thread.subject}
           </div>
-          <div className="text-micro text-[var(--color-text-secondary)] mt-0.5 truncate">
+          <div className="mt-1 truncate text-xs text-white/40">
             #{thread.id}
             {thread.category ? ` · ${thread.category}` : ""}
           </div>
         </div>
+        <span className="hidden items-center gap-1.5 text-[10px] font-medium text-white/40 sm:inline-flex">
+          <span className={clsx("h-1.5 w-1.5 rounded-full", connected ? "bg-success-6" : "bg-white/25")} />
+          {connected ? "Live" : "Connecting"}
+        </span>
         <StatusBadge status={thread.status} />
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-black/[0.08] px-4 py-4 sm:px-5">
         {isLoading
           ? Array.from({ length: 3 }).map((_, i) => (
               <div
                 key={i}
-                className="h-16 rounded-xl bg-muted animate-pulse"
+                className="h-16 animate-pulse rounded-xl bg-muted"
               />
             ))
+          : isError
+            ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 py-8 text-center">
+                <p className="text-sm text-white/60">Unable to load this conversation.</p>
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  onClick={() => void refetch()}
+                  className="!text-primary"
+                >
+                  Try again
+                </Button>
+              </div>
+            )
           : messages.length === 0
             ? (
               <EmptyState
@@ -304,27 +383,27 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
                 >
                   <div
                     className={clsx(
-                      "max-w-[75%] px-4 py-2.5 rounded-2xl shadow-md",
+                      "max-w-[min(85%,560px)] rounded-2xl border px-4 py-3 shadow-sm",
                       isAdmin
-                        ? "bg-white/[0.06] border border-white/5 text-[var(--color-neutral-off-white)] rounded-bl-sm"
-                        : "bg-gradient-to-br from-[#0ECB81] to-emerald-600 text-white rounded-br-sm shadow-[0_4px_15px_rgba(14,203,129,0.25)]"
+                        ? "rounded-bl-sm border-white/[0.06] bg-white/[0.045] text-white/90"
+                        : "rounded-br-sm border-primary/20 bg-primary/[0.14] text-white"
                     )}
                   >
                     <div
                       className={clsx(
-                        "flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider mb-1",
-                        isAdmin ? "text-white/40" : "text-white/85"
+                        "mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider",
+                        isAdmin ? "text-white/40" : "text-primary"
                       )}
                     >
                       {isAdmin && <MdOutlineSupportAgent size={12} />}
                       {isAdmin ? "Support Team" : "You"}
                     </div>
-                    <p className="text-caption leading-relaxed break-words whitespace-pre-wrap">
+                    <p className="break-words whitespace-pre-wrap text-sm leading-6">
                       {msg.message}
                     </p>
                     <div
                       className={clsx(
-                        "text-2xs mt-1.5",
+                        "mt-2 text-[10px]",
                         isAdmin ? "text-white/35" : "text-white/75"
                       )}
                     >
@@ -339,7 +418,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
 
       {/* Reply input */}
       {open ? (
-        <div className="border-t border-line p-3 flex flex-col gap-2 flex-shrink-0 bg-black/20">
+        <div className="flex flex-shrink-0 flex-col gap-2 border-t border-white/[0.06] bg-elevated p-3 sm:p-4">
           {peerTyping && (
             <div className="px-1 text-micro text-[var(--color-text-secondary)]">
               Support is typing…
@@ -367,13 +446,15 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
                   }
                 }
               }}
-              classNames={{ input: "!bg-surface !border-line !text-[var(--color-text-primary)] placeholder:!text-[var(--color-text-disabled)] focus:!border-primary resize-none" }}
+              classNames={{
+                input: "!rounded-xl !bg-black/20 !border-white/[0.08] !text-white placeholder:!text-white/30 focus:!border-primary/60 resize-none",
+              }}
             />
             <ActionIcon
               size="lg"
               variant="filled"
               className={clsx(
-                "mb-0.5 text-white transition-colors",
+                "mb-0.5 !h-11 !w-11 !rounded-xl text-white transition-colors",
                 reply.trim()
                   ? "bg-primary-strong hover:bg-primary-strong/90"
                   : "bg-muted text-[var(--color-text-disabled)]"
@@ -390,7 +471,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
           </div>
         </div>
       ) : (
-        <div className="border-t border-line px-4 py-3 text-center text-xs text-[var(--color-text-secondary)] flex-shrink-0">
+        <div className="flex-shrink-0 border-t border-white/[0.06] px-4 py-4 text-center text-xs text-white/40">
           This ticket is {thread.status}
         </div>
       )}
@@ -400,37 +481,49 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
 
 // ─── Ticket List Item ─────────────────────────────────────────────────────────
 
-function TicketItem({ ticket, isActive, onClick }: { ticket: SupportTicket; isActive: boolean; onClick: () => void }) {
+function TicketItem({
+  ticket,
+  isActive,
+  onClick,
+}: {
+  ticket: SupportTicket;
+  isActive: boolean;
+  onClick: () => void;
+}) {
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
+      aria-pressed={isActive}
       className={clsx(
-        "flex flex-col gap-1 px-4 py-3.5 border-b border-line bg-transparent border-l-2 cursor-pointer transition-colors",
+        "flex w-full flex-col gap-2 border-b border-white/[0.05] border-l-2 px-4 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60",
         isActive
-          ? "bg-primary/10 border-l-primary"
-          : "border-l-transparent hover:bg-white/[0.04]"
+          ? "border-l-primary bg-primary/[0.07]"
+          : "border-l-transparent hover:bg-white/[0.035]"
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <span
           className={clsx(
-            "flex-1 text-caption font-semibold truncate",
+            "min-w-0 flex-1 truncate text-sm font-semibold",
             isActive
               ? "text-primary"
-              : "text-[var(--color-neutral-off-white)]"
+              : "text-white/85"
           )}
         >
           {ticket.subject}
         </span>
         <StatusBadge status={ticket.status} />
       </div>
-      <span className="text-micro text-[var(--color-text-secondary)]">
-        {ticket.category ?? "General"}
-      </span>
-      <span className="text-2xs text-[var(--color-text-disabled)]">
-        {timeAgo(ticket.updated_at || ticket.created_at)}
-      </span>
-    </div>
+      <div className="flex items-center justify-between gap-3">
+        <span className="truncate text-xs text-white/40">
+          {ticket.category ?? "General"} <span className="px-1 text-white/20">·</span> #{ticket.id}
+        </span>
+        <span className="shrink-0 text-2xs text-white/35">
+          {timeAgo(ticket.updated_at || ticket.created_at)}
+        </span>
+      </div>
+    </button>
   );
 }
 
@@ -440,16 +533,32 @@ function SupportPageInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [mobileView, setMobileView] = useState<"list" | "thread">("list");
+  const [ticketSearch, setTicketSearch] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: supportKeys.tickets(),
     queryFn: () => supportService.listTickets(),
     select: (r) => normalizeTicketList(r),
     refetchInterval: 30000,
   });
 
-  const tickets: SupportTicket[] = data ?? [];
+  const tickets = useMemo<SupportTicket[]>(() => data ?? [], [data]);
   const selected = tickets.find((t) => t.id === selectedId) ?? null;
+  const filteredTickets = useMemo(() => {
+    const query = ticketSearch.trim().toLowerCase();
+    if (!query) return tickets;
+    return tickets.filter((ticket) =>
+      [ticket.subject, ticket.category, ticket.id, ticket.status]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query))
+    );
+  }, [ticketSearch, tickets]);
 
   const handleSelect = useCallback((id: string) => {
     setSelectedId(id);
@@ -461,55 +570,89 @@ function SupportPageInner() {
     setSelectedId(null);
   }, []);
 
-  const openCount = tickets.filter((t) => t.status === "open" || t.status === "in_progress").length;
+  const openCount = tickets.filter((ticket) =>
+    ["open", "in_progress", "pending_user"].includes(ticket.status)
+  ).length;
 
   return (
-    <div className="flex h-[calc(100dvh-150px)] min-h-[480px] flex-col gap-5 page-enter">
-      {/* Page header */}
-      <div className="flex items-center justify-between gap-4 flex-shrink-0">
-        <div className="flex items-center gap-3.5 min-w-0">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-            <RiCustomerService2Line size={22} />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold text-[var(--color-text-primary)] leading-tight truncate">
-              Support Center
-            </h1>
-            <p className="text-xs text-[var(--color-text-secondary)] truncate">
-              {openCount > 0
-                ? `${openCount} active ticket${openCount !== 1 ? "s" : ""} · We reply within 24h`
-                : "No open tickets · We reply within 24h"}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] bg-primary-strong px-4 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(77,119,240,0.3)] transition-all hover:bg-primary-strong/90 hover:shadow-[0_6px_20px_rgba(77,119,240,0.4)] active:scale-[0.98]"
-        >
-          <RiAddLine size={16} />
-          New Ticket
-        </button>
-      </div>
+    <main className="mx-auto flex h-[calc(100dvh-160px)] min-h-[500px] w-full max-w-[1180px] flex-col gap-5 pb-2 page-enter max-[1150px]:h-[calc(100dvh-205px)] max-[1150px]:min-h-[460px]">
+      <AccountPageHeader
+        title="Support center"
+        description="Get help from our team, follow your requests, and continue conversations in one place."
+        icon={<RiCustomerService2Line size={23} />}
+        eyebrow="We're here to help"
+        action={
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(77,119,240,0.2)] transition-all hover:bg-primary/90 active:scale-[0.98]"
+          >
+            <RiAddLine size={17} />
+            New ticket
+          </button>
+        }
+      />
 
       {/* Main panel */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[330px_1fr] gap-4">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]">
         {/* Left — ticket list */}
         <div
           className={clsx(
-            "flex flex-col min-h-0 overflow-hidden rounded-xl border border-line bg-elevated shadow-card",
+            "flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-elevated shadow-card",
             mobileView === "thread" && "max-lg:hidden"
           )}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-line flex-shrink-0">
-            <span className="text-micro font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
-              Your Tickets ({tickets.length})
-            </span>
+          <div className="flex flex-col gap-3 border-b border-white/[0.06] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-white">Your tickets</h2>
+                <p className="mt-1 text-xs text-white/40">
+                  {openCount} active <span className="px-1 text-white/20">·</span> {tickets.length} total
+                </p>
+              </div>
+              <ActionIcon
+                variant="subtle"
+                aria-label="Refresh tickets"
+                onClick={() => void refetch()}
+                disabled={isFetching}
+                className="!text-white/45 hover:!text-white"
+              >
+                <RiRefreshLine className={isFetching ? "animate-spin" : ""} size={18} />
+              </ActionIcon>
+            </div>
+            <TextInput
+              value={ticketSearch}
+              onChange={(event) => setTicketSearch(event.currentTarget.value)}
+              placeholder="Search tickets"
+              aria-label="Search support tickets"
+              leftSection={<RiSearchLine size={15} />}
+              classNames={{
+                input: "!min-h-10 !rounded-xl !border-white/[0.07] !bg-black/15 !pl-10 !text-sm !text-white placeholder:!text-white/30 focus:!border-primary/50",
+                section: "!text-white/35",
+              }}
+            />
           </div>
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="mx-3 my-3 h-[72px] rounded-lg bg-muted animate-pulse" />
+                <div key={i} className="mx-3 my-3 h-[76px] animate-pulse rounded-xl bg-muted" />
               ))
+            ) : isError ? (
+              <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-error-1/[0.08] text-error-1">
+                  <RiRefreshLine size={19} />
+                </span>
+                <p className="text-sm font-medium text-white/75">Unable to load your tickets</p>
+                <p className="text-xs text-white/40">Check your connection and try again.</p>
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  onClick={() => void refetch()}
+                  className="!text-primary"
+                >
+                  Try again
+                </Button>
+              </div>
             ) : tickets.length === 0 ? (
               <EmptyState
                 icon={<RiCustomerService2Line size={36} />}
@@ -522,8 +665,20 @@ function SupportPageInner() {
                   </>
                 }
               />
+            ) : filteredTickets.length === 0 ? (
+              <EmptyState
+                icon={<RiSearchLine size={30} />}
+                caption={
+                  <>
+                    No matching tickets
+                    <span className="mt-1 block text-xs text-[var(--color-text-secondary)]">
+                      Try a different subject or ticket ID.
+                    </span>
+                  </>
+                }
+              />
             ) : (
-              tickets.map((t) => (
+              filteredTickets.map((t) => (
                 <TicketItem
                   key={t.id}
                   ticket={t}
@@ -538,33 +693,35 @@ function SupportPageInner() {
         {/* Right — thread or empty state */}
         <div
           className={clsx(
-            "flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-elevated shadow-card",
+            "flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-elevated shadow-card",
             mobileView !== "thread" && "max-lg:hidden"
           )}
         >
           {selected ? (
             <TicketThread ticket={selected} onBack={handleBack} />
           ) : (
-            <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-              <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[22px] bg-primary/10 border border-primary/15 text-primary">
+            <div className="relative flex flex-1 flex-col items-center justify-center gap-5 overflow-hidden px-6 text-center">
+              <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full border border-white/[0.035]" />
+              <div className="pointer-events-none absolute -bottom-28 -left-20 h-64 w-64 rounded-full border border-white/[0.035]" />
+              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/[0.1] text-primary">
                 <RiCustomerService2Line size={32} />
               </div>
-              <div>
-                <p className="text-body font-semibold text-white/60 m-0">
-                  Select a ticket
-                </p>
-                <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                  or create a new one to get help
+              <div className="relative">
+                <h2 className="text-lg font-semibold text-white">
+                  Your conversations
+                </h2>
+                <p className="mt-1 max-w-xs text-sm leading-6 text-white/45">
+                  Select a ticket to read and reply, or open a new request to get help from our team.
                 </p>
               </div>
-              <div className="flex flex-wrap justify-center gap-4">
+              <div className="relative flex flex-wrap justify-center gap-2">
                 {[
                   { icon: <RiTimeLine size={14} />, label: "24h response time" },
                   { icon: <RiCheckDoubleLine size={14} />, label: "Real-time updates" },
                 ].map(({ icon, label }) => (
                   <span
                     key={label}
-                    className="flex items-center gap-1.5 text-micro text-[var(--color-text-secondary)]"
+                    className="flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 text-xs text-white/45"
                   >
                     {icon} {label}
                   </span>
@@ -577,7 +734,7 @@ function SupportPageInner() {
 
       {/* Create modal */}
       {showCreate && <CreateTicketModal onClose={() => setShowCreate(false)} />}
-    </div>
+    </main>
   );
 }
 
