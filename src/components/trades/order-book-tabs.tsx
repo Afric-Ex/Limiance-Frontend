@@ -291,7 +291,10 @@ export function OrderBookTabs({
   useEffect(() => {
     if (lastTradedPrice === null) return;
     const previous = previousPriceRef.current;
-    if (previous !== null && lastTradedPrice !== previous) {
+    // Compare at 6 decimal places so tiny sub-cent moves still flip the arrow/colour,
+    // while the displayed value is still rounded to displayDecimals for readability.
+    const toFixed6 = (n: number) => Math.round(n * 1_000_000);
+    if (previous !== null && toFixed6(lastTradedPrice) !== toFixed6(previous)) {
       setPriceDir(lastTradedPrice > previous ? "up" : "down");
     }
     previousPriceRef.current = lastTradedPrice;

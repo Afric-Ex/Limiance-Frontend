@@ -78,7 +78,11 @@ export function SpotPairHeader({
     if (next === null) return;
     const prev = prevPriceRef.current;
     prevPriceRef.current = next;
-    if (prev === null || next === prev) return;
+    if (prev === null) return;
+    // Compare at 6 decimal places — the displayed value rounds to fewer places
+    // but the arrow and colour should react to any real move in the raw price.
+    const toFixed6 = (n: number) => Math.round(n * 1_000_000);
+    if (toFixed6(next) === toFixed6(prev)) return;
     setPriceFlash(next > prev ? "up" : "down");
     const t = setTimeout(() => setPriceFlash(null), 600);
     return () => clearTimeout(t);
