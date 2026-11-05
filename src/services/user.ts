@@ -115,11 +115,31 @@ export const userService = {
   createApiKey: async (data: {
     label: string;
     permissions: string[];
+    name?: string;
+    coverage?: string;
+    expiresAt?: string;
     ipAllowlist?: string[];
   }): Promise<ApiResponse<any>> => {
+    // Backend contract: POST /users/api_keys expects coverage, expires_at,
+    // name and label (plus the permission list the UI collects). Keys are
+    // not creatable without an expiry, so default to one year when the caller
+    // does not supply one.
+    const permissions = Array.isArray(data.permissions) ? data.permissions : [];
+    const expiresAt = data.expiresAt ?? (() => {
+      const expiry = new Date();
+      expiry.setFullYear(expiry.getFullYear() + 1);
+      return expiry.toISOString();
+    })();
+
     const response = await api.post("users/api_keys", {
-      ...data,
-      ip_allowlist: data.ipAllowlist ?? [],
+      coverage: data.coverage ?? permissions.join(", "),
+      expires_at: expiresAt,
+      name: data.name ?? data.label,
+      label: data.label,
+      permissions,
+      ...(data.ipAllowlist && data.ipAllowlist.length > 0
+        ? { ip_allowlist: data.ipAllowlist }
+        : {}),
     });
     return response.data;
   },

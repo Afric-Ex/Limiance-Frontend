@@ -107,7 +107,7 @@ function FuturesTradesInner() {
   // Live funding countdown
   const [fundingCountdown, setFundingCountdown] = useState('--:--:--');
 
-  const feed = useMarketFeed(selectedPair);
+  const feed = useMarketFeed(selectedPair, "futures");
   const orderBook = useOrderBook(selectedPair, "futures");
 
   // Futures screen: open positions, per-coin balances and the account total.

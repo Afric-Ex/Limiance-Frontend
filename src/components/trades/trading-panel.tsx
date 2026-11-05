@@ -9,7 +9,12 @@ import {
   type TradingMarketFilter,
 } from "@/src/services/trading";
 import { parseDate } from "@/src/lib/parse-date";
-import { cancelSpotOrderWs, closeFuturesPositionWs } from "@/src/lib/order-ws";
+import {
+  cancelSpotOrderWs,
+  closeFuturesPositionWs,
+  getMarginTradesWs,
+  getSpotTradesWs,
+} from "@/src/lib/order-ws";
 import { readList } from "@/src/lib/api-response";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -23,6 +28,7 @@ import {
   type StatusFilter,
 } from "@/src/components/trades/order-history-table";
 import { useOrderHistory, ORDER_HISTORY_QUERY_KEY } from "@/src/hooks/use-order-history";
+import { useUserOrderUpdates } from "@/src/hooks/use-user-order-updates";
 import { Loader, Checkbox, NumberInput, Popover, PopoverTarget, PopoverDropdown } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
@@ -96,6 +102,8 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   
   const queryClient = useQueryClient();
   const { refreshBalances } = usePortfolioWs({});
+  // Keep this panel's open orders / history fresh on every fill or cancellation.
+  useUserOrderUpdates();
 
   // Open Orders
   // Fetched on mount/pair change and refreshed AFTER an order is placed or
@@ -131,11 +139,23 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const allHistoryRows = useMemo(() => buildOrderHistoryRows(historyPages), [historyPages]);
   const historyTotalPages = historyPages[0]?.totalPages ?? 1;
 
-  // Trade History
+  // Trade History — WS fills first (§3.16 / §4.12) with the REST unified
+  // endpoint as fallback. Futures has no documented fills stream.
   const { data: tradeHistory = [], isLoading: tradeHistoryLoading } = useQuery({
     queryKey: tradingKeys.tradeHistory(market),
-    queryFn: () => tradingService.tradeHistory(market),
+    queryFn: async () => {
+      if (market === "spot" || market === "margin") {
+        try {
+          const wsRequest = market === "spot" ? getSpotTradesWs : getMarginTradesWs;
+          return await wsRequest({ page: 1, limit: 50 });
+        } catch {
+          // fall through to REST
+        }
+      }
+      return tradingService.tradeHistory(market);
+    },
     select: (res: unknown) => readList<Record<string, unknown>>(res),
+    enabled: activeMainTab === "trade_history",
     retry: false,
   });
 

@@ -540,3 +540,32 @@ export function getFuturesOrderHistoryWs(params?: {
     params
   );
 }
+
+/**
+ * get_spot_trades frame (doc §3.16). The master matrix (§2.1) routes the fills
+ * reply onto the same `spot_order_history` channel as the order query.
+ */
+export function getSpotTradesWs(params?: {
+  page?: number | string;
+  limit?: number | string;
+}): Promise<any> {
+  return queryOrderHistory(
+    "get_spot_trades",
+    SPOT_ORDER_HISTORY_RESPONSE,
+    SPOT_ORDER_HISTORY_ERROR,
+    params
+  );
+}
+
+/** get_margin_trades frame (doc §4.12); fills reply on `margin_order_history`. */
+export function getMarginTradesWs(params?: {
+  page?: number | string;
+  limit?: number | string;
+}): Promise<any> {
+  return queryOrderHistory(
+    "get_margin_trades",
+    MARGIN_ORDER_HISTORY_RESPONSE,
+    MARGIN_ORDER_HISTORY_ERROR,
+    params
+  );
+}

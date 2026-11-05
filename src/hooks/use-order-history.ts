@@ -1,5 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { readList } from "@/src/lib/api-response";
+import {
+  getFuturesOrderHistoryWs,
+  getMarginOrderHistoryWs,
+  getSpotOrderHistoryWs,
+  type OrderHistoryStatus,
+  type OrderHistoryWsParams,
+} from "@/src/lib/order-ws";
 import { tradingService } from "@/src/services/trading";
 
 export type HistoryMarket = "spot" | "margin" | "futures";
@@ -46,6 +53,22 @@ export interface UseOrderHistoryParams {
 
 const QUERY_KEY = "ORDER_HISTORY_QUERY_KEY";
 
+const WS_HISTORY_STATUSES = new Set<OrderHistoryStatus>([
+  "OPEN",
+  "FILLED",
+  "CANCELLED",
+  "REJECTED",
+]);
+
+function wsHistoryRequest(
+  market: HistoryMarket,
+  params: OrderHistoryWsParams | undefined
+): Promise<any> {
+  if (market === "margin") return getMarginOrderHistoryWs(params);
+  if (market === "futures") return getFuturesOrderHistoryWs(params);
+  return getSpotOrderHistoryWs(params);
+}
+
 export function useOrderHistory({
   enabled = true,
   marketType = "all",
@@ -60,20 +83,50 @@ export function useOrderHistory({
   return useQuery({
     queryKey: [QUERY_KEY, marketType, page, status, orderType, side, pair, from, to],
     queryFn: async () => {
-      const params: Record<string, any> = {
-        market_type: marketType,
+      const historyStatus = status?.toUpperCase() as OrderHistoryStatus | undefined;
+      const wsParams: OrderHistoryWsParams = {
         page,
         limit: 20,
+        ...(historyStatus && WS_HISTORY_STATUSES.has(historyStatus)
+          ? { status: historyStatus }
+          : {}),
       };
-      if (status) params.status = status;
-      if (orderType) params.order_type = orderType;
-      if (side) params.side = side;
-      if (pair) params.pair = pair;
-      if (from) params.from = from;
-      if (to) params.to = to;
 
-      const res = await tradingService.getOrderHistory(params);
+      let res: any;
+      if (marketType !== "all") {
+        // WS-first for a single market (§3.13–3.15, §4.10–4.11, §5.10).
+        // The unified "all markets" view has no WS equivalent, and filters the
+        // socket does not accept (pair/date/type/side) are applied client-side
+        // by the order-history table.
+        try {
+          res = await wsHistoryRequest(marketType, wsParams);
+        } catch {
+          res = null;
+        }
+      }
+
+      if (!res) {
+        const params: Record<string, any> = {
+          market_type: marketType,
+          page,
+          limit: 20,
+        };
+        if (status) params.status = status;
+        if (orderType) params.order_type = orderType;
+        if (side) params.side = side;
+        if (pair) params.pair = pair;
+        if (from) params.from = from;
+        if (to) params.to = to;
+
+        res = await tradingService.getOrderHistory(params);
+      }
+
       const data = readList<OrderHistoryRawRow>(res);
+
+      // The WS payload keeps totalPages/currentPage as siblings of `data`;
+      // the REST envelope does the same on its backend body.
+      const currentPage = res?.currentPage ?? res?.data?.currentPage ?? page;
+      const totalPages = res?.totalPages ?? res?.data?.totalPages ?? 1;
 
       // Normalize the unified endpoint response back into MarketHistoryPage[] format
       // The unified endpoint may return records from multiple markets with market_type on each
@@ -89,15 +142,17 @@ export function useOrderHistory({
       const pages: MarketHistoryPage[] = Array.from(pagesByMarket.entries()).map(([market, rows]) => ({
         market,
         rows,
-        currentPage: res?.data?.currentPage ?? page,
-        totalPages: res?.data?.totalPages ?? 1,
+        currentPage,
+        totalPages,
       }));
 
       return pages;
     },
     enabled,
     staleTime: 0,
-    refetchInterval: 15000,
+    // Slow safety net only: live order updates invalidate this query via
+    // useUserOrderUpdates, and the socket supplies the initial page.
+    refetchInterval: 60_000,
   });
 }
 

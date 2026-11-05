@@ -23,6 +23,16 @@ function readTrades(payload: any): RecentTrade[] {
 
   if (Array.isArray(values)) return values;
   if (values && typeof values === "object") return [values];
+
+  // A single live `trade` frame is the trade itself (doc §6.6), not an envelope.
+  const source = payload?.data && typeof payload.data === "object" ? payload.data : payload;
+  if (
+    source &&
+    typeof source === "object" &&
+    (source.price !== undefined || source.quantity !== undefined || source.id !== undefined)
+  ) {
+    return [source];
+  }
   return [];
 }
 
@@ -40,8 +50,13 @@ export function useRecentTrades(pair: string, market: OrderBookMarket) {
       data: { pair, symbol, market },
     };
 
-    const unsubscribe = wsClient.subscribe(
-      "trades",
+    // The request is sent once on the primary response topic. The other topics
+    // are aliases documented in WEBSOCKET_MESSAGES.md §6.4/§11: the snapshot
+    // arrives on `recent_trades` and each live fill on `trade` (older backends
+    // answer on `trades`). Passing `null` for them avoids re-sending the
+    // request frame once per alias.
+    const primaryUnsubscribe = wsClient.subscribe(
+      "recent_trades",
       request,
       (payload) => {
         const updates = filterRecentTradesByPair(readTrades(payload), pair);
@@ -68,7 +83,34 @@ export function useRecentTrades(pair: string, market: OrderBookMarket) {
       }
     );
 
-    return unsubscribe;
+    const aliasUnsubscribes = ["trade", "trades"].map((topic) =>
+      wsClient.subscribe(topic, null, (payload) => {
+        const updates = filterRecentTradesByPair(readTrades(payload), pair);
+        if (updates.length === 0) return;
+        setTrades((current) => {
+          const combined = [...updates, ...current];
+          const seen = new Set<string>();
+          return combined
+            .filter((trade) => {
+              const record = trade as Record<string, unknown>;
+              const id = record.id ?? record.tradeId ?? record.trade_id;
+              const key = id == null
+                ? `${record.timestamp ?? record.time ?? record.createdAt ?? ""}:${record.price ?? ""}:${record.quantity ?? record.qty ?? ""}:${record.side ?? record.direction ?? ""}`
+                : String(id);
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            })
+            .slice(0, 100);
+        });
+        setIsLoading(false);
+      })
+    );
+
+    return () => {
+      primaryUnsubscribe();
+      aliasUnsubscribes.forEach((unsubscribe) => unsubscribe());
+    };
   }, [pair, market]);
 
   return { recentTrades: trades, recentTradesLoading: isLoading };
