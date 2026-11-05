@@ -589,15 +589,27 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             label="Price"
             value={price}
             onChange={(v) => {
-              if (isBuy) { setBuyPriceEdited(true); setBuyPrice(v); }
-              else { setSellPriceEdited(true); setSellPrice(v); }
+              if (isBuy) {
+                setBuyPriceEdited(true); setBuyPrice(v);
+                const p = parseNum(v);
+                if (p && rawQuote && buyPct) setBuyAmount(+(((rawQuote * buyPct / 100) / p).toFixed(8)));
+              } else { setSellPriceEdited(true); setSellPrice(v); }
             }}
             unit={quote}
             color={tone}
           />
         ) : null}
 
-        <FieldRow floating label="Quantity" value={amount} onChange={isBuy ? setBuyAmount : setSellAmount} unit={base} color={tone} />
+        <FieldRow floating label="Quantity" value={amount} onChange={(v) => {
+          if (isBuy) {
+            setBuyAmount(v);
+            const p = parseNum(buyPrice || marketPrice || 0);
+            if (p && rawQuote) setBuyPct(Math.min(100, Math.round((parseNum(v) * p / rawQuote) * 100)));
+          } else {
+            setSellAmount(v);
+            if (rawBase) setSellPct(Math.min(100, Math.round((parseNum(v) / rawBase) * 100)));
+          }
+        }} unit={base} color={tone} />
 
         <div className="px-1.5 pb-5 pt-1">
           <Slider
@@ -609,9 +621,19 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             onChange={(v) => {
               if (isBuy) {
                 setBuyPct(v);
-                if (refPrice) setBuyAmount(+(((rawQuote || 0) * v / 100) / refPrice).toFixed(8));
+                const bp = parseNum(marketPrice || buyPrice || 0);
+                if (bp) {
+                  const sp = +(bp * (1 + 0.10 * v / 100)).toFixed(2);
+                  setBuyPriceEdited(true); setBuyPrice(sp);
+                  if (rawQuote && sp) setBuyAmount(+(((rawQuote * v / 100) / sp).toFixed(8)));
+                }
               } else {
                 setSellPct(v);
+                const sp2 = parseNum(marketPrice || sellPrice || 0);
+                if (sp2) {
+                  const slp = +(sp2 * (1 - 0.10 * v / 100)).toFixed(2);
+                  setSellPriceEdited(true); setSellPrice(slp);
+                }
                 setSellAmount(+(((rawBase || 0) * v / 100).toFixed(8)));
               }
             }}
@@ -681,7 +703,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
         <button
           onClick={() => (isBuy ? placeBuy() : placeSell())}
-          disabled={loading || !amount || rawAvail === 0}
+          disabled={loading || !amount || rawAvail === 0 || (isBuy ? (parseNum(total) > rawQuote && rawQuote > 0) : (parseNum(amount) > rawBase && rawBase > 0))}
           className={clsx(
             "flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-50",
             isBuy ? "bg-buy hover:bg-buy/90" : "bg-sell hover:bg-sell/90"
@@ -1046,13 +1068,25 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           ) : effectiveTab === "stop" ? (
             <>
               <FieldRow label="Stop" value={buyStopPrice} onChange={setBuyStopPrice} unit={quote} color="buy" />
-              <FieldRow label="Limit" value={buyPrice} onChange={(v) => { setBuyPriceEdited(true); setBuyPrice(v); }} unit={quote} color="buy" />
+              <FieldRow label="Limit" value={buyPrice} onChange={(v) => {
+                setBuyPriceEdited(true); setBuyPrice(v);
+                const p = parseNum(v);
+                if (p && rawQuote && buyPct) setBuyAmount(+(((rawQuote * buyPct / 100) / p).toFixed(8)));
+              }} unit={quote} color="buy" />
             </>
           ) : effectiveTab !== "market" ? (
-            <FieldRow label="Price" value={buyPrice} onChange={(v) => { setBuyPriceEdited(true); setBuyPrice(v); }} unit={quote} color="buy" />
+            <FieldRow label="Price" value={buyPrice} onChange={(v) => {
+              setBuyPriceEdited(true); setBuyPrice(v);
+              const p = parseNum(v);
+              if (p && rawQuote && buyPct) setBuyAmount(+(((rawQuote * buyPct / 100) / p).toFixed(8)));
+            }} unit={quote} color="buy" />
           ) : null}
 
-          <FieldRow label="Qty" value={buyAmount} onChange={setBuyAmount} unit={base} color="buy" showMax onMax={handleBuyMax} />
+          <FieldRow label="Qty" value={buyAmount} onChange={(v) => {
+            setBuyAmount(v);
+            const p = parseNum(buyPrice || marketPrice || 0);
+            if (p && rawQuote) setBuyPct(Math.min(100, Math.round((parseNum(v) * p / rawQuote) * 100)));
+          }} unit={base} color="buy" showMax onMax={handleBuyMax} />
 
           <div className="px-1 pt-1 pb-3">
             <Slider
@@ -1060,9 +1094,13 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               value={buyPct}
               onChange={(v) => {
                 setBuyPct(v);
-                const price = parseNum(buyPrice || marketPrice || 0);
-                if (price) {
-                  setBuyAmount(+(((rawQuote || 0) * v / 100) / price).toFixed(8));
+                const baseP = parseNum(marketPrice || buyPrice || 0);
+                if (baseP) {
+                  // slider 0%→price, 100%→price+10%
+                  const sliderPrice = +(baseP * (1 + 0.10 * v / 100)).toFixed(2);
+                  setBuyPriceEdited(true);
+                  setBuyPrice(sliderPrice);
+                  if (rawQuote && sliderPrice) setBuyAmount(+(((rawQuote * v / 100) / sliderPrice).toFixed(8)));
                 }
               }}
               classNames={{
@@ -1088,7 +1126,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           <button
             onClick={() => placeBuy()}
-            disabled={buyLoading || !(Number(buyAmount) > 0) || rawQuote === 0}
+            disabled={buyLoading || !(Number(buyAmount) > 0) || rawQuote === 0 || (buyTotal > rawQuote && rawQuote > 0)}
             className="mt-0.5 bg-buy hover:bg-buy/90 disabled:opacity-50 transition-all text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(37,171,66,0.3)] active:scale-95"
           >
             {buyLoading && <Loader size={13} color="white" />}
@@ -1131,7 +1169,10 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             <FieldRow label="Price" value={sellPrice} onChange={(v) => { setSellPriceEdited(true); setSellPrice(v); }} unit={quote} color="sell" />
           ) : null}
 
-          <FieldRow label="Qty" value={sellAmount} onChange={setSellAmount} unit={base} color="sell" showMax onMax={handleSellMax} />
+          <FieldRow label="Qty" value={sellAmount} onChange={(v) => {
+            setSellAmount(v);
+            if (rawBase) setSellPct(Math.min(100, Math.round((parseNum(v) / rawBase) * 100)));
+          }} unit={base} color="sell" showMax onMax={handleSellMax} />
 
           <div className="px-1 pt-1 pb-3">
             <Slider
@@ -1139,6 +1180,13 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               value={sellPct}
               onChange={(v) => {
                 setSellPct(v);
+                const baseP = parseNum(marketPrice || sellPrice || 0);
+                if (baseP) {
+                  // slider 0%→price, 100%→price-10%
+                  const sliderPrice = +(baseP * (1 - 0.10 * v / 100)).toFixed(2);
+                  setSellPriceEdited(true);
+                  setSellPrice(sliderPrice);
+                }
                 setSellAmount(+(((rawBase || 0) * v / 100).toFixed(8)));
               }}
               classNames={{
@@ -1163,7 +1211,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           <button
             onClick={() => placeSell()}
-            disabled={sellLoading || !(Number(sellAmount) > 0) || rawBase === 0}
+            disabled={sellLoading || !(Number(sellAmount) > 0) || rawBase === 0 || (parseNum(sellAmount) > rawBase && rawBase > 0)}
             className="mt-0.5 bg-sell hover:bg-sell/90 disabled:opacity-50 transition-all text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(246,70,93,0.3)] active:scale-95"
           >
             {sellLoading && <Loader size={13} color="white" />}
