@@ -135,22 +135,11 @@ const loadP2PWs = () => import("../lib/p2p-ws");
 const shouldFallbackToRest = (error: unknown): boolean =>
   (error as { isTransport?: boolean } | null)?.isTransport !== false;
 
-const withWsFallback = async <T>(
-  restCall: () => Promise<T>,
-  wsCall: () => Promise<T>
-): Promise<T> => {
-  try {
-    return await restCall();
-  } catch (restError) {
-    if (typeof window === "undefined") throw restError;
-    try {
-      return await wsCall();
-    } catch {
-      throw restError;
-    }
-  }
-};
-
+/**
+ * WS-first with HTTP fallback.
+ * Tries the WebSocket call first; if it fails with a transport error (or
+ * fallbackOnAnyError is set), falls back to the REST call.
+ */
 const withRestFallback = async <T>(
   wsCall: () => Promise<T>,
   restCall: () => Promise<T>,
@@ -229,8 +218,8 @@ export const p2p = {
     page?: number;
     limit?: number;
   }): Promise<ApiResponse<UserAds>> => {
-    return withWsFallback(
-      async () => api.get(`trading/p2p/get_user_orders`, { params }),
+    // WS-first: get_user_p2p_orders → HTTP fallback
+    return withRestFallback(
       async () => {
         const { getUserP2POrdersWs, normalizeWsP2PUserAdsResponse } =
           await loadP2PWs();
@@ -238,7 +227,9 @@ export const p2p = {
         return {
           data: normalizeWsP2PUserAdsResponse(payload),
         } as unknown as ApiResponse<UserAds>;
-      }
+      },
+      () => api.get(`trading/p2p/get_user_orders`, { params }),
+      { fallbackOnAnyError: true }
     );
   },
 
@@ -247,8 +238,20 @@ export const p2p = {
     page?: number;
     limit?: number;
   }): Promise<ApiResponse<P2POrderListings>> => {
-    const response = await api.get(`trading/p2p/pending_orders`, { params });
-    return response;
+    // WS-first: reuse get_p2p_orders filtered by status=pending → HTTP fallback
+    return withRestFallback(
+      async () => {
+        const { getP2POrdersWs, normalizeWsP2POrdersResponse } = await loadP2PWs();
+        const payload = await getP2POrdersWs({
+          ...(params as P2PAdsQueryParams),
+          status: "pending",
+        });
+        const normalized = normalizeWsP2POrdersResponse(payload);
+        return { data: normalized } as unknown as ApiResponse<P2POrderListings>;
+      },
+      () => api.get(`trading/p2p/pending_orders`, { params }),
+      { fallbackOnAnyError: true }
+    );
   },
 
   advertiserInfo: (): Promise<ApiResponse<AdvertiserInfo>> =>
@@ -271,45 +274,42 @@ export const p2p = {
     data: CreateOrder,
     paymentMethodNames?: string[]
   ): Promise<ApiResponse<CreateOrderResponseDatum>> => {
-    if (typeof window !== "undefined") {
-      try {
+    // WS-first: p2p_create_order → HTTP fallback
+    return withRestFallback(
+      async () => {
         const { createP2POrderWs } = await loadP2PWs();
         const payload = await createP2POrderWs(data, paymentMethodNames);
-        return {
-          data: payload,
-        } as unknown as ApiResponse<CreateOrderResponseDatum>;
-      } catch (error) {
-        if (!shouldFallbackToRest(error)) throw error;
-      }
-    }
-
-    const response = await api.post("trading/p2p/create_order", {
-      ...data,
-      active: true,
-      // Prefer the logo the caller resolved from `listed_tokens`; the local
-      // map only covers the handful of majors and returns "" for the rest.
-      assetLogo: data.assetLogo || assetLogoMap[data.asset.toUpperCase()] || "",
-      quantity: data.quantity ? +data.quantity : null,
-      minQuantity: data.minQuantity ? +data.minQuantity : null,
-      maxQuantity: data.maxQuantity ? +data.maxQuantity : null,
-      allCompletedOrders: data?.allCompletedOrders ? +data.allCompletedOrders : null,
-      completedOrders: data?.completedOrders ? +data.completedOrders : null,
-      daysSinceAccountCreation: data?.daysSinceAccountCreation ? +data.daysSinceAccountCreation : null,
-      fixedPrice: data.fixedPrice ? +data.fixedPrice : null,
-    });
-    return response;
+        return { data: payload } as unknown as ApiResponse<CreateOrderResponseDatum>;
+      },
+      () =>
+        api.post("trading/p2p/create_order", {
+          ...data,
+          active: true,
+          // Prefer the logo the caller resolved from `listed_tokens`; the local
+          // map only covers the handful of majors and returns "" for the rest.
+          assetLogo: data.assetLogo || assetLogoMap[data.asset.toUpperCase()] || "",
+          quantity: data.quantity ? +data.quantity : null,
+          minQuantity: data.minQuantity ? +data.minQuantity : null,
+          maxQuantity: data.maxQuantity ? +data.maxQuantity : null,
+          allCompletedOrders: data?.allCompletedOrders ? +data.allCompletedOrders : null,
+          completedOrders: data?.completedOrders ? +data.completedOrders : null,
+          daysSinceAccountCreation: data?.daysSinceAccountCreation ? +data.daysSinceAccountCreation : null,
+          fixedPrice: data.fixedPrice ? +data.fixedPrice : null,
+        })
+    );
   },
 
   editOrder: async (
     id: string,
     data: EditP2POrderInput
   ): Promise<ApiResponse<unknown>> => {
-    if (typeof window === "undefined") {
-      throw new Error("Ad editing requires a live WebSocket connection");
+    // WS-first: p2p_edit_order → no HTTP equivalent exists so surface the WS error
+    if (typeof window !== "undefined") {
+      const { editP2POrderWs } = await loadP2PWs();
+      const payload = await editP2POrderWs(id, data);
+      return { data: payload } as unknown as ApiResponse<unknown>;
     }
-    const { editP2POrderWs } = await loadP2PWs();
-    const payload = await editP2POrderWs(id, data);
-    return { data: payload } as unknown as ApiResponse<unknown>;
+    throw new Error("Ad editing requires a live WebSocket connection");
   },
 
   addPaymentMethod: async (data: CreatePaymentMethod): Promise<ApiResponse<CreatePaymentMethodResponse>> => {
@@ -323,49 +323,40 @@ export const p2p = {
   },
 
   matchOrder: async (data: P2PMatchOrder): Promise<ApiResponse<CreatePaymentMethodResponse>> => {
-    if (typeof window !== "undefined") {
-      try {
+    // WS-first: p2p_match_order → HTTP fallback
+    return withRestFallback(
+      async () => {
         const { matchP2POrderWs } = await loadP2PWs();
         const payload = await matchP2POrderWs({
           orderId: data.orderId,
           quantity: data.quantity,
           paymentMethodId: data.paymentMethodId,
         });
-        return {
-          data: payload,
-        } as unknown as ApiResponse<CreatePaymentMethodResponse>;
-      } catch (error) {
-        if (!shouldFallbackToRest(error)) throw error;
-      }
-    }
-
-    const response = await api.post("trading/p2p/match_order", data);
-    return response;
+        return { data: payload } as unknown as ApiResponse<CreatePaymentMethodResponse>;
+      },
+      () => api.post("trading/p2p/match_order", data)
+    );
   },
 
   releaseOrder: async (data: P2PReleaseOrder): Promise<ApiResponse<CreatePaymentMethodResponse>> => {
-    if (typeof window !== "undefined") {
-      try {
+    // WS-first: p2p_release_order → HTTP fallback
+    // Must use `api` (with /api/v1 prefix) for HTTP — apiRoot misses the prefix and returns 404
+    return withRestFallback(
+      async () => {
         const { releaseP2POrderWs } = await loadP2PWs();
         const payload = await releaseP2POrderWs({
           orderMatchId: data.id,
           releaseCode: data.releaseCode,
           totpCode: data.totpCode,
         });
-        return {
-          data: payload,
-        } as unknown as ApiResponse<CreatePaymentMethodResponse>;
-      } catch (error) {
-        if (!shouldFallbackToRest(error)) throw error;
-      }
-    }
-
-    // Must use `api` (with /api/v1 prefix) — apiRoot misses the prefix and returns 404
-    const response = await api.post(`trading/p2p/release_order/${data.id}`, {
-      releaseCode: data.releaseCode,
-      ...(data.totpCode ? { totpCode: data.totpCode } : {}),
-    });
-    return response;
+        return { data: payload } as unknown as ApiResponse<CreatePaymentMethodResponse>;
+      },
+      () =>
+        api.post(`trading/p2p/release_order/${data.id}`, {
+          releaseCode: data.releaseCode,
+          ...(data.totpCode ? { totpCode: data.totpCode } : {}),
+        })
+    );
   },
 
   fetchPaymentMethod: async (): Promise<ApiResponse<PaymentMethodsResponse>> => {
@@ -392,18 +383,15 @@ export const p2p = {
   },
 
   fetchChats: async (params?: { page?: number; limit?: number }): Promise<any> => {
-    // Primary: get_chats over the trading socket (§8.2).
-    if (typeof window !== "undefined") {
-      try {
+    // WS-first: get_chats (§8.2) → HTTP fallback
+    return withRestFallback(
+      async () => {
         const { getChatsWs } = await import("../lib/chat-ws");
-        return await getChatsWs();
-      } catch {
-        // Fall back to REST below.
-      }
-    }
-
-    const response = await api.get(`trading/p2p/chats`, { params });
-    return response;
+        return getChatsWs();
+      },
+      () => api.get(`trading/p2p/chats`, { params }),
+      { fallbackOnAnyError: true }
+    );
   },
 
   getOrderById: async (id: string): Promise<ApiResponse<unknown>> => {
@@ -411,7 +399,7 @@ export const p2p = {
   },
 
   getMatchedOrder: async (id: string): Promise<ApiResponse<unknown>> => {
-    // Primary: fetch order match over WebSocket via get_p2p_match with fallback to HTTP REST
+    // WS-first: get_p2p_match → HTTP fallback
     return withRestFallback(
       async () => {
         const { getP2PMatchWs, normalizeWsP2PMatchResponse } =
@@ -440,7 +428,23 @@ export const p2p = {
     end_date?: string;
     status?: string;
   }): Promise<ApiResponse<unknown>> => {
-    return api.get(`trading/p2p/all_matched_orders`, { params });
+    // WS-first: get_user_p2p_matches → HTTP fallback
+    return withRestFallback(
+      async () => {
+        const { getUserP2PMatchesWs, normalizeWsUserMatchesResponse } =
+          await loadP2PWs();
+        const payload = await getUserP2PMatchesWs({
+          status: params?.status,
+          type: params?.type,
+          page: params?.page,
+          limit: params?.limit,
+        });
+        const normalized = normalizeWsUserMatchesResponse(payload);
+        return { data: normalized } as unknown as ApiResponse<unknown>;
+      },
+      () => api.get(`trading/p2p/all_matched_orders`, { params }),
+      { fallbackOnAnyError: true }
+    );
   },
 
   updateMatchedOrder: async (data: {
@@ -448,44 +452,42 @@ export const p2p = {
     status: string;
     [key: string]: unknown;
   }): Promise<ApiResponse<unknown>> => {
-    const isDispute =
-      String(data.status).toUpperCase() === "DISPUTED" ||
-      Boolean(data.reason || data.description || data.evidence);
+    // WS-first for all statuses (including DISPUTED): p2p_update_match_status → HTTP fallback
+    // If the update includes dispute evidence fields, skip WS (server expects multipart/form
+    // data for evidence) and go straight to REST.
+    const hasEvidenceFields = Boolean(data.reason || data.description || data.evidence);
 
-    if (!isDispute && typeof window !== "undefined") {
-      try {
-        const { updateP2PMatchStatusWs } = await loadP2PWs();
-        const payload = await updateP2PMatchStatusWs(
-          data.orderMatchId,
-          data.status
-        );
-        return { data: payload } as unknown as ApiResponse<unknown>;
-      } catch {
-        // Fall back to REST below
-      }
+    if (!hasEvidenceFields) {
+      return withRestFallback(
+        async () => {
+          const { updateP2PMatchStatusWs } = await loadP2PWs();
+          const payload = await updateP2PMatchStatusWs(data.orderMatchId, data.status);
+          return { data: payload } as unknown as ApiResponse<unknown>;
+        },
+        // /api/v1 prefix is required — apiRoot (no prefix) returns 404 for this endpoint
+        () => api.patch(`trading/p2p/update_matched_order`, data),
+        { fallbackOnAnyError: true }
+      );
     }
 
-    // /api/v1 prefix is required — apiRoot (no prefix) returns 404 for this endpoint
+    // Evidence-bearing dispute: go directly to REST (multipart evidence upload)
     const response = await api.patch(`trading/p2p/update_matched_order`, data);
     return response;
   },
 
-
   getReleaseCode: async (id: string): Promise<ApiResponse<unknown>> => {
-    if (typeof window !== "undefined") {
-      try {
+    // WS-first: p2p_request_release_code → HTTP fallback
+    // Both paths trigger OTP dispatch; HTTP fallback ensures delivery even when WS is down.
+    // Must use `api` (with /api/v1 prefix) — apiRoot misses the prefix so OTP email was never sent
+    return withRestFallback(
+      async () => {
         const { requestP2PReleaseCodeWs } = await loadP2PWs();
         const payload = await requestP2PReleaseCodeWs(id);
         return { data: payload } as unknown as ApiResponse<unknown>;
-      } catch {
-        // Any socket-level rejection (bad action mapping, auth, timeout) must
-        // still try REST so the release code is actually emailed.
-      }
-    }
-
-    // Must use `api` (with /api/v1 prefix) — apiRoot misses the prefix so OTP email was never sent
-    const response = await api.get(`trading/p2p/get_release_order_code/${id}`);
-    return response;
+      },
+      () => api.get(`trading/p2p/get_release_order_code/${id}`),
+      { fallbackOnAnyError: true }
+    );
   },
 
   addReview: async (data: AddP2PReviewPayload): Promise<ApiResponse<unknown>> => {
@@ -504,33 +506,27 @@ export const p2p = {
   toggleAllOrders: toggleAllOrdersRequest,
 
   deactivateSingleOrder: async (id: string): Promise<ApiResponse<unknown>> => {
-    if (typeof window !== "undefined") {
-      try {
+    // WS-first: p2p_deactivate_order → HTTP fallback
+    return withRestFallback(
+      async () => {
         const { deactivateP2POrderWs } = await loadP2PWs();
         const payload = await deactivateP2POrderWs(id);
         return { data: payload } as unknown as ApiResponse<unknown>;
-      } catch (error) {
-        if (!shouldFallbackToRest(error)) throw error;
-      }
-    }
-
-    const response = await api.get(`trading/p2p/deactivate_single_order/${id}`);
-    return response;
+      },
+      () => api.get(`trading/p2p/deactivate_single_order/${id}`)
+    );
   },
 
   reactivateSingleOrder: async (id: string): Promise<ApiResponse<unknown>> => {
-    if (typeof window !== "undefined") {
-      try {
+    // WS-first: p2p_reactivate_order → HTTP fallback
+    return withRestFallback(
+      async () => {
         const { reactivateP2POrderWs } = await loadP2PWs();
         const payload = await reactivateP2POrderWs(id);
         return { data: payload } as unknown as ApiResponse<unknown>;
-      } catch (error) {
-        if (!shouldFallbackToRest(error)) throw error;
-      }
-    }
-
-    const response = await api.get(`trading/p2p/reactivate_single_order/${id}`);
-    return response;
+      },
+      () => api.get(`trading/p2p/reactivate_single_order/${id}`)
+    );
   },
 
   getDisputedOrders: async (params?: { page?: number; limit?: number }): Promise<ApiResponse<unknown>> => {
