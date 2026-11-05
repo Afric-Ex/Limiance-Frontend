@@ -25,7 +25,7 @@ export const AccountSidebar = () => {
   const pathname = usePathname();
 
   return (
-    <div className="flex w-full flex-col gap-1.5 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#1a1d25] to-[#13151b] p-3 shadow-[0_16px_40px_rgba(0,0,0,0.22)]">
+    <div className="flex w-full flex-col gap-1.5 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-elevated to-surface p-3 shadow-[0_16px_40px_rgba(0,0,0,0.22)]">
       {/* Header */}
       <div className="mb-1 border-b border-white/[0.07] px-3 pb-4">
         <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Personal hub</p>
