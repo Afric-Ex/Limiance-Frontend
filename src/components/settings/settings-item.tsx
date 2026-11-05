@@ -37,7 +37,7 @@ export const SettingsItemContainer = ({
   isGroup?: boolean;
 }) => {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-br from-[#1a1d25] to-[#14161c] shadow-[0_12px_36px_rgba(0,0,0,0.16)] transition-colors duration-300 hover:border-white/[0.12]">
+    <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-br from-elevated to-surface shadow-[0_12px_36px_rgba(0,0,0,0.16)] transition-colors duration-300 hover:border-white/[0.12]">
       {isGroup ? (
         <div className="divide-y divide-white/[0.07]">
           {React.Children.map(children, (child) => (

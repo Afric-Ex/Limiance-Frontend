@@ -206,10 +206,16 @@ function SettingsInner() {
 
   return (
     <main className="page-enter mx-auto flex w-full max-w-[1240px] flex-col gap-7 px-2 pb-12 max-[1150px]:px-1 max-[1150px]:pb-[100px] max-[640px]:gap-5">
-      <section className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-[radial-gradient(ellipse_at_90%_0%,rgba(77,119,240,0.2),transparent_42%),linear-gradient(130deg,#1b1e27_0%,#13151b_72%)] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.22)] max-[640px]:rounded-2xl max-[640px]:p-5">
+      <section
+        className="relative overflow-hidden rounded-3xl border border-white/[0.08] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.22)] max-[640px]:rounded-2xl max-[640px]:p-5"
+        style={{
+          background:
+            "radial-gradient(ellipse at 90% 0%, color-mix(in srgb, var(--color-primary) 20%, transparent), transparent 42%), linear-gradient(130deg, var(--color-elevated) 0%, var(--color-surface) 72%)",
+        }}
+      >
         <div className="relative z-10 flex flex-wrap items-end justify-between gap-6 max-[640px]:items-start">
           <div className="max-w-2xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/[0.09] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9bb4ff]">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/[0.09] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
               <MdOutlineTune size={15} />
               Account controls
             </div>

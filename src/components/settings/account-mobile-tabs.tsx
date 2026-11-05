@@ -25,7 +25,7 @@ export const AccountMobileTabs = () => {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Account navigation" className="fixed bottom-0 left-0 right-0 z-[9999] border-t border-white/[0.08] bg-[#111319]/95 pb-safe shadow-[0_-12px_36px_rgba(0,0,0,0.4)] backdrop-blur-xl pointer-events-auto min-[1150px]:hidden">
+    <nav aria-label="Account navigation" className="fixed bottom-0 left-0 right-0 z-[9999] border-t border-white/[0.08] bg-surface/95 pb-safe shadow-[0_-12px_36px_rgba(0,0,0,0.4)] backdrop-blur-xl pointer-events-auto min-[1150px]:hidden">
       <div className="mx-auto flex w-full max-w-2xl items-center gap-1 overflow-x-auto px-2 py-2 no-scrollbar">
         {accountNavLinks.map((tab) => {
           const isActive = pathname === tab.link || pathname.startsWith(`${tab.link}/`);
@@ -36,7 +36,7 @@ export const AccountMobileTabs = () => {
               aria-current={isActive ? "page" : undefined}
               className={clsx(
                 "relative z-10 flex min-w-[68px] flex-none touch-manipulation flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 transition-all active:scale-95",
-                isActive ? "bg-primary/[0.12] text-[#9bb4ff]" : "text-white/45 hover:bg-white/[0.04] hover:text-white"
+                isActive ? "bg-primary/[0.12] text-primary" : "text-white/45 hover:bg-white/[0.04] hover:text-white"
               )}
             >
               <div className="relative">
