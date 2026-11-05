@@ -47,7 +47,54 @@ interface MarketFeedData {
   marketsLoading: boolean;
 }
 
-export const useMarketFeed = (pair: string): MarketFeedData => {
+export type MarketFeedMarket = "spot" | "margin" | "futures";
+
+/** Pair comparison ignores separators so "BTC/USDT", "BTC-USDT" and "BTCUSDT" match. */
+const normalizePairKey = (value: unknown) =>
+  String(value ?? "").replace(/[/\\\-_:\s]/g, "").toUpperCase();
+
+/** The pair spelling the funding-rate stream expects ("BTC/USDT"). */
+const canonicalPair = (value: string) => {
+  const raw = String(value ?? "").trim().toUpperCase();
+  const parts = raw.split(/[\/\-_:\s]+/).filter(Boolean);
+  return parts.length === 2 ? `${parts[0]}/${parts[1]}` : raw;
+};
+
+/**
+ * Pull the ticker array out of any of the envelopes the market streams use:
+ * `{ data: [...] }`, `{ markets: [...] }`, a bare array, or a single ticker
+ * object pushed as `market_data` / `futures_markets`.
+ */
+function extractMarketItems(raw: unknown, depth = 0): any[] {
+  if (!raw || depth > 4) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== "object") return [];
+  const record = raw as Record<string, unknown>;
+  const direct =
+    record.markets ?? record.tickers ?? record.ticker ?? record.market ?? record.futures;
+  if (Array.isArray(direct)) return direct;
+  const data = record.data;
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const nested = extractMarketItems(data, depth + 1);
+    if (nested.length > 0) return nested;
+  }
+  if (record.symbol !== undefined || record.pair !== undefined) return [record];
+  return [];
+}
+
+/** Selected-pair ticker from a ticker list, separator-insensitive. */
+function findMarket(items: any[], pair: string): any | undefined {
+  const target = normalizePairKey(pair);
+  return items.find(
+    (item) => normalizePairKey(item?.symbol ?? item?.pair) === target
+  );
+}
+
+export const useMarketFeed = (
+  pair: string,
+  market: MarketFeedMarket = "spot"
+): MarketFeedData => {
   const [data, setData] = useState<MarketFeedData>({
     price: null,
     change24h: null,
@@ -77,11 +124,11 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
     lastFallbackAt.current = now;
 
     try {
-      const normalisedPair = pair.replace("/", "-").toUpperCase();
+      const normalisedPair = normalizePairKey(pair);
       const res = await api.get("trading/24_hours_movers", { params: { limit: 100 } });
       const items: any[] = Array.isArray(res.data?.data) ? res.data.data : [];
       const match = items.find(
-        (m: any) => (m.symbol || m.pair || "").replace("/", "-").toUpperCase() === normalisedPair
+        (m: any) => normalizePairKey(m.symbol ?? m.pair) === normalisedPair
       );
 
       setData((prev) => ({
@@ -107,10 +154,9 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
   useEffect(() => {
     fetchHttpFallback();
 
-    const normalisedPair = pair.replace("/", "-").toUpperCase();
-    // The feed streams every market on this topic, so the server no longer
-    // needs the pair in the request: filtering happens client-side below.
-    const payload = { type: "get_market_data" };
+    // The spot/margin feed streams every market on this topic, so the server
+    // no longer needs the pair in the request: filtering happens client-side.
+    const marketDataRequest = { type: "get_market_data", data: {} };
 
     // Attached only while this screen is mounted, so a market feed can't keep
     // the socket alive on pages that show no prices.
@@ -119,38 +165,127 @@ export const useMarketFeed = (pair: string): MarketFeedData => {
       if (!connected) fetchHttpFallback();
     });
 
-    const unsubscribeMessages = wsClient.subscribe(
-      "spot_margin_markets",
-      payload,
-      (dataPayload) => {
-        const items: any[] = Array.isArray(dataPayload?.data) ? dataPayload.data : [];
-        const match = items.find(
-          (m) => (m.symbol || m.pair || "").replace("/", "-").toUpperCase() === normalisedPair
-        );
+    const applyMarkets = (dataPayload: any) => {
+      const items = extractMarketItems(dataPayload);
+      if (items.length === 0) return;
+      const match = findMarket(items, pair);
 
-        setData((prev) => ({
-          ...prev,
-          price: match?.last_price ?? match?.lastPrice ?? match?.price ?? prev.price,
-          change24h: match?.price_change ?? match?.priceChange ?? match?.change24h ?? prev.change24h,
-          changePercent24h: match?.percent_change ?? match?.priceChangePercent ?? match?.changePercent24h ?? prev.changePercent24h,
-          high24h: match?.high_24h ?? match?.highPrice ?? match?.high24h ?? prev.high24h,
-          low24h: match?.low_24h ?? match?.lowPrice ?? match?.low24h ?? prev.low24h,
-          volume24h: match?.volume ?? match?.volume24h ?? prev.volume24h,
-          fundingRate: match?.funding_rate ?? match?.fundingRate ?? prev.fundingRate,
-          nextFundingTime: match?.next_funding_time ?? prev.nextFundingTime,
-          isConnected: true,
-          lastUpdated: new Date(),
-          markets: items,
-          marketsLoading: false,
-        }));
-      }
-    );
+      setData((prev) => ({
+        ...prev,
+        // Futures prices come from the dedicated futures ticker/funding streams
+        // below, so the spot/margin snapshot only supplies the pair list there.
+        price:
+          market === "futures"
+            ? prev.price
+            : match?.last_price ?? match?.lastPrice ?? match?.price ?? prev.price,
+        change24h:
+          market === "futures"
+            ? prev.change24h
+            : match?.price_change ?? match?.priceChange ?? match?.change24h ?? prev.change24h,
+        changePercent24h:
+          market === "futures"
+            ? prev.changePercent24h
+            : match?.percent_change ?? match?.priceChangePercent ?? match?.changePercent24h ?? prev.changePercent24h,
+        high24h:
+          market === "futures"
+            ? prev.high24h
+            : match?.high_24h ?? match?.highPrice ?? match?.high24h ?? prev.high24h,
+        low24h:
+          market === "futures"
+            ? prev.low24h
+            : match?.low_24h ?? match?.lowPrice ?? match?.low24h ?? prev.low24h,
+        volume24h:
+          market === "futures"
+            ? prev.volume24h
+            : match?.volume ?? match?.volume24h ?? prev.volume24h,
+        fundingRate:
+          market === "futures" ? prev.fundingRate : match?.funding_rate ?? match?.fundingRate ?? prev.fundingRate,
+        nextFundingTime:
+          market === "futures" ? prev.nextFundingTime : match?.next_funding_time ?? prev.nextFundingTime,
+        isConnected: true,
+        lastUpdated: new Date(),
+        markets: items as MarketItem[],
+        marketsLoading: false,
+      }));
+    };
+
+    // One request frame per stream: the primary topic carries the payload and
+    // the alias topics are listeners only, so a reconnect re-sends each request
+    // exactly once instead of once per documented response type.
+    const unsubscribes: Array<() => void> = [
+      wsClient.subscribe("market_data", marketDataRequest, applyMarkets),
+      wsClient.subscribe("spot_margin_stream_started", null, applyMarkets),
+    ];
+
+    if (market === "futures") {
+      // §5.12: mark/index price, 24h stats and open interest for every perp.
+      unsubscribes.push(
+        wsClient.subscribe("futures_markets", { type: "get_futures_markets", data: {} }, (dataPayload) => {
+          const items = extractMarketItems(dataPayload);
+          if (items.length === 0) return;
+          const match = findMarket(items, pair);
+
+          setData((prev) => ({
+            ...prev,
+            price: match?.markPrice ?? match?.last_price ?? match?.lastPrice ?? match?.price ?? match?.lastPrice ?? prev.price,
+            change24h:
+              match?.priceChange ??
+              match?.price_change ??
+              match?.change24h ??
+              (match?.priceChangePercent != null && match?.lastPrice != null
+                ? (Number(match.lastPrice) * Number(match.priceChangePercent)) / 100
+                : prev.change24h),
+            changePercent24h:
+              match?.priceChangePercent ??
+              match?.percent_change ??
+              match?.changePercent24h ??
+              prev.changePercent24h,
+            high24h: match?.highPrice ?? match?.high_24h ?? match?.high24h ?? prev.high24h,
+            low24h: match?.lowPrice ?? match?.low_24h ?? match?.low24h ?? prev.low24h,
+            volume24h: match?.volume24h ?? match?.volume ?? prev.volume24h,
+            fundingRate: match?.fundingRate ?? match?.funding_rate ?? prev.fundingRate,
+            nextFundingTime:
+              match?.nextFundingTime ?? match?.next_funding_time ?? prev.nextFundingTime,
+            // Keep the pair list from the market-wide feed; futures tickers use a
+            // compact symbol and do not carry base/quote for the pair selector.
+            isConnected: true,
+            lastUpdated: new Date(),
+            marketsLoading: false,
+          }));
+        })
+      );
+
+      // §5.11: funding rate + countdown for the selected pair.
+      unsubscribes.push(
+        wsClient.subscribe(
+          "funding_rate",
+          { type: "get_funding_rate", data: { pair: canonicalPair(pair) } },
+          (dataPayload) => {
+            const source = dataPayload?.data && typeof dataPayload.data === "object"
+              ? dataPayload.data
+              : dataPayload;
+            if (!source) return;
+            const streamPair = source.pair ?? source.symbol ?? dataPayload?.pair;
+            if (streamPair && normalizePairKey(streamPair) !== normalizePairKey(pair)) return;
+
+            const rawRate = Number(source.rate ?? source.fundingRate ?? source.funding_rate);
+            setData((prev) => ({
+              ...prev,
+              fundingRate: Number.isFinite(rawRate) ? rawRate : prev.fundingRate,
+              nextFundingTime:
+                source.nextFundingTime ?? source.next_funding_time ?? prev.nextFundingTime,
+              lastUpdated: new Date(),
+            }));
+          }
+        )
+      );
+    }
 
     return () => {
       unsubscribeStatus();
-      unsubscribeMessages();
+      unsubscribes.forEach((unsubscribe) => unsubscribe());
     };
-  }, [pair, fetchHttpFallback]);
+  }, [pair, market, fetchHttpFallback]);
 
   return data;
 };

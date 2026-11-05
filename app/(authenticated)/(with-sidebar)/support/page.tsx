@@ -239,8 +239,12 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
   const qc = useQueryClient();
   const [reply, setReply] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
-  const currentUserId = useUserStore((state) => state.user?.id);
-  const chatId = ticket.chatId ?? null;
+  const currentUserId = useUserStore((state) =>
+    state.user?.id != null ? String(state.user.id) : undefined
+  );
+  // The ticket list may omit the chat id; the detail payload can still provide
+  // it. Keep it in state so the WS subscription attaches once it is known.
+  const [chatId, setChatId] = useState<string | null>(ticket.chatId ?? null);
 
   const { peerTyping, onTyping, notifyTyping } = useTypingIndicator(
     chatId,
@@ -281,12 +285,14 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
     queryFn: async () => {
       // Primary: chat history over the socket. The ticket REST call still
       // supplies subject/status metadata and is the message fallback.
-      const [restResponse, wsPayload] = await Promise.all([
-        supportService.getTicket(ticket.id),
-        chatId ? supportService.getChatMessages(chatId) : Promise.resolve(null),
-      ]);
+      const restResponse = await supportService.getTicket(ticket.id);
       const normalized = normalizeTicketDetail(restResponse, ticket);
-      if (!normalized.chatId && ticket.chatId) normalized.chatId = ticket.chatId;
+      const resolvedChatId = normalized.chatId ?? ticket.chatId ?? null;
+      if (resolvedChatId) normalized.chatId = resolvedChatId;
+
+      const wsPayload = resolvedChatId
+        ? await supportService.getChatMessages(resolvedChatId)
+        : null;
       const wsMessages = toSupportMessages(wsPayload, currentUserId);
       if (wsMessages.length > 0) normalized.messages = wsMessages;
       return normalized;
@@ -298,6 +304,11 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
 
   const thread: SupportTicket = data ?? ticket;
   const messages: SupportMessage[] = thread.messages ?? [];
+
+  useEffect(() => {
+    const resolved = thread.chatId ?? ticket.chatId ?? null;
+    if (resolved && resolved !== chatId) setChatId(resolved);
+  }, [thread.chatId, ticket.chatId, chatId]);
 
   const { mutate: sendReply, isPending: sending } = useMutation({
     mutationFn: () =>
@@ -575,17 +586,18 @@ function SupportPageInner() {
   ).length;
 
   return (
-    <main className="mx-auto flex h-[calc(100dvh-160px)] min-h-[500px] w-full max-w-[1180px] flex-col gap-5 pb-2 page-enter max-[1150px]:h-[calc(100dvh-205px)] max-[1150px]:min-h-[460px]">
+    <main className="mx-auto flex h-[calc(100dvh-140px)] min-h-[500px] w-full max-w-[1180px] flex-col gap-4 pb-2 page-enter max-[1150px]:h-[calc(100dvh-180px)] max-[1150px]:min-h-[460px]">
       <AccountPageHeader
+        compact
         title="Support center"
         description="Get help from our team, follow your requests, and continue conversations in one place."
-        icon={<RiCustomerService2Line size={23} />}
+        icon={<RiCustomerService2Line size={20} />}
         eyebrow="We're here to help"
         action={
           <button
             type="button"
             onClick={() => setShowCreate(true)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(77,119,240,0.2)] transition-all hover:bg-primary/90 active:scale-[0.98]"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(77,119,240,0.2)] transition-all hover:bg-primary/90 active:scale-[0.98]"
           >
             <RiAddLine size={17} />
             New ticket

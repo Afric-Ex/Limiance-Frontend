@@ -49,13 +49,15 @@ const wsPairForMarket = (pair: string, _market: OrderBookMarket) => {
   return parts.length === 2 ? `${parts[0]}/${parts[1]}` : raw;
 };
 
-// The backend pushes order books on a per-market response type:
-//   spot/margin → "order_book_update"  (data.orderBook.{buyOrders,sellOrders})
-//   futures     → "futures_order_book_update"   (data.{buy,sell} + markPrice)
+// Documented topics (WEBSOCKET_MESSAGES.md §6.1–6.3/§11) plus the update-shaped
+// topics some backend deployments push instead. The first topic carries the
+// request frame; the rest are listeners only.
+//   spot/margin → "order_book_stream_started", "order_book"
+//   futures     → "futures_order_book_stream_started", "order_book"
 const RESPONSE_TOPICS: Record<OrderBookMarket, string[]> = {
-  spot: ["order_book_update"],
-  margin: ["order_book_update"],
-  futures: ["futures_order_book_update"],
+  spot: ["order_book", "order_book_update", "order_book_stream_started"],
+  margin: ["order_book", "order_book_update", "order_book_stream_started"],
+  futures: ["order_book", "futures_order_book_update", "futures_order_book_stream_started"],
 };
 
 export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): OrderBookData => {
@@ -221,12 +223,14 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
     };
 
     // Subscribe to the first response topic this market can use. The others are
-    // alternates for backends that answer on a different channel — subscribing
-    // to all of them cost one request frame each per pair for a stream that is
-    // already open. If the primary stays silent, the heal timer below retries.
-    const unsubscribeMessages = RESPONSE_TOPICS[market].map((topic) =>
-      wsClient.subscribe(topic, payload, handleBookMessage)
-    );
+    // alternates for backends that answer on a different channel; passing `null`
+    // makes them listeners only, so the request frame is sent once per stream
+    // (and re-sent once on reconnect) rather than once per alias.
+    const [primaryTopic, ...aliasTopics] = RESPONSE_TOPICS[market];
+    const unsubscribeMessages = [
+      wsClient.subscribe(primaryTopic, payload, handleBookMessage),
+      ...aliasTopics.map((topic) => wsClient.subscribe(topic, null, handleBookMessage)),
+    ];
 
     unsubscribeStatus = wsClient.onStatusChange((connected) => {
       setData((prev) => ({ ...prev, isConnected: connected }));

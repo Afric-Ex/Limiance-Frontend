@@ -35,7 +35,7 @@ const findInvalidIp = (value: string): string[] =>
 function CreateApiKeyInner() {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  const [revealedKey, setRevealedKey] = useState<{ key: string; secret: string } | null>(null);
   const [revealOpen, { open: openReveal, close: closeReveal }] = useDisclosure(false);
   const [permissions, setPermissions] = useState<string[]>(["read"]);
 
@@ -63,8 +63,12 @@ function CreateApiKeyInner() {
       }),
     onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: userKeys.apiKeys });
-      if (res.data?.fullKey) {
-        setRevealedKey(res.data.fullKey);
+      // Response: { data: { key, secret, keyPrefix, label, coverage, ... } }
+      const payload = res?.data?.data ?? res?.data ?? res;
+      const key = payload?.key ?? payload?.apiKey ?? payload?.api_key ?? payload?.fullKey;
+      const secret = payload?.secret ?? payload?.secretKey ?? payload?.secret_key;
+      if (key) {
+        setRevealedKey({ key, secret: secret ?? "" });
         openReveal();
       } else {
         successNotification("API key created");
@@ -97,19 +101,29 @@ function CreateApiKeyInner() {
       >
         <div className="flex flex-col gap-4 p-4">
           <p className="text-sm text-yellow-400">
-            Copy this key now — it will never be shown again.
+            Copy your key and secret now — the secret will never be shown again.
           </p>
-          <div className="bg-gray-1 rounded p-3 break-all text-sm font-mono text-primary">
-            {revealedKey}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs text-white/50 font-medium">API Key</span>
+            <div className="bg-gray-1 rounded p-3 break-all text-sm font-mono text-primary">
+              {revealedKey?.key}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-xs text-white/50 font-medium">Secret Key</span>
+            <div className="bg-gray-1 rounded p-3 break-all text-sm font-mono text-primary">
+              {revealedKey?.secret || "—"}
+            </div>
           </div>
           <button
             onClick={() => {
-              navigator.clipboard.writeText(revealedKey ?? "");
+              const text = [revealedKey?.key, revealedKey?.secret].filter(Boolean).join("\n");
+              navigator.clipboard.writeText(text);
               successNotification("Key copied to clipboard");
             }}
             className="w-full py-3 bg-primary rounded-lg text-sm font-semibold"
           >
-            Copy Key
+            Copy Key &amp; Secret
           </button>
           <button
             onClick={() => { closeReveal(); router.push("/account/api-keys"); }}

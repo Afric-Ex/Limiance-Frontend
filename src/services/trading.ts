@@ -272,8 +272,12 @@ export const tradingService = {
     return response.data;
   },
 
-  borrowMargin: async (data: { asset: string; amount: number }) => {
-    const response = await api.post("trading/margin/borrow", data);
+  borrowMargin: async (data: { asset: string; amount: number; symbol: string }) => {
+    const response = await api.post("trading/margin/borrow", {
+      asset: data.asset,
+      amount: data.amount,
+      symbol: data.symbol,
+    });
     return response.data;
   },
 
