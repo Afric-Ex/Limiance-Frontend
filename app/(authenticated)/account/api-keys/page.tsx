@@ -130,7 +130,29 @@ function ApiKeysPageInner() {
 
   // Mutations
   const { mutate: createKey, isPending: createLoading } = useMutation({
-    mutationFn: () => userService.createApiKey({ label: label.trim(), permissions: selectedPerms }),
+    mutationFn: async () => {
+      const response = await userService.createApiKey({
+        label: label.trim(),
+        permissions: selectedPerms,
+      });
+      const result = response as typeof response & {
+        success?: boolean;
+        statusCode?: number;
+        error?: string;
+      };
+      const statusCode = Number(result.statusCode);
+      if (result.success === false || (Number.isFinite(statusCode) && statusCode >= 400)) {
+        const error = new Error(
+          result.message || result.error || "Failed to create API key"
+        ) as Error & { response: { data: typeof response; status: number } };
+        error.response = {
+          data: response,
+          status: Number.isFinite(statusCode) && statusCode >= 400 ? statusCode : 500,
+        };
+        throw error;
+      }
+      return response;
+    },
     onSuccess: (res: any) => {
       const data = unwrapPayload(res);
       setNewKey({
