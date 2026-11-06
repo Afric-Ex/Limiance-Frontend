@@ -343,6 +343,7 @@ const formatVolume = (value: number) =>
   value.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
 const formatPrice = (value: number) => {
+  if (!Number.isFinite(value)) return "--";
   const abs = Math.abs(value);
   const decimals = abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
   return value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -900,12 +901,27 @@ export function LwcCandlestickChart({
         setLegend(null);
         return;
       }
-      const bar = param.seriesData.get(candlesSeries) as
-        | { open: number; high: number; low: number; close: number }
-        | undefined;
-      if (!bar) {
+      const raw = param.seriesData.get(candlesSeries);
+      if (!raw) {
         setLegend(null);
         return;
+      }
+
+      let bar: { open: number; high: number; low: number; close: number };
+      if (chartType === "line" || chartType === "area") {
+        const value = (raw as LineData).value;
+        if (!Number.isFinite(value)) {
+          setLegend(null);
+          return;
+        }
+        bar = { open: value, high: value, low: value, close: value };
+      } else {
+        const candle = raw as CandlestickData;
+        if (![candle.open, candle.high, candle.low, candle.close].every((v) => Number.isFinite(v))) {
+          setLegend(null);
+          return;
+        }
+        bar = { open: candle.open, high: candle.high, low: candle.low, close: candle.close };
       }
       const volBar = param.seriesData.get(volumeSeries) as { value?: number } | undefined;
       const volSmaBar = param.seriesData.get(volumeSmaSeries) as { value?: number } | undefined;
@@ -1471,6 +1487,7 @@ export function LwcCandlestickChart({
       ? { o: last.open, h: last.high, l: last.low, c: last.close, v: Number.isFinite(last.volume) ? last.volume : undefined }
       : null;
   const shown = legend ?? lastBar;
+  const isLineChart = chartType === "line" || chartType === "area";
   const shownVolumeSma = legend ? legend.vsma : lastVolumeSma;
   const barChange = shown ? shown.c - shown.o : 0;
   const barChangePct = shown && shown.o ? (barChange / shown.o) * 100 : 0;
@@ -1516,10 +1533,16 @@ export function LwcCandlestickChart({
         <div className="pointer-events-none absolute top-1 left-2 z-10 flex flex-wrap items-center gap-x-2 text-2xs font-mono">
           <span className="font-bold text-white/90">{legendTitle}</span>
           <span className="flex flex-wrap gap-x-2 text-white/50">
-            <span>O <span className={barTone}>{formatPrice(shown.o)}</span></span>
-            <span>H <span className={barTone}>{formatPrice(shown.h)}</span></span>
-            <span>L <span className={barTone}>{formatPrice(shown.l)}</span></span>
-            <span>C <span className={barTone}>{formatPrice(shown.c)}</span></span>
+            {isLineChart ? (
+              <span>C <span className={barTone}>{formatPrice(shown.c)}</span></span>
+            ) : (
+              <>
+                <span>O <span className={barTone}>{formatPrice(shown.o)}</span></span>
+                <span>H <span className={barTone}>{formatPrice(shown.h)}</span></span>
+                <span>L <span className={barTone}>{formatPrice(shown.l)}</span></span>
+                <span>C <span className={barTone}>{formatPrice(shown.c)}</span></span>
+              </>
+            )}
             <span className={barTone}>
               {barSign}{formatPrice(barChange)} ({barSign}{barChangePct.toFixed(2)}%)
             </span>
