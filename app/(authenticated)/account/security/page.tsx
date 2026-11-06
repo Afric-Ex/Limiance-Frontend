@@ -10,7 +10,7 @@ import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { Authenticator } from "@/src/components/icons/authenticator";
 import { OtpInput } from "@/src/components/settings/otp-input";
-import { MdSmartphone, MdDesktopMac, MdMailOutline } from "react-icons/md";
+import { MdSmartphone, MdDesktopMac, MdTablet, MdMailOutline, MdRefresh } from "react-icons/md";
 import { BiCheck } from "react-icons/bi";
 import { CopyButton } from "@/src/components/shared/copy-button";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
@@ -26,9 +26,13 @@ type TwoFASetupData = {
 
 type SecurityRecord = Record<string, any>;
 
+type DeviceKind = "mobile" | "tablet" | "desktop";
+
 type SessionItem = {
   id: string;
   device: string;
+  rawDevice: string;
+  deviceKind: DeviceKind;
   ip: string;
   location: string;
   lastActive: string;
@@ -39,6 +43,7 @@ type SessionItem = {
 type LoginLogItem = {
   id: string;
   device: string;
+  rawDevice: string;
   location: string;
   ip: string;
   createdAt: string;
@@ -119,25 +124,100 @@ const getDateField = (record: SecurityRecord, keys: string[]): string => {
 };
 
 const normalizeDateValue = (value: unknown): string => {
-  if (typeof value !== "string" || !value.trim()) return "";
+  if (value == null) return "";
 
-  const trimmed = value.trim();
-  const direct = new Date(trimmed);
-  if (!Number.isNaN(direct.getTime())) {
-    return direct.toISOString();
-  }
+  let date: Date | null = null;
 
-  const formattedMatch = trimmed.match(/^[A-Za-z]+\s(\d{2})\s([A-Za-z]+)\s(\d{4})\s(\d{2}:\d{2}:\d{2})(AM|PM)$/);
-  if (formattedMatch) {
-    const [, day, month, year, time, meridiem] = formattedMatch;
-    const normalized = `${day} ${month} ${year} ${time} ${meridiem}`;
-    const parsed = new Date(normalized);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString();
+  if (typeof value === "number" && Number.isFinite(value)) {
+    // Session timestamps are epoch milliseconds, but accept seconds too.
+    date = new Date(value < 1e12 ? value * 1000 : value);
+  } else if (typeof value === "string" && value.trim()) {
+    const trimmed = value.trim();
+    if (/^\d+$/.test(trimmed)) {
+      const numeric = Number(trimmed);
+      if (Number.isFinite(numeric)) {
+        date = new Date(numeric < 1e12 ? numeric * 1000 : numeric);
+      }
+    }
+
+    if (!date || Number.isNaN(date.getTime())) {
+      date = new Date(trimmed);
+    }
+
+    if (Number.isNaN(date.getTime())) {
+      const formattedMatch = trimmed.match(/^[A-Za-z]+\s(\d{2})\s([A-Za-z]+)\s(\d{4})\s(\d{2}:\d{2}:\d{2})(AM|PM)$/);
+      if (formattedMatch) {
+        const [, day, month, year, time, meridiem] = formattedMatch;
+        date = new Date(`${day} ${month} ${year} ${time} ${meridiem}`);
+      }
     }
   }
 
-  return "";
+  return date && !Number.isNaN(date.getTime()) ? date.toISOString() : "";
+};
+
+const describeUserAgent = (ua: string): { label: string; kind: DeviceKind } => {
+  const raw = ua.trim();
+  if (!raw) return { label: "Unknown device", kind: "desktop" };
+
+  const lower = raw.toLowerCase();
+
+  if (lower.includes("apidog")) return { label: "Apidog (API client)", kind: "desktop" };
+  if (lower.includes("postman")) return { label: "Postman (API client)", kind: "desktop" };
+  if (lower.startsWith("curl/") || lower.includes(" curl/")) return { label: "curl (API client)", kind: "desktop" };
+  if (lower.includes("python-requests") || lower.includes("axios")) return { label: "API client", kind: "desktop" };
+
+  const isTablet =
+    lower.includes("ipad") ||
+    lower.includes("tablet") ||
+    (lower.includes("android") && !lower.includes("mobile")) ||
+    (lower.includes("macintosh") && lower.includes("mobile"));
+  const isMobile =
+    !isTablet &&
+    (lower.includes("mobile") ||
+      lower.includes("iphone") ||
+      lower.includes("ipod") ||
+      lower.includes("android") ||
+      lower.includes("windows phone"));
+
+  let platform = "";
+  if (lower.includes("windows")) platform = "Windows";
+  else if (lower.includes("iphone") || lower.includes("ipad") || lower.includes("ipod")) platform = "iOS";
+  else if (lower.includes("android")) platform = "Android";
+  else if (lower.includes("mac os x") || lower.includes("macintosh")) platform = "macOS";
+  else if (lower.includes("cros")) platform = "ChromeOS";
+  else if (lower.includes("linux")) platform = "Linux";
+
+  let browser = "";
+  if (lower.includes("edg/")) browser = "Edge";
+  else if (lower.includes("opr/") || lower.includes("opera")) browser = "Opera";
+  else if (lower.includes("firefox")) browser = "Firefox";
+  else if (lower.includes("chrome") || lower.includes("crios")) browser = "Chrome";
+  else if (lower.includes("safari")) browser = "Safari";
+
+  const kind: DeviceKind = isTablet ? "tablet" : isMobile ? "mobile" : "desktop";
+  const label = browser && platform ? `${browser} on ${platform}` : browser || platform || raw;
+
+  return { label, kind };
+};
+
+const formatRelativeTime = (iso: string): string => {
+  if (!iso) return "Unknown";
+  const timestamp = new Date(iso).getTime();
+  if (!Number.isFinite(timestamp)) return "Unknown";
+
+  const diff = Date.now() - timestamp;
+  const abs = Math.abs(diff);
+  const suffix = diff >= 0 ? "ago" : "from now";
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (abs < minute) return "Just now";
+  if (abs < hour) return `${Math.round(abs / minute)} min ${suffix}`;
+  if (abs < day) return `${Math.round(abs / hour)} hr ${suffix}`;
+  if (abs < 7 * day) return `${Math.round(abs / day)} d ${suffix}`;
+  return new Date(timestamp).toLocaleDateString();
 };
 
 function SecurityPageInner() {
@@ -147,7 +227,11 @@ function SecurityPageInner() {
   const twoFAEnabled = user?.twoFaEnabled ?? false;
   const emailOtpEnabled = user?.emailOtpEnabled ?? false;
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const [currentUserAgent, setCurrentUserAgent] = useState("");
+  useEffect(() => {
+    setMounted(true);
+    setCurrentUserAgent(window.navigator.userAgent);
+  }, []);
 
   // Modals state
   const [setupOpen, { open: openSetup, close: closeSetup }] = useDisclosure(false);
@@ -280,6 +364,7 @@ function SecurityPageInner() {
   const {
     data: sessions = [],
     isLoading: sessionsLoading,
+    isFetching: sessionsFetching,
     isError: sessionsError,
     refetch: refetchSessions,
   } = useQuery<any, Error, SessionItem[]>({
@@ -304,10 +389,14 @@ function SecurityPageInner() {
         ]);
         const isCurrent =
           session?.isCurrent === true || session?.is_current === true;
+        const rawDevice = getStringField(session, ["device", "browser", "userAgent", "user_agent"]);
+        const device = describeUserAgent(rawDevice);
 
         return {
           id,
-          device: getStringField(session, ["device", "browser", "userAgent", "user_agent"]),
+          device: device.label,
+          rawDevice,
+          deviceKind: device.kind,
           ip: getStringField(session, ["ip", "IP"]),
           location: getStringField(session, ["location", "country", "city"]),
           lastActive: normalizeDateValue(
@@ -330,17 +419,40 @@ function SecurityPageInner() {
     },
   });
 
-  const { mutate: revokeSession, isPending: revokeLoading } = useMutation({
+  const [revokeConfirmId, setRevokeConfirmId] = useState<string | null>(null);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
+
+  const { mutate: revokeSession } = useMutation({
     mutationFn: (sessionId: string) => userService.revokeSession(sessionId),
+    onMutate: (sessionId) => setRevokingId(sessionId),
     onSuccess: () => {
       successNotification("Session revoked successfully");
       queryClient.invalidateQueries({ queryKey: userKeys.sessions });
       setRevokeConfirmId(null);
     },
+    onSettled: () => setRevokingId(null),
     onError: (e: any) => errorMessageHandler(e),
   });
 
-  const [revokeConfirmId, setRevokeConfirmId] = useState<string | null>(null);
+  const activeSessions = useMemo(() => {
+    const timestamp = (iso: string) => {
+      const value = new Date(iso).getTime();
+      return Number.isFinite(value) ? value : 0;
+    };
+
+    return sessions
+      .map((session) => {
+        const isCurrent =
+          session.isCurrent ||
+          (currentUserAgent !== "" && session.rawDevice === currentUserAgent);
+        return {
+          ...session,
+          isCurrent,
+          canRevoke: session.canRevoke && !isCurrent,
+        };
+      })
+      .sort((a, b) => timestamp(b.lastActive) - timestamp(a.lastActive));
+  }, [sessions, currentUserAgent]);
 
   // Logs
   const { data: logs = [], isLoading: logsLoading } = useQuery<any, Error, LoginLogItem[]>({
@@ -349,14 +461,18 @@ function SecurityPageInner() {
     select: (res: any) => {
       const rawLogs = extractPayloadList(res, "user_login_log");
 
-      return rawLogs.map((log: SecurityRecord, index: number) => ({
-        id: getStringField(log, ["id", "_id"]) || `log-${index}`,
-        device: getStringField(log, ["device", "browser", "userAgent", "user_agent"]),
-        location: getStringField(log, ["location", "country", "city"]),
-        ip: getStringField(log, ["ip", "IP"]),
-        createdAt: normalizeDateValue(getDateField(log, ["createdAt", "created_at", "loginAt", "login_at"])),
-        status: getStringField(log, ["status", "result"]) || "Success",
-      }));
+      return rawLogs.map((log: SecurityRecord, index: number) => {
+        const rawDevice = getStringField(log, ["device", "browser", "userAgent", "user_agent"]);
+        return {
+          id: getStringField(log, ["id", "_id"]) || `log-${index}`,
+          device: describeUserAgent(rawDevice).label,
+          rawDevice,
+          location: getStringField(log, ["location", "country", "city"]),
+          ip: getStringField(log, ["ip", "IP"]),
+          createdAt: normalizeDateValue(getDateField(log, ["createdAt", "created_at", "loginAt", "login_at"])),
+          status: getStringField(log, ["status", "result"]) || "Success",
+        };
+      });
     },
   });
 
@@ -519,7 +635,29 @@ function SecurityPageInner() {
 
       {/* Card 3 — Active Sessions */}
       <div className="account-card flex flex-col gap-6 max-[1150px]:gap-4">
-        <h3 className="text-lg font-semibold">Active Sessions</h3>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <h3 className="text-lg font-semibold">Active Sessions</h3>
+            {!sessionsLoading && !sessionsError && (
+              <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-2xs font-semibold text-white/50">
+                {activeSessions.length} {activeSessions.length === 1 ? "session" : "sessions"}
+              </span>
+            )}
+          </div>
+          <Button
+            variant="subtle"
+            size="xs"
+            disabled={sessionsFetching}
+            onClick={() => void refetchSessions()}
+            className="!text-white/55 hover:!text-white"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <MdRefresh size={14} className={sessionsFetching ? "animate-spin" : ""} />
+              Refresh
+            </span>
+          </Button>
+        </div>
+
         {sessionsLoading ? (
           <div className="flex justify-center py-6"><Loader color="blue" /></div>
         ) : sessionsError ? (
@@ -533,32 +671,74 @@ function SecurityPageInner() {
               Retry
             </Button>
           </div>
-        ) : sessions?.length > 0 ? (
-          <div className="flex flex-col gap-4">
-            {sessions.map((session: any) => (
-              <div key={session.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 rounded-xl border border-white/[0.06] bg-black/20 gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-white/[0.05] flex items-center justify-center text-white/50">
-                    {session.device?.toLowerCase().includes("mobile") ? <MdSmartphone size={20} /> : <MdDesktopMac size={20} />}
+        ) : activeSessions.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {activeSessions.map((session, index) => (
+              <div
+                key={session.id || index}
+                className={`flex flex-col gap-4 rounded-xl border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between ${
+                  session.isCurrent
+                    ? "border-success-6/25 bg-success-6/[0.04]"
+                    : "border-white/[0.06] bg-black/20 hover:border-white/[0.12] hover:bg-white/[0.02]"
+                }`}
+              >
+                <div className="flex min-w-0 items-center gap-4">
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                    session.isCurrent ? "bg-success-6/10 text-success-6" : "bg-white/[0.05] text-white/50"
+                  }`}>
+                    {session.deviceKind === "mobile" ? (
+                      <MdSmartphone size={20} />
+                    ) : session.deviceKind === "tablet" ? (
+                      <MdTablet size={20} />
+                    ) : (
+                      <MdDesktopMac size={20} />
+                    )}
                   </div>
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{session.device || "Unknown Device"}</span>
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate text-sm font-medium text-white/90" title={session.rawDevice || undefined}>
+                        {session.device || "Unknown device"}
+                      </span>
                       {session.isCurrent && (
-                        <span className="px-2 py-0.5 bg-success-6/20 text-success-6 text-2xs font-bold rounded-full">CURRENT SESSION</span>
+                        <span className="shrink-0 rounded-full bg-success-6/20 px-2 py-0.5 text-2xs font-bold text-success-6">
+                          CURRENT SESSION
+                        </span>
                       )}
                     </div>
-                    <span className="text-xs text-white/40">{session.location || "Unknown Location"} • {session.ip || "Unknown IP"}</span>
-                    <span className="text-xs text-white/40">Last active: {session.lastActive ? new Date(session.lastActive).toLocaleString() : "Recently"}</span>
+                    <span className="truncate text-xs text-white/40">
+                      {session.location || "Unknown location"} • {session.ip || "Unknown IP"}
+                    </span>
+                    <span
+                      className="text-xs text-white/40"
+                      title={session.lastActive ? new Date(session.lastActive).toLocaleString() : undefined}
+                    >
+                      Last active: {session.lastActive ? formatRelativeTime(session.lastActive) : "Unknown"}
+                    </span>
                   </div>
                 </div>
-                
+
                 {!session.isCurrent && session.canRevoke && (
                   revokeConfirmId === session.id ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-warning-1 mr-2">Revoke this session?</span>
-                      <Button size="xs" variant="subtle" color="gray" onClick={() => setRevokeConfirmId(null)}>Cancel</Button>
-                      <Button size="xs" color="red" loading={revokeLoading} onClick={() => revokeSession(session.id)}>Confirm</Button>
+                    <div className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-warning-1/20 bg-warning-1/[0.06] px-3 py-2 sm:w-auto">
+                      <span className="mr-auto text-xs text-warning-1">Revoke this session?</span>
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        color="gray"
+                        disabled={revokingId !== null}
+                        onClick={() => setRevokeConfirmId(null)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="xs"
+                        color="red"
+                        loading={revokingId === session.id}
+                        disabled={revokingId !== null && revokingId !== session.id}
+                        onClick={() => revokeSession(session.id)}
+                      >
+                        Confirm
+                      </Button>
                     </div>
                   ) : (
                     <Button
@@ -566,7 +746,7 @@ function SecurityPageInner() {
                       color="red"
                       size="sm"
                       onClick={() => setRevokeConfirmId(session.id)}
-                      className="!border-error-1 !text-error-1 hover:!bg-error-1/10"
+                      className="w-full !border-error-1 !text-error-1 hover:!bg-error-1/10 sm:w-auto"
                     >
                       Revoke
                     </Button>
@@ -576,7 +756,11 @@ function SecurityPageInner() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-white/40 italic">No other active sessions</p>
+          <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-white/[0.08] bg-white/[0.01] px-4 py-8 text-center">
+            <MdDesktopMac size={22} className="text-white/25" />
+            <p className="text-sm text-white/45">No active sessions found</p>
+            <p className="text-xs text-white/30">Sessions appear here when you sign in from another device.</p>
+          </div>
         )}
       </div>
 
@@ -603,7 +787,7 @@ function SecurityPageInner() {
                     <td className="py-4 pr-4 text-sm text-white/80 whitespace-nowrap">{log.createdAt ? new Date(log.createdAt).toLocaleString() : "—"}</td>
                     <td className="py-4 pr-4 text-sm font-mono text-white/60 whitespace-nowrap">{log.ip ?? "—"}</td>
                     <td className="py-4 pr-4 text-sm text-white/80 whitespace-nowrap">{log.location ?? "—"}</td>
-                    <td className="py-4 pr-4 text-sm text-white/80">{log.device ?? "—"}</td>
+                    <td className="py-4 pr-4 text-sm text-white/80" title={log.rawDevice || undefined}>{log.device ?? "—"}</td>
                     <td className="py-4 text-sm">
                       <span className={`px-2 py-1 text-xs font-medium rounded ${log.status.toLowerCase() === "success" ? "bg-success-6/15 text-success-6" : "bg-error-1/15 text-error-1"}`}>{log.status}</span>
                     </td>
