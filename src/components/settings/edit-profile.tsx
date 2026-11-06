@@ -47,10 +47,16 @@ export const EditProfile = () => {
     },
   });
 
+  // Keep the field in sync when the authenticated user loads/changes.
+  // Depend on Mantine's stable setter rather than the whole form object:
+  // the form object can be recreated on render, which repeatedly resets the
+  // input to the stored username and makes it appear non-editable.
+  const { setFieldValue } = form;
+
   useEffect(() => {
     if (!user) return;
-    form.setFieldValue("username", user?.username as string);
-  }, [user, form]);
+    setFieldValue("username", user.username ?? "");
+  }, [user?.username, setFieldValue]);
 
   const [file, setFile] = useState<File | null>(null);
 
