@@ -17,6 +17,8 @@ interface OrderBookTabsProps {
   base: string;
   quote: string;
   currentPrice: number | null;
+  // Last traded price carried by the order-book feed itself (order_book_update).
+  bookLastPrice?: number | null;
   // 24h % change; only used to pick the arrow before any live price move is seen.
   dayChangePercent?: number | null;
   buyPercentage?: number | null;
@@ -191,6 +193,7 @@ export function OrderBookTabs({
   base,
   quote,
   currentPrice,
+  bookLastPrice = null,
   dayChangePercent = null,
   buyPercentage,
   sellPercentage,
@@ -248,18 +251,15 @@ export function OrderBookTabs({
   const totalBuy = buyOrders.reduce((total, order) => total + order.quantity, 0);
   const totalSell = sellOrders.reduce((total, order) => total + order.quantity, 0);
   const total = totalBuy + totalSell;
-  const hasPressureData = total > 0;
   const calculatedBuyPercent = total > 0 ? (totalBuy / total) * 100 : 50;
+  // The order-book feed already carries the pressure split; only derive it from
+  // the visible levels when the feed omits it.
+  const backendBuyPercent =
+    buyPercentage ?? (sellPercentage != null ? 100 - sellPercentage : null);
+  const hasPressureData = backendBuyPercent != null || total > 0;
   const buyPercent = Math.max(
     0,
-    Math.min(
-      100,
-      Math.round(
-        total > 0
-          ? calculatedBuyPercent
-          : buyPercentage ?? (sellPercentage != null ? 100 - sellPercentage : calculatedBuyPercent)
-      )
-    )
+    Math.min(100, Math.round(backendBuyPercent ?? calculatedBuyPercent))
   );
   const sellPercent = 100 - buyPercent;
   const empty = buyOrders.length === 0 && sellOrders.length === 0;
@@ -280,10 +280,17 @@ export function OrderBookTabs({
     return true;
   };
 
+  const validBookLastPrice =
+    bookLastPrice != null && Number.isFinite(bookLastPrice) && bookLastPrice > 0
+      ? bookLastPrice
+      : null;
+
   const lastTradedPrice =
+    (validBookLastPrice !== null && isWithinSpread(validBookLastPrice) ? validBookLastPrice : null) ??
     (latestTradePrice !== null && isWithinSpread(latestTradePrice) ? latestTradePrice : null) ??
     (validCurrentPrice !== null && isWithinSpread(validCurrentPrice) ? validCurrentPrice : null) ??
     midPrice ??
+    validBookLastPrice ??
     latestTradePrice ??
     validCurrentPrice;
 
@@ -291,10 +298,10 @@ export function OrderBookTabs({
   useEffect(() => {
     if (lastTradedPrice === null) return;
     const previous = previousPriceRef.current;
-    // Compare at 6 decimal places so tiny sub-cent moves still flip the arrow/colour,
-    // while the displayed value is still rounded to displayDecimals for readability.
-    const toFixed6 = (n: number) => Math.round(n * 1_000_000);
-    if (previous !== null && toFixed6(lastTradedPrice) !== toFixed6(previous)) {
+    // lastTradedPrice carries 8 decimals, so compare at the full 8-decimal
+    // precision (not a coarse rounding) before flipping the arrow/colour.
+    const toFixed8 = (n: number) => Math.round(n * 100_000_000);
+    if (previous !== null && toFixed8(lastTradedPrice) !== toFixed8(previous)) {
       setPriceDir(lastTradedPrice > previous ? "up" : "down");
     }
     previousPriceRef.current = lastTradedPrice;

@@ -16,6 +16,8 @@ interface OrderBookData {
   sellPercentage: number | null;
   totalBuyVolume: number | null;
   totalSellVolume: number | null;
+  lastPrice: number | null;
+  lastPriceTs: number | null;
   isConnected: boolean;
   lastUpdated: Date | null;
 }
@@ -68,6 +70,8 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
     sellPercentage: null,
     totalBuyVolume: null,
     totalSellVolume: null,
+    lastPrice: null,
+    lastPriceTs: null,
     isConnected: false,
     lastUpdated: null,
   });
@@ -116,14 +120,32 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
       const totalBuy = buyOrders.reduce((acc, curr) => acc + curr.quantity, 0);
       const totalSell = sellOrders.reduce((acc, curr) => acc + curr.quantity, 0);
       const total = totalBuy + totalSell;
+      const backendBuyPercentage = Number(payload.buyPercentage ?? payload.bidPercentage);
+      const backendSellPercentage = Number(payload.sellPercentage ?? payload.askPercentage);
+      const rawLastPrice = Number(
+        payload.lastTradedPrice ?? payload.realLastPrice ?? payload.lastPrice
+      );
+      const rawLastPriceTs = Number(
+        payload.realLastPriceTs ?? payload.lastPriceTs
+      );
 
       setData((prev) => ({
         buyOrders,
         sellOrders,
-        buyPercentage: total > 0 ? +((totalBuy / total) * 100).toFixed(1) : null,
-        sellPercentage: total > 0 ? +((totalSell / total) * 100).toFixed(1) : null,
+        buyPercentage: Number.isFinite(backendBuyPercentage)
+          ? backendBuyPercentage
+          : total > 0
+            ? +((totalBuy / total) * 100).toFixed(1)
+            : null,
+        sellPercentage: Number.isFinite(backendSellPercentage)
+          ? backendSellPercentage
+          : total > 0
+            ? +((totalSell / total) * 100).toFixed(1)
+            : null,
         totalBuyVolume: totalBuy,
         totalSellVolume: totalSell,
+        lastPrice: Number.isFinite(rawLastPrice) && rawLastPrice > 0 ? rawLastPrice : prev.lastPrice,
+        lastPriceTs: Number.isFinite(rawLastPriceTs) ? rawLastPriceTs : prev.lastPriceTs,
         isConnected: prev.isConnected,
         lastUpdated: new Date(),
       }));
@@ -200,24 +222,42 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
         const total = totalBuyVolume + totalSellVolume;
         const backendBuyPercentage = Number(book.buyPercentage ?? book.bidPercentage);
         const backendSellPercentage = Number(book.sellPercentage ?? book.askPercentage);
+        const rawLastPrice = Number(
+          book.lastTradedPrice ??
+            book.realLastPrice ??
+            dataPayload?.lastTradedPrice ??
+            dataPayload?.realLastPrice ??
+            dataPayload?.lastPrice
+        );
+        const rawLastPriceTs = Number(
+          book.realLastPriceTs ??
+            book.lastPriceTs ??
+            dataPayload?.realLastPriceTs ??
+            dataPayload?.lastPriceTs
+        );
+        const backendLastUpdated = Number(book.lastUpdated);
 
         return {
           buyOrders,
           sellOrders,
-          buyPercentage: total > 0
-            ? (totalBuyVolume / total) * 100
-            : Number.isFinite(backendBuyPercentage)
-              ? backendBuyPercentage
+          buyPercentage: Number.isFinite(backendBuyPercentage)
+            ? backendBuyPercentage
+            : total > 0
+              ? (totalBuyVolume / total) * 100
               : null,
-          sellPercentage: total > 0
-            ? (totalSellVolume / total) * 100
-            : Number.isFinite(backendSellPercentage)
-              ? backendSellPercentage
+          sellPercentage: Number.isFinite(backendSellPercentage)
+            ? backendSellPercentage
+            : total > 0
+              ? (totalSellVolume / total) * 100
               : null,
           totalBuyVolume: Number.isFinite(Number(book.totalBuyVolume)) ? Number(book.totalBuyVolume) : totalBuyVolume,
           totalSellVolume: Number.isFinite(Number(book.totalSellVolume)) ? Number(book.totalSellVolume) : totalSellVolume,
+          lastPrice: Number.isFinite(rawLastPrice) && rawLastPrice > 0 ? rawLastPrice : previous.lastPrice,
+          lastPriceTs: Number.isFinite(rawLastPriceTs) ? rawLastPriceTs : previous.lastPriceTs,
           isConnected: true,
-          lastUpdated: new Date(),
+          lastUpdated: Number.isFinite(backendLastUpdated)
+            ? new Date(backendLastUpdated < 1e12 ? backendLastUpdated * 1000 : backendLastUpdated)
+            : new Date(),
         };
       });
     };

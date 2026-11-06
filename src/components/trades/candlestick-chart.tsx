@@ -3,6 +3,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { FiArrowUp, FiArrowDown, FiChevronDown, FiMaximize2, FiMinimize2, FiCheck, FiRotateCcw } from "react-icons/fi";
 import { TbChartCandle, TbChartBar, TbChartLine, TbChartArea, TbFunction } from "react-icons/tb";
+import { Popover } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import clsx from "clsx";
 import type { OrderBookEntry } from "@/src/hooks/use-order-book";
 import { TokenOverview } from "@/src/components/trades/token-overview";
@@ -34,6 +36,9 @@ const MORE_INTERVALS = [
   { value: "6mh", label: "6M" },
   { value: "1y", label: "1Y" },
 ] as const;
+// Phones keep the four most-used intraday intervals visible and route the
+// rest into the More menu so the strip never needs horizontal scrolling.
+const MOBILE_INTERVALS = new Set<string>(["1m", "5m", "15m", "30m"]);
 const _INTERVALS = [
   ...QUICK_INTERVALS.map(({ value }) => value),
   ...MORE_INTERVALS.map(({ value }) => value),
@@ -433,8 +438,16 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
   const [priceScaleMode, setPriceScaleMode] = useState<"normal" | "log" | "percent">("normal");
   const [showChartTypeDropdown, setShowChartTypeDropdown] = useState(false);
   const [showIndicatorsModal, setShowIndicatorsModal] = useState(false);
-  const chartTypeMenuRef = useRef<HTMLDivElement>(null);
-  const indicatorsMenuRef = useRef<HTMLDivElement>(null);
+  const isDesktop = useMediaQuery("(min-width: 1150px)", true);
+  const visibleIntervals = isDesktop
+    ? QUICK_INTERVALS
+    : QUICK_INTERVALS.filter(({ value }) => MOBILE_INTERVALS.has(value));
+  const moreIntervals = isDesktop
+    ? MORE_INTERVALS
+    : [
+        ...QUICK_INTERVALS.filter(({ value }) => !MOBILE_INTERVALS.has(value)),
+        ...MORE_INTERVALS,
+      ];
 
   const [utcTime, setUtcTime] = useState("");
   useEffect(() => {
@@ -445,25 +458,6 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
     updateTime();
     const timer = setInterval(updateTime, 1000);
     return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    const onClickOutside = (e: MouseEvent) => {
-      if (
-        chartTypeMenuRef.current &&
-        !chartTypeMenuRef.current.contains(e.target as Node)
-      ) {
-        setShowChartTypeDropdown(false);
-      }
-      if (
-        indicatorsMenuRef.current &&
-        !indicatorsMenuRef.current.contains(e.target as Node)
-      ) {
-        setShowIndicatorsModal(false);
-      }
-    };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
   const exitFullscreen = useCallback(async () => {
@@ -656,9 +650,14 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
       </div>
 
       {view === "chart" && (
-        <div className="shrink-0 overflow-x-auto px-2 [scrollbar-width:none]">
+        <div
+          className={clsx(
+            "shrink-0 px-2 [scrollbar-width:none]",
+            isFullscreen ? "overflow-visible" : "overflow-x-auto"
+          )}
+        >
           <div className="flex h-9 min-w-max items-center gap-0.5">
-            {QUICK_INTERVALS.map(({ value, label }) => (
+            {visibleIntervals.map(({ value, label }) => (
               <button
                 key={value}
                 onClick={() => setIntervalVal(value)}
@@ -674,22 +673,22 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
             <div className="relative flex h-7 items-center">
               <select
                 aria-label="More chart intervals"
-                value={MORE_INTERVALS.some(({ value }) => value === interval) ? interval : ""}
+                value={moreIntervals.some(({ value }) => value === interval) ? interval : ""}
                 onChange={(event) => {
                   const value = event.currentTarget.value;
-                  if (MORE_INTERVALS.some((item) => item.value === value)) {
+                  if (moreIntervals.some((item) => item.value === value)) {
                     setIntervalVal(value as Interval);
                   }
                 }}
                 className={clsx(
                   "h-7 cursor-pointer appearance-none rounded bg-transparent pl-2 pr-5 text-xs font-semibold outline-none transition-colors",
-                  MORE_INTERVALS.some(({ value }) => value === interval)
+                  moreIntervals.some(({ value }) => value === interval)
                     ? "text-primary"
                     : "text-white/50 hover:text-white"
                 )}
               >
                 <option value="" disabled>More</option>
-                {MORE_INTERVALS.map(({ value, label }) => (
+                {moreIntervals.map(({ value, label }) => (
                   <option key={value} value={value} className="bg-[#181a20] text-white">
                     {label}
                   </option>
@@ -706,116 +705,129 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
             <div className="mx-1 h-3.5 w-px bg-white/10" />
 
             {/* Chart Type Selector */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowChartTypeDropdown((v) => !v);
-                  setShowIndicatorsModal(false);
-                }}
-                title={`Chart type: ${chartType}`}
-                aria-label="Chart type"
-                className={clsx(
-                  "flex h-7 items-center gap-1 rounded px-2 text-xs font-semibold transition-colors hover:bg-white/[0.08]",
-                  showChartTypeDropdown ? "bg-white/[0.08] text-white" : "text-white/60 hover:text-white"
-                )}
-              >
-                {chartType === "candles" && <TbChartCandle size={15} />}
-                {chartType === "bars" && <TbChartBar size={15} />}
-                {chartType === "line" && <TbChartLine size={15} />}
-                {chartType === "area" && <TbChartArea size={15} />}
-                <FiChevronDown size={11} className="text-white/40" />
-              </button>
-
-              {showChartTypeDropdown && (
-                <div
-                  ref={chartTypeMenuRef}
-                  className="absolute left-0 top-8 z-50 flex w-36 flex-col gap-0.5 rounded-lg border border-white/10 bg-[#1e2026] p-1.5 shadow-2xl backdrop-blur-md"
+            <Popover
+              opened={showChartTypeDropdown}
+              onChange={setShowChartTypeDropdown}
+              position="bottom-start"
+              withArrow={false}
+              shadow="xl"
+              zIndex={1100}
+              withinPortal={!isFullscreen}
+              middlewares={{ flip: true, shift: true }}
+            >
+              <Popover.Target>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowChartTypeDropdown((v) => !v);
+                    setShowIndicatorsModal(false);
+                  }}
+                  title={`Chart type: ${chartType}`}
+                  aria-label="Chart type"
+                  aria-expanded={showChartTypeDropdown}
+                  className={clsx(
+                    "flex h-7 items-center gap-1 rounded px-2 text-xs font-semibold transition-colors hover:bg-white/[0.08]",
+                    showChartTypeDropdown ? "bg-white/[0.08] text-white" : "text-white/60 hover:text-white"
+                  )}
                 >
-                  <button
-                    type="button"
-                    onClick={() => { setChartType("candles"); setShowChartTypeDropdown(false); }}
-                    className={clsx(
-                      "flex items-center justify-between rounded px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/[0.08]",
-                      chartType === "candles" ? "text-primary bg-primary/10" : "text-white/80"
-                    )}
-                  >
-                    <span className="flex items-center gap-2">
-                      <TbChartCandle size={15} />
-                      Candles
-                    </span>
-                    {chartType === "candles" && <FiCheck size={12} />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setChartType("bars"); setShowChartTypeDropdown(false); }}
-                    className={clsx(
-                      "flex items-center justify-between rounded px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/[0.08]",
-                      chartType === "bars" ? "text-primary bg-primary/10" : "text-white/80"
-                    )}
-                  >
-                    <span className="flex items-center gap-2">
-                      <TbChartBar size={15} />
-                      Bars
-                    </span>
-                    {chartType === "bars" && <FiCheck size={12} />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setChartType("line"); setShowChartTypeDropdown(false); }}
-                    className={clsx(
-                      "flex items-center justify-between rounded px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/[0.08]",
-                      chartType === "line" ? "text-primary bg-primary/10" : "text-white/80"
-                    )}
-                  >
-                    <span className="flex items-center gap-2">
-                      <TbChartLine size={15} />
-                      Line
-                    </span>
-                    {chartType === "line" && <FiCheck size={12} />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setChartType("area"); setShowChartTypeDropdown(false); }}
-                    className={clsx(
-                      "flex items-center justify-between rounded px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/[0.08]",
-                      chartType === "area" ? "text-primary bg-primary/10" : "text-white/80"
-                    )}
-                  >
-                    <span className="flex items-center gap-2">
-                      <TbChartArea size={15} />
-                      Area
-                    </span>
-                    {chartType === "area" && <FiCheck size={12} />}
-                  </button>
-                </div>
-              )}
-            </div>
+                  {chartType === "candles" && <TbChartCandle size={15} />}
+                  {chartType === "bars" && <TbChartBar size={15} />}
+                  {chartType === "line" && <TbChartLine size={15} />}
+                  {chartType === "area" && <TbChartArea size={15} />}
+                  <FiChevronDown size={11} className="text-white/40" />
+                </button>
+              </Popover.Target>
+              <Popover.Dropdown className="!z-[1100] !flex !w-36 !flex-col !gap-0.5 !rounded-lg !border !border-white/10 !bg-[#1e2026] !p-1.5 !shadow-2xl backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => { setChartType("candles"); setShowChartTypeDropdown(false); }}
+                  className={clsx(
+                    "flex items-center justify-between rounded px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/[0.08]",
+                    chartType === "candles" ? "text-primary bg-primary/10" : "text-white/80"
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <TbChartCandle size={15} />
+                    Candles
+                  </span>
+                  {chartType === "candles" && <FiCheck size={12} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setChartType("bars"); setShowChartTypeDropdown(false); }}
+                  className={clsx(
+                    "flex items-center justify-between rounded px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/[0.08]",
+                    chartType === "bars" ? "text-primary bg-primary/10" : "text-white/80"
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <TbChartBar size={15} />
+                    Bars
+                  </span>
+                  {chartType === "bars" && <FiCheck size={12} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setChartType("line"); setShowChartTypeDropdown(false); }}
+                  className={clsx(
+                    "flex items-center justify-between rounded px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/[0.08]",
+                    chartType === "line" ? "text-primary bg-primary/10" : "text-white/80"
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <TbChartLine size={15} />
+                    Line
+                  </span>
+                  {chartType === "line" && <FiCheck size={12} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setChartType("area"); setShowChartTypeDropdown(false); }}
+                  className={clsx(
+                    "flex items-center justify-between rounded px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/[0.08]",
+                    chartType === "area" ? "text-primary bg-primary/10" : "text-white/80"
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <TbChartArea size={15} />
+                    Area
+                  </span>
+                  {chartType === "area" && <FiCheck size={12} />}
+                </button>
+              </Popover.Dropdown>
+            </Popover>
 
             {/* Indicators Button */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowIndicatorsModal((v) => !v);
-                  setShowChartTypeDropdown(false);
-                }}
-                title="Indicators"
-                aria-label="Indicators"
-                className={clsx(
-                  "flex h-7 items-center gap-1.5 rounded px-2 text-xs font-semibold transition-colors hover:bg-white/[0.08]",
-                  showIndicatorsModal ? "bg-white/[0.08] text-white" : "text-white/60 hover:text-white"
-                )}
-              >
-                <TbFunction size={16} />
-                <span className="text-[11px]">Indicators</span>
-              </button>
-
-              {showIndicatorsModal && (
-                <div
-                  ref={indicatorsMenuRef}
-                  className="absolute left-0 top-8 z-50 flex w-72 flex-col gap-3 rounded-xl border border-white/10 bg-[#1e2026] p-4 shadow-2xl backdrop-blur-md"
+            <Popover
+              opened={showIndicatorsModal}
+              onChange={setShowIndicatorsModal}
+              position="bottom-start"
+              withArrow={false}
+              shadow="xl"
+              zIndex={1100}
+              withinPortal={!isFullscreen}
+              middlewares={{ flip: true, shift: true }}
+            >
+              <Popover.Target>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowIndicatorsModal((v) => !v);
+                    setShowChartTypeDropdown(false);
+                  }}
+                  title="Indicators"
+                  aria-label="Indicators"
+                  aria-expanded={showIndicatorsModal}
+                  className={clsx(
+                    "flex h-7 items-center gap-1.5 rounded px-2 text-xs font-semibold transition-colors hover:bg-white/[0.08]",
+                    showIndicatorsModal ? "bg-white/[0.08] text-white" : "text-white/60 hover:text-white"
+                  )}
                 >
+                  <TbFunction size={16} />
+                  <span className="text-[11px]">Indicators</span>
+                </button>
+              </Popover.Target>
+              <Popover.Dropdown className="!z-[1100] !flex !w-72 !flex-col !gap-3 !rounded-xl !border !border-white/10 !bg-[#1e2026] !p-4 !shadow-2xl backdrop-blur-md">
                   <div className="flex items-center justify-between border-b border-white/[0.08] pb-2">
                     <span className="text-xs font-bold text-white">Technical Indicators</span>
                     <button
@@ -936,9 +948,8 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
                       Volume SMA (9)
                     </label>
                   </div>
-                </div>
-              )}
-            </div>
+              </Popover.Dropdown>
+            </Popover>
           </div>
         </div>
       )}
