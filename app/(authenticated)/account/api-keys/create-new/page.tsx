@@ -3,7 +3,7 @@
 import { Add } from "@/src/components/icons/add";
 import { InfoOrange } from "@/src/components/icons/info-orange";
 import { InfoWhite } from "@/src/components/icons/info-white";
-import { TextInput, RadioGroup, Radio, Textarea, Loader, Modal, Checkbox } from "@mantine/core";
+import { TextInput, RadioGroup, Radio, Textarea, Loader, Modal } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import { useState } from "react";
@@ -15,6 +15,8 @@ import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountCreateApiKeySkeleton } from "@/src/components/skeletons/account";
+import { useApiKeyPermissions } from "@/src/hooks/use-api-key-permissions";
+import { ApiKeyPermissionPicker } from "@/src/components/settings/api-key-permission-picker";
 
 const inputStyles = {
   input: "!h-50px !bg-transparent !rounded",
@@ -37,7 +39,13 @@ function CreateApiKeyInner() {
   const router = useRouter();
   const [revealedKey, setRevealedKey] = useState<{ key: string; secret: string } | null>(null);
   const [revealOpen, { open: openReveal, close: closeReveal }] = useDisclosure(false);
-  const [permissions, setPermissions] = useState<string[]>(["read"]);
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const {
+    data: permissionData,
+    isLoading: permissionsLoading,
+    isError: permissionsError,
+    refetch: refetchPermissions,
+  } = useApiKeyPermissions();
 
   const form = useForm({
     initialValues: {
@@ -86,7 +94,7 @@ function CreateApiKeyInner() {
 
   const handleCreate = () => {
     const result = form.validate();
-    if (result.hasErrors) return;
+    if (result.hasErrors || permissionsLoading || permissionsError || !permissionData?.permissions.length || permissions.length === 0) return;
     createKey();
   };
 
@@ -145,7 +153,7 @@ function CreateApiKeyInner() {
           </div>
           <button
             onClick={handleCreate}
-            disabled={isPending || !form.values.label}
+            disabled={isPending || !form.values.label.trim() || permissionsLoading || permissionsError || !permissionData?.permissions.length || permissions.length === 0}
             className="flex font-medium py-4 px-18px rounded-3xl bg-primary items-center justify-center gap-6px disabled:opacity-50"
           >
             {isPending ? <Loader size="xs" color="white" /> : <Add />}
@@ -206,7 +214,7 @@ function CreateApiKeyInner() {
             </div>
             <button
               onClick={handleCreate}
-              disabled={isPending || !form.values.label}
+              disabled={isPending || !form.values.label.trim() || permissionsLoading || permissionsError || !permissionData?.permissions.length || permissions.length === 0}
               className="bg-primary rounded-xl py-18px text-base font-medium disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isPending && <Loader size="xs" color="white" />}
@@ -246,19 +254,20 @@ function CreateApiKeyInner() {
             maxRows={5}
             {...form.getInputProps("ipAllowlist")}
           />
-          <div className="flex flex-col gap-2">
-            <span className="text-sm">Permissions</span>
-            <div className="flex items-center gap-4">
-              {["read", "trade", "withdraw"].map((perm) => (
-                <Checkbox
-                  key={perm}
-                  label={perm.charAt(0).toUpperCase() + perm.slice(1)}
-                  checked={permissions.includes(perm)}
-                  onChange={() => togglePermission(perm)}
-                  classNames={{ input: "!border-gray-31 !bg-transparent" }}
-                />
-              ))}
+          <div className="flex flex-col gap-3">
+            <div>
+              <span className="text-sm font-semibold">Permissions</span>
+              <p className="mt-1 text-xs text-white/45">Select at least one capability for this API key.</p>
+              <p className="mt-1 text-xs text-white/50">{permissions.length} selected</p>
             </div>
+            <ApiKeyPermissionPicker
+              groups={permissionData?.groups ?? []}
+              selected={permissions}
+              onToggle={togglePermission}
+              isLoading={permissionsLoading}
+              isError={permissionsError}
+              onRetry={() => void refetchPermissions()}
+            />
           </div>
         </div>
       </div>
