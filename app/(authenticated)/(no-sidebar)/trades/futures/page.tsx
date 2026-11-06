@@ -86,6 +86,7 @@ function FuturesTradesInner() {
   const [prevPrice, setPrevPrice] = useState<number | null>(null);
   const [chartLastPrice, setChartLastPrice] = useState<number | null>(null);
   const accountModalShownRef = useRef(false);
+  const openFuturesModalIdRef = useRef<string | null>(null);
   const router = useRouter();
   const priceUserEditedRef = useRef(false); // true when user has manually typed a custom price
   const [chartExpanded, setChartExpanded] = useState(false);
@@ -139,13 +140,14 @@ function FuturesTradesInner() {
     (bestBid == null || bestAsk == null || (feed.price >= bestBid * 0.98 && feed.price <= bestAsk * 1.02));
 
   const effectiveMarketPrice =
+    (orderBook.lastPrice != null && orderBook.lastPrice > 0 ? orderBook.lastPrice : null) ??
     (latestTradePrice != null && latestTradePrice > 0 ? latestTradePrice : null) ??
     (chartLastPrice != null && chartLastPrice > 0 ? chartLastPrice : null) ??
     orderBookMidPrice ??
     (isFeedPriceConsistent ? feed.price : null) ??
     (feed.price != null && feed.price > 0 ? feed.price : null) ??
     null;
-  const lastTradedPrice = latestTradePrice ?? chartLastPrice ?? feed.price ?? null;
+  const lastTradedPrice = orderBook.lastPrice ?? latestTradePrice ?? chartLastPrice ?? feed.price ?? null;
 
   const { mutate: handleSetFuturesMode } = useMutation({
     mutationFn: (mode: MarginMode) => tradingService.setFuturesMode(mode),
@@ -171,6 +173,8 @@ function FuturesTradesInner() {
   });
 
   const user = useUserStore((state) => state.user);
+  const hydrated = useUserStore((state) => state.hydrated);
+  const fetchUser = useUserStore((state) => state.fetchUser);
 
   // Wallet Balance = total USD value of everything in futures wallet (from balance API)
   const walletBalanceUsd = useMemo(
@@ -190,25 +194,52 @@ function FuturesTradesInner() {
   const hasFuturesAccount = user?.isFuturesAccepted;
 
   useEffect(() => {
-    if (user === null || hasFuturesAccount || accountModalShownRef.current) return;
+    if (!hydrated || user === null) return;
+
+    // The login payload can omit isFuturesAccepted, which normalizes to false
+    // even for users who already opened a futures account. Refresh once before
+    // deciding, and close the prompt if the fresh flag says the account exists.
+    if (hasFuturesAccount) {
+      if (openFuturesModalIdRef.current) {
+        modals.close(openFuturesModalIdRef.current);
+        openFuturesModalIdRef.current = null;
+      }
+      return;
+    }
+
+    if (accountModalShownRef.current) return;
     accountModalShownRef.current = true;
-    modals.open({
-      children: (
-        <OpenFuturesModal
-          onConfirm={() => {
-            // Handled by the modal store update
-          }}
-          onExit={() => {
-            modals.closeAll();
-            router.push('/dashboard');
-          }}
-        />
-      ),
-      closeOnClickOutside: false,
-      closeOnEscape: false,
-      ...DEFAULT_MODAL_SETTINGS,
-    });
-  }, [hasFuturesAccount, user, router]);
+
+    void (async () => {
+      await fetchUser();
+      const latest = useUserStore.getState();
+      if (latest.error || latest.user?.isFuturesAccepted) {
+        accountModalShownRef.current = false;
+        return;
+      }
+      if (openFuturesModalIdRef.current) return;
+
+      openFuturesModalIdRef.current = modals.open({
+        modalId: 'open-futures-account',
+        children: (
+          <OpenFuturesModal
+            onConfirm={() => {
+              openFuturesModalIdRef.current = null;
+              // Handled by the modal store update
+            }}
+            onExit={() => {
+              openFuturesModalIdRef.current = null;
+              modals.closeAll();
+              router.push('/dashboard');
+            }}
+          />
+        ),
+        closeOnClickOutside: false,
+        closeOnEscape: false,
+        ...DEFAULT_MODAL_SETTINGS,
+      });
+    })();
+  }, [hasFuturesAccount, user, hydrated, fetchUser, router]);
 
   useEffect(() => {
     if (orderType === 'market') {
@@ -292,6 +323,8 @@ function FuturesTradesInner() {
   const cost = leverage > 0 ? orderValue / leverage : 0;
   const maxNotional = availableQuote * leverage;
   const maxQuantity = effectiveLimitPrice > 0 ? maxNotional / effectiveLimitPrice : 0;
+  const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const insufficientMargin = availableQuote > 0 && round2(cost) > round2(availableQuote);
   const chartOrderLevels: OrderLevel[] = [
     ...(workingPrice && (quantity > 0 || tpslEnabled)
       ? [{
@@ -476,11 +509,20 @@ function FuturesTradesInner() {
     },
   });
 
+  // Format qty without scientific notation, max 6 decimal places
+  const fmtFuturesQty = (val: number): string => {
+    if (!Number.isFinite(val) || val === 0) return "";
+    return val.toFixed(6).replace(/(\.[0-9]*?)0+$/, "$1").replace(/\.$/, "");
+  };
+
   const updateSliderValue = (value: number) => {
     setSliderValue(value);
-    if (!workingPrice) return;
-    const nextQuantity = (maxQuantity * value) / 100;
-    setFuturesAmount(Number(nextQuantity.toFixed(6)));
+    // Use feed.price as fallback when user hasn't typed a price yet
+    const effectivePrice = effectiveLimitPrice || feed.price || 0;
+    if (!effectivePrice) return;
+    const effectiveMax = effectivePrice > 0 ? (availableQuote * leverage) / effectivePrice : 0;
+    const nextQuantity = (effectiveMax * value) / 100;
+    setFuturesAmount(fmtFuturesQty(nextQuantity));
   };
 
   const inputLabel = orderType === 'stop' ? 'Trigger' : 'Price';
@@ -517,8 +559,19 @@ function FuturesTradesInner() {
               value={futuresPrice}
               onChange={(val) => {
                 setFuturesPrice(val);
-                // Mark that the user is typing their own price — stop auto-fill
                 priceUserEditedRef.current = val !== '' && val !== feed.price;
+                // Price edits keep qty; the slider follows the current qty.
+                const limitPrice =
+                  orderType === 'stop'
+                    ? Number(stopLimitPrice) || Number(val) || feed.price || 0
+                    : Number(val) || feed.price || 0;
+                const q = Number(futuresAmount) || 0;
+                if (limitPrice > 0 && q > 0 && availableQuote > 0) {
+                  const maxQty = (availableQuote * leverage) / limitPrice;
+                  setSliderValue(maxQty > 0 ? Math.max(0, Math.min(100, Math.round((q / maxQty) * 100))) : 0);
+                } else if (q <= 0) {
+                  setSliderValue(0);
+                }
               }}
               classNames={{
                 root: '!flex-1',
@@ -536,7 +589,17 @@ function FuturesTradesInner() {
             <NumberInput
               hideControls
               value={stopLimitPrice}
-              onChange={setStopLimitPrice}
+              onChange={(val) => {
+                setStopLimitPrice(val);
+                const limitPrice = Number(val) || workingPrice || feed.price || 0;
+                const q = Number(futuresAmount) || 0;
+                if (limitPrice > 0 && q > 0 && availableQuote > 0) {
+                  const maxQty = (availableQuote * leverage) / limitPrice;
+                  setSliderValue(maxQty > 0 ? Math.max(0, Math.min(100, Math.round((q / maxQty) * 100))) : 0);
+                } else if (q <= 0) {
+                  setSliderValue(0);
+                }
+              }}
               classNames={{
                 root: '!flex-1',
                 input: '!bg-transparent !h-full !text-sm font-semibold !text-white !border-0 !text-right focus:!ring-0',
@@ -552,7 +615,16 @@ function FuturesTradesInner() {
           <NumberInput
             hideControls
             value={futuresAmount}
-            onChange={setFuturesAmount}
+            onChange={(v) => {
+              setFuturesAmount(v);
+              // Back-calculate slider from qty
+              const effectivePrice = effectiveLimitPrice || feed.price || 0;
+              const effectiveMax = effectivePrice > 0 ? (availableQuote * leverage) / effectivePrice : 0;
+              if (effectiveMax > 0) {
+                const pct = Math.min(100, Math.round((Number(v) / effectiveMax) * 100));
+                setSliderValue(pct);
+              }
+            }}
             classNames={{
               root: '!flex-1',
               input: '!bg-transparent !h-full !text-sm font-semibold !text-white !border-0 !text-right focus:!ring-0',
@@ -644,7 +716,13 @@ function FuturesTradesInner() {
               setBuyingSide('buy');
               placeOrder('buy');
             }}
-            disabled={orderPending || !hasFuturesAccount}
+            disabled={
+              orderPending ||
+              !hasFuturesAccount ||
+              quantity <= 0 ||
+              (orderType !== 'market' && !workingPrice) ||
+              insufficientMargin
+            }
             className="bg-success-6 hover:bg-success-5 disabled:opacity-50 transition-colors text-white font-bold text-xs py-3 rounded-lg flex items-center justify-center gap-1 active:scale-95"
           >
             {orderPending && buyingSide === 'buy' && <Loader size={12} color="white" />}
@@ -655,7 +733,13 @@ function FuturesTradesInner() {
               setBuyingSide('sell');
               placeOrder('sell');
             }}
-            disabled={orderPending || !hasFuturesAccount}
+            disabled={
+              orderPending ||
+              !hasFuturesAccount ||
+              quantity <= 0 ||
+              (orderType !== 'market' && !workingPrice) ||
+              insufficientMargin
+            }
             className="bg-error-1 hover:bg-error-2 disabled:opacity-50 transition-colors text-white font-bold text-xs py-3 rounded-lg flex items-center justify-center gap-1 active:scale-95"
           >
             {orderPending && buyingSide === 'sell' && <Loader size={12} color="white" />}
@@ -811,6 +895,7 @@ function FuturesTradesInner() {
           base={baseAsset}
           quote={quoteAsset}
           currentPrice={effectiveMarketPrice}
+          bookLastPrice={orderBook.lastPrice}
           dayChangePercent={feed.changePercent24h}
           buyPercentage={orderBook.buyPercentage}
           sellPercentage={orderBook.sellPercentage}
@@ -999,6 +1084,7 @@ function FuturesTradesInner() {
               base={baseAsset}
               quote={quoteAsset}
               currentPrice={effectiveMarketPrice}
+              bookLastPrice={orderBook.lastPrice}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -1032,6 +1118,7 @@ function FuturesTradesInner() {
               base={baseAsset}
               quote={quoteAsset}
               currentPrice={effectiveMarketPrice}
+              bookLastPrice={orderBook.lastPrice}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}

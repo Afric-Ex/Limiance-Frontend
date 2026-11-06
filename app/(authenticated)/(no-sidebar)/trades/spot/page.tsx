@@ -96,7 +96,7 @@ function SpotTrades() {
 
   const { recentTrades, recentTradesLoading } = useRecentTrades(selectedPair, "spot");
   const latestTradePrice = getLatestTradePrice(recentTrades);
-  const lastTradedPrice = latestTradePrice ?? chartLastPrice ?? feed.price ?? null;
+  const lastTradedPrice = orderBook.lastPrice ?? latestTradePrice ?? chartLastPrice ?? feed.price ?? null;
 
   // Price flash effect
   const [flashClass, setFlashClass] = useState("");
@@ -195,6 +195,7 @@ function SpotTrades() {
     (bestBid == null || bestAsk == null || (feed.price >= bestBid * 0.98 && feed.price <= bestAsk * 1.02));
 
   const effectiveMarketPrice =
+    (orderBook.lastPrice != null && orderBook.lastPrice > 0 ? orderBook.lastPrice : null) ??
     (latestTradePrice != null && latestTradePrice > 0 ? latestTradePrice : null) ??
     (chartLastPrice != null && chartLastPrice > 0 ? chartLastPrice : null) ??
     orderBookMidPrice ??
@@ -425,6 +426,7 @@ function SpotTrades() {
           base={base}
           quote={quote}
           currentPrice={effectiveMarketPrice}
+          bookLastPrice={orderBook.lastPrice}
           dayChangePercent={feed.changePercent24h}
           buyPercentage={orderBook.buyPercentage}
           sellPercentage={orderBook.sellPercentage}
@@ -557,6 +559,7 @@ function SpotTrades() {
               base={base}
               quote={quote}
               currentPrice={chartLastPrice ?? effectiveMarketPrice}
+              bookLastPrice={orderBook.lastPrice}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -699,6 +702,7 @@ function SpotTrades() {
                   base={base}
                   quote={quote}
                   currentPrice={effectiveMarketPrice}
+                  bookLastPrice={orderBook.lastPrice}
                   buyPercentage={orderBook.buyPercentage}
                   sellPercentage={orderBook.sellPercentage}
                   isConnected={orderBook.isConnected}

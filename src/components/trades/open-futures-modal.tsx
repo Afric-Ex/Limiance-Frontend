@@ -39,10 +39,10 @@ export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) =
   };
 
   return (
-    <div className="w-full max-w-[520px] flex flex-col bg-[#13151c] border border-white/[0.07] rounded-2xl overflow-hidden">
+    <div className="w-full max-w-[520px] max-h-[85dvh] flex flex-col bg-[#13151c] border border-white/[0.07] rounded-2xl overflow-hidden">
 
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+      <div className="flex shrink-0 items-center justify-between px-5 py-4 border-b border-white/[0.06]">
         <div className="flex items-center gap-2.5">
           {/* Icon */}
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -60,7 +60,7 @@ export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) =
       </div>
 
       {/* Body */}
-      <div className="flex flex-col gap-5 p-5">
+      <div className="flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto p-4 sm:gap-5 sm:p-5">
 
         {/* Description card */}
         <div className="rounded-xl bg-white/[0.03] border border-white/[0.05] px-4 py-3.5">
@@ -162,7 +162,7 @@ export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) =
       </div>
 
       {/* Footer */}
-      <div className="px-5 pb-5">
+      <div className="shrink-0 border-t border-white/[0.06] bg-[#13151c] px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
         <button
           type="button"
           onClick={handleCreate}

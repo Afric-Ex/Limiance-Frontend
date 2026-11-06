@@ -129,13 +129,14 @@ function MarginTrades() {
     (bestBid == null || bestAsk == null || (feed.price >= bestBid * 0.98 && feed.price <= bestAsk * 1.02));
 
   const effectiveMarketPrice =
+    (orderBook.lastPrice != null && orderBook.lastPrice > 0 ? orderBook.lastPrice : null) ??
     (latestTradePrice != null && latestTradePrice > 0 ? latestTradePrice : null) ??
     (chartLastPrice != null && chartLastPrice > 0 ? chartLastPrice : null) ??
     orderBookMidPrice ??
     (isFeedPriceConsistent ? feed.price : null) ??
     (feed.price != null && feed.price > 0 ? feed.price : null) ??
     null;
-  const lastTradedPrice = latestTradePrice ?? chartLastPrice ?? feed.price ?? null;
+  const lastTradedPrice = orderBook.lastPrice ?? latestTradePrice ?? chartLastPrice ?? feed.price ?? null;
 
   const { mutate: handleSetLeverage } = useMutation({
     mutationFn: (newLeverage: number) => tradingService.setMarginLeverage(newLeverage),
@@ -441,6 +442,7 @@ function MarginTrades() {
           base={base}
           quote={quote}
           currentPrice={effectiveMarketPrice}
+          bookLastPrice={orderBook.lastPrice}
           dayChangePercent={feed.changePercent24h}
           buyPercentage={orderBook.buyPercentage}
           sellPercentage={orderBook.sellPercentage}
@@ -484,7 +486,7 @@ function MarginTrades() {
                 leverage={leverage}
                 onLeverageChange={setLeverage}
                 onLeverageChangeEnd={(val) => handleSetLeverage(val)}
-                marketPrice={feed.price}
+                marketPrice={effectiveMarketPrice}
                 clickedPrice={clickedPrice}
               />
             </TabsPanel>
@@ -498,7 +500,7 @@ function MarginTrades() {
                 leverage={leverage}
                 onLeverageChange={setLeverage}
                 onLeverageChangeEnd={(val) => handleSetLeverage(val)}
-                marketPrice={feed.price}
+                marketPrice={effectiveMarketPrice}
                 clickedPrice={clickedPrice}
               />
             </TabsPanel>
@@ -571,6 +573,7 @@ function MarginTrades() {
               base={base}
               quote={quote}
               currentPrice={effectiveMarketPrice}
+              bookLastPrice={orderBook.lastPrice}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -603,10 +606,10 @@ function MarginTrades() {
                     <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
                   </TabsList>
                   <TabsPanel value="buy">
-                    <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={feed.price} clickedPrice={clickedPrice} compactSide="buy" />
+                    <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" />
                   </TabsPanel>
                   <TabsPanel value="sell">
-                    <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={feed.price} clickedPrice={clickedPrice} compactSide="sell" />
+                    <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" />
                   </TabsPanel>
                 </Tabs>
               </div>
@@ -622,6 +625,7 @@ function MarginTrades() {
               base={base}
               quote={quote}
               currentPrice={effectiveMarketPrice}
+              bookLastPrice={orderBook.lastPrice}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -653,10 +657,10 @@ function MarginTrades() {
               <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
             </TabsList>
             <TabsPanel value="buy">
-              <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} marketPrice={feed.price} clickedPrice={clickedPrice} compactSide="buy" />
+              <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" />
             </TabsPanel>
             <TabsPanel value="sell">
-              <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} marketPrice={feed.price} clickedPrice={clickedPrice} compactSide="sell" />
+              <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" />
             </TabsPanel>
           </Tabs>
         </div>

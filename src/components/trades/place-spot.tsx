@@ -275,25 +275,59 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     return isNaN(num) ? 0 : num;
   };
 
+  // Format a quantity number without scientific notation (e.g. 1e-7 → "0.0000001")
+  // Trims trailing zeros after the decimal point, max 8 decimal places.
+  const fmtQty = (val: number): string => {
+    if (!Number.isFinite(val) || val === 0) return "";
+    // toFixed(8) always gives fixed notation, then strip trailing zeros
+    const fixed = val.toFixed(8);
+    // Remove trailing zeros after decimal, keep at least 1 decimal if needed
+    const trimmed = fixed.replace(/(\.[0-9]*?)0+$/, "$1").replace(/\.$/, "");
+    return trimmed;
+  };
+
   const rawQuote = quoteAsset ? parseNum(mode === "spot" ? quoteAsset.spotBalance : quoteAsset.marginBalance) : 0;
   const rawBase = baseAsset ? parseNum(mode === "spot" ? baseAsset.spotBalance : baseAsset.marginBalance) : 0;
   const availQuote = rawQuote ? rawQuote.toLocaleString("en-US", { minimumFractionDigits: 2 }) : "0.00";
   const availBase  = rawBase  ? rawBase.toLocaleString("en-US",  { minimumFractionDigits: 6 }) : "0.00000000";
 
+  const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const clampPct = (v: number) => Math.max(0, Math.min(100, Number.isFinite(v) ? v : 0));
+
+  // Price each order type actually uses for sizing/total. Market never falls
+  // back to a stale limit price; OCO uses its entry price.
+  const effectivePriceFor = (side: "buy" | "sell"): number => {
+    if (effectiveTab === "oco") return parseNum(side === "buy" ? buyOcoPrice : sellOcoPrice);
+    if (effectiveTab === "market") return parseNum(marketPrice);
+    return parseNum(side === "buy" ? buyPrice : sellPrice);
+  };
+
+  const totalFor = (side: "buy" | "sell"): number =>
+    effectivePriceFor(side) * parseNum(side === "buy" ? buyAmount : sellAmount);
+
+  // Percentage of available balance the current amount represents.
+  const calcPct = (side: "buy" | "sell", price: number, amount: number) => {
+    if (side === "buy") {
+      return rawQuote > 0 ? clampPct(((amount * price) / rawQuote) * 100) : 0;
+    }
+    return rawBase > 0 ? clampPct((amount / rawBase) * 100) : 0;
+  };
+
   const handleBuyMax = () => {
-    const price = parseNum(buyPrice || marketPrice || 0);
+    const price = effectivePriceFor("buy");
     if (!price) return;
-    const maxAmount = +(rawQuote / price).toFixed(8);
-    setBuyAmount(maxAmount);
+    setBuyAmount(fmtQty(rawQuote / price));
+    setBuyPct(100);
   };
 
   const handleSellMax = () => {
     if (!rawBase) return;
-    setSellAmount(+rawBase.toFixed(8));
+    setSellAmount(fmtQty(rawBase));
+    setSellPct(100);
   };
 
-  const buyTotal  = parseNum(buyPrice) * parseNum(buyAmount);
-  const sellTotal = parseNum(sellPrice) * parseNum(sellAmount);
+  const buyTotal = totalFor("buy");
+  const sellTotal = totalFor("sell");
 
   const getOrderType = (side: "buy" | "sell") => {
     if (activeTab === "limit") return side === "buy" ? "buy_limit" as const : "sell_limit" as const;
@@ -540,7 +574,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     const total = isBuy ? buyTotal : sellTotal;
     const loading = isBuy ? buyLoading : sellLoading;
     const rawAvail = isBuy ? rawQuote : rawBase;
-    const refPrice = parseNum(price || marketPrice || 0);
+    const refPrice = effectivePriceFor(side);
     const maxAmount = isBuy ? (refPrice ? rawQuote / refPrice : 0) : rawBase;
     const sliderStyle = STACKED_SLIDER[tone];
 
@@ -564,7 +598,10 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
         {effectiveTab === "oco" ? (
           <>
-            <FieldRow floating label="Price" value={isBuy ? buyOcoPrice : sellOcoPrice} onChange={isBuy ? setBuyOcoPrice : setSellOcoPrice} unit={quote} color={tone} />
+            <FieldRow floating label="Price" value={isBuy ? buyOcoPrice : sellOcoPrice} onChange={(v) => {
+              if (isBuy) { setBuyOcoPrice(v); setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount))); }
+              else { setSellOcoPrice(v); setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount))); }
+            }} unit={quote} color={tone} />
             <FieldRow floating label="Stop" value={isBuy ? buyOcoStop : sellOcoStop} onChange={isBuy ? setBuyOcoStop : setSellOcoStop} unit={quote} color={tone} />
             <FieldRow floating label="Limit" value={isBuy ? buyOcoLimit : sellOcoLimit} onChange={isBuy ? setBuyOcoLimit : setSellOcoLimit} unit={quote} color={tone} />
           </>
@@ -576,8 +613,8 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               label="Limit Price"
               value={price}
               onChange={(v) => {
-                if (isBuy) { setBuyPriceEdited(true); setBuyPrice(v); }
-                else { setSellPriceEdited(true); setSellPrice(v); }
+                if (isBuy) { setBuyPriceEdited(true); setBuyPrice(v); setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount))); }
+                else { setSellPriceEdited(true); setSellPrice(v); setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount))); }
               }}
               unit={quote}
               color={tone}
@@ -589,11 +626,8 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             label="Price"
             value={price}
             onChange={(v) => {
-              if (isBuy) {
-                setBuyPriceEdited(true); setBuyPrice(v);
-                const p = parseNum(v);
-                if (p && rawQuote && buyPct) setBuyAmount(+(((rawQuote * buyPct / 100) / p).toFixed(8)));
-              } else { setSellPriceEdited(true); setSellPrice(v); }
+              if (isBuy) { setBuyPriceEdited(true); setBuyPrice(v); setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount))); }
+              else { setSellPriceEdited(true); setSellPrice(v); setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount))); }
             }}
             unit={quote}
             color={tone}
@@ -603,11 +637,10 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         <FieldRow floating label="Quantity" value={amount} onChange={(v) => {
           if (isBuy) {
             setBuyAmount(v);
-            const p = parseNum(buyPrice || marketPrice || 0);
-            if (p && rawQuote) setBuyPct(Math.min(100, Math.round((parseNum(v) * p / rawQuote) * 100)));
+            setBuyPct(calcPct("buy", effectivePriceFor("buy"), parseNum(v)));
           } else {
             setSellAmount(v);
-            if (rawBase) setSellPct(Math.min(100, Math.round((parseNum(v) / rawBase) * 100)));
+            setSellPct(calcPct("sell", 0, parseNum(v)));
           }
         }} unit={base} color={tone} />
 
@@ -621,20 +654,11 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             onChange={(v) => {
               if (isBuy) {
                 setBuyPct(v);
-                const bp = parseNum(marketPrice || buyPrice || 0);
-                if (bp) {
-                  const sp = +(bp * (1 + 0.10 * v / 100)).toFixed(2);
-                  setBuyPriceEdited(true); setBuyPrice(sp);
-                  if (rawQuote && sp) setBuyAmount(+(((rawQuote * v / 100) / sp).toFixed(8)));
-                }
+                const p = effectivePriceFor("buy");
+                if (p) setBuyAmount(fmtQty((rawQuote * v / 100) / p));
               } else {
                 setSellPct(v);
-                const sp2 = parseNum(marketPrice || sellPrice || 0);
-                if (sp2) {
-                  const slp = +(sp2 * (1 - 0.10 * v / 100)).toFixed(2);
-                  setSellPriceEdited(true); setSellPrice(slp);
-                }
-                setSellAmount(+(((rawBase || 0) * v / 100).toFixed(8)));
+                setSellAmount(fmtQty((rawBase || 0) * v / 100));
               }
             }}
             classNames={{
@@ -703,7 +727,15 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
         <button
           onClick={() => (isBuy ? placeBuy() : placeSell())}
-          disabled={loading || !amount || rawAvail === 0 || (isBuy ? (parseNum(total) > rawQuote && rawQuote > 0) : (parseNum(amount) > rawBase && rawBase > 0))}
+          disabled={
+            loading ||
+            parseNum(amount) <= 0 ||
+            rawAvail === 0 ||
+            (effectiveTab !== "market" && !(effectivePriceFor(side) > 0)) ||
+            (isBuy
+              ? rawQuote > 0 && round2(total) > round2(rawQuote)
+              : rawBase > 0 && round2(parseNum(amount)) > round2(rawBase))
+          }
           className={clsx(
             "flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-50",
             isBuy ? "bg-buy hover:bg-buy/90" : "bg-sell hover:bg-sell/90"
@@ -818,7 +850,15 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             floating
             label="Order Price"
             value={price}
-            onChange={setPrice}
+            onChange={(v) => {
+              setPrice(v);
+              const p = parseNum(v) || parseNum(marketPrice);
+              setPct(
+                isBuy
+                  ? rawQuote > 0 ? clampPct((parseNum(amount) * p / rawQuote) * 100) : 0
+                  : rawBase > 0 ? clampPct((parseNum(amount) / rawBase) * 100) : 0
+              );
+            }}
             unit={quote}
             color={tone}
           />
@@ -828,7 +868,14 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           floating
           label="Quantity"
           value={amount}
-          onChange={setAmount}
+          onChange={(v) => {
+            setAmount(v);
+            setPct(
+              isBuy
+                ? rawQuote > 0 ? clampPct((parseNum(v) * refPrice / rawQuote) * 100) : 0
+                : rawBase > 0 ? clampPct((parseNum(v) / rawBase) * 100) : 0
+            );
+          }}
           unit={base}
           color={tone}
         />
@@ -844,9 +891,9 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               setPct(v);
               if (refPrice) {
                 if (isBuy) {
-                  setAmount(+(((rawQuote || 0) * v / 100) / refPrice).toFixed(8));
+                  setAmount(fmtQty(((rawQuote || 0) * v / 100) / refPrice));
                 } else {
-                  setAmount(+(((rawBase || 0) * v / 100).toFixed(8)));
+                  setAmount(fmtQty(((rawBase || 0) * v / 100)));
                 }
               }
             }}
@@ -864,7 +911,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         <FieldRow
           floating
           label="Order Value"
-          value={total ? +total.toFixed(8) : ""}
+          value={total ? fmtQty(total) : ""}
           unit={quote}
           readOnly
         />
@@ -1061,7 +1108,10 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           {effectiveTab === "oco" ? (
             <>
-              <FieldRow label="Price" value={buyOcoPrice} onChange={setBuyOcoPrice} unit={quote} color="buy" />
+              <FieldRow label="Price" value={buyOcoPrice} onChange={(v) => {
+                setBuyOcoPrice(v);
+                setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount)));
+              }} unit={quote} color="buy" />
               <FieldRow label="Stop" value={buyOcoStop} onChange={setBuyOcoStop} unit={quote} color="buy" />
               <FieldRow label="Limit" value={buyOcoLimit} onChange={setBuyOcoLimit} unit={quote} color="buy" />
             </>
@@ -1070,22 +1120,19 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               <FieldRow label="Stop" value={buyStopPrice} onChange={setBuyStopPrice} unit={quote} color="buy" />
               <FieldRow label="Limit" value={buyPrice} onChange={(v) => {
                 setBuyPriceEdited(true); setBuyPrice(v);
-                const p = parseNum(v);
-                if (p && rawQuote && buyPct) setBuyAmount(+(((rawQuote * buyPct / 100) / p).toFixed(8)));
+                setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount)));
               }} unit={quote} color="buy" />
             </>
           ) : effectiveTab !== "market" ? (
             <FieldRow label="Price" value={buyPrice} onChange={(v) => {
               setBuyPriceEdited(true); setBuyPrice(v);
-              const p = parseNum(v);
-              if (p && rawQuote && buyPct) setBuyAmount(+(((rawQuote * buyPct / 100) / p).toFixed(8)));
+              setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount)));
             }} unit={quote} color="buy" />
           ) : null}
 
           <FieldRow label="Qty" value={buyAmount} onChange={(v) => {
             setBuyAmount(v);
-            const p = parseNum(buyPrice || marketPrice || 0);
-            if (p && rawQuote) setBuyPct(Math.min(100, Math.round((parseNum(v) * p / rawQuote) * 100)));
+            setBuyPct(calcPct("buy", effectivePriceFor("buy"), parseNum(v)));
           }} unit={base} color="buy" showMax onMax={handleBuyMax} />
 
           <div className="px-1 pt-1 pb-3">
@@ -1094,14 +1141,8 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               value={buyPct}
               onChange={(v) => {
                 setBuyPct(v);
-                const baseP = parseNum(marketPrice || buyPrice || 0);
-                if (baseP) {
-                  // slider 0%→price, 100%→price+10%
-                  const sliderPrice = +(baseP * (1 + 0.10 * v / 100)).toFixed(2);
-                  setBuyPriceEdited(true);
-                  setBuyPrice(sliderPrice);
-                  if (rawQuote && sliderPrice) setBuyAmount(+(((rawQuote * v / 100) / sliderPrice).toFixed(8)));
-                }
+                const p = effectivePriceFor("buy");
+                if (p) setBuyAmount(fmtQty((rawQuote * v / 100) / p));
               }}
               classNames={{
                 track: "!h-1 before:!h-1 before:!bg-white/10",
@@ -1126,7 +1167,13 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           <button
             onClick={() => placeBuy()}
-            disabled={buyLoading || !(Number(buyAmount) > 0) || rawQuote === 0 || (buyTotal > rawQuote && rawQuote > 0)}
+            disabled={
+              buyLoading ||
+              !(Number(buyAmount) > 0) ||
+              rawQuote === 0 ||
+              (effectiveTab !== "market" && !(effectivePriceFor("buy") > 0)) ||
+              (rawQuote > 0 && round2(buyTotal) > round2(rawQuote))
+            }
             className="mt-0.5 bg-buy hover:bg-buy/90 disabled:opacity-50 transition-all text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(37,171,66,0.3)] active:scale-95"
           >
             {buyLoading && <Loader size={13} color="white" />}
@@ -1156,22 +1203,31 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           {effectiveTab === "oco" ? (
             <>
-              <FieldRow label="Price" value={sellOcoPrice} onChange={setSellOcoPrice} unit={quote} color="sell" />
+              <FieldRow label="Price" value={sellOcoPrice} onChange={(v) => {
+                setSellOcoPrice(v);
+                setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount)));
+              }} unit={quote} color="sell" />
               <FieldRow label="Stop" value={sellOcoStop} onChange={setSellOcoStop} unit={quote} color="sell" />
               <FieldRow label="Limit" value={sellOcoLimit} onChange={setSellOcoLimit} unit={quote} color="sell" />
             </>
           ) : effectiveTab === "stop" ? (
             <>
               <FieldRow label="Stop" value={sellStopPrice} onChange={setSellStopPrice} unit={quote} color="sell" />
-              <FieldRow label="Limit" value={sellPrice} onChange={(v) => { setSellPriceEdited(true); setSellPrice(v); }} unit={quote} color="sell" />
+              <FieldRow label="Limit" value={sellPrice} onChange={(v) => {
+                setSellPriceEdited(true); setSellPrice(v);
+                setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount)));
+              }} unit={quote} color="sell" />
             </>
           ) : effectiveTab !== "market" ? (
-            <FieldRow label="Price" value={sellPrice} onChange={(v) => { setSellPriceEdited(true); setSellPrice(v); }} unit={quote} color="sell" />
+            <FieldRow label="Price" value={sellPrice} onChange={(v) => {
+              setSellPriceEdited(true); setSellPrice(v);
+              setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount)));
+            }} unit={quote} color="sell" />
           ) : null}
 
           <FieldRow label="Qty" value={sellAmount} onChange={(v) => {
             setSellAmount(v);
-            if (rawBase) setSellPct(Math.min(100, Math.round((parseNum(v) / rawBase) * 100)));
+            setSellPct(calcPct("sell", 0, parseNum(v)));
           }} unit={base} color="sell" showMax onMax={handleSellMax} />
 
           <div className="px-1 pt-1 pb-3">
@@ -1180,14 +1236,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               value={sellPct}
               onChange={(v) => {
                 setSellPct(v);
-                const baseP = parseNum(marketPrice || sellPrice || 0);
-                if (baseP) {
-                  // slider 0%→price, 100%→price-10%
-                  const sliderPrice = +(baseP * (1 - 0.10 * v / 100)).toFixed(2);
-                  setSellPriceEdited(true);
-                  setSellPrice(sliderPrice);
-                }
-                setSellAmount(+(((rawBase || 0) * v / 100).toFixed(8)));
+                setSellAmount(fmtQty((rawBase || 0) * v / 100));
               }}
               classNames={{
                 track: "!h-1 before:!h-1 before:!bg-white/10",
@@ -1211,7 +1260,12 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           <button
             onClick={() => placeSell()}
-            disabled={sellLoading || !(Number(sellAmount) > 0) || rawBase === 0 || (parseNum(sellAmount) > rawBase && rawBase > 0)}
+            disabled={
+              sellLoading ||
+              !(Number(sellAmount) > 0) ||
+              rawBase === 0 ||
+              (rawBase > 0 && round2(parseNum(sellAmount)) > round2(rawBase))
+            }
             className="mt-0.5 bg-sell hover:bg-sell/90 disabled:opacity-50 transition-all text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(246,70,93,0.3)] active:scale-95"
           >
             {sellLoading && <Loader size={13} color="white" />}
