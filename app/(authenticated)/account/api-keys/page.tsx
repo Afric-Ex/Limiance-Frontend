@@ -2,12 +2,15 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
+import { useApiKeyPermissions } from "@/src/hooks/use-api-key-permissions";
+import { ApiKeyPermissionPicker } from "@/src/components/settings/api-key-permission-picker";
+import { API_KEY_PERMISSION_TONE_CLASS, getApiKeyPermissionMeta } from "@/src/lib/api-key-permissions";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { Add } from "@/src/components/icons/add";
 import { EmptyTable } from "@/src/components/icons/empty-table";
 import { Delete as Trash } from "@/src/components/icons/trash";
-import { Modal, Loader, Checkbox, Table, TableTr, TableTh, TableTd } from "@mantine/core";
+import { Modal, Loader, Table, TableTr, TableTh, TableTd } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useState } from "react";
 import { CopyButton } from "@/src/components/shared/copy-button";
@@ -16,46 +19,13 @@ import {
   MdVisibilityOff,
   MdClose,
   MdOutlineKey,
-  MdOutlineLock,
   MdOutlineSecurity,
-  MdOutlineShowChart,
-  MdOutlineSwapHoriz,
 } from "react-icons/md";
 import clsx from "clsx";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountApiKeysSkeleton } from "@/src/components/skeletons/account";
 import { AccountPageHeader } from "@/src/components/settings/account-page-header";
 import { MdVpnKey } from "react-icons/md";
-
-const PERMISSIONS = [
-  {
-    id: "read",
-    label: "Read",
-    desc: "View balances, account information and order history.",
-    icon: MdOutlineShowChart,
-    level: "Read only",
-  },
-  {
-    id: "trade",
-    label: "Trade",
-    desc: "Place, manage and cancel trading orders.",
-    icon: MdOutlineSwapHoriz,
-    level: "Trading",
-  },
-  {
-    id: "withdraw",
-    label: "Withdraw",
-    desc: "Request withdrawals from your account.",
-    icon: MdOutlineLock,
-    level: "Sensitive",
-  },
-];
-
-const permColor: Record<string, string> = {
-  read:     "bg-blue-2/20 text-blue-2 border border-blue-2/30",
-  trade:    "bg-primary/20 text-primary border border-primary/30",
-  withdraw: "bg-warning-1/20 text-warning-1 border border-warning-1/30",
-};
 
 const unwrapPayload = (value: any): any => {
   let payload = value;
@@ -100,6 +70,13 @@ function ApiKeysPageInner() {
     queryFn: () => userService.listApiKeys(),
     select: normalizeApiKeys,
   });
+
+  const {
+    data: permissionData,
+    isLoading: permissionsLoading,
+    isError: permissionsError,
+    refetch: refetchPermissions,
+  } = useApiKeyPermissions();
 
   // Create key state
   const [createOpen, { open: openCreate, close: closeCreate }] = useDisclosure(false);
@@ -181,6 +158,9 @@ function ApiKeysPageInner() {
   const handleCreate = () => {
     let valid = true;
     if (!label.trim()) { setLabelError("Label is required"); valid = false; } else setLabelError("");
+    if (permissionsLoading || permissionsError || !permissionData?.permissions.length) {
+      valid = false;
+    }
     if (selectedPerms.length === 0) { setPermsError("Select at least one permission"); valid = false; } else setPermsError("");
     if (valid) createKey();
   };
@@ -257,11 +237,18 @@ function ApiKeysPageInner() {
                   </TableTd>
                   <TableTd>
                     <div className="flex gap-1.5 flex-wrap">
-                      {(k.permissions ?? []).map((p: string) => (
-                        <span key={p} className={clsx("px-2 py-0.5 text-micro font-semibold rounded-full capitalize", permColor[p] ?? "bg-white/10 text-white/50")}>
-                          {p}
-                        </span>
-                      ))}
+                      {(k.permissions ?? []).map((p: string) => {
+                        const meta = getApiKeyPermissionMeta(p);
+                        return (
+                          <span
+                            key={p}
+                            title={meta.description}
+                            className={clsx("px-2 py-0.5 text-micro font-semibold rounded-full", API_KEY_PERMISSION_TONE_CLASS[meta.tone])}
+                          >
+                            {meta.shortLabel}
+                          </span>
+                        );
+                      })}
                     </div>
                   </TableTd>
                   <TableTd><span className="text-xs text-white/50">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : "—"}</span></TableTd>
@@ -396,56 +383,14 @@ function ApiKeysPageInner() {
                   {selectedPerms.length} selected
                 </span>
               </div>
-              <div className="grid gap-2.5">
-                {PERMISSIONS.map((perm) => {
-                  const selected = selectedPerms.includes(perm.id);
-                  const PermissionIcon = perm.icon;
-                  return (
-                    <label
-                      key={perm.id}
-                      className={clsx(
-                        "flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors sm:gap-4 sm:p-4",
-                        selected
-                          ? "border-primary/40 bg-primary/[0.07]"
-                          : "border-white/[0.07] bg-white/[0.015] hover:border-white/[0.14] hover:bg-white/[0.03]"
-                      )}
-                    >
-                      <Checkbox
-                        checked={selected}
-                        onChange={() => togglePerm(perm.id)}
-                        color="blue"
-                        size="sm"
-                        aria-label={`${perm.label} permission`}
-                        className="mt-0.5"
-                      />
-                      <span className={clsx(
-                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border",
-                        selected
-                          ? "border-primary/20 bg-primary/10 text-primary"
-                          : "border-white/[0.07] bg-white/[0.03] text-white/45"
-                      )}>
-                        <PermissionIcon size={18} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-white/90">{perm.label}</span>
-                          <span className={clsx(
-                            "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                            perm.id === "withdraw"
-                              ? "bg-warning-1/10 text-warning-1"
-                              : "bg-white/[0.05] text-white/40"
-                          )}>
-                            {perm.level}
-                          </span>
-                        </span>
-                        <span className="mt-1 block text-xs leading-5 text-white/45">
-                          {perm.desc}
-                        </span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
+              <ApiKeyPermissionPicker
+                groups={permissionData?.groups ?? []}
+                selected={selectedPerms}
+                onToggle={togglePerm}
+                isLoading={permissionsLoading}
+                isError={permissionsError}
+                onRetry={() => void refetchPermissions()}
+              />
               {permsError && <span className="text-xs text-error-1">{permsError}</span>}
             </fieldset>
           </div>
@@ -462,7 +407,14 @@ function ApiKeysPageInner() {
             <button
               type="button"
               onClick={handleCreate}
-              disabled={createLoading}
+              disabled={
+                createLoading ||
+                permissionsLoading ||
+                permissionsError ||
+                !permissionData?.permissions.length ||
+                selectedPerms.length === 0 ||
+                !label.trim()
+              }
               className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(77,119,240,0.18)] transition-all hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {createLoading ? <Loader size="xs" color="white" /> : <Add />}

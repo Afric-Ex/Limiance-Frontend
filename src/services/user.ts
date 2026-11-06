@@ -9,6 +9,7 @@ export const userKeys = {
   userDetails: ["user-details"] as const,
   sessions: ["sessions"] as const,
   apiKeys: ["api-keys"] as const,
+  apiKeyPermissions: ["api-key-permissions"] as const,
   settings: ["settings"] as const,
   kycStatus: ["kyc-status"] as const,
   twoFASetup: ["2fa-setup"] as const,
@@ -110,6 +111,10 @@ export const userService = {
   // API Keys
   listApiKeys: async (): Promise<ApiResponse<any>> => {
     const response = await api.get("users/api_keys");
+    return response.data;
+  },
+  getApiKeyPermissions: async (): Promise<ApiResponse<any>> => {
+    const response = await api.get("users/api_keys/permissions");
     return response.data;
   },
   createApiKey: async (data: {
