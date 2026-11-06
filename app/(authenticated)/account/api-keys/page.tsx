@@ -10,7 +10,7 @@ import { errorMessageHandler } from "@/src/lib/error-handler";
 import { Add } from "@/src/components/icons/add";
 import { EmptyTable } from "@/src/components/icons/empty-table";
 import { Delete as Trash } from "@/src/components/icons/trash";
-import { Modal, Loader, Table, TableTr, TableTh, TableTd } from "@mantine/core";
+import { Modal, Loader, Table, TableTr, TableTh, TableTd, Checkbox } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useState } from "react";
 import { CopyButton } from "@/src/components/shared/copy-button";
