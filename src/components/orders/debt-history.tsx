@@ -31,10 +31,10 @@ export const DebtHistory = () => {
 
   const allRecords: any[] = Array.isArray(records) ? records : [];
 
-  const coin = (r: any) => r.coin ?? r.asset ?? r.symbol ?? getPair(r);
-  const borrowed = (r: any) => r.amount ?? r.quantity ?? r.borrowed ?? r.principal ?? 0;
+  const coin = (r: any) => r.base ?? r.coin ?? r.asset ?? r.symbol ?? getPair(r);
+  const borrowed = (r: any) => r.borrowAmount ?? r.amount ?? r.quantity ?? r.borrowed ?? r.principal ?? 0;
   const interest = (r: any) => (r.interest !== undefined ? r.interest : 0);
-  const category = (r: any) => r.category ?? r.type ?? (r.isRepay ? "Repayment" : "Borrowing");
+  const category = (r: any) => (r.category && String(r.category).trim() !== "" ? r.category : (r.type && String(r.type).trim() !== "" ? r.type : (r.isRepay ? "Repayment" : "Borrowing")));
 
   const display = allRecords.filter((r) => {
     const cat = String(category(r)).toLowerCase();

@@ -1218,19 +1218,32 @@ function BorrowingsTable({ borrowings, loading, mobile }: any) {
     return <EmptyState message="No borrowings" />;
   }
 
+  const assetOf = (b: any) => b.base ?? b.asset ?? b.symbol ?? b.coin ?? "—";
+  const num = (value: any, fallback = 0) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed.toLocaleString("en-US", { maximumFractionDigits: 8 }) : fallback.toLocaleString("en-US", { maximumFractionDigits: 8 });
+  };
+  const borrowedOf = (b: any) => num(b.borrowAmount ?? b.amount ?? b.borrowed ?? b.principal);
+  const interestOf = (b: any) => num(b.interestAccrued ?? b.interest);
+  const totalDebtOf = (b: any) => {
+    const explicit = b.totalDebt ?? b.debt;
+    if (explicit !== undefined && explicit !== null && Number.isFinite(Number(explicit))) return num(explicit);
+    return num(Number(b.borrowAmount ?? b.amount ?? b.borrowed ?? 0) + Number(b.interestAccrued ?? b.interest ?? 0));
+  };
+
   if (mobile) {
     return (
       <div className="flex flex-col divide-y divide-white/[0.04]">
         {borrowings.map((borrow: any, idx: number) => (
           <div key={borrow.id ?? idx} className="px-4 py-3 flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-white">{borrow.asset ?? borrow.symbol}</span>
+              <span className="font-bold text-sm text-white">{assetOf(borrow)}</span>
               <button className="text-xs font-semibold text-primary">Repay</button>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-              <MobileRow label="Borrowed" value={Number(borrow.amount ?? borrow.borrowed).toLocaleString()} />
-              <MobileRow label="Interest" value={Number(borrow.interest ?? 0).toLocaleString()} />
-              <MobileRow label="Total Debt" value={Number(borrow.totalDebt ?? borrow.amount).toLocaleString()} />
+              <MobileRow label="Borrowed" value={borrowedOf(borrow)} />
+              <MobileRow label="Interest" value={interestOf(borrow)} />
+              <MobileRow label="Total Debt" value={totalDebtOf(borrow)} />
               <MobileRow label="Time" value={borrow.createdAt ? new Date(borrow.createdAt).toLocaleDateString() : "—"} />
             </div>
           </div>
@@ -1255,10 +1268,10 @@ function BorrowingsTable({ borrowings, loading, mobile }: any) {
         <tbody>
           {borrowings.map((borrow: any, idx: number) => (
             <tr key={borrow.id ?? idx} className="border-b border-white/[0.02] hover:bg-white/[0.02]">
-              <td className="px-3 py-2.5 font-semibold text-white/90">{borrow.asset ?? borrow.symbol}</td>
-              <td className="px-3 py-2.5 font-mono text-white/90">{Number(borrow.amount ?? borrow.borrowed).toLocaleString()}</td>
-              <td className="px-3 py-2.5 font-mono text-white/70">{Number(borrow.interest ?? 0).toLocaleString()}</td>
-              <td className="px-3 py-2.5 font-mono text-white/90">{Number(borrow.totalDebt ?? borrow.amount).toLocaleString()}</td>
+              <td className="px-3 py-2.5 font-semibold text-white/90">{assetOf(borrow)}</td>
+              <td className="px-3 py-2.5 font-mono text-white/90">{borrowedOf(borrow)}</td>
+              <td className="px-3 py-2.5 font-mono text-white/70">{interestOf(borrow)}</td>
+              <td className="px-3 py-2.5 font-mono text-white/90">{totalDebtOf(borrow)}</td>
               <td className="px-3 py-2.5 text-white/70 font-mono">
                 {borrow.createdAt ? new Date(borrow.createdAt).toLocaleString() : "—"}
               </td>

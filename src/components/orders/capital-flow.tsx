@@ -29,9 +29,9 @@ export const CapitalFlow = () => {
 
   const allRecords: any[] = Array.isArray(records) ? records : [];
 
-  const coin = (r: any) => r.coin ?? r.asset ?? r.symbol ?? "—";
-  const amount = (r: any) => r.amount ?? r.quantity ?? r.borrowed ?? 0;
-  const typeName = (r: any) => r.type ?? r.transactionType ?? (r.isRepay ? "Repayment" : "Borrow");
+  const coin = (r: any) => r.base ?? r.coin ?? r.asset ?? r.symbol ?? "—";
+  const amount = (r: any) => r.borrowAmount ?? r.amount ?? r.quantity ?? r.borrowed ?? 0;
+  const typeName = (r: any) => (r.type && String(r.type).trim() !== "" ? r.type : (r.transactionType && String(r.transactionType).trim() !== "" ? r.transactionType : (r.isRepay ? "Repayment" : "Borrow")));
 
   return (
     <div className="flex flex-col gap-6">

@@ -12,6 +12,7 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { MarketsPageSkeleton } from "@/src/components/skeletons/with-sidebar";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { errorMessageHandler } from "@/src/lib/error-handler";
 
 type TokenRow = {
   symbol: string;
@@ -262,6 +263,7 @@ function MarketsPageInner() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trading-favorites"] }),
     onMutate: ({ pair }) => setPendingFavoritePair(pair),
     onSettled: () => setPendingFavoritePair(null),
+    onError: (error) => errorMessageHandler(error),
   });
 
   useEffect(() => {
@@ -280,10 +282,16 @@ function MarketsPageInner() {
     setCurrentPage(1);
   }, [mainTab, spotQuoteTab, search]);
 
-  const toggleFav = (pair: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleFav = (pair: string, e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     const isFavorite = isFavoritePair(pair);
     favoriteMutation.mutate({ pair, isFavorite });
+  };
+
+  const handleRowClick = (pair: string, e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button, a, input, [data-row-ignore]")) return;
+    goTrade(pair);
   };
 
   const normaliseRow = useCallback((m: any): TokenRow => {
@@ -512,7 +520,7 @@ function MarketsPageInner() {
                   return (
                     <tr
                       key={token.pair}
-                      onClick={() => goTrade(token.pair)}
+                      onClick={(e) => handleRowClick(token.pair, e)}
                       className="hover:bg-white/[0.02] cursor-pointer transition-colors"
                     >
                       {/* Favorite */}
@@ -633,7 +641,7 @@ function MarketsPageInner() {
               return (
                 <div
                   key={token.pair}
-                  onClick={() => goTrade(token.pair)}
+                  onClick={(e) => handleRowClick(token.pair, e)}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") goTrade(token.pair); }}

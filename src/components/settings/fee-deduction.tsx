@@ -12,17 +12,17 @@ import { errorMessageHandler } from "@/src/lib/error-handler";
 const settings = [
   {
     key: "useBNBToPayFees",
-    title: "Use BNB to pay fees",
+    title: "Use LIM to pay fees",
     desc: "Enjoy 25% discount on trading fees",
   },
   {
     key: "useBNBToPayMarginFees",
-    title: "Use BNB to pay Margin interests",
+    title: "Use LIM to pay Margin interests",
     desc: "Enjoy 5% discount on margin fees",
   },
   {
     key: "useBNBToPayFuturesFees",
-    title: "Use BNB to pay USDⓈ-M Futures fees",
+    title: "Use LIM to pay USDⓈ-M Futures fees",
     desc: "Enjoy 10% discount on futures fees",
   },
 ];
