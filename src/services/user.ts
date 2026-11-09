@@ -162,6 +162,10 @@ export const userService = {
     const response = await api.patch("users/app_settings", data);
     return response.data;
   },
+  updateSettings: async (data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const response = await api.patch("users/app_settings", data);
+    return response.data;
+  },
 
   // Login Logs
   getLoginLogs: async (params?: { query?: string; page?: number; limit?: number }): Promise<ApiResponse<any>> => {

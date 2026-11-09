@@ -1,54 +1,168 @@
 "use client";
 
-import { Checkbox, CheckboxGroup } from "@mantine/core";
+import { Loader } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { ModalClose } from "../icons/modal-close";
+import { MdOutlineClose, MdOutlineCheckCircleOutline } from "react-icons/md";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { userKeys, userService } from "@/src/services/user";
+import { successNotification } from "@/src/lib/notification-handler";
+import { errorMessageHandler } from "@/src/lib/error-handler";
 
 const reminders = [
-  "Limit Order",
-  "Market Order",
-  "Stop-Limit Order",
-  "Auto Borrow/Repay for Margin",
-  "Select All",
+  { key: "limitOrder", label: "Limit Order" },
+  { key: "marketOrder", label: "Market Order" },
+  { key: "stopOrder", label: "Stop-Limit Order" },
+  { key: "autoBorrowRepayMargin", label: "Auto Borrow/Repay for Margin" },
 ];
 
 export const TradeReminder = () => {
-  return (
-    <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <h4 className="text-2xl font-bold">
-          Trade ( Order Confirmation Reminder)
-        </h4>
-        <ModalClose onClick={() => modals.closeAll()} />
+  const queryClient = useQueryClient();
+  
+  // Fetch current settings from backend
+  const { data: settingsData, isLoading: settingsLoading } = useQuery({
+    queryKey: userKeys.settings,
+    queryFn: () => userService.getSettings(),
+    select: (res: any) => res.data ?? res,
+  });
+
+  const [tradeOrdersReminder, setTradeOrdersReminder] = useState({
+    autoBorrowRepayMargin: false,
+    limitOrder: false,
+    marketOrder: false,
+    stopOrder: false,
+  });
+
+  // Initialize from backend data
+  useEffect(() => {
+    if (settingsData?.tradeOrdersNotificationReminder) {
+      setTradeOrdersReminder(settingsData.tradeOrdersNotificationReminder);
+    }
+  }, [settingsData]);
+
+  const toggle = (key: string) => {
+    setTradeOrdersReminder((prev) => ({
+      ...prev,
+      [key]: !prev[key as keyof typeof prev],
+    }));
+  };
+
+  const toggleAll = () => {
+    const allValues = Object.values(tradeOrdersReminder);
+    const allEnabled = allValues.every((v) => v === true);
+    const newState: Record<string, boolean> = {};
+    reminders.forEach((r) => {
+      newState[r.key] = !allEnabled;
+    });
+    setTradeOrdersReminder(newState as typeof tradeOrdersReminder);
+  };
+
+  const isAllSelected = Object.values(tradeOrdersReminder).every((v) => v === true);
+
+  const { mutate: saveReminders, isPending } = useMutation({
+    mutationFn: (): Promise<any> =>
+      userService.updateSettings({ tradeOrdersNotificationReminder: tradeOrdersReminder }),
+    onSuccess: () => {
+      successNotification("Trade reminders updated");
+      queryClient.invalidateQueries({ queryKey: userKeys.settings });
+      modals.closeAll();
+    },
+    onError: (e: any) => errorMessageHandler(e),
+  });
+
+  if (settingsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader color="blue" />
       </div>
-      <div className="flex flex-col gap-16">
-        <CheckboxGroup>
-          <div className="flex flex-col gap-6">
-            {reminders.map((item) => (
-              <Checkbox
-                key={item}
-                classNames={{ input: "!bg-transparent !border-white" }}
-                labelPosition="right"
-                label={item}
-                value={item}
-              />
-            ))}
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+            <MdOutlineCheckCircleOutline size={22} />
           </div>
-        </CheckboxGroup>
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => modals.closeAll()}
-            className="bg-gray-9 rounded-xl py-18px text-base font-medium"
-          >
-            Cancel
-          </button>
-          <button
-            className="bg-gray-9 rounded-xl disabled:text-white/20 py-18px text-base font-medium disabled:bg-gray-9"
-            disabled
-          >
-            Confirm
-          </button>
+          <div className="flex flex-col gap-0.5">
+            <h4 className="text-[var(--text-title)] font-bold text-[var(--color-text-primary)]">Order Confirmation</h4>
+            <p className="text-[var(--text-caption)] text-[var(--color-text-secondary)]">Require confirmation before placing orders</p>
+          </div>
         </div>
+        <button
+          onClick={() => modals.closeAll()}
+          className="w-9 h-9 rounded-lg flex items-center justify-center bg-white/[0.04] hover:bg-white/[0.08] transition-all active:scale-95 text-white/60 hover:text-white shrink-0"
+        >
+          <MdOutlineClose size={18} />
+        </button>
+      </div>
+
+      <div className="h-px bg-white/[0.06]" />
+
+      <div className="flex flex-col gap-2">
+        {/* Select All */}
+        <button
+          onClick={toggleAll}
+          className={`flex items-center justify-between px-4 py-3.5 rounded-xl border transition-all cursor-pointer ${
+            isAllSelected
+              ? "bg-primary/[0.08] border-primary/40"
+              : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.10]"
+          }`}
+        >
+          <span className={`text-[var(--text-body)] font-semibold ${isAllSelected ? "text-primary" : "text-white/70"}`}>
+            {isAllSelected ? "Deselect All" : "Select All"}
+          </span>
+          <div className={`w-11 h-6 rounded-full relative transition-all duration-200 ${
+            isAllSelected ? "bg-primary-strong" : "bg-white/[0.12]"
+          }`}>
+            <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200 ${
+              isAllSelected ? "left-[22px]" : "left-0.5"
+            }`} />
+          </div>
+        </button>
+        
+        <div className="h-px bg-white/[0.04] my-1" />
+        
+        {reminders.map(({ key, label }) => {
+          const isOn = tradeOrdersReminder[key as keyof typeof tradeOrdersReminder];
+          return (
+            <div key={key} className="flex items-center justify-between px-4 py-3.5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-white/[0.10] transition-all">
+              <span className="text-[var(--text-body)] font-semibold text-[var(--color-text-primary)]">{label}</span>
+              <button
+                onClick={() => toggle(key)}
+                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ml-4 ${
+                  isOn ? "bg-primary-strong" : "bg-white/[0.12]"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-200 ${
+                    isOn ? "left-[22px]" : "left-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="h-px bg-white/[0.06] mt-2" />
+
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={() => modals.closeAll()}
+          className="h-[var(--size-input-standard)] rounded-xl bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-[var(--color-text-primary)] font-semibold text-[var(--text-body)] transition-all active:scale-[0.98]"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => saveReminders()}
+          disabled={isPending}
+          className="h-[var(--size-input-standard)] rounded-xl bg-primary-strong hover:bg-primary hover:shadow-[var(--shadow-glow-primary)] text-white font-semibold text-[var(--text-body)] transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {isPending && <Loader size="xs" color="white" />}
+          Save Changes
+        </button>
       </div>
     </div>
   );
