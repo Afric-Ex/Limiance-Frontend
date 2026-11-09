@@ -22,7 +22,6 @@ import {
 } from "@/src/components/settings/settings-item";
 import { TradeReminder } from "@/src/components/settings/trade-reminder";
 import { TransactionNotifications } from "@/src/components/settings/transaction-notifications";
-import { XTermOfUse } from "@/src/components/settings/x-term-of-use";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { WithSidebarSettingsSkeleton } from "@/src/components/skeletons/with-sidebar";
 import { userKeys, userService } from "@/src/services/user";
@@ -172,7 +171,7 @@ function SettingsInner() {
         },
         {
           title: "Fee deductions",
-          description: "Choose whether to use BNB to pay eligible trading fees.",
+          description: "Choose whether to use LIM to pay eligible trading fees.",
           descMaxWidth: "max-w-[460px]",
           buttonText: "Edit",
           withArrow: false,
@@ -188,17 +187,6 @@ function SettingsInner() {
           modal: <FeeDeduction />,
         },
       ],
-    },
-    {
-      title: "Link X account",
-      description: "Manage the X account connected to your Limiance profile.",
-      descMaxWidth: "max-w-full",
-      buttonText: "Linked",
-      withArrow: false,
-      rightSection: (
-        <span className="text-sm font-medium text-white/65">Disconnect</span>
-      ),
-      modal: <XTermOfUse />,
     },
   ];
 

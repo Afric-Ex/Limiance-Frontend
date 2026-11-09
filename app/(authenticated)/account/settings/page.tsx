@@ -69,7 +69,7 @@ const preferenceGroups = [
   {
     key: "tradeFeeDeductions",
     title: "Fee deductions",
-    description: "Choose whether to use BNB to pay eligible trading fees.",
+    description: "Choose whether to use LIM to pay eligible trading fees.",
     options: [
       { key: "useBNBToPayFees", label: "Spot trading fees" },
       { key: "useBNBToPayMarginFees", label: "Margin fees" },

@@ -6,15 +6,15 @@ import { ModalClose } from "../icons/modal-close";
 
 const settings = [
   {
-    title: "Use BNB to pay fees",
+    title: "Use LIM to pay fees",
     desc: "Enjoy 25% discount",
   },
   {
-    title: "Use BNB to pay Margin interests",
+    title: "Use LIM to pay Margin interests",
     desc: "Enjoy 5% discount",
   },
   {
-    title: "Use BNB to pay USDⓈ-M Futures fees",
+    title: "Use LIM to pay USDⓈ-M Futures fees",
     desc: "Enjoy 10% discount",
   },
 ];
