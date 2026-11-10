@@ -17,9 +17,9 @@ export interface PriceAlerts {
 }
 
 export interface TradeFeeDeductions {
-  useBNBToPayFees: boolean;
-  useBNBToPayFuturesFees: boolean;
-  useBNBToPayMarginFees: boolean;
+  useLIMToPayFees: boolean;
+  useLIMToPayFuturesFees: boolean;
+  useLIMToPayMarginFees: boolean;
 }
 
 export interface TradeOrdersNotificationReminder {

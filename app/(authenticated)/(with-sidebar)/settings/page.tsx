@@ -178,9 +178,9 @@ function SettingsInner() {
           rightSection: (
             <span>
               {preferenceSummary([
-                ["Spot", settings?.tradeFeeDeductions.useBNBToPayFees ?? false],
-                ["Margin", settings?.tradeFeeDeductions.useBNBToPayMarginFees ?? false],
-                ["Futures", settings?.tradeFeeDeductions.useBNBToPayFuturesFees ?? false],
+                ["Spot", settings?.tradeFeeDeductions.useLIMToPayFees ?? false],
+                ["Margin", settings?.tradeFeeDeductions.useLIMToPayMarginFees ?? false],
+                ["Futures", settings?.tradeFeeDeductions.useLIMToPayFuturesFees ?? false],
               ])}
             </span>
           ),

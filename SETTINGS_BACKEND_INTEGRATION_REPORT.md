@@ -25,9 +25,9 @@ Fetches user settings with the following structure:
     },
     "timezone": "",
     "tradeFeeDeductions": {
-      "useBNBToPayFees": false,
-      "useBNBToPayFuturesFees": false,
-      "useBNBToPayMarginFees": false
+      "useLIMToPayFees": false,
+      "useLIMToPayFuturesFees": false,
+      "useLIMToPayMarginFees": false
     },
     "tradeOrdersNotificationReminder": {
       "autoBorrowRepayMargin": false,
@@ -89,7 +89,7 @@ Updates user settings with partial updates supported.
 - ✅ Shows loading state while fetching
 - ✅ Handles errors gracefully
 - **Backend Field:** `tradeFeeDeductions`
-- **Keys:** `useBNBToPayFees`, `useBNBToPayFuturesFees`, `useBNBToPayMarginFees`
+- **Keys:** `useLIMToPayFees`, `useLIMToPayFuturesFees`, `useLIMToPayMarginFees`
 
 ### ✅ 5. Trade Reminder Modal
 **File:** `src/components/settings/trade-reminder.tsx`

@@ -11,17 +11,17 @@ import { errorMessageHandler } from "@/src/lib/error-handler";
 
 const settings = [
   {
-    key: "useBNBToPayFees",
+    key: "useLIMToPayFees",
     title: "Use LIM to pay fees",
     desc: "Enjoy 25% discount on trading fees",
   },
   {
-    key: "useBNBToPayMarginFees",
+    key: "useLIMToPayMarginFees",
     title: "Use LIM to pay Margin interests",
     desc: "Enjoy 5% discount on margin fees",
   },
   {
-    key: "useBNBToPayFuturesFees",
+    key: "useLIMToPayFuturesFees",
     title: "Use LIM to pay USDⓈ-M Futures fees",
     desc: "Enjoy 10% discount on futures fees",
   },
@@ -38,9 +38,9 @@ export const FeeDeduction = () => {
   });
 
   const [tradeFeeDeductions, setTradeFeeDeductions] = useState({
-    useBNBToPayFees: false,
-    useBNBToPayFuturesFees: false,
-    useBNBToPayMarginFees: false,
+    useLIMToPayFees: false,
+    useLIMToPayFuturesFees: false,
+    useLIMToPayMarginFees: false,
   });
 
   // Initialize from backend data
@@ -85,7 +85,7 @@ export const FeeDeduction = () => {
           </div>
           <div className="flex flex-col gap-0.5">
             <h4 className="text-[var(--text-title)] font-bold text-[var(--color-text-primary)]">Fee Deduction</h4>
-            <p className="text-[var(--text-caption)] text-[var(--color-text-secondary)]">Use BNB to reduce trading costs</p>
+            <p className="text-[var(--text-caption)] text-[var(--color-text-secondary)]">Use LIM to reduce trading costs</p>
           </div>
         </div>
         <button

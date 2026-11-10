@@ -94,7 +94,7 @@ const footerLinks = [
             link: "",
           },
           {
-            name: "Buy BNB",
+            name: "Buy LIM",
             link: "",
           },
           {
