@@ -37,9 +37,9 @@ export interface UserSettings {
   };
   timezone: string;
   tradeFeeDeductions: {
-    useBNBToPayFees: boolean;
-    useBNBToPayFuturesFees: boolean;
-    useBNBToPayMarginFees: boolean;
+    useLIMToPayFees: boolean;
+    useLIMToPayFuturesFees: boolean;
+    useLIMToPayMarginFees: boolean;
   };
   tradeOrdersNotificationReminder: {
     autoBorrowRepayMargin: boolean;
