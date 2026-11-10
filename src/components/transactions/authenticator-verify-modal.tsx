@@ -90,7 +90,7 @@ export const AuthenticatorVerificationModal = ({
 
           <div className="flex flex-col gap-4 items-center w-full mt-2">
             <span className="font-bold text-xs text-white/50 uppercase tracking-wider">Enter 6-digit Code</span>
-            <div className="w-full flex justify-center">
+            <div className="w-full max-w-[320px]">
               <PinInput
                 length={6}
                 type="number"
@@ -98,8 +98,21 @@ export const AuthenticatorVerificationModal = ({
                 onChange={setCode}
                 onComplete={handleComplete}
                 size="xl"
+                styles={{
+                  root: {
+                    display: "grid",
+                    gridTemplateColumns: "repeat(6, 1fr)",
+                    gap: "8px",
+                    width: "100%",
+                  },
+                  pinInput: {
+                    width: "100%",
+                    height: "auto",
+                    aspectRatio: "1 / 1",
+                  },
+                }}
                 classNames={{
-                  input: "!bg-muted !border-white/[0.04] !text-white !text-xl !font-bold focus:!border-primary focus:!bg-line !rounded-xl !w-12 !h-14",
+                  input: "!bg-muted !border-white/[0.04] !text-white !text-lg sm:!text-xl !font-bold focus:!border-primary focus:!bg-line !rounded-xl !w-full !h-full",
                 }}
               />
             </div>

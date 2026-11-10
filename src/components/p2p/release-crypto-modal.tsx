@@ -85,18 +85,33 @@ export function ReleaseCryptoModal({
                 Send Verification Code
               </Button>
             ) : (
-              <div className="flex flex-col items-center gap-4 py-2">
-                <PinInput
-                  length={6}
-                  type="number"
-                  value={otpValue}
-                  onChange={setOtpValue}
-                  onComplete={onOtpComplete}
-                  classNames={{
-                    input:
-                      "!bg-white/[0.04] !border-white/[0.08] !text-white focus:!border-primary/50 !rounded-lg !w-10 !h-12 !text-base !font-mono text-center",
-                  }}
-                />
+              <div className="flex flex-col items-center gap-4 py-2 w-full">
+                <div className="w-full max-w-[320px]">
+                  <PinInput
+                    length={6}
+                    type="number"
+                    value={otpValue}
+                    onChange={setOtpValue}
+                    onComplete={onOtpComplete}
+                    styles={{
+                      root: {
+                        display: "grid",
+                        gridTemplateColumns: "repeat(6, 1fr)",
+                        gap: "8px",
+                        width: "100%",
+                      },
+                      pinInput: {
+                        width: "100%",
+                        height: "auto",
+                        aspectRatio: "1 / 1",
+                      },
+                    }}
+                    classNames={{
+                      input:
+                        "!bg-white/[0.04] !border-white/[0.08] !text-white focus:!border-primary/50 !rounded-lg !w-full !h-full !text-base !font-mono text-center",
+                    }}
+                  />
+                </div>
                 <Button
                   className="w-full !bg-buy hover:!bg-buy/90 !text-white !font-semibold !h-10 !rounded-lg !text-xs mt-1"
                   disabled={otpValue.length < 6}
