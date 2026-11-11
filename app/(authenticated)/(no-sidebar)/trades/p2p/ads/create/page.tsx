@@ -116,7 +116,7 @@ function CreateAdPageInner() {
   const [minOrder, setMinOrder] = useState<number | "">("");
   const [maxOrder, setMaxOrder] = useState<number | "">("");
 
-  const [paymentWindow, setPaymentWindow] = useState<number | "">(15);
+  const [paymentWindow, setPaymentWindow] = useState("15");
   const [remarks, setRemarks] = useState("");
 
   const [selectedMethodIds, setSelectedMethodIds] = useState<string[]>([]);
@@ -684,7 +684,7 @@ function CreateAdPageInner() {
           <StepCard num={5} title="Payment Window & Remarks">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <NumberInput
+                <Select
                   label="Payment Time Limit"
                   description="Between 5 and 60 minutes."
                   value={paymentWindow}
@@ -696,7 +696,7 @@ function CreateAdPageInner() {
                     { value: "45", label: "45 Minutes" },
                     { value: "60", label: "1 Hour" },
                   ]}
-                  classNames={{ label: labelClass, input: selectClass, dropdown: dropdownClass, option: optionClass }}
+                  classNames={{ label: labelClass, description: descriptionClass, input: selectClass, dropdown: dropdownClass, option: optionClass }}
                 />
               </div>
             </div>
