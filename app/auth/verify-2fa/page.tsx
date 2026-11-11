@@ -98,7 +98,7 @@ function Verify2FAPageInner() {
   };
 
   return (
-    <main className="flex items-center justify-center px-4 min-h-hero relative bg-landing bg-cover bg-no-repeat max-[1150px]:bg-none max-[1150px]:bg-black page-enter animate-fade-in">
+    <main className="flex items-center justify-center px-6 sm:px-4 min-h-hero relative bg-landing bg-cover bg-no-repeat max-[1150px]:bg-none max-[1150px]:bg-black page-enter animate-fade-in">
       <HeroDecorations />
       <div className="flex flex-col items-center gap-8 max-w-sm w-full">
         
