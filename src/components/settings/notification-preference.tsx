@@ -6,6 +6,7 @@ import { MdOutlineClose, MdOutlineNotificationsActive } from "react-icons/md";
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
+import { buildSettingsPayload } from "@/src/lib/user-settings";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 
@@ -61,7 +62,9 @@ export const NotificationPreference = () => {
 
   const { mutate: saveNotifications, isPending } = useMutation({
     mutationFn: (): Promise<any> =>
-      userService.updateSettings({ notificationPreference: selected }),
+      userService.updateSettings(
+        buildSettingsPayload(settingsData, { notificationPreference: selected })
+      ),
     onSuccess: () => {
       successNotification("Notification preferences saved");
       queryClient.invalidateQueries({ queryKey: userKeys.settings });

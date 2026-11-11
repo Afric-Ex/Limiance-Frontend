@@ -116,7 +116,7 @@ function CreateAdPageInner() {
   const [minOrder, setMinOrder] = useState<number | "">("");
   const [maxOrder, setMaxOrder] = useState<number | "">("");
 
-  const [paymentWindow, setPaymentWindow] = useState("15");
+  const [paymentWindow, setPaymentWindow] = useState<number | "">(15);
   const [remarks, setRemarks] = useState("");
 
   const [selectedMethodIds, setSelectedMethodIds] = useState<string[]>([]);
@@ -267,9 +267,12 @@ function CreateAdPageInner() {
     return received !== null ? toPrice(1 / received) : null;
   }, [fiatQuote]);
 
+  const isPaymentWindowValid =
+    paymentWindow !== "" && Number(paymentWindow) >= 5 && Number(paymentWindow) <= 60;
+
   const handleSubmit = () => {
     if (!price || !totalAmount || !minOrder || !maxOrder || selectedMethodIds.length === 0 || !agreed) return;
-    if (isOverBalance) return;
+    if (!isPaymentWindowValid || isOverBalance) return;
 
     const payload: CreateOrder = {
       type: adMode === "BUY" ? "Buy" : "Sell",
@@ -277,7 +280,7 @@ function CreateAdPageInner() {
       assetLogo: selectedTokenLogo,
       fiat: fiat,
       fixedPrice: String(price),
-      paymentDuration: paymentWindow,
+      paymentDuration: String(paymentWindow),
       minQuantity: String(minOrder),
       maxQuantity: String(maxOrder),
       quantity: String(totalAmount),
@@ -681,8 +684,9 @@ function CreateAdPageInner() {
           <StepCard num={5} title="Payment Window & Remarks">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Select
+                <NumberInput
                   label="Payment Time Limit"
+                  description="Between 5 and 60 minutes."
                   value={paymentWindow}
                   onChange={(v) => setPaymentWindow(v || "15")}
                   data={[
@@ -728,7 +732,7 @@ function CreateAdPageInner() {
                     ? "!bg-buy hover:!bg-buy/90"
                     : "!bg-sell hover:!bg-sell/90"
                 )}
-                disabled={!price || !totalAmount || !minOrder || !maxOrder || selectedMethodIds.length === 0 || !agreed || isOverBalance}
+                disabled={!price || !totalAmount || !minOrder || !maxOrder || selectedMethodIds.length === 0 || !agreed || !isPaymentWindowValid || isOverBalance}
                 loading={isCreating}
                 onClick={handleSubmit}
               >

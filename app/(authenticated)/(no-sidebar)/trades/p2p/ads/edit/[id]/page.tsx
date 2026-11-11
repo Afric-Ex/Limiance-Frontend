@@ -5,7 +5,7 @@ import Link from "next/link";
 import { P2PLayout } from "@/src/components/p2p/p2p-layout";
 import { PaymentMethodManager } from "@/src/components/p2p/payment-method-manager";
 import { PaymentMethodBadge } from "@/src/components/p2p/payment-method-badge";
-import { Button, Select, NumberInput, Textarea, Tooltip } from "@mantine/core";
+import { Button, NumberInput, Textarea, Tooltip } from "@mantine/core";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { p2p, p2pKey } from "@/src/services/p2p";
@@ -64,11 +64,7 @@ function StepCard({
 const labelClass = "!text-xs !font-semibold !text-white/50 !uppercase !tracking-wider !mb-1.5";
 const inputClass =
   "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !rounded-lg !h-11 !text-white !text-xs !transition-all !duration-150 placeholder:!text-white/20 font-mono";
-const selectClass =
-  "!bg-white/[0.03] !border !border-white/[0.08] hover:!border-white/[0.18] focus:!border-primary/60 !rounded-lg !h-11 !text-white !text-xs !transition-all !duration-150 placeholder:!text-white/20";
-const dropdownClass = "!bg-[#181a20] !border !border-white/[0.1] !shadow-2xl !rounded-lg";
-const optionClass =
-  "hover:!bg-white/5 data-[combobox-selected]:!bg-primary/20 data-[combobox-selected]:!text-primary !rounded-md !mx-1 !my-0.5 !text-xs !transition-colors";
+
 
 function EditAdPageInner() {
   const router = useRouter();
@@ -85,7 +81,7 @@ function EditAdPageInner() {
   const [minOrder, setMinOrder] = useState<number | "">("");
   const [maxOrder, setMaxOrder] = useState<number | "">("");
 
-  const [paymentWindow, setPaymentWindow] = useState("15");
+  const [paymentWindow, setPaymentWindow] = useState<number | "">(15);
   const [remarks, setRemarks] = useState("");
   const [autoReply, setAutoReply] = useState("");
 
@@ -136,13 +132,17 @@ function EditAdPageInner() {
     }
   }, [adData]);
 
+  const isPaymentWindowValid =
+    paymentWindow !== "" && Number(paymentWindow) >= 5 && Number(paymentWindow) <= 60;
+
   const handleSave = () => {
     if (
       !price ||
       !totalAmount ||
       !minOrder ||
       !maxOrder ||
-      selectedMethods.length === 0
+      selectedMethods.length === 0 ||
+      !isPaymentWindowValid
     ) {
       return;
     }
@@ -156,7 +156,7 @@ function EditAdPageInner() {
           quantity: Number(totalAmount),
           minQuantity: Number(minOrder),
           maxQuantity: Number(maxOrder),
-          paymentDuration: paymentWindow,
+          paymentDuration: String(paymentWindow),
           remark: remarks,
           paymentMethods: selectedMethods.map(methodName),
         },
@@ -361,8 +361,9 @@ function EditAdPageInner() {
         {/* Step 5: Remarks & Payment Window */}
         <StepCard num={5} title="Payment Window & Remarks">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
+            <NumberInput
               label="Payment Time Limit"
+              description="Between 5 and 60 minutes."
               value={paymentWindow}
               onChange={(v) => setPaymentWindow(v || "15")}
               data={[
@@ -411,7 +412,7 @@ function EditAdPageInner() {
           </Button>
           <Button
             className="flex-1 !bg-buy hover:!bg-buy/90 !text-white !rounded-lg !h-11 !text-xs !font-semibold"
-            disabled={!price || !totalAmount || !minOrder || !maxOrder || selectedMethods.length === 0}
+            disabled={!price || !totalAmount || !minOrder || !maxOrder || selectedMethods.length === 0 || !isPaymentWindowValid}
             loading={isSaving}
             onClick={handleSave}
           >

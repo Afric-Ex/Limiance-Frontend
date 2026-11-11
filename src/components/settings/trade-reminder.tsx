@@ -6,6 +6,7 @@ import { MdOutlineClose, MdOutlineCheckCircleOutline } from "react-icons/md";
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
+import { buildSettingsPayload } from "@/src/lib/user-settings";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 
@@ -61,7 +62,11 @@ export const TradeReminder = () => {
 
   const { mutate: saveReminders, isPending } = useMutation({
     mutationFn: (): Promise<any> =>
-      userService.updateSettings({ tradeOrdersNotificationReminder: tradeOrdersReminder }),
+      userService.updateSettings(
+        buildSettingsPayload(settingsData, {
+          tradeOrdersNotificationReminder: tradeOrdersReminder,
+        })
+      ),
     onSuccess: () => {
       successNotification("Trade reminders updated");
       queryClient.invalidateQueries({ queryKey: userKeys.settings });

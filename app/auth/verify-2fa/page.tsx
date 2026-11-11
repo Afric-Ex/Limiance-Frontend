@@ -98,7 +98,7 @@ function Verify2FAPageInner() {
   };
 
   return (
-    <main className="flex items-center justify-center px-4 min-h-hero relative bg-landing bg-cover bg-no-repeat max-[1150px]:bg-none max-[1150px]:bg-black page-enter animate-fade-in">
+    <main className="flex items-center justify-center px-6 sm:px-4 min-h-hero relative bg-landing bg-cover bg-no-repeat max-[1150px]:bg-none max-[1150px]:bg-black page-enter animate-fade-in">
       <HeroDecorations />
       <div className="flex flex-col items-center gap-8 max-w-sm w-full">
         
@@ -115,7 +115,7 @@ function Verify2FAPageInner() {
 
         {isTotp && <TotpCountdown />}
 
-        <div className={shake ? "animate-shake" : ""}>
+        <div className={`w-full max-w-[320px] ${shake ? "animate-shake" : ""}`}>
           <PinInput
             length={6}
             type="number"
@@ -123,8 +123,21 @@ function Verify2FAPageInner() {
             onChange={setCode}
             onComplete={handleComplete}
             size="xl"
+            styles={{
+              root: {
+                display: "grid",
+                gridTemplateColumns: "repeat(6, 1fr)",
+                gap: "8px",
+                width: "100%",
+              },
+              pinInput: {
+                width: "100%",
+                height: "auto",
+                aspectRatio: "1 / 1",
+              },
+            }}
             classNames={{
-              input: "!bg-gray-1 !border-gray-9/40 !text-white !text-xl !font-bold focus:!border-primary !w-12 !h-14 !rounded-xl",
+              input: "!bg-gray-1 !border-gray-9/40 !text-white !text-lg sm:!text-xl !font-bold focus:!border-primary !w-full !h-full !rounded-xl",
             }}
           />
         </div>

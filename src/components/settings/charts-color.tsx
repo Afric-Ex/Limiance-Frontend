@@ -9,6 +9,7 @@ import clsx from "clsx";
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
+import { buildSettingsPayload } from "@/src/lib/user-settings";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 
@@ -47,7 +48,7 @@ export const ChartsColor = () => {
 
   const { mutate: saveChartColor, isPending } = useMutation({
     mutationFn: (): Promise<any> =>
-      userService.updateSettings({ chartColor }),
+      userService.updateSettings(buildSettingsPayload(settingsData, { chartColor })),
     onSuccess: () => {
       successNotification("Chart color updated");
       queryClient.invalidateQueries({ queryKey: userKeys.settings });

@@ -72,7 +72,7 @@ export const TotpGateModal = ({ onComplete }: { onComplete: (code: string) => vo
 
         <TotpCountdown />
 
-        <div className={shake ? "animate-shake" : ""}>
+        <div className={`w-full max-w-[320px] ${shake ? "animate-shake" : ""}`}>
           <PinInput
             length={6}
             type="number"
@@ -80,8 +80,21 @@ export const TotpGateModal = ({ onComplete }: { onComplete: (code: string) => vo
             onChange={setCode}
             onComplete={(val) => { setCode(val); }}
             size="xl"
+            styles={{
+              root: {
+                display: "grid",
+                gridTemplateColumns: "repeat(6, 1fr)",
+                gap: "8px",
+                width: "100%",
+              },
+              pinInput: {
+                width: "100%",
+                height: "auto",
+                aspectRatio: "1 / 1",
+              },
+            }}
             classNames={{
-              input: "!bg-muted !border-white/[0.04] !text-white !text-xl !font-bold focus:!border-primary focus:!bg-line !rounded-xl !w-12 !h-14",
+              input: "!bg-muted !border-white/[0.04] !text-white !text-lg sm:!text-xl !font-bold focus:!border-primary focus:!bg-line !rounded-xl !w-full !h-full",
             }}
           />
         </div>

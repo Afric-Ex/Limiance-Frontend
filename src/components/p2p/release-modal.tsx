@@ -62,16 +62,31 @@ export const ReleaseModal = ({ isOpen, onClose, onCodeVerified }: ReleaseModalPr
           <p className="text-white/40 text-micro">This verification is required before releasing cryptocurrency from escrow.</p>
         </div>
 
-        <PinInput
-          length={6}
-          value={code}
-          onChange={setCode}
-          size="md"
-          classNames={{
-            input:
-              "!bg-white/[0.04] !border-white/[0.08] !text-white focus:!border-primary/50 !rounded-lg !w-10 !h-12 !text-base !font-mono",
-          }}
-        />
+        <div className="w-full max-w-[320px]">
+          <PinInput
+            length={6}
+            value={code}
+            onChange={setCode}
+            size="md"
+            styles={{
+              root: {
+                display: "grid",
+                gridTemplateColumns: "repeat(6, 1fr)",
+                gap: "8px",
+                width: "100%",
+              },
+              pinInput: {
+                width: "100%",
+                height: "auto",
+                aspectRatio: "1 / 1",
+              },
+            }}
+            classNames={{
+              input:
+                "!bg-white/[0.04] !border-white/[0.08] !text-white focus:!border-primary/50 !rounded-lg !w-full !h-full !text-base !font-mono",
+            }}
+          />
+        </div>
 
         <div className="text-xs">
           <span className="text-white/40">Didn&apos;t receive code? </span>
