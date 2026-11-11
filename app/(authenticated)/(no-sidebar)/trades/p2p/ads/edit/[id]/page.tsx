@@ -120,7 +120,10 @@ function EditAdPageInner() {
       setTotalAmount(ad.quantity || ad.availableQuantity || "");
       setMinOrder(ad.minQuantity || "");
       setMaxOrder(ad.maxQuantity || "");
-      setPaymentWindow(Number(ad.paymentDuration) || 15);
+      setPaymentWindow((() => {
+        const d = String(ad.paymentDuration || "15");
+        return d === "1" ? "60" : d;
+      })());
       setRemarks(ad.remark || "");
       setAutoReply(ad.autoReply || "");
       if (ad.paymentMethod) {
@@ -362,18 +365,15 @@ function EditAdPageInner() {
               label="Payment Time Limit"
               description="Between 5 and 60 minutes."
               value={paymentWindow}
-              onChange={(val) => setPaymentWindow(val === "" ? "" : Number(val))}
-              min={5}
-              max={60}
-              clampBehavior="strict"
-              hideControls
-              rightSection={<span className="text-white/40 pr-3 text-xs font-medium">Min</span>}
-              classNames={{
-                label: labelClass,
-                description: "!text-micro !text-white/40 !mt-1",
-                input: inputClass,
-                section: "!w-fit !right-2",
-              }}
+              onChange={(v) => setPaymentWindow(v || "15")}
+              data={[
+                { value: "5", label: "5 Minutes" },
+                { value: "15", label: "15 Minutes" },
+                { value: "30", label: "30 Minutes" },
+                { value: "45", label: "45 Minutes" },
+                { value: "60", label: "1 Hour" },
+              ]}
+              classNames={{ label: labelClass, input: selectClass, dropdown: dropdownClass, option: optionClass }}
             />
           </div>
 
