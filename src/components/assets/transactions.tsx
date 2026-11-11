@@ -9,9 +9,9 @@ import { InfiniteScrollTrigger } from "../shared/infinite-scroll-trigger";
 import { PendingIcon } from "../icons/pending-icon";
 import { Copy } from "../shared/copy";
 import { InlineLoading } from "../shared/inline-loading";
-import { truncateCryptoAddress } from "@/src/utils/truncate-address";
+import { truncateCryptoAddress, isZeroAddress } from "@/src/utils/truncate-address";
 import { formatTransactionAmount, formatTransactionAsset } from "@/src/utils/transaction";
-import { fmtDate } from "../orders/orders-shared";
+import { fmtDate, parseDate } from "../orders/orders-shared";
 
 export enum TransactionViews {
   RECENT = "recent",
@@ -76,7 +76,7 @@ export const Transactions = () => {
                 <TableTd>
                   <span className="flex flex-col gap-1">
                     <span className="text-xs font-medium text-gray-14">
-                      {fmtDate(item.completedAt || item.createdAt)}
+                      {fmtDate(parseDate(item.completedAt) ? item.completedAt : item.createdAt)}
                     </span>
                     {/* <span className="text-primary text-2xs font-bold">
                                   18:16:23
@@ -94,10 +94,21 @@ export const Transactions = () => {
                 <TableTd>{formatTransactionAmount(item.amount)}</TableTd>
                 <TableTd className="!capitalize">{item.type}</TableTd>
                 <TableTd>
-                  <span className="flex items-center gap-2">
-                    <span>{truncateCryptoAddress(item.hash)}</span>
-                    <Copy color="var(--primary)" text={item.hash} />
-                  </span>
+                  {(() => {
+                    const addr = (item.hash && !isZeroAddress(item.hash))
+                      ? item.hash
+                      : (item.toBalance && !isZeroAddress(item.toBalance))
+                      ? item.toBalance
+                      : null;
+                    return addr ? (
+                      <span className="flex items-center gap-2">
+                        <span>{truncateCryptoAddress(addr)}</span>
+                        <Copy color="var(--primary)" text={addr} />
+                      </span>
+                    ) : (
+                      <span className="text-white/30">—</span>
+                    );
+                  })()}
                 </TableTd>
                 <TableTd>
                   <span className="uppercase">{item.chain}</span>

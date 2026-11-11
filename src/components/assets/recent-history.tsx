@@ -6,7 +6,7 @@ import { assetKeys, asset } from "@/src/services/asset";
 import Link from "next/link";
 import { Skeleton } from "../shared/skeleton";
 import { formatTransactionAmount, formatTransactionAsset } from "@/src/utils/transaction";
-import { fmtDate } from "../orders/orders-shared";
+import { fmtDate, parseDate } from "../orders/orders-shared";
 import { TransactionDetailsModal } from "../transactions/transaction-details-modal";
 
 /**
@@ -67,7 +67,7 @@ export const RecentHistory = () => {
                     {item.type}
                   </span>
                   <span className="text-2xs text-white/40">
-                    {fmtDate(item.completedAt || item.createdAt)}
+                    {fmtDate(parseDate(item.completedAt) ? item.completedAt : item.createdAt)}
                   </span>
                 </div>
                 <div className="flex flex-col items-end gap-0.5 min-w-0">

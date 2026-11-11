@@ -50,7 +50,7 @@ import {
   truncateWhitelistAddress,
   validateWhitelistAddress,
 } from "@/src/lib/whitelist";
-import { fmtDate } from "@/src/components/orders/orders-shared";
+import { fmtDate, parseDate } from "@/src/components/orders/orders-shared";
 
 const faqs = [
   {
@@ -705,7 +705,7 @@ function WithdrawalInner() {
                     onClick={() => setSelectedTransaction(item)}
                     className="cursor-pointer"
                   >
-                    <TableTd className="pl-6 !text-white/40">{fmtDate(item.completedAt || item.createdAt)}</TableTd>
+                    <TableTd className="pl-6 !text-white/40">{fmtDate(parseDate(item.completedAt) ? item.completedAt : item.createdAt)}</TableTd>
                     <TableTd>
                       <span className="flex items-center gap-2">
                         {(() => {
@@ -725,17 +725,24 @@ function WithdrawalInner() {
                     </TableTd>
                     <TableTd className="!text-white !font-bold">{item.amount}</TableTd>
                     <TableTd>
-                      {item.hash && !isZeroAddress(item.hash) ? (
-                        <span
-                          className="flex items-center gap-2"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <span className="font-mono text-xs">{truncateCryptoAddress(item.hash)}</span>
-                          <Copy color="var(--primary)" text={item.hash} />
-                        </span>
-                      ) : (
-                        <span className="text-white/30">—</span>
-                      )}
+                      {(() => {
+                        const addr = (item.hash && !isZeroAddress(item.hash))
+                          ? item.hash
+                          : (item.toBalance && !isZeroAddress(item.toBalance))
+                          ? item.toBalance
+                          : null;
+                        return addr ? (
+                          <span
+                            className="flex items-center gap-2"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <span className="font-mono text-xs">{truncateCryptoAddress(addr)}</span>
+                            <Copy color="var(--primary)" text={addr} />
+                          </span>
+                        ) : (
+                          <span className="text-white/30">—</span>
+                        );
+                      })()}
                     </TableTd>
                     <TableTd className="uppercase font-bold">{item.chain}</TableTd>
                     <TableTd>
