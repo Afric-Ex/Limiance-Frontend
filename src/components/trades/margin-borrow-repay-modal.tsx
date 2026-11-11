@@ -7,6 +7,8 @@ import { errorMessageHandler } from "@/src/lib/error-handler";
 import { MdWarning, MdInfoOutline } from "react-icons/md";
 import clsx from "clsx";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { openTradeOrderConfirmation } from "./trade-order-confirmation-modal";
+import { useTradeConfirmations } from "@/src/hooks/use-trade-confirmations";
 
 // Mirror of the backend constant: minBorrowMarginLevel = 1.3
 const MIN_MARGIN_LEVEL = 1.3;
@@ -22,6 +24,7 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
   const [selectedAsset, setSelectedAsset] = useState<string>(quote);
 
   const queryClient = useQueryClient();
+  const { isEnabled: isConfirmationEnabled } = useTradeConfirmations();
 
   // Margin screens need the per-coin holdings (asset price + margin balance),
   // the margin account (borrowed/equity/leverage caps) and the derived margin
@@ -140,6 +143,39 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
     },
     onError: (e) => errorMessageHandler(e),
   });
+
+  const submit = () => {
+    if (isBorrowTab) handleBorrow();
+    else handleRepay();
+  };
+
+  const requestConfirm = () => {
+    if (!isConfirmationEnabled("autoBorrowRepayMargin")) {
+      submit();
+      return;
+    }
+
+    openTradeOrderConfirmation({
+      title: isBorrowTab ? "Confirm borrow" : "Confirm repay",
+      description: isBorrowTab
+        ? "Review the amount below before borrowing against your margin account."
+        : "Review the amount below before repaying your margin debt.",
+      rows: [
+        { label: "Account", value: tradeMode === "cross" ? "Cross Margin" : "Isolated Margin" },
+        { label: "Asset", value: selectedAsset },
+        { label: "Action", value: isBorrowTab ? "Borrow" : "Repay" },
+        {
+          label: "Amount",
+          value: `${enteredAmount.toLocaleString("en-US", { maximumFractionDigits: 6 })} ${selectedAsset}`,
+        },
+      ],
+      warning: isBorrowTab
+        ? "Borrowed funds accrue interest. Your collateral may be liquidated if the margin level falls below the maintenance requirement."
+        : undefined,
+      confirmLabel: isBorrowTab ? "Confirm Borrow" : "Confirm Repay",
+      onConfirm: submit,
+    });
+  };
 
   const isPending = borrowLoading || repayLoading;
 
@@ -321,10 +357,7 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
           className="bg-primary hover:bg-primary/90 text-black font-semibold"
           disabled={isBorrowTab ? borrowInvalid : repayInvalid}
           loading={isPending}
-          onClick={() => {
-            if (isBorrowTab) handleBorrow();
-            else handleRepay();
-          }}
+          onClick={requestConfirm}
         >
           {isBorrowTab ? "Confirm Borrow" : "Confirm Repay"}
         </Button>

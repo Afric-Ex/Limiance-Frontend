@@ -17,6 +17,8 @@ import { successNotification } from '@/src/lib/notification-handler';
 import { useUserStore } from '@/src/stores/user-store';
 import { tradingService } from '@/src/services/trading';
 import { placeFuturesOrderWs } from '@/src/lib/order-ws';
+import { openTradeOrderConfirmation, type TradeConfirmationRow } from '@/src/components/trades/trade-order-confirmation-modal';
+import { useTradeConfirmations, type TradeConfirmationKey } from '@/src/hooks/use-trade-confirmations';
 import { DEFAULT_MODAL_SETTINGS } from '@/src/utils/constants';
 import {
   Checkbox,
@@ -175,6 +177,15 @@ function FuturesTradesInner() {
   const user = useUserStore((state) => state.user);
   const hydrated = useUserStore((state) => state.hydrated);
   const fetchUser = useUserStore((state) => state.fetchUser);
+  const { isEnabled: isConfirmationEnabled } = useTradeConfirmations();
+
+  // Which "Order confirmations" preference governs the selected order type.
+  const confirmationKey: TradeConfirmationKey =
+    orderType === 'market'
+      ? 'marketOrder'
+      : orderType === 'stop'
+        ? 'stopOrder'
+        : 'limitOrder';
 
   // Wallet Balance = total USD value of everything in futures wallet (from balance API)
   const walletBalanceUsd = useMemo(
@@ -509,6 +520,99 @@ function FuturesTradesInner() {
     },
   });
 
+  // Entry point for the Buy/Sell buttons: validate, then either ask for the
+  // user's confirmation (when enabled in settings) or submit immediately.
+  const requestOrder = (side: TradeSide) => {
+    if (!hasFuturesAccount) {
+      errorMessageHandler(new Error('Open your futures account before placing an order.'));
+      return;
+    }
+    if (!quantity) {
+      errorMessageHandler(new Error('Enter a valid quantity.'));
+      return;
+    }
+    if (orderType !== 'market' && !workingPrice) {
+      errorMessageHandler(new Error(orderType === 'stop' ? 'Enter a trigger price.' : 'Enter a valid price.'));
+      return;
+    }
+    if (cost > availableQuote && availableQuote > 0) {
+      errorMessageHandler(new Error('Insufficient futures balance for this margin requirement.'));
+      return;
+    }
+    try {
+      validateTpsl(side);
+    } catch (error: any) {
+      errorMessageHandler(error);
+      return;
+    }
+
+    const submit = () => {
+      setBuyingSide(side);
+      placeOrder(side);
+    };
+
+    if (!isConfirmationEnabled(confirmationKey)) {
+      submit();
+      return;
+    }
+
+    const fmtPx = (value: number) =>
+      value > 0
+        ? `${value.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDT`
+        : '—';
+    const referencePrice =
+      orderType === 'market' ? (effectiveMarketPrice ?? feed.price ?? 0) : effectiveLimitPrice;
+
+    const rows: TradeConfirmationRow[] = [
+      { label: 'Pair', value: selectedPair },
+      { label: 'Side', value: side === 'buy' ? 'Buy / Long' : 'Sell / Short', tone: side },
+      {
+        label: 'Order type',
+        value: orderType === 'stop' ? 'Stop Limit' : orderType === 'market' ? 'Market' : 'Limit',
+      },
+    ];
+
+    if (orderType === 'stop') {
+      rows.push(
+        { label: 'Trigger price', value: fmtPx(workingPrice) },
+        { label: 'Limit price', value: fmtPx(effectiveLimitPrice) }
+      );
+    } else {
+      rows.push({ label: 'Price', value: orderType === 'market' ? 'Market price' : fmtPx(referencePrice) });
+    }
+
+    rows.push(
+      {
+        label: 'Quantity',
+        value: `${quantity.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${baseAsset}`,
+      },
+      { label: 'Leverage', value: `${leverage}x` },
+      { label: 'Margin mode', value: marginMode === 'cross' ? 'Cross' : 'Isolated' },
+      {
+        label: 'Margin required',
+        value: `${cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`,
+      }
+    );
+
+    if (tpslEnabled) {
+      const tp = Number(takeProfit) || 0;
+      const sl = Number(stopLoss) || 0;
+      if (tp > 0) rows.push({ label: 'Take profit', value: fmtPx(tp) });
+      if (sl > 0) rows.push({ label: 'Stop loss', value: fmtPx(sl) });
+    }
+
+    openTradeOrderConfirmation({
+      title: `Confirm ${orderType} order`,
+      description: 'Review the details below before submitting your futures order.',
+      rows,
+      warning:
+        'Futures trading is leveraged. Your position can be liquidated if the market moves against you.',
+      confirmLabel: side === 'buy' ? 'Buy / Long' : 'Sell / Short',
+      side,
+      onConfirm: submit,
+    });
+  };
+
   // Format qty without scientific notation, max 6 decimal places
   const fmtFuturesQty = (val: number): string => {
     if (!Number.isFinite(val) || val === 0) return "";
@@ -712,10 +816,7 @@ function FuturesTradesInner() {
 
         <div className="grid grid-cols-2 gap-2 mt-2">
           <button
-            onClick={() => {
-              setBuyingSide('buy');
-              placeOrder('buy');
-            }}
+            onClick={() => requestOrder('buy')}
             disabled={
               orderPending ||
               !hasFuturesAccount ||
@@ -729,10 +830,7 @@ function FuturesTradesInner() {
             Buy / Long
           </button>
           <button
-            onClick={() => {
-              setBuyingSide('sell');
-              placeOrder('sell');
-            }}
+            onClick={() => requestOrder('sell')}
             disabled={
               orderPending ||
               !hasFuturesAccount ||
