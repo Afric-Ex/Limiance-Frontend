@@ -5,10 +5,12 @@ import { FiArrowUp, FiArrowDown, FiChevronDown, FiMaximize2, FiMinimize2, FiChec
 import { TbChartCandle, TbChartBar, TbChartLine, TbChartArea, TbFunction } from "react-icons/tb";
 import { Popover } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
+import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import type { OrderBookEntry } from "@/src/hooks/use-order-book";
 import { TokenOverview } from "@/src/components/trades/token-overview";
 import { TradeFlowPanel } from "@/src/components/trades/trade-flow-panel";
+import { userKeys, userService } from "@/src/services/user";
 import type { ChartType, ChartIndicators } from "@/src/components/trades/candlestick-chart-lwc";
 import { DEFAULT_INDICATORS } from "@/src/components/trades/candlestick-chart-lwc";
 
@@ -429,6 +431,16 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
   const fullscreenFallbackRef = useRef(false);
   const marketLabel = market === "futures" ? "Futures" : market === "margin" ? "Margin" : "Spot";
   const bookLive = orderBook?.isConnected ?? false;
+
+  // Up/down candle colors follow the saved app setting: true = green up / red
+  // down, false = red up / green down. Defaults to the green-up scheme while the
+  // setting loads or if it cannot be fetched.
+  const { data: settings } = useQuery({
+    queryKey: userKeys.settings,
+    queryFn: userService.getSettings,
+    select: (response) => response.data,
+  });
+  const chartColor = settings?.chartColor ?? true;
 
   const bids = orderBook?.buyOrders ?? [];
   const asks = orderBook?.sellOrders ?? [];
@@ -968,6 +980,7 @@ export default function TradingViewChart({ symbol = "BTC/USDT", market = "spot",
                 chartType={chartType}
                 indicators={indicators}
                 priceScaleMode={priceScaleMode}
+                chartColor={chartColor}
               />
             </div>
             {insightTabs && showDepth && (
