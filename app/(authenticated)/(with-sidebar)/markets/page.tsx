@@ -13,6 +13,7 @@ import { MarketsPageSkeleton } from "@/src/components/skeletons/with-sidebar";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { errorMessageHandler } from "@/src/lib/error-handler";
+import { successNotification } from "@/src/lib/notification-handler";
 
 type TokenRow = {
   symbol: string;
@@ -232,7 +233,9 @@ function MarketsPageInner() {
   const favorites = useMemo(() => {
     const response: any = favoritesQuery.data;
     const rows = Array.isArray(response) ? response
+      : Array.isArray(response?.symbols) ? response.symbols
       : Array.isArray(response?.data) ? response.data
+      : Array.isArray(response?.data?.symbols) ? response.data.symbols
       : Array.isArray(response?.data?.favorites) ? response.data.favorites
       : Array.isArray(response?.data?.items) ? response.data.items
       : Array.isArray(response?.favorites) ? response.favorites
@@ -260,7 +263,12 @@ function MarketsPageInner() {
   const favoriteMutation = useMutation({
     mutationFn: ({ pair, isFavorite }: { pair: string; isFavorite: boolean }) =>
       isFavorite ? tradingService.removeFavorite(pair) : tradingService.addFavorite(pair),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trading-favorites"] }),
+    onSuccess: (_data, variables) => {
+      successNotification(
+        variables.isFavorite ? "Removed from favorites" : "Added to favorites"
+      );
+      queryClient.invalidateQueries({ queryKey: ["trading-favorites"] });
+    },
     onMutate: ({ pair }) => setPendingFavoritePair(pair),
     onSettled: () => setPendingFavoritePair(null),
     onError: (error) => errorMessageHandler(error),
