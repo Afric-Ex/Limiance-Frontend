@@ -134,15 +134,15 @@ function SettingsInner() {
       withArrow: true,
       rightSection: (
         <span className="flex items-center gap-3">
-          {settings?.chartColor ? <PriceTrend2 /> : <PriceTrend />}
+          {settings?.chartColor ? <PriceTrend /> : <PriceTrend2 />}
           <span className="text-sm font-medium">
             {settingsQuery.isLoading
               ? "Loading preferences…"
               : settingsQuery.isError
                 ? "Unavailable"
                 : settings?.chartColor
-                  ? "Red up · Green down"
-                  : "Green up · Red down"}
+                  ? "Green up · Red down"
+                  : "Red up · Green down"}
           </span>
         </span>
       ),

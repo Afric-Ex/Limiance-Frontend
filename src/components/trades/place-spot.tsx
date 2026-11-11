@@ -3,6 +3,8 @@ import { modals } from "@mantine/modals";
 import toast from "react-hot-toast";
 import { MarginBorrowRepayModal } from "./margin-borrow-repay-modal";
 import { MarginTransferModal } from "./margin-transfer-modal";
+import { openTradeOrderConfirmation, type TradeConfirmationRow } from "./trade-order-confirmation-modal";
+import { useTradeConfirmations, type TradeConfirmationKey } from "@/src/hooks/use-trade-confirmations";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { MdExpandMore, MdRefresh } from "react-icons/md";
 import { icons } from "../assets/icons";
@@ -220,6 +222,15 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           : selectedOrderType.charAt(0).toUpperCase() + selectedOrderType.slice(1);
 
   const queryClient = useQueryClient();
+  const { isEnabled: isConfirmationEnabled } = useTradeConfirmations();
+
+  // Which "Order confirmations" preference governs the order type on screen.
+  const confirmationKey: TradeConfirmationKey =
+    activeTab === "market"
+      ? "marketOrder"
+      : activeTab === "stop"
+        ? "stopOrder"
+        : "limitOrder";
 
   // reset edited flags when tab switches to limit or pair changes
   useEffect(() => {
@@ -356,26 +367,30 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     };
   };
 
-  const placeOrder = async (side: "buy" | "sell") => {
-    const payload = buildPayload(side);
-
+  const validateOrder = (payload: ReturnType<typeof buildPayload>) => {
     if (!Number.isFinite(Number(payload.quantity)) || Number(payload.quantity) <= 0) {
       errorMessageHandler(new Error("Quantity must be greater than zero"));
-      return;
+      return false;
     }
     if (
       activeTab !== "market" &&
       (!Number.isFinite(Number(payload.price)) || Number(payload.price) <= 0)
     ) {
       errorMessageHandler(new Error("Price must be greater than zero"));
-      return;
+      return false;
     }
     if (activeTab === "stop") {
       if (!Number.isFinite(Number(payload.stopPrice)) || Number(payload.stopPrice) <= 0) {
         errorMessageHandler(new Error("Stop trigger price must be greater than zero"));
-        return;
+        return false;
       }
     }
+    return true;
+  };
+
+  const placeOrder = async (side: "buy" | "sell") => {
+    const payload = buildPayload(side);
+    if (!validateOrder(payload)) return;
 
     // Spot orders go over the trading WebSocket (place_spot_order frame),
     // or REST for Spot OCO (dedicated endpoint).
@@ -514,6 +529,94 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     },
     onError: (e) => errorMessageHandler(e),
   });
+
+  const confirmationRows = (side: "buy" | "sell"): TradeConfirmationRow[] => {
+    const payload = buildPayload(side);
+    const isBuy = side === "buy";
+    const quantity = parseNum(payload.quantity);
+    const referencePrice =
+      activeTab === "oco"
+        ? parseNum(isBuy ? buyOcoPrice : sellOcoPrice)
+        : activeTab === "market"
+          ? parseNum(marketPrice)
+          : parseNum(payload.price);
+    const total = referencePrice * quantity;
+    const fmtPrice = (value: number) =>
+      Number.isFinite(value) && value > 0
+        ? `${value.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${quote}`
+        : "—";
+
+    const rows: TradeConfirmationRow[] = [
+      { label: "Pair", value: `${base}/${quote}` },
+      { label: "Side", value: isBuy ? "Buy" : "Sell", tone: side },
+      { label: "Order type", value: selectedOrderTypeLabel },
+    ];
+
+    if (activeTab === "oco") {
+      rows.push(
+        { label: "Entry price", value: fmtPrice(parseNum(isBuy ? buyOcoPrice : sellOcoPrice)) },
+        { label: "Stop trigger", value: fmtPrice(parseNum(isBuy ? buyOcoStop : sellOcoStop)) },
+        { label: "Stop limit", value: fmtPrice(parseNum(isBuy ? buyOcoLimit : sellOcoLimit)) }
+      );
+    } else if (activeTab === "stop") {
+      rows.push(
+        { label: "Trigger price", value: fmtPrice(parseNum(payload.stopPrice)) },
+        { label: "Limit price", value: fmtPrice(parseNum(payload.price)) }
+      );
+    } else if (activeTab === "market") {
+      rows.push({ label: "Price", value: fmtPrice(parseNum(marketPrice)) });
+    } else {
+      rows.push({ label: "Limit price", value: fmtPrice(parseNum(payload.price)) });
+    }
+
+    rows.push(
+      { label: "Quantity", value: `${formatAmount(quantity)} ${base}` },
+      { label: "Order value", value: fmtPrice(total) }
+    );
+
+    if (mode !== "spot") {
+      rows.push({ label: "Leverage", value: `${leverage}x` });
+      rows.push({ label: "Margin mode", value: mode === "cross" ? "Cross" : "Isolated" });
+    }
+
+    if (tpslEnabled) {
+      const takeProfit = parseNum(isBuy ? buyTp : sellTp);
+      const stopLoss = parseNum(isBuy ? buySl : sellSl);
+      if (takeProfit > 0) rows.push({ label: "Take profit", value: fmtPrice(takeProfit) });
+      if (stopLoss > 0) rows.push({ label: "Stop loss", value: fmtPrice(stopLoss) });
+    }
+
+    if (activeTab === "limit") {
+      rows.push({ label: "Time in force", value: timeInForce });
+      if (postOnly) rows.push({ label: "Post only", value: "Yes" });
+    }
+
+    return rows;
+  };
+
+  const requestOrder = (side: "buy" | "sell") => {
+    if (!validateOrder(buildPayload(side))) return;
+
+    const submit = () => (side === "buy" ? placeBuy() : placeSell());
+
+    if (!isConfirmationEnabled(confirmationKey)) {
+      submit();
+      return;
+    }
+
+    openTradeOrderConfirmation({
+      title: `Confirm ${selectedOrderTypeLabel.toLowerCase()} order`,
+      description: "Review the details below before submitting your order.",
+      rows: confirmationRows(side),
+      warning:
+        mode !== "spot"
+          ? "Margin orders use borrowed funds. Your position can be liquidated if the market moves against you."
+          : undefined,
+      confirmLabel: side === "buy" ? `Buy ${base}` : `Sell ${base}`,
+      side,
+      onConfirm: submit,
+    });
+  };
 
   const openBorrowModal = () => {
     modals.open({
@@ -726,7 +829,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         )}
 
         <button
-          onClick={() => (isBuy ? placeBuy() : placeSell())}
+          onClick={() => requestOrder(side)}
           disabled={
             loading ||
             parseNum(amount) <= 0 ||
@@ -1166,7 +1269,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           )}
 
           <button
-            onClick={() => placeBuy()}
+            onClick={() => requestOrder("buy")}
             disabled={
               buyLoading ||
               !(Number(buyAmount) > 0) ||
@@ -1259,7 +1362,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           )}
 
           <button
-            onClick={() => placeSell()}
+            onClick={() => requestOrder("sell")}
             disabled={
               sellLoading ||
               !(Number(sellAmount) > 0) ||

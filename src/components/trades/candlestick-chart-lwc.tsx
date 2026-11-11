@@ -47,6 +47,8 @@ import type { OrderLevel } from "@/src/components/trades/candlestick-chart";
 const APP_CHART_BACKGROUND = "#181a20";
 const BULL_COLOR = "#16c784";
 const BEAR_COLOR = "#ea3943";
+const VOLUME_UP_COLOR = "rgba(37,171,66,0.35)";
+const VOLUME_DOWN_COLOR = "rgba(246,70,93,0.35)";
 
 const LEVEL_COLORS: Record<OrderLevel["color"], { line: string; axis: string }> = {
   entry: { line: "#3b82f6", axis: "#2563eb" },
@@ -299,7 +301,11 @@ function toLineData(candles: KlineCandle[]): LineData[] {
   return out.sort((a, b) => a.t - b.t).map((x) => x.d);
 }
 
-function toVolumeData(candles: KlineCandle[]): HistogramData[] {
+function toVolumeData(
+  candles: KlineCandle[],
+  upColor = "rgba(37,171,66,0.35)",
+  downColor = "rgba(246,70,93,0.35)"
+): HistogramData[] {
   const seen = new Set<number>();
   const out: { t: number; d: HistogramData }[] = [];
   for (const c of candles) {
@@ -314,7 +320,7 @@ function toVolumeData(candles: KlineCandle[]): HistogramData[] {
       d: {
         time,
         value: c.volume,
-        color: c.close >= c.open ? "rgba(37,171,66,0.35)" : "rgba(246,70,93,0.35)",
+        color: c.close >= c.open ? upColor : downColor,
       },
     });
   }
@@ -374,6 +380,7 @@ export function LwcCandlestickChart({
   chartType = "candles",
   indicators = DEFAULT_INDICATORS,
   priceScaleMode = "normal",
+  chartColor = true,
 }: {
   symbol: string;
   interval: string;
@@ -383,7 +390,15 @@ export function LwcCandlestickChart({
   chartType?: ChartType;
   indicators?: ChartIndicators;
   priceScaleMode?: "normal" | "log" | "percent";
+  /** true = green up / red down, false = red up / green down. */
+  chartColor?: boolean;
 }) {
+  const upColor = chartColor ? BULL_COLOR : BEAR_COLOR;
+  const downColor = chartColor ? BEAR_COLOR : BULL_COLOR;
+  const volumeUpColor = chartColor ? VOLUME_UP_COLOR : VOLUME_DOWN_COLOR;
+  const volumeDownColor = chartColor ? VOLUME_DOWN_COLOR : VOLUME_UP_COLOR;
+  const areaTopColor = chartColor ? "rgba(22,199,132,0.28)" : "rgba(234,57,67,0.28)";
+  const areaBottomColor = chartColor ? "rgba(22,199,132,0.01)" : "rgba(234,57,67,0.01)";
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<any> | null>(null);
@@ -781,8 +796,8 @@ export function LwcCandlestickChart({
     let candlesSeries: ISeriesApi<any>;
     if (chartType === "bars") {
       candlesSeries = chart.addSeries(BarSeries, {
-        upColor: BULL_COLOR,
-        downColor: BEAR_COLOR,
+        upColor,
+        downColor,
         lastValueVisible: true,
         priceLineVisible: true,
         priceLineStyle: LineStyle.Dotted,
@@ -790,7 +805,7 @@ export function LwcCandlestickChart({
       });
     } else if (chartType === "line") {
       candlesSeries = chart.addSeries(LineSeries, {
-        color: BULL_COLOR,
+        color: upColor,
         lineWidth: 2,
         lastValueVisible: true,
         priceLineVisible: true,
@@ -799,9 +814,9 @@ export function LwcCandlestickChart({
       });
     } else if (chartType === "area") {
       candlesSeries = chart.addSeries(AreaSeries, {
-        topColor: "rgba(22,199,132,0.28)",
-        bottomColor: "rgba(22,199,132,0.01)",
-        lineColor: BULL_COLOR,
+        topColor: areaTopColor,
+        bottomColor: areaBottomColor,
+        lineColor: upColor,
         lineWidth: 2,
         lastValueVisible: true,
         priceLineVisible: true,
@@ -810,10 +825,10 @@ export function LwcCandlestickChart({
       });
     } else {
       candlesSeries = chart.addSeries(CandlestickSeries, {
-        upColor: BULL_COLOR,
-        downColor: BEAR_COLOR,
-        wickUpColor: BULL_COLOR,
-        wickDownColor: BEAR_COLOR,
+        upColor,
+        downColor,
+        wickUpColor: upColor,
+        wickDownColor: downColor,
         borderVisible: false,
         lastValueVisible: true,
         priceLineVisible: true,
@@ -1015,7 +1030,7 @@ export function LwcCandlestickChart({
       chartRef.current = null;
       chart.remove();
     };
-  }, [symbol, interval, chartType, indicators, priceScaleMode, addDrawing, detachPreview, setPending, setSelectedId, syncPanMode, syncPrimitives, syncPriceLines]);
+  }, [symbol, interval, chartType, indicators, priceScaleMode, chartColor, upColor, downColor, volumeUpColor, volumeDownColor, areaTopColor, areaBottomColor, addDrawing, detachPreview, setPending, setSelectedId, syncPanMode, syncPrimitives, syncPriceLines]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -1085,7 +1100,7 @@ export function LwcCandlestickChart({
           volumeSeries.update({
             time: Math.floor(lastVolCandle.time / 1000) as UTCTimestamp,
             value: lastVolCandle.volume,
-            color: lastVolCandle.close >= lastVolCandle.open ? "rgba(37,171,66,0.35)" : "rgba(246,70,93,0.35)",
+            color: lastVolCandle.close >= lastVolCandle.open ? volumeUpColor : volumeDownColor,
           });
         }
       }
@@ -1109,7 +1124,10 @@ export function LwcCandlestickChart({
       const prevTotal = prevBarCountRef.current;
       candlesSeries.setData(mainData);
       const volumeSeries = volumeSeriesRef.current;
-      if (volumeSeries) volumeSeries.setData(indicators.showVolume ? toVolumeData(candles) : []);
+      if (volumeSeries)
+        volumeSeries.setData(
+          indicators.showVolume ? toVolumeData(candles, volumeUpColor, volumeDownColor) : []
+        );
 
       const ma7Series = ma7SeriesRef.current;
       const ma25Series = ma25SeriesRef.current;
@@ -1138,7 +1156,11 @@ export function LwcCandlestickChart({
     }
     const volumeSmaSeries = volumeSmaSeriesRef.current;
     if (volumeSmaSeries) {
-      volumeSmaSeries.setData(indicators.showVolume && indicators.showVolumeSma ? toVolumeSmaData(toVolumeData(candles)) : []);
+      volumeSmaSeries.setData(
+        indicators.showVolume && indicators.showVolumeSma
+          ? toVolumeSmaData(toVolumeData(candles, volumeUpColor, volumeDownColor))
+          : []
+      );
     }
     lastCandleRef.current = lastCandle;
     candleDataContextRef.current = key;
@@ -1158,7 +1180,7 @@ export function LwcCandlestickChart({
       });
     }
     prevBarCountRef.current = candleData.length;
-  }, [candles, historyCandles, symbol, interval, chartType, indicators]);
+  }, [candles, historyCandles, symbol, interval, chartType, indicators, chartColor, volumeUpColor, volumeDownColor]);
 
   // Keep the latest levels in a ref so an interval/pair chart rebuild can
   // replay them immediately, then update the current series without rebuilding
@@ -1491,7 +1513,14 @@ export function LwcCandlestickChart({
   const shownVolumeSma = legend ? legend.vsma : lastVolumeSma;
   const barChange = shown ? shown.c - shown.o : 0;
   const barChangePct = shown && shown.o ? (barChange / shown.o) * 100 : 0;
-  const barTone = barChange >= 0 ? "text-[#25AB42]" : "text-[#F6465D]";
+  const barTone =
+    barChange >= 0
+      ? chartColor
+        ? "text-[#25AB42]"
+        : "text-[#F6465D]"
+      : chartColor
+        ? "text-[#F6465D]"
+        : "text-[#25AB42]";
   const barSign = barChange >= 0 ? "+" : "";
   const marketName = market === "futures" ? "Futures" : market === "margin" ? "Margin" : "Spot";
   const legendTitle = `${symbol.replace(/[/\-_\s]/g, "")} ${marketName} · ${INTERVAL_LABELS[interval] ?? interval} · Limiance`;
