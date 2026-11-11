@@ -210,7 +210,12 @@ function PreOrderScreenContent() {
                 </div>
                 <div className="bg-white/[0.02] border border-white/[0.05] p-3 rounded-lg">
                   <div className="text-white/35 text-2xs uppercase tracking-wider mb-0.5">Payment Window</div>
-                  <div className="text-xs font-medium text-white">{ad.paymentDuration ?? 15} Minutes</div>
+                  <div className="text-xs font-medium text-white">
+                    {(() => {
+                      const d = String(ad.paymentDuration ?? "15");
+                      return d === "60" || d === "1" ? "1 Hour" : `${d} Minutes`;
+                    })()}
+                  </div>
                 </div>
               </div>
             </div>

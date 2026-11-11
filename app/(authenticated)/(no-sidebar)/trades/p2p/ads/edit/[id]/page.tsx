@@ -124,7 +124,10 @@ function EditAdPageInner() {
       setTotalAmount(ad.quantity || ad.availableQuantity || "");
       setMinOrder(ad.minQuantity || "");
       setMaxOrder(ad.maxQuantity || "");
-      setPaymentWindow(String(ad.paymentDuration || "15"));
+      setPaymentWindow((() => {
+        const d = String(ad.paymentDuration || "15");
+        return d === "1" ? "60" : d;
+      })());
       setRemarks(ad.remark || "");
       setAutoReply(ad.autoReply || "");
       if (ad.paymentMethod) {
@@ -363,9 +366,11 @@ function EditAdPageInner() {
               value={paymentWindow}
               onChange={(v) => setPaymentWindow(v || "15")}
               data={[
+                { value: "5", label: "5 Minutes" },
                 { value: "15", label: "15 Minutes" },
                 { value: "30", label: "30 Minutes" },
                 { value: "45", label: "45 Minutes" },
+                { value: "60", label: "1 Hour" },
               ]}
               classNames={{ label: labelClass, input: selectClass, dropdown: dropdownClass, option: optionClass }}
             />
