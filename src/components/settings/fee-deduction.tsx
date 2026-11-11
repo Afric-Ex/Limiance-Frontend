@@ -6,6 +6,7 @@ import { MdOutlineClose, MdOutlineAccountBalanceWallet } from "react-icons/md";
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
+import { buildSettingsPayload } from "@/src/lib/user-settings";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 
@@ -59,7 +60,7 @@ export const FeeDeduction = () => {
 
   const { mutate: saveFeeDeductions, isPending } = useMutation({
     mutationFn: (): Promise<any> =>
-      userService.updateSettings({ tradeFeeDeductions }),
+      userService.updateSettings(buildSettingsPayload(settingsData, { tradeFeeDeductions })),
     onSuccess: () => {
       successNotification("Fee deduction settings updated");
       queryClient.invalidateQueries({ queryKey: userKeys.settings });

@@ -6,6 +6,7 @@ import { MdOutlineClose, MdOutlineSwapHoriz } from "react-icons/md";
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
+import { buildSettingsPayload } from "@/src/lib/user-settings";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 
@@ -49,7 +50,7 @@ export const TransactionNotifications = () => {
 
   const { mutate: saveNotifications, isPending } = useMutation({
     mutationFn: (): Promise<any> =>
-      userService.updateSettings({ transactionNotifications }),
+      userService.updateSettings(buildSettingsPayload(settingsData, { transactionNotifications })),
     onSuccess: () => {
       successNotification("Transaction notifications updated");
       queryClient.invalidateQueries({ queryKey: userKeys.settings });

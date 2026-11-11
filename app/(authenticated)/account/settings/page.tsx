@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
+import { buildSettingsPayload } from "@/src/lib/user-settings";
 import { api } from "@/src/lib/axios";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -125,13 +126,9 @@ function SettingsPageInner() {
   // Seed from API
   useEffect(() => {
     if (!settings) return;
-    if (settings.theme) setTheme(settings.theme);
-    if (settings.currency) setCurrency(settings.currency);
     if (settings.language) setLanguage(settings.language);
     if (settings.timezone) setTimezone(settings.timezone);
     prevValuesRef.current = {
-      theme: settings.theme ?? "dark",
-      currency: settings.currency ?? "USD",
       language: settings.language ?? "en",
       timezone: settings.timezone ?? "UTC",
     };
@@ -157,54 +154,57 @@ function SettingsPageInner() {
       errorMessageHandler(e);
       setSaveStatus("error");
       // revert to previous values
-      setTheme(prevValuesRef.current.theme ?? "dark");
-      setCurrency(prevValuesRef.current.currency ?? "USD");
       setLanguage(prevValuesRef.current.language ?? "en");
       setTimezone(prevValuesRef.current.timezone ?? "UTC");
     },
   });
 
-  const debouncedSave = useCallback((data: Record<string, any>) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    setSaveStatus("saving");
-    debounceRef.current = setTimeout(() => {
-      saveSettings(data);
-      setTimeout(() => setSaveStatus("idle"), 2500);
-    }, 500);
-  }, [saveSettings]);
+  const debouncedSave = useCallback(
+    (patch: Record<string, any>) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      setSaveStatus("saving");
+      debounceRef.current = setTimeout(() => {
+        saveSettings(buildSettingsPayload(settings, patch));
+        setTimeout(() => setSaveStatus("idle"), 2500);
+      }, 500);
+    },
+    [saveSettings, settings]
+  );
 
+  // Theme and display currency are local presentation preferences; the backend
+  // settings contract does not include them, so they are not persisted.
   const handleThemeChange = (val: "dark" | "light") => {
     setTheme(val);
-    debouncedSave({ theme: val, currency, language, timezone });
   };
 
   const handleCurrencyChange = (val: string) => {
     setCurrency(val);
-    debouncedSave({ theme, currency: val, language, timezone });
   };
 
   const handleLanguageChange = (val: string) => {
     setLanguage(val);
-    debouncedSave({ theme, currency, language: val, timezone });
+    debouncedSave({ language: val });
   };
 
   const handleTimezoneChange = (val: string) => {
     setTimezone(val);
     setTzDropOpen(false);
     setTzSearch("");
-    debouncedSave({ theme, currency, language, timezone: val });
+    debouncedSave({ timezone: val });
   };
 
   const togglePreference = (group: string, key: string, enabled: boolean) => {
     setSaveStatus("saving");
-    const currentGroup = settings?.[group as keyof typeof settings];
+    const currentGroup = (settings as any)?.[group];
     if (!currentGroup || typeof currentGroup !== "object") return;
-    saveSettings({
-      [group]: {
-        ...currentGroup,
-        [key]: !enabled,
-      },
-    });
+    saveSettings(
+      buildSettingsPayload(settings, {
+        [group]: {
+          ...currentGroup,
+          [key]: !enabled,
+        },
+      } as any)
+    );
   };
 
   const filteredTz = (timezones ?? []).filter((tz: any) =>

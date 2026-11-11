@@ -4,8 +4,9 @@ import { Loader, Radio, RadioGroup } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { ModalClose } from "../icons/modal-close";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
+import { buildSettingsPayload } from "@/src/lib/user-settings";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 
@@ -25,9 +26,15 @@ export const EditTimeZone = ({ initialTimezone }: { initialTimezone?: string }) 
   const [selected, setSelected] = useState(initialTimezone || "Last 24 hours");
   const queryClient = useQueryClient();
 
+  const { data: settingsData } = useQuery({
+    queryKey: userKeys.settings,
+    queryFn: () => userService.getSettings(),
+    select: (res: any) => res.data ?? res,
+  });
+
   const { mutate: saveTimezone, isPending } = useMutation({
     mutationFn: (): Promise<any> =>
-      userService.saveSettings({ timezone: selected }),
+      userService.saveSettings(buildSettingsPayload(settingsData, { timezone: selected })),
     onSuccess: () => {
       successNotification("Timezone updated");
       queryClient.invalidateQueries({ queryKey: userKeys.settings });
