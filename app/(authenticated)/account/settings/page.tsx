@@ -115,13 +115,47 @@ function SettingsPageInner() {
   });
 
   // Local form state
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [currency, setCurrency] = useState("USD");
   const [language, setLanguage] = useState("en");
   const [timezone, setTimezone] = useState("UTC");
   const [tzSearch, setTzSearch] = useState("");
   const [tzDropOpen, setTzDropOpen] = useState(false);
   const tzDropRef = useRef<HTMLDivElement>(null);
+
+  const tzValue = useCallback((tz: any): string => {
+    if (typeof tz === "string") return tz;
+    return tz.locatonName ?? tz.locationName ?? tz.value ?? tz.code ?? tz.name ?? "";
+  }, []);
+
+  const tzLabel = useCallback((tz: any): string => {
+    if (typeof tz === "string") return tz;
+    const name = tz.name ?? tz.locatonName ?? tz.locationName ?? tz.code ?? "";
+    const offset = tz.offsetString ? ` (${tz.offsetString})` : "";
+    return `${name}${offset}`.trim();
+  }, []);
+
+  // The backend only accepts IANA timezone identifiers (e.g. "Africa/Lagos").
+  // Older saves may contain a display label, so normalise whatever we hold
+  // before every PATCH to avoid the "timezone must be a valid timezone" error.
+  const normalizeTimezone = useCallback(
+    (value?: string | null): string => {
+      const raw = (value ?? "").trim();
+      if (!raw) return "UTC";
+      const match = (timezones ?? []).find((tz: any) => {
+        if (typeof tz === "string") return tz === raw;
+        return (
+          tzValue(tz) === raw ||
+          tz.locatonName === raw ||
+          tz.locationName === raw ||
+          tz.name === raw ||
+          tz.code === raw
+        );
+      });
+      if (match) return tzValue(match);
+      return raw.includes("/") ? raw : "UTC";
+    },
+    [timezones, tzValue]
+  );
 
   // Seed from API
   useEffect(() => {
@@ -163,20 +197,20 @@ function SettingsPageInner() {
     (patch: Record<string, any>) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       setSaveStatus("saving");
+      const payloadPatch = {
+        ...patch,
+        timezone: normalizeTimezone(patch.timezone ?? (settings as any)?.timezone),
+      };
       debounceRef.current = setTimeout(() => {
-        saveSettings(buildSettingsPayload(settings, patch));
+        saveSettings(buildSettingsPayload(settings, payloadPatch));
         setTimeout(() => setSaveStatus("idle"), 2500);
       }, 500);
     },
-    [saveSettings, settings]
+    [saveSettings, settings, normalizeTimezone]
   );
 
-  // Theme and display currency are local presentation preferences; the backend
-  // settings contract does not include them, so they are not persisted.
-  const handleThemeChange = (val: "dark" | "light") => {
-    setTheme(val);
-  };
-
+  // Display currency is a local presentation preference; the backend settings
+  // contract does not include it, so it is not persisted.
   const handleCurrencyChange = (val: string) => {
     setCurrency(val);
   };
@@ -194,24 +228,29 @@ function SettingsPageInner() {
   };
 
   const togglePreference = (group: string, key: string, enabled: boolean) => {
-    setSaveStatus("saving");
     const currentGroup = (settings as any)?.[group];
     if (!currentGroup || typeof currentGroup !== "object") return;
+    setSaveStatus("saving");
     saveSettings(
       buildSettingsPayload(settings, {
         [group]: {
           ...currentGroup,
           [key]: !enabled,
         },
+        timezone: normalizeTimezone((settings as any)?.timezone),
       } as any)
     );
   };
 
   const filteredTz = (timezones ?? []).filter((tz: any) =>
-    (typeof tz === "string" ? tz : tz.label ?? tz.name ?? tz.value ?? "").toLowerCase().includes(tzSearch.toLowerCase())
+    tzLabel(tz).toLowerCase().includes(tzSearch.toLowerCase())
   );
 
-  const tzLabel = (tz: any) => typeof tz === "string" ? tz : tz.label ?? tz.name ?? tz.value ?? "";
+  const selectedTimezoneLabel = (() => {
+    const normalized = normalizeTimezone(timezone);
+    const match = (timezones ?? []).find((tz: any) => tzValue(tz) === normalized);
+    return match ? tzLabel(match) : timezone;
+  })();
 
   const isLoading = settingsLoading;
   const isPreferenceEnabled = (group: string, key: string) =>
@@ -290,6 +329,8 @@ function SettingsPageInner() {
             </div>
 
             <div className="flex flex-col divide-y divide-white/[0.06]">
+              {/* Theme switching is disabled for now. */}
+              {/*
               <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-white/85">Theme</p>
@@ -314,6 +355,7 @@ function SettingsPageInner() {
                   ))}
                 </div>
               </div>
+              */}
 
               <label className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <span>
@@ -376,7 +418,7 @@ function SettingsPageInner() {
                   >
                     <span className="flex min-w-0 items-center gap-2 truncate">
                       <MdAccessTime className="shrink-0 text-white/40" size={16} />
-                      {timezone}
+                      {selectedTimezoneLabel}
                     </span>
                     <span className={clsx("text-white/40 transition-transform", tzDropOpen && "rotate-180")}>⌄</span>
                   </button>
@@ -399,15 +441,16 @@ function SettingsPageInner() {
                           <p className="px-3 py-4 text-center text-xs text-red-300">Unable to load timezones.</p>
                         ) : filteredTz.length ? (
                           filteredTz.slice(0, 100).map((entry: any) => {
+                            const value = tzValue(entry);
                             const label = tzLabel(entry);
                             return (
                               <button
-                                key={label}
+                                key={value || label}
                                 type="button"
-                                onClick={() => handleTimezoneChange(label)}
+                                onClick={() => handleTimezoneChange(value)}
                                 className={clsx(
                                   "w-full rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/[0.05]",
-                                  timezone === label && "bg-primary/10 text-primary"
+                                  timezone === value && "bg-primary/10 text-primary"
                                 )}
                               >
                                 {label}
@@ -462,8 +505,8 @@ function SettingsPageInner() {
                         >
                           <span
                             className={clsx(
-                              "absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform",
-                              enabled ? "translate-x-6" : "translate-x-1"
+                              "absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                              enabled ? "translate-x-5" : "translate-x-0"
                             )}
                           />
                         </button>
