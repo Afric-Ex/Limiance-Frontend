@@ -118,11 +118,11 @@ export const TradeReminder = () => {
           <span className={`text-[var(--text-body)] font-semibold ${isAllSelected ? "text-primary" : "text-white/70"}`}>
             {isAllSelected ? "Deselect All" : "Select All"}
           </span>
-          <div className={`w-11 h-6 rounded-full relative transition-all duration-200 ${
+          <div className={`w-11 h-6 shrink-0 rounded-full relative transition-colors duration-200 ${
             isAllSelected ? "bg-primary-strong" : "bg-white/[0.12]"
           }`}>
-            <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200 ${
-              isAllSelected ? "left-[22px]" : "left-0.5"
+            <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+              isAllSelected ? "translate-x-5" : "translate-x-0"
             }`} />
           </div>
         </button>
@@ -141,8 +141,8 @@ export const TradeReminder = () => {
                 }`}
               >
                 <span
-                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-200 ${
-                    isOn ? "left-[22px]" : "left-0.5"
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                    isOn ? "translate-x-5" : "translate-x-0"
                   }`}
                 />
               </button>

@@ -112,8 +112,8 @@ export const PriceAlert = () => {
                 }`}
               >
                 <span
-                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-200 ${
-                    isOn ? "left-[22px]" : "left-0.5"
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                    isOn ? "translate-x-5" : "translate-x-0"
                   }`}
                 />
               </button>
