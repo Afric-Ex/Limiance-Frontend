@@ -10,6 +10,13 @@ export type SpotOrderType = "buy_limit" | "sell_limit" | "buy_stop" | "sell_stop
 
 const compactSymbol = (base: string, quote: string) => `${base}${quote}`.toUpperCase();
 const slashSymbol = (base: string, quote: string) => `${base}/${quote}`.toUpperCase();
+// Favorites endpoints expect a `BASE-QUOTE` identifier (e.g. BTC-USDT), not a
+// slash-separated pair. Normalise whatever pair format the UI hands us.
+const favoriteSymbol = (symbol: string) =>
+  String(symbol ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s/_:]+/g, "-");
 const filterOrdersByPair = (orders: any[], pair?: string) => {
   if (!pair) return orders;
   const normalizedPair = pair.replace("/", "").toUpperCase();
@@ -62,12 +69,12 @@ export const tradingService = {
   },
 
   addFavorite: async (symbol: string) => {
-    const response = await api.post(`trading/favorites/${encodeURIComponent(symbol)}`);
+    const response = await api.post(`trading/favorites/${encodeURIComponent(favoriteSymbol(symbol))}`);
     return response.data;
   },
 
   removeFavorite: async (symbol: string) => {
-    const response = await api.delete(`trading/favorites/${encodeURIComponent(symbol)}`);
+    const response = await api.delete(`trading/favorites/${encodeURIComponent(favoriteSymbol(symbol))}`);
     return response.data;
   },
 
