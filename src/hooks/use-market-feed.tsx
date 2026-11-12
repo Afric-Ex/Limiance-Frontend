@@ -230,7 +230,10 @@ export const useMarketFeed = (
 
           setData((prev) => ({
             ...prev,
-            price: match?.markPrice ?? match?.last_price ?? match?.lastPrice ?? match?.price ?? match?.lastPrice ?? prev.price,
+            price: (() => {
+              const n = Number(match?.markPrice ?? match?.last_price ?? match?.lastPrice ?? match?.price);
+              return Number.isFinite(n) && n > 0 ? n : prev.price;
+            })(),
             change24h:
               match?.priceChange ??
               match?.price_change ??

@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Popover, PopoverDropdown, PopoverTarget, TextInput } from "@mantine/core";
 import { MdKeyboardArrowDown } from "react-icons/md";
+import { IoArrowDown, IoArrowUp } from "react-icons/io5";
 import { Search } from "@/src/components/icons/search";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { SidebarMenuButton } from "@/src/components/shared/sidebar-menu";
@@ -24,6 +25,8 @@ interface SpotPairHeaderProps {
   onSelectPair: (base: string, quote: string) => void;
   className?: string;
   currentPrice?: number | null;
+  // Futures: keep the arrow + red/green from the last real (6-decimal) price move.
+  showPriceArrow?: boolean;
 }
 
 // Quote assets that trade ~1:1 with USD, so "≈ price USD" is accurate for them.
@@ -66,11 +69,13 @@ export function SpotPairHeader({
   onSelectPair,
   className,
   currentPrice,
+  showPriceArrow = false,
 }: SpotPairHeaderProps) {
   const icons = useTokenIconMap();
   const names = useTokenNameMap();
 
   const [priceFlash, setPriceFlash] = useState<"up" | "down" | null>(null);
+  const [priceDir, setPriceDir] = useState<"up" | "down" | null>(null);
   const prevPriceRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -84,6 +89,7 @@ export function SpotPairHeader({
     const toFixed6 = (n: number) => Math.round(n * 1_000_000);
     if (toFixed6(next) === toFixed6(prev)) return;
     setPriceFlash(next > prev ? "up" : "down");
+    setPriceDir(next > prev ? "up" : "down");
     const t = setTimeout(() => setPriceFlash(null), 600);
     return () => clearTimeout(t);
   }, [currentPrice, feed.price]);
@@ -106,6 +112,7 @@ export function SpotPairHeader({
 
   const isUp = (pct ?? 0) >= 0;
   const tone = isUp ? "text-success-6" : "text-error-1";
+  const shownDir = showPriceArrow ? (priceFlash ?? priceDir) : priceFlash;
   const showUsd = price !== null && USD_PEGGED.has(quote.toUpperCase());
 
   return (
@@ -203,11 +210,14 @@ export function SpotPairHeader({
             <span
               className={clsx(
                 "text-xl font-bold leading-tight tabular-nums transition-colors duration-300",
-                priceFlash === "up" && "text-[#25AB42]",
-                priceFlash === "down" && "text-[#F6465D]",
-                priceFlash === null && tone
+                "flex items-center gap-1",
+                shownDir === "up" && "text-[#25AB42]",
+                shownDir === "down" && "text-[#F6465D]",
+                shownDir === null && tone
               )}
             >
+              {showPriceArrow && shownDir === "up" && <IoArrowUp size={16} />}
+              {showPriceArrow && shownDir === "down" && <IoArrowDown size={16} />}
               {fmt(price)}
             </span>
           ) : (
