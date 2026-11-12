@@ -116,5 +116,5 @@ export function useNotifications() {
     }
   }, [query.data, notifications, setNotifications]);
 
-  return { notifications, error: query.error, isLoading: query.isLoading };
+  return { notifications, error: query.error, isLoading: query.isLoading, hasData: query.data !== undefined };
 }
