@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { mono, sans } from "./fonts";
+import { useTranslations } from "next-intl";
 import { fmtPct, fmtPrice, useCta, useMovers, type Pair } from "./landing-data";
 
-const TABS = [["all", "All"], ["gainers", "Gainers"], ["losers", "Losers"]] as const;
+const TABS = [["all", "all"], ["gainers", "gainers"], ["losers", "losers"]] as const;
 type Tab = (typeof TABS)[number][0];
 
 /** Brief color on the price cell when a refreshed price differs from the last one. */
@@ -27,6 +28,7 @@ function Price({ value }: { value: number }) {
 }
 
 function Row({ p, href }: { p: Pair; href: string }) {
+  const t = useTranslations("Landing");
   const up = p.changePct >= 0;
   const [base, quote] = p.symbol.split("/");
   return (
@@ -43,13 +45,14 @@ function Row({ p, href }: { p: Pair; href: string }) {
       </td>
       <td className={`${mono.className} hidden py-3.5 text-right tabular-nums text-[#8A91A0] sm:table-cell`}>{p.prev !== null ? fmtPrice(p.prev) : "\u2014"}</td>
       <td className="py-3.5 pr-4 text-right">
-        <Link href={href} className="rounded-md border border-white/10 px-2.5 py-1.5 text-xs sm:px-3 text-[#E6E8EE] transition-colors group-hover:border-[#4D77F0] group-hover:text-white">Trade</Link>
+        <Link href={href} className="rounded-md border border-white/10 px-2.5 py-1.5 text-xs sm:px-3 text-[#E6E8EE] transition-colors group-hover:border-[#4D77F0] group-hover:text-white">{t("trade")}</Link>
       </td>
     </tr>
   );
 }
 
 export function MarketsTable() {
+  const t = useTranslations("Landing");
   const [tab, setTab] = useState<Tab>("all");
   const { data, isPending } = useMovers();
   const cta = useCta();
@@ -57,24 +60,24 @@ export function MarketsTable() {
 
   return (
     <div className={`${sans.className} overflow-hidden rounded-lg border border-white/[0.08] bg-[#10131A]`}>
-      <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3" role="tablist" aria-label="Market filter">
+      <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3" role="tablist" aria-label={t("marketFilter")}>
         <div className="flex gap-1">
           {TABS.map(([id, label]) => (
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-              className={`rounded-md px-3 py-1.5 text-sm transition-colors ${tab === id ? "bg-white/10 text-white" : "text-[#8A91A0] hover:text-white"}`}>{label}</button>
+              className={`rounded-md px-3 py-1.5 text-sm transition-colors ${tab === id ? "bg-white/10 text-white" : "text-[#8A91A0] hover:text-white"}`}>{t(label)}</button>
           ))}
         </div>
-        <span className="hidden text-xs text-[#8A91A0] sm:block">Refreshes every 15 seconds</span>
+        <span className="hidden text-xs text-[#8A91A0] sm:block">{t("refreshesEvery")}</span>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-[#8A91A0]">
-              <th className="py-3 pl-4 text-left font-normal">Pair</th>
-              <th className="py-3 text-right font-normal">Last price</th>
-              <th className="py-3 text-right font-normal">24h change</th>
-              <th className="hidden py-3 text-right font-normal sm:table-cell">Price 24h ago</th>
+              <th className="py-3 pl-4 text-left font-normal">{t("pair")}</th>
+              <th className="py-3 text-right font-normal">{t("lastPrice")}</th>
+              <th className="py-3 text-right font-normal">{t("change24h")}</th>
+              <th className="hidden py-3 text-right font-normal sm:table-cell">{t("price24hAgo")}</th>
               <th className="py-3 pr-4" />
             </tr>
           </thead>
@@ -89,7 +92,7 @@ export function MarketsTable() {
 
       {!isPending && rows.length === 0 && (
         <p className="border-t border-white/[0.06] px-4 py-10 text-center text-sm text-[#8A91A0]">
-          {data ? "No pairs in this view right now." : "Market data isn\u2019t available right now. Create an account to see every market."}
+          {data ? t("noPairs") : t("marketUnavailable")}
         </p>
       )}
     </div>

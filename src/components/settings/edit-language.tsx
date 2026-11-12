@@ -1,62 +1,32 @@
 "use client";
 
-import { Loader, Radio, RadioGroup } from "@mantine/core";
+import { Radio, RadioGroup } from "@mantine/core";
 import { modals } from "@mantine/modals";
+import { useLocale, useTranslations } from "next-intl";
 import { ModalClose } from "../icons/modal-close";
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { userKeys, userService } from "@/src/services/user";
-import { buildSettingsPayload } from "@/src/lib/user-settings";
-import { successNotification } from "@/src/lib/notification-handler";
-import { errorMessageHandler } from "@/src/lib/error-handler";
-
-const languages = [
-  "English",
-  "Español",
-  "Hungarian",
-  "英国人的",
-  "Slovenčina",
-  "Português",
-  "Dansk",
-  "Sinhala",
-  "Português (Brasil)",
-];
+import { useLocaleSwitcher } from "@/src/hooks/use-locale-switcher";
+import { locales, localeNames, isLocale } from "@/i18n/routing";
 
 export const EditLanguage = ({ initialLanguage }: { initialLanguage?: string }) => {
-  const [selected, setSelected] = useState(initialLanguage || "English");
-  const queryClient = useQueryClient();
-
-  const { data: settingsData } = useQuery({
-    queryKey: userKeys.settings,
-    queryFn: () => userService.getSettings(),
-    select: (res: any) => res.data ?? res,
-  });
-
-  const { mutate: saveLanguage, isPending } = useMutation({
-    mutationFn: (): Promise<any> =>
-      userService.saveSettings(buildSettingsPayload(settingsData, { language: selected })),
-    onSuccess: () => {
-      successNotification("Language updated");
-      queryClient.invalidateQueries({ queryKey: userKeys.settings });
-      modals.closeAll();
-    },
-    onError: (e: any) => errorMessageHandler(e),
-  });
+  const tc = useTranslations("Common");
+  const locale = useLocale();
+  const { switchLocale } = useLocaleSwitcher();
+  const selected = isLocale(initialLanguage) ? initialLanguage : locale;
 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
-        <h4 className="text-2xl font-bold">Language</h4>
+        <h4 className="text-2xl font-bold">{tc("language")}</h4>
         <ModalClose onClick={() => modals.closeAll()} />
       </div>
       <div className="flex flex-col gap-16">
-        <RadioGroup value={selected} onChange={setSelected}>
+        <RadioGroup value={selected} onChange={(value) => value && switchLocale(value)}>
           <div className="flex flex-col gap-6">
-            {languages.map((item) => (
+            {locales.map((item) => (
               <Radio
                 key={item}
                 labelPosition="right"
-                label={item}
+                label={localeNames[item]}
                 value={item}
               />
             ))}
@@ -67,15 +37,13 @@ export const EditLanguage = ({ initialLanguage }: { initialLanguage?: string }) 
             onClick={() => modals.closeAll()}
             className="bg-gray-9 rounded-xl py-18px text-base font-medium"
           >
-            Cancel
+            {tc("cancel")}
           </button>
           <button
-            onClick={() => saveLanguage()}
-            disabled={isPending}
-            className="bg-primary rounded-xl py-18px text-base font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            onClick={() => modals.closeAll()}
+            className="bg-primary rounded-xl py-18px text-base font-medium"
           >
-            {isPending && <Loader size="xs" color="white" />}
-            Confirm
+            {tc("done")}
           </button>
         </div>
       </div>

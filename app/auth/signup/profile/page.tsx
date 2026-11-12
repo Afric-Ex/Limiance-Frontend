@@ -5,8 +5,10 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { SignUpProfilePageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 import { AuthMobileBrand } from "@/src/components/shared/auth-mobile-brand";
+import { getTranslations } from "next-intl/server";
 
-function Profile() {
+async function Profile() {
+  const t = await getTranslations("Auth");
   return (
     <main className="flex items-center flex-1 overflow-auto px-4 justify-center py-10 relative bg-landing bg-cover bg-no-repeat">
       <HeroDecorations />
@@ -14,7 +16,7 @@ function Profile() {
         <AuthMobileBrand />
         <Image
           src={SignupImage}
-          alt="Profile image"
+          alt={t("personalDetailsHint")}
           className="max-w-429px sm:inline-block hidden w-full"
           width={429}
           height={523}
@@ -22,9 +24,9 @@ function Profile() {
         <div className="flex flex-col max-w-460px w-full max-sm:mx-auto sm:ml-auto gap-8 animate-fade-in-up">
           <div className="flex flex-col gap-2">
             <h2 className="md:text-display sm:text-4xl text-3xl font-bold tracking-tight">
-              Welcome to <span className="text-primary">Limiance</span>
+              {t("welcomeTo")} <span className="text-primary">Limiance</span>
             </h2>
-            <p className="sm:text-lg text-base text-white/50 font-medium">Please enter your personal details</p>
+            <p className="sm:text-lg text-base text-white/50 font-medium">{t("personalDetailsHint")}</p>
           </div>
           <RegisterForm />
         </div>

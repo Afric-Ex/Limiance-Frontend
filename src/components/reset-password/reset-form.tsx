@@ -3,6 +3,7 @@
 import { Button, PasswordInput } from "@mantine/core";
 import { useAuth } from "@/src/hooks/queries/use-auth";
 import { Info } from "@/src/components/icons/info";
+import { useTranslations } from "next-intl";
 
 const inputStyles = {
   input:
@@ -11,6 +12,7 @@ const inputStyles = {
 };
 
 export const ResetPasswordForm = () => {
+  const t = useTranslations("Auth");
   const { resetForm, resetLoading, handleResetPassword } = useAuth();
   return (
     <div className="flex flex-col gap-4">
@@ -20,21 +22,20 @@ export const ResetPasswordForm = () => {
             <div className="flex flex-col gap-4">
               <PasswordInput
                 classNames={inputStyles}
-                label="Password"
-                placeholder="Enter your password"
+                label={t("password")}
+                placeholder={t("passwordPlaceholder")}
                 {...resetForm.getInputProps("password")}
               />
               <PasswordInput
                 classNames={inputStyles}
-                label="Confirm Password"
-                placeholder="Enter your password"
+                label={t("confirmPassword")}
+                placeholder={t("confirmPasswordPlaceholder")}
                 {...resetForm.getInputProps("confirmPassword")}
               />
               <div className="text-warning-1 bg-gray-47 rounded-xl px-4 py-3 text-xs leading-relaxed flex items-start gap-2">
                 <Info className="shrink-0 mt-0.5" />
                 <span>
-                  For your security, withdrawals, P2P selling, and payment
-                  services may be disabled for 24 hours after a password change.
+                  {t("resetSecurityWarning")}
                 </span>
               </div>
             </div>
@@ -45,7 +46,7 @@ export const ResetPasswordForm = () => {
               fullWidth
               loading={resetLoading}
             >
-              Reset Password
+              {t("resetPassword")}
             </Button>
           </form>
         </div>

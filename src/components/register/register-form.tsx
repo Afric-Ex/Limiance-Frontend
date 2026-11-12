@@ -13,6 +13,7 @@ import { Google } from "../icons/google";
 import { useAuth } from "@/src/hooks/queries/use-auth";
 import { useAuthStore } from "@/src/stores/auth-store";
 import { useGoogleLogin } from "@react-oauth/google";
+import { useTranslations } from "next-intl";
 
 const inputStyles = {
   input:
@@ -22,6 +23,7 @@ const inputStyles = {
 };
 
 export const RegisterForm = () => {
+  const t = useTranslations("Auth");
   const [isAgreed, setIsAgreed] = useState(false);
   const { handleRegister, registerLoading, registerForm: form } = useAuth();
   const storeEmail = useAuthStore((state) => state.email);
@@ -53,45 +55,45 @@ export const RegisterForm = () => {
           <div className="flex flex-col gap-5">
             <TextInput
               classNames={inputStyles}
-              label="First Name"
-              placeholder="Enter your first name"
+              label={t("firstName")}
+              placeholder={t("firstNamePlaceholder")}
               {...form.getInputProps("firstName")}
             />
             <TextInput
               classNames={inputStyles}
-              label="Last Name"
-              placeholder="Enter your last name"
+              label={t("lastName")}
+              placeholder={t("lastNamePlaceholder")}
               {...form.getInputProps("lastName")}
             />
             <TextInput
               classNames={inputStyles}
-              label="Username"
-              placeholder="Enter your username"
+              label={t("username")}
+              placeholder={t("usernamePlaceholder")}
               {...form.getInputProps("username")}
             />
             <TextInput
               classNames={inputStyles}
-              label="Phone"
-              placeholder="e.g. 2348012345678 (no + prefix)"
+              label={t("phone")}
+              placeholder={t("phonePlaceholder")}
               {...form.getInputProps("phone")}
             />
             <TextInput
               classNames={inputStyles}
-              label="Email"
+              label={t("email")}
               type="email"
-              placeholder="Email"
+              placeholder={t("emailPlaceholder")}
               {...form.getInputProps("email")}
             />
             <PasswordInput
               classNames={inputStyles}
-              label="Password"
-              placeholder="Enter your password"
+              label={t("password")}
+              placeholder={t("passwordPlaceholder")}
               {...form.getInputProps("password")}
             />
             <PasswordInput
               classNames={inputStyles}
-              label="Confirm Password"
-              placeholder="Confirm your password"
+              label={t("confirmPassword")}
+              placeholder={t("confirmPasswordPlaceholder")}
               {...form.getInputProps("confirmPassword")}
             />
             <div className="flex items-start gap-3 mt-2">
@@ -104,13 +106,13 @@ export const RegisterForm = () => {
                 }}
               />
               <span className="text-sm font-medium text-white/70 leading-relaxed">
-                By creating an account, I agree to Limiance&apos;s{" "}
+                {t("agreePrefix")}{" "}
                 <Link href="#" className="text-primary hover:text-primary/80 transition-colors">
-                  User Agreement, Terms of Service
+                  {t("userAgreement")}, {t("termsOfService")}
                 </Link>{" "}
-                and{" "}
+                {t("and")}{" "}
                 <Link href="#" className="text-primary hover:text-primary/80 transition-colors">
-                  Privacy Policy
+                  {t("privacyPolicy")}
                 </Link>
               </span>
             </div>
@@ -122,19 +124,19 @@ export const RegisterForm = () => {
             fullWidth
             loading={registerLoading}
           >
-            Register
+            {t("register")}
           </Button>
         </div>
         
         <span className="self-center text-sm font-medium text-white/50 mt-2">
-          Already have an account?{" "}
+          {t("alreadyHaveAccount")}{" "}
           <Link href="/auth/login" className="text-primary font-bold hover:text-primary/80 transition-colors ml-1">
-            Log In
+            {t("login")}
           </Link>
         </span>
         
         <Divider
-          label={<span className="text-white/40 text-xs uppercase tracking-widest font-semibold px-2">Or continue with</span>}
+          label={<span className="text-white/40 text-xs uppercase tracking-widest font-semibold px-2">{t("orContinueWith")}</span>}
           classNames={{
             label: "before:!border-t-white/[0.08] after:!border-t-white/[0.08]",
             root: "!my-2"
@@ -149,7 +151,7 @@ export const RegisterForm = () => {
         className="flex items-center justify-center gap-3 w-full h-[55px] bg-[#181a20] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12] transition-colors rounded-xl"
       >
         <Google />
-        <span className="text-white/80 font-bold text-sm">Log In with Google</span>
+        <span className="text-white/80 font-bold text-sm">{t("logInWithGoogle")}</span>
       </button>
     </form>
   );

@@ -6,8 +6,10 @@ import { auth } from "@/src/services/auth";
 import { Button, LoadingOverlay, PinInput } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
 import { maskIdentifier } from "@/src/utils/mask-identifier";
+import { useTranslations } from "next-intl";
 
 export const VerifyForm = () => {
+  const t = useTranslations("Auth");
   const { handleVerify, otpForm, emailOrPhone, verifyLoading } = useAuth();
 
   const { mutate: forgotPassword, isPending: forgotLoading } = useMutation({
@@ -16,7 +18,7 @@ export const VerifyForm = () => {
         email: emailOrPhone as string,
       }),
     onSuccess: () => {
-      successNotification("OTP resent");
+      successNotification(t("otpResent"));
     },
   });
 
@@ -24,11 +26,11 @@ export const VerifyForm = () => {
     <form onSubmit={handleVerify} className="flex flex-col gap-10">
       <div className="flex flex-col gap-30px">
         <p className="sm:text-base text-sm">
-          A 6-digit verification code has just been sent to{" "}
+          {t("otpSentTo")}{" "}
           <span className="text-primary">{maskIdentifier(emailOrPhone ?? "")}</span>
         </p>
         <div className="flex flex-col gap-6">
-          <span className="font-medium sm:text-base text-sm">Enter Verification Code</span>
+          <span className="font-medium sm:text-base text-sm">{t("enterVerificationCode")}</span>
           <PinInput
             styles={{
               root: {
@@ -65,15 +67,15 @@ export const VerifyForm = () => {
           fullWidth
           loading={verifyLoading}
         >
-          Verify
+          {t("verify")}
         </Button>
         <span className="self-center">
-          Didn&apos;t receive email?{" "}
+          {t("didntReceiveEmail")}{" "}
           <span
             onClick={() => forgotPassword()}
             className="text-primary hover:text-primary/50 cursor-pointer underline font-bold"
           >
-            Resend
+            {t("resend")}
           </span>
         </span>
       </div>

@@ -5,8 +5,10 @@ import Image from "next/image";
 import { useAuthStore } from "@/src/stores/auth-store";
 import { useAuth } from "@/src/hooks/queries/use-auth";
 import { maskIdentifier } from "@/src/utils/mask-identifier";
+import { useTranslations } from "next-intl";
 
 export const ResetModal = () => {
+  const t = useTranslations("Auth");
   const email = useAuthStore((state) => state.email);
   const { handleForgotPassword, forgotLoading } = useAuth();
 
@@ -27,10 +29,10 @@ export const ResetModal = () => {
 
       <div className="flex items-center flex-col gap-8 w-full px-2 mt-8">
         <div className="flex flex-col items-center gap-3 text-center">
-          <h2 className="text-heading tracking-tight font-bold text-white">Reset Password?</h2>
+          <h2 className="text-heading tracking-tight font-bold text-white">{t("resetPasswordQuestion")}</h2>
           <div className="text-center text-white/50 text-base max-w-[380px] font-medium leading-relaxed">
-            Hi, <span className="text-primary">{maskIdentifier(email)}</span>.<br/><br/>
-            For your security, withdrawals, P2P selling, and payment services may be disabled for 24 hours after a password change.
+            {t("hello")}, <span className="text-primary">{maskIdentifier(email)}</span>.<br/><br/>
+            {t("resetSecurityWarning")}
           </div>
         </div>
 
@@ -42,14 +44,14 @@ export const ResetModal = () => {
             onClick={() => modals.closeAll()}
             disabled={forgotLoading}
           >
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             className="flex-1 !h-[55px] !rounded-xl !bg-primary hover:!bg-primary/90 hover:!shadow-[0_0_16px_rgba(77,119,240,0.3)] !text-white !font-bold !transition-all active:!scale-[0.98]"
             onClick={handleForgotPassword}
             disabled={forgotLoading}
           >
-            {forgotLoading ? <Loader size={18} color="white" /> : "Proceed"}
+            {forgotLoading ? <Loader size={18} color="white" /> : t("proceed")}
           </Button>
         </div>
       </div>

@@ -19,6 +19,9 @@ import clsx from "clsx";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountSettingsSkeleton } from "@/src/components/skeletons/account";
 import { AccountPageHeader } from "@/src/components/settings/account-page-header";
+import { useLocale, useTranslations } from "next-intl";
+import { useLocaleSwitcher } from "@/src/hooks/use-locale-switcher";
+import { locales, localeNames, isLocale } from "@/i18n/routing";
 
 const CURRENCIES = ["USD", "EUR", "GBP", "NGN", "USDT"];
 
@@ -27,59 +30,62 @@ type SaveStatus = "idle" | "saving" | "saved" | "error";
 const preferenceGroups = [
   {
     key: "notificationPreference",
-    title: "Account notifications",
-    description: "Account activity and important platform updates.",
+    titleKey: "accountNotifications",
+    descriptionKey: "accountActivityDetail",
     options: [
-      { key: "activities", label: "Account activity", detail: "Deposits, withdrawals and account events" },
-      { key: "tradeNotification", label: "Trade updates", detail: "Order fills and P2P activity" },
-      { key: "news", label: "Product news", detail: "Announcements and new listings" },
-      { key: "systemMessages", label: "System messages", detail: "Security alerts and account notices" },
+      { key: "activities", labelKey: "accountActivity", detailKey: "accountActivityDetail" },
+      { key: "tradeNotification", labelKey: "tradeUpdates", detailKey: "tradeUpdatesDetail" },
+      { key: "news", labelKey: "productNews", detailKey: "productNewsDetail" },
+      { key: "systemMessages", labelKey: "systemMessages", detailKey: "systemMessagesDetail" },
     ],
   },
   {
     key: "priceAlerts",
-    title: "Price alerts",
-    description: "Control price notifications across your watchlist.",
+    titleKey: "priceAlerts",
+    descriptionKey: "priceAlerts",
     options: [
-      { key: "priceOn", label: "Price alerts", detail: "Notify me when an alert is triggered" },
-      { key: "notificationOn", label: "Alert notifications", detail: "Show price alerts in the app" },
+      { key: "priceOn", labelKey: "priceAlerts", detailKey: "priceAlerts" },
+      { key: "notificationOn", labelKey: "notifications", detailKey: "notifications" },
     ],
   },
   {
     key: "transactionNotifications",
-    title: "Trading notifications",
-    description: "Choose which market activity notifications are enabled.",
+    titleKey: "tradeNotifications",
+    descriptionKey: "tradeNotifications",
     options: [
-      { key: "spotTradingNotification", label: "Spot trading", detail: "Spot order activity" },
-      { key: "spotNotificationSound", label: "Spot sounds", detail: "Play sounds for spot activity" },
-      { key: "futuresTradingNotification", label: "Futures trading", detail: "Futures order activity" },
-      { key: "futuresNotificationSound", label: "Futures sounds", detail: "Play sounds for futures activity" },
+      { key: "spotTradingNotification", labelKey: "spotTrading", detailKey: "spotTradingDetail" },
+      { key: "spotNotificationSound", labelKey: "spotSounds", detailKey: "spotSoundsDetail" },
+      { key: "futuresTradingNotification", labelKey: "futuresTrading", detailKey: "futuresTradingDetail" },
+      { key: "futuresNotificationSound", labelKey: "futuresSounds", detailKey: "futuresSoundsDetail" },
     ],
   },
   {
     key: "tradeOrdersNotificationReminder",
-    title: "Order confirmations",
-    description: "Get a reminder before submitting selected order types.",
+    titleKey: "orderConfirmations",
+    descriptionKey: "orderConfirmations",
     options: [
-      { key: "limitOrder", label: "Limit orders" },
-      { key: "marketOrder", label: "Market orders" },
-      { key: "stopOrder", label: "Stop orders" },
-      { key: "autoBorrowRepayMargin", label: "Margin borrow and repay" },
+      { key: "limitOrder", labelKey: "limitOrders" },
+      { key: "marketOrder", labelKey: "marketOrders" },
+      { key: "stopOrder", labelKey: "stopOrders" },
+      { key: "autoBorrowRepayMargin", labelKey: "autoBorrowRepayMargin" },
     ],
   },
   {
     key: "tradeFeeDeductions",
-    title: "Fee deductions",
-    description: "Choose whether to use LIM to pay eligible trading fees.",
+    titleKey: "feeDeductions",
+    descriptionKey: "feeDeductions",
     options: [
-      { key: "useLIMToPayFees", label: "Spot trading fees" },
-      { key: "useLIMToPayMarginFees", label: "Margin fees" },
-      { key: "useLIMToPayFuturesFees", label: "Futures fees" },
+      { key: "useLIMToPayFees", labelKey: "spotFees" },
+      { key: "useLIMToPayMarginFees", labelKey: "marginFees" },
+      { key: "useLIMToPayFuturesFees", labelKey: "futuresFees" },
     ],
   },
 ] as const;
 
 function SettingsPageInner() {
+  const t = useTranslations("Settings");
+  const locale = useLocale();
+  const { switchLocale } = useLocaleSwitcher();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevValuesRef = useRef<Record<string, any>>({});
@@ -96,15 +102,6 @@ function SettingsPageInner() {
     select: (res: any) => res.data ?? res,
   });
 
-  // Load languages
-  const { data: languages, isLoading: langsLoading, isError: langsError } = useQuery({
-    queryKey: ["languages"],
-    queryFn: async () => {
-      const res = await api.get("/languages");
-      return res.data?.data ?? res.data ?? [];
-    },
-  });
-
   // Load timezones
   const { data: timezones, isLoading: tzsLoading, isError: tzsError } = useQuery({
     queryKey: ["timezones"],
@@ -116,7 +113,7 @@ function SettingsPageInner() {
 
   // Local form state
   const [currency, setCurrency] = useState("USD");
-  const [language, setLanguage] = useState("en");
+  const [language, setLanguage] = useState(locale);
   const [timezone, setTimezone] = useState("UTC");
   const [tzSearch, setTzSearch] = useState("");
   const [tzDropOpen, setTzDropOpen] = useState(false);
@@ -160,7 +157,7 @@ function SettingsPageInner() {
   // Seed from API
   useEffect(() => {
     if (!settings) return;
-    if (settings.language) setLanguage(settings.language);
+    if (isLocale(settings.language)) setLanguage(settings.language);
     if (settings.timezone) setTimezone(settings.timezone);
     prevValuesRef.current = {
       language: settings.language ?? "en",
@@ -217,7 +214,7 @@ function SettingsPageInner() {
 
   const handleLanguageChange = (val: string) => {
     setLanguage(val);
-    debouncedSave({ language: val });
+    if (isLocale(val)) switchLocale(val);
   };
 
   const handleTimezoneChange = (val: string) => {
@@ -262,7 +259,7 @@ function SettingsPageInner() {
         title="Account settings"
         description="Personalize how Limiance looks, keeps you informed, and displays your trading activity."
         icon={<MdOutlineSettings size={23} />}
-        eyebrow="Preferences"
+        eyebrow={t("preferencesEyebrow")}
         action={
           saveStatus !== "idle" ? (
             <span
@@ -321,7 +318,7 @@ function SettingsPageInner() {
                 <MdOutlinePalette size={20} />
               </span>
               <div>
-                <h2 className="text-base font-semibold text-white">Display & region</h2>
+                <h2 className="text-base font-semibold text-white">{t("displayRegion")}</h2>
                 <p className="mt-1 text-xs leading-5 text-white/45">
                   Set the appearance and regional formats used across your account.
                 </p>
@@ -360,7 +357,7 @@ function SettingsPageInner() {
               <label className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <span>
                   <span className="block text-sm font-semibold text-white/85">Display currency</span>
-                  <span className="mt-1 block text-xs text-white/40">Currency used to show prices and balances.</span>
+                  <span className="mt-1 block text-xs text-white/40">{t("displayCurrencyDesc")}</span>
                 </span>
                 <select
                   value={currency}
@@ -376,38 +373,23 @@ function SettingsPageInner() {
               <label className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <span>
                   <span className="block text-sm font-semibold text-white/85">Language</span>
-                  <span className="mt-1 block text-xs text-white/40">Language used across the interface.</span>
+                  <span className="mt-1 block text-xs text-white/40">{t("languageInterface")}</span>
                 </span>
                 <select
                   value={language}
                   onChange={(event) => handleLanguageChange(event.target.value)}
-                  disabled={langsLoading || langsError}
                   className="min-h-10 w-full rounded-xl border border-white/[0.08] bg-elevated px-3 text-sm text-white outline-none transition-colors focus:border-primary/60 disabled:cursor-not-allowed disabled:opacity-50 sm:w-40"
                 >
-                  {langsLoading ? (
-                    <option value={language}>Loading languages…</option>
-                  ) : Array.isArray(languages) && languages.length > 0 ? (
-                    languages.map((entry: any) => {
-                      const value = typeof entry === "string" ? entry : entry.code ?? entry.value ?? entry.id;
-                      const label = typeof entry === "string" ? entry : entry.name ?? entry.label ?? value;
-                      return <option key={value} value={value}>{label}</option>;
-                    })
-                  ) : (
-                    <>
-                      <option value="en">English</option>
-                      <option value="fr">French</option>
-                      <option value="es">Spanish</option>
-                      <option value="pt">Portuguese</option>
-                      <option value="zh">Chinese</option>
-                    </>
-                  )}
+                  {locales.map((code) => (
+                    <option key={code} value={code}>{localeNames[code]}</option>
+                  ))}
                 </select>
               </label>
 
               <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-white/85">Timezone</p>
-                  <p className="mt-1 text-xs text-white/40">Timezone used to display dates and times.</p>
+                  <p className="mt-1 text-xs text-white/40">{t("timezoneDesc")}</p>
                 </div>
                 <div className="relative w-full sm:w-64" ref={tzDropRef}>
                   <button
@@ -438,7 +420,7 @@ function SettingsPageInner() {
                         {tzsLoading ? (
                           <div className="flex justify-center py-5"><Loader size="sm" /></div>
                         ) : tzsError ? (
-                          <p className="px-3 py-4 text-center text-xs text-red-300">Unable to load timezones.</p>
+                          <p className="px-3 py-4 text-center text-xs text-red-300">{t("unableTimezones")}</p>
                         ) : filteredTz.length ? (
                           filteredTz.slice(0, 100).map((entry: any) => {
                             const value = tzValue(entry);
@@ -458,7 +440,7 @@ function SettingsPageInner() {
                             );
                           })
                         ) : (
-                          <p className="px-3 py-4 text-center text-xs text-white/40">No matching timezones.</p>
+                          <p className="px-3 py-4 text-center text-xs text-white/40">{t("noTimezones")}</p>
                         )}
                       </div>
                     </div>
@@ -471,15 +453,15 @@ function SettingsPageInner() {
           <section className="flex flex-col gap-4">
             <div className="flex items-center gap-2 px-1">
               <MdOutlineNotificationsActive className="text-primary" size={18} />
-              <h2 className="text-sm font-semibold text-white/85">Notifications & trading</h2>
+              <h2 className="text-sm font-semibold text-white/85">{t("notificationsTrading")}</h2>
               <span className="h-px flex-1 bg-white/[0.07]" />
             </div>
 
             {preferenceGroups.map((group) => (
               <article key={group.key} className="account-card !p-0">
                 <div className="border-b border-white/[0.06] px-4 py-4 sm:px-5">
-                  <h3 className="text-sm font-semibold text-white">{group.title}</h3>
-                  <p className="mt-1 text-xs leading-5 text-white/40">{group.description}</p>
+                  <h3 className="text-sm font-semibold text-white">{t(group.titleKey as "accountNotifications")}</h3>
+                  <p className="mt-1 text-xs leading-5 text-white/40">{t(group.descriptionKey as "accountActivityDetail")}</p>
                 </div>
                 <div className="divide-y divide-white/[0.05] px-4 sm:px-5">
                   {group.options.map((option) => {
@@ -487,7 +469,7 @@ function SettingsPageInner() {
                     return (
                       <div key={option.key} className="flex items-center justify-between gap-4 py-3">
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-white/80">{option.label}</p>
+                          <p className="text-sm font-medium text-white/80">{t(option.labelKey as "accountActivity")}</p>
                           {"detail" in option && (
                             <p className="mt-0.5 text-xs text-white/40">{option.detail}</p>
                           )}
@@ -496,7 +478,7 @@ function SettingsPageInner() {
                           type="button"
                           role="switch"
                           aria-checked={enabled}
-                          aria-label={`${option.label} ${enabled ? "enabled" : "disabled"}`}
+                          aria-label={`${t(option.labelKey as "accountActivity")} ${enabled ? t("enabled") : t("disabled")}`}
                           onClick={() => togglePreference(group.key, option.key, enabled)}
                           className={clsx(
                             "relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#181a20]",

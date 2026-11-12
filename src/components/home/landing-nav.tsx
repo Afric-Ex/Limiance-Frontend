@@ -6,9 +6,10 @@ import Link from "next/link";
 import Wordmark from "@/public/limiance-wordmark.png";
 import { useUserStore } from "@/src/stores/user-store";
 import { sans } from "./fonts";
+import { useTranslations } from "next-intl";
 
 const LINKS = [
-  ["markets", "Markets"], ["platform", "Platform"], ["why", "Why Limiance"], ["security", "Security"], ["faq", "FAQ"],
+  ["markets", "navMarkets"], ["platform", "navPlatform"], ["why", "navWhy"], ["security", "navSecurity"], ["faq", "navFaq"],
 ] as const;
 
 const goTo = (id: string) => {
@@ -17,6 +18,7 @@ const goTo = (id: string) => {
 };
 
 export function LandingNav() {
+  const t = useTranslations("Landing");
   const user = useUserStore((s) => s.user);
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -47,28 +49,28 @@ export function LandingNav() {
       <div ref={sentinel} aria-hidden className="absolute left-0 top-0 h-px w-px" />
       <header className={`${sans.className} sticky top-0 z-50 border-b transition-colors ${scrolled || open ? "border-white/[0.08] bg-[#0B0D12]/90 backdrop-blur-xl" : "border-transparent bg-transparent"}`}>
         <div className="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between gap-3 px-4 sm:gap-6">
-          <Link href="/" aria-label="Limiance home" className="min-w-0 shrink">
+          <Link href="/" aria-label="Limiance" className="min-w-0 shrink">
             <Image src={Wordmark} alt="Limiance" priority width={168} height={42} className="h-auto w-[96px] min-[340px]:w-[120px] sm:w-[140px] md:w-[168px]" />
           </Link>
 
-          <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
+          <nav aria-label={t("navPlatform")} className="hidden items-center gap-1 lg:flex">
             {LINKS.map(([id, label]) => (
               <button
                 key={id} onClick={() => goTo(id)}
                 className={`rounded-md px-3 py-2 text-sm transition-colors ${active === id ? "text-white" : "text-[#A7AEBD] hover:text-white"}`}
               >
-                {label}
+                {t(label)}
               </button>
             ))}
           </nav>
 
           <div className="flex items-center gap-2">
             {user ? (
-              <Link href="/dashboard" className="rounded-md bg-[#4168DD] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4D77F0]">Dashboard</Link>
+              <Link href="/dashboard" className="rounded-md bg-[#4168DD] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4D77F0]">{t("dashboard")}</Link>
             ) : (
               <>
-                <Link href="/auth/login" className="hidden rounded-md px-3 py-2 text-sm text-[#E6E8EE] transition-colors hover:bg-white/5 sm:block">Log in</Link>
-                <Link href="/auth/signup" className="rounded-md bg-[#4168DD] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4D77F0] min-[340px]:px-4">Sign up</Link>
+                <Link href="/auth/login" className="hidden rounded-md px-3 py-2 text-sm text-[#E6E8EE] transition-colors hover:bg-white/5 sm:block">{t("logIn")}</Link>
+                <Link href="/auth/signup" className="rounded-md bg-[#4168DD] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4D77F0] min-[340px]:px-4">{t("signUp")}</Link>
               </>
             )}
             <button
@@ -87,9 +89,9 @@ export function LandingNav() {
         {open && (
           <nav id="mobile-menu" aria-label="Mobile" className="border-t border-white/[0.08] px-4 pb-4 lg:hidden">
             {LINKS.map(([id, label]) => (
-              <button key={id} onClick={() => { setOpen(false); goTo(id); }} className="block w-full border-b border-white/[0.06] py-3.5 text-left text-body text-[#E6E8EE]">{label}</button>
+              <button key={id} onClick={() => { setOpen(false); goTo(id); }} className="block w-full border-b border-white/[0.06] py-3.5 text-left text-body text-[#E6E8EE]">{t(label)}</button>
             ))}
-            {!user && <Link href="/auth/login" className="block py-3.5 text-body text-[#E6E8EE]">Log in</Link>}
+            {!user && <Link href="/auth/login" className="block py-3.5 text-body text-[#E6E8EE]">{t("logIn")}</Link>}
           </nav>
         )}
       </header>

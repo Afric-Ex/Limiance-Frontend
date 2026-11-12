@@ -11,6 +11,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@mantine/core";
 import { userKeys, userService } from "@/src/services/user";
 import { isKycApproved } from "@/src/lib/normalize-kyc-status";
+import { useTranslations } from "next-intl";
+import { stripLocalePrefix } from "@/src/lib/locale-path";
 
 // Icons
 import { Dashboard } from "../icons/dashboard";
@@ -30,9 +32,9 @@ import { RiExchangeFundsLine, RiBarChartFill, RiCustomerService2Line } from "rea
 
 // --- Nav structure ------------------------------------------------------------
 
-type NavChild = { name: string; link: string };
+type NavChild = { nameKey: string; link: string };
 type NavItem = {
-  name: string;
+  nameKey: string;
   link?: string;
   icon: React.ElementType;
   routeIdentifier?: string;
@@ -41,57 +43,57 @@ type NavItem = {
 };
 
 const mainNavLinks: NavItem[] = [
-  { name: "Dashboard", link: "/dashboard", icon: Dashboard },
-  { name: "Markets", link: "/markets", icon: IoStatsChart },
+  { nameKey: "dashboard", link: "/dashboard", icon: Dashboard },
+  { nameKey: "markets", link: "/markets", icon: IoStatsChart },
   {
-    name: "Assets",
+    nameKey: "assets",
     routeIdentifier: "assets",
     icon: Assets,
     children: [
-      { name: "Overview", link: "/assets/overview" },
-      { name: "Spot", link: "/assets/spot" },
-      { name: "Margin", link: "/assets/margin" },
-      { name: "Futures", link: "/assets/futures" },
-      { name: "Earn", link: "/assets/earn" },
-      { name: "Funding", link: "/assets/funding" },
+      { nameKey: "overview", link: "/assets/overview" },
+      { nameKey: "spot", link: "/assets/spot" },
+      { nameKey: "margin", link: "/assets/margin" },
+      { nameKey: "futures", link: "/assets/futures" },
+      { nameKey: "earn", link: "/assets/earn" },
+      { nameKey: "funding", link: "/assets/funding" },
     ],
   },
   {
-    name: "Orders",
+    nameKey: "orders",
     routeIdentifier: "orders",
     icon: Orders,
     children: [
-      { name: "Spot Order", link: "/orders/spot" },
-      { name: "Margin Order", link: "/orders/margin" },
-      { name: "Fiat Order", link: "/orders/fiat" },
-      { name: "Transaction Analysis", link: "/orders/transaction-analysis" },
-      { name: "Convert History", link: "/orders/convert-history" },
-      { name: "Payment History", link: "/orders/payment-history" },
+      { nameKey: "spotOrder", link: "/orders/spot" },
+      { nameKey: "marginOrder", link: "/orders/margin" },
+      { nameKey: "fiatOrder", link: "/orders/fiat" },
+      { nameKey: "transactionAnalysis", link: "/orders/transaction-analysis" },
+      { nameKey: "convertHistory", link: "/orders/convert-history" },
+      { nameKey: "paymentHistory", link: "/orders/payment-history" },
     ],
   },
-  { name: "Futures", link: "/trades/futures", icon: IoFlashOutline, badge: "PRO" },
-  { name: "Margin", link: "/trades/margin", icon: RiBarChartFill },
-  { name: "P2P Trading", link: "/trades/p2p", icon: RiExchangeFundsLine },
+  { nameKey: "futures", link: "/trades/futures", icon: IoFlashOutline, badge: "PRO" },
+  { nameKey: "margin", link: "/trades/margin", icon: RiBarChartFill },
+  { nameKey: "p2pTrading", link: "/trades/p2p", icon: RiExchangeFundsLine },
   {
-    name: "Account",
+    nameKey: "account",
     routeIdentifier: "account",
     icon: Account,
     children: [
-      { name: "Profile", link: "/account/profile" },
-      { name: "Security", link: "/account/security" },
-      { name: "API Keys", link: "/account/api-keys" },
-      { name: "Whitelisted Wallets", link: "/account/whitelisted-wallets" },
-      { name: "Identity (KYC)", link: "/account/kyc" },
-      { name: "Payment Methods", link: "/account/payment-methods" },
+      { nameKey: "profile", link: "/account/profile" },
+      { nameKey: "security", link: "/account/security" },
+      { nameKey: "apiKeys", link: "/account/api-keys" },
+      { nameKey: "whitelistedWallets", link: "/account/whitelisted-wallets" },
+      { nameKey: "identity", link: "/account/kyc" },
+      { nameKey: "paymentMethods", link: "/account/payment-methods" },
     ],
   },
-  { name: "Settings", link: "/settings", icon: IoSettingsSharp },
-  { name: "Support", link: "/support", icon: RiCustomerService2Line },
+  { nameKey: "settings", link: "/settings", icon: IoSettingsSharp },
+  { nameKey: "support", link: "/support", icon: RiCustomerService2Line },
 ];
 
 const transactionLinks: NavItem[] = [
-  { name: "Deposit", link: "/transactions/deposit", icon: BusinessCard },
-  { name: "Withdrawal", link: "/transactions/withdrawal", icon: Send },
+  { nameKey: "deposit", link: "/transactions/deposit", icon: BusinessCard },
+  { nameKey: "withdrawal", link: "/transactions/withdrawal", icon: Send },
 ];
 
 // --- Expandable dropdown ------------------------------------------------------
@@ -105,6 +107,7 @@ function NavDropdown({
   pathname: string;
   onNavigate?: () => void;
 }) {
+  const t = useTranslations("Navigation");
   const isActive = pathname.includes(item.routeIdentifier ?? "");
   const [open, setOpen] = useState(isActive);
   const Icon = item.icon;
@@ -134,7 +137,7 @@ function NavDropdown({
             fillOpacity={isActive ? "1" : "0.6"}
           />
         </span>
-        <span className="flex-1 text-caption font-semibold">{item.name}</span>
+        <span className="flex-1 text-caption font-semibold">{t(item.nameKey)}</span>
         <IoChevronDown
           size={13}
           className={clsx(
@@ -156,7 +159,7 @@ function NavDropdown({
               pathname === child.link || pathname.startsWith(child.link + "/");
             return (
 <Link
-                key={child.name}
+                key={child.nameKey}
                 href={child.link}
                 onClick={onNavigate}
                 className={clsx(
@@ -166,7 +169,7 @@ function NavDropdown({
                     : "text-white/40 hover:text-white/70 hover:bg-white/[0.04]"
                 )}
               >
-                {child.name}
+                {t(child.nameKey)}
               </Link>
             );
           })}
@@ -187,6 +190,7 @@ function NavLink({
   pathname: string;
   onNavigate?: () => void;
 }) {
+  const t = useTranslations("Navigation");
   if (!item.link) return null;
 
   const isActive =
@@ -218,7 +222,7 @@ function NavLink({
           fillOpacity={isActive ? "1" : "0.6"}
         />
       </span>
-      <span className="flex-1 text-caption font-semibold">{item.name}</span>
+      <span className="flex-1 text-caption font-semibold">{t(item.nameKey)}</span>
       {item.badge && (
         <span className="text-2xs font-bold tracking-widest px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
           {item.badge}
@@ -230,10 +234,11 @@ function NavLink({
 
 // --- Section label ------------------------------------------------------------
 
-function SectionLabel({ label }: { label: string }) {
+function SectionLabel({ labelKey }: { labelKey: string }) {
+  const t = useTranslations("Navigation");
   return (
     <p className="px-3 pt-5 pb-1.5 text-2xs font-bold tracking-[0.18em] uppercase text-white/20 select-none">
-      {label}
+      {t(labelKey)}
     </p>
   );
 }
@@ -241,6 +246,9 @@ function SectionLabel({ label }: { label: string }) {
 // --- User profile card --------------------------------------------------------
 
 export function UserProfileCard() {
+  const t = useTranslations("Common");
+  const headerT = useTranslations("Header");
+  const securityT = useTranslations("Security");
   const user = useUserStore((s) => s.user);
   const userLoading = useUserStore((s) => s.loading);
   const userHydrated = useUserStore((s) => s.hydrated);
@@ -255,19 +263,19 @@ const { data: kycStatus } = useQuery({
   });
 
   const displayName = user
-    ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.username || user.email || "Account"
+    ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.username || user.email || t("account")
     : "";
 
   const normalizedKycStatus = String(kycStatus || user?.kycStatus || "").toLowerCase();
   const isVerified = (user?.isIDverified ?? false) || isKycApproved(normalizedKycStatus);
   const statusText =
     isVerified
-      ? "KYC Verified"
+      ? securityT("kycVerified")
       : ["pending", "processing", "under_review"].includes(normalizedKycStatus)
-        ? "KYC Pending"
+        ? securityT("kycPending")
         : ["rejected", "failed"].includes(normalizedKycStatus)
-          ? normalizedKycStatus === "failed" ? "KYC Failed" : "KYC Rejected"
-          : "Unverified";
+          ? normalizedKycStatus === "failed" ? securityT("kycFailed") : securityT("kycRejected")
+          : securityT("unverified");
 
   return (
     <div className="p-3 border-t border-white/[0.06]">
@@ -294,7 +302,7 @@ const { data: kycStatus } = useQuery({
               </p>
             </>
           ) : !userHydrated || userLoading ? (
-            <div className="flex flex-col gap-1.5" aria-label="Loading account">
+            <div className="flex flex-col gap-1.5" aria-label={headerT("loadingAccount")}>
               <Skeleton height={10} width="70%" />
               <Skeleton height={8} width="45%" />
             </div>
@@ -303,14 +311,14 @@ const { data: kycStatus } = useQuery({
               onClick={() => void fetchUser()}
               className="text-left text-micro font-medium text-white/60 hover:text-white transition-colors"
             >
-              Profile unavailable — retry
+              {t("profileUnavailable")} — {t("retry")}
             </button>
           )}
         </div>
 
         <button
           onClick={() => void handleLogout()}
-          title="Sign out"
+          title={headerT("logout")}
           className="flex-shrink-0 p-1.5 rounded-lg text-white/30 hover:text-sell hover:bg-sell/10 transition-all duration-200"
         >
           <Logout />
@@ -323,7 +331,9 @@ const { data: kycStatus } = useQuery({
 // --- Main sidebar content (shared between desktop nav & mobile drawer) ----------
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  const pathname = usePathname();
+  const t = useTranslations("Navigation");
+  const rawPathname = usePathname();
+  const pathname = stripLocalePrefix(rawPathname || "/");
   const isTransactions = pathname.includes("transactions");
   const links = isTransactions ? transactionLinks : mainNavLinks;
 
@@ -331,12 +341,12 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 flex flex-col scrollbar-none">
       {isTransactions ? (
         <>
-          <SectionLabel label="Transactions" />
+          <SectionLabel labelKey="trades" />
           <div className="flex flex-col gap-0.5">
             {links.map((item) =>
               item.link ? (
                 <NavLink
-                  key={item.name}
+                  key={t(item.nameKey)}
                   item={item}
                   pathname={pathname}
                   onNavigate={onNavigate}
@@ -347,11 +357,11 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </>
       ) : (
         <>
-          <SectionLabel label="Overview" />
+          <SectionLabel labelKey="overview" />
           <div className="flex flex-col gap-0.5">
             {mainNavLinks.slice(0, 2).map((item) => (
               <NavLink
-                key={item.name}
+                key={t(item.nameKey)}
                 item={item}
                 pathname={pathname}
                 onNavigate={onNavigate}
@@ -359,19 +369,19 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             ))}
           </div>
 
-          <SectionLabel label="Trading" />
+          <SectionLabel labelKey="trade" />
           <div className="flex flex-col gap-0.5">
             {mainNavLinks.slice(2, 7).map((item) =>
               item.children ? (
                 <NavDropdown
-                  key={item.name}
+                  key={t(item.nameKey)}
                   item={item}
                   pathname={pathname}
                   onNavigate={onNavigate}
                 />
               ) : (
                 <NavLink
-                  key={item.name}
+                  key={t(item.nameKey)}
                   item={item}
                   pathname={pathname}
                   onNavigate={onNavigate}
@@ -380,19 +390,19 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             )}
           </div>
 
-          <SectionLabel label="Profile" />
+          <SectionLabel labelKey="profile" />
           <div className="flex flex-col gap-0.5">
             {mainNavLinks.slice(7).map((item) =>
               item.children ? (
                 <NavDropdown
-                  key={item.name}
+                  key={t(item.nameKey)}
                   item={item}
                   pathname={pathname}
                   onNavigate={onNavigate}
                 />
               ) : (
                 <NavLink
-                  key={item.name}
+                  key={t(item.nameKey)}
                   item={item}
                   pathname={pathname}
                   onNavigate={onNavigate}
