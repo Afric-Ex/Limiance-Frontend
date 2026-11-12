@@ -18,6 +18,7 @@ import { AccountSecuritySkeleton } from "@/src/components/skeletons/account";
 import { AccountPageHeader } from "@/src/components/settings/account-page-header";
 import { MdShield } from "react-icons/md";
 import QRCode from "react-qr-code";
+import { useTranslations } from "next-intl";
 
 type TwoFASetupData = {
   secret: string;
@@ -156,16 +157,18 @@ const normalizeDateValue = (value: unknown): string => {
   return date && !Number.isNaN(date.getTime()) ? date.toISOString() : "";
 };
 
-const describeUserAgent = (ua: string): { label: string; kind: DeviceKind } => {
+type TranslateFn = (key: string, values?: Record<string, string | number | Date>) => string;
+
+const describeUserAgent = (ua: string, t: TranslateFn): { label: string; kind: DeviceKind } => {
   const raw = ua.trim();
-  if (!raw) return { label: "Unknown device", kind: "desktop" };
+  if (!raw) return { label: t("unknownDevice"), kind: "desktop" };
 
   const lower = raw.toLowerCase();
 
-  if (lower.includes("apidog")) return { label: "Apidog (API client)", kind: "desktop" };
-  if (lower.includes("postman")) return { label: "Postman (API client)", kind: "desktop" };
-  if (lower.startsWith("curl/") || lower.includes(" curl/")) return { label: "curl (API client)", kind: "desktop" };
-  if (lower.includes("python-requests") || lower.includes("axios")) return { label: "API client", kind: "desktop" };
+  if (lower.includes("apidog")) return { label: t("apidogClient"), kind: "desktop" };
+  if (lower.includes("postman")) return { label: t("postmanClient"), kind: "desktop" };
+  if (lower.startsWith("curl/") || lower.includes(" curl/")) return { label: t("curlClient"), kind: "desktop" };
+  if (lower.includes("python-requests") || lower.includes("axios")) return { label: t("apiClient"), kind: "desktop" };
 
   const isTablet =
     lower.includes("ipad") ||
@@ -196,31 +199,37 @@ const describeUserAgent = (ua: string): { label: string; kind: DeviceKind } => {
   else if (lower.includes("safari")) browser = "Safari";
 
   const kind: DeviceKind = isTablet ? "tablet" : isMobile ? "mobile" : "desktop";
-  const label = browser && platform ? `${browser} on ${platform}` : browser || platform || raw;
+  const label =
+    browser && platform
+      ? t("browserOnPlatform", { browser, platform })
+      : browser || platform || raw;
 
   return { label, kind };
 };
 
-const formatRelativeTime = (iso: string): string => {
-  if (!iso) return "Unknown";
+const formatRelative = (t: TranslateFn, value: string, diff: number): string =>
+  diff >= 0 ? t("timeAgo", { value }) : t("timeFromNow", { value });
+
+const formatRelativeTime = (iso: string, t: TranslateFn): string => {
+  if (!iso) return t("unknown");
   const timestamp = new Date(iso).getTime();
-  if (!Number.isFinite(timestamp)) return "Unknown";
+  if (!Number.isFinite(timestamp)) return t("unknown");
 
   const diff = Date.now() - timestamp;
   const abs = Math.abs(diff);
-  const suffix = diff >= 0 ? "ago" : "from now";
   const minute = 60_000;
   const hour = 60 * minute;
   const day = 24 * hour;
 
-  if (abs < minute) return "Just now";
-  if (abs < hour) return `${Math.round(abs / minute)} min ${suffix}`;
-  if (abs < day) return `${Math.round(abs / hour)} hr ${suffix}`;
-  if (abs < 7 * day) return `${Math.round(abs / day)} d ${suffix}`;
+  if (abs < minute) return t("justNow");
+  if (abs < hour) return formatRelative(t, `${Math.round(abs / minute)} ${t("minutesUnit")}`, diff);
+  if (abs < day) return formatRelative(t, `${Math.round(abs / hour)} ${t("hoursUnit")}`, diff);
+  if (abs < 7 * day) return formatRelative(t, `${Math.round(abs / day)} ${t("daysUnit")}`, diff);
   return new Date(timestamp).toLocaleDateString();
 };
 
 function SecurityPageInner() {
+  const t = useTranslations("Security");
   const queryClient = useQueryClient();
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
@@ -269,7 +278,7 @@ function SecurityPageInner() {
   const { mutate: verify2FA, isPending: verifyLoading } = useMutation({
     mutationFn: (code: string) => userService.verify2FA({ code }),
     onSuccess: () => {
-      successNotification("Two-factor authentication enabled.");
+      successNotification(t("twoFactorEnabled"));
       if (user) setUser({ ...user, twoFaEnabled: true });
       queryClient.invalidateQueries({ queryKey: userKeys.twoFASetup });
       closeSetup();
@@ -287,7 +296,7 @@ function SecurityPageInner() {
   const { mutate: disable2FA, isPending: disableLoading } = useMutation({
     mutationFn: (code: string) => userService.disable2FA({ code }),
     onSuccess: () => {
-      successNotification("Two-factor authentication disabled.");
+      successNotification(t("twoFactorDisabled"));
       if (user) setUser({ ...user, twoFaEnabled: false });
       closeDisable();
       setDisableCode("");
@@ -303,7 +312,7 @@ function SecurityPageInner() {
   const { mutate: enableEmailOtp, isPending: enableEmailLoading } = useMutation({
     mutationFn: () => userService.enableEmailOtp(),
     onSuccess: () => {
-      successNotification("Email OTP login enabled.");
+      successNotification(t("emailOtpEnabled"));
       if (user) setUser({ ...user, emailOtpEnabled: true });
     },
     onError: (e: any) => errorMessageHandler(e),
@@ -312,7 +321,7 @@ function SecurityPageInner() {
   const { mutate: disableEmailOtp, isPending: disableEmailLoading } = useMutation({
     mutationFn: () => userService.disableEmailOtp(),
     onSuccess: () => {
-      successNotification("Email OTP login disabled.");
+      successNotification(t("emailOtpDisabled"));
       if (user) setUser({ ...user, emailOtpEnabled: false });
     },
     onError: (e: any) => errorMessageHandler(e),
@@ -335,18 +344,24 @@ function SecurityPageInner() {
   }, [newPw]);
 
   const strength = Object.values(passwordCriteria).filter(Boolean).length;
-  const strengthLabels = ["Weak", "Weak", "Fair", "Strong", "Very Strong"];
+  const strengthLabels = [
+    t("passwordWeak"),
+    t("passwordWeak"),
+    t("passwordFair"),
+    t("passwordStrong"),
+    t("passwordVeryStrong"),
+  ];
   const strengthColors = ["bg-error-1", "bg-error-1", "bg-yellow-500", "bg-success-6", "bg-success-6"];
 
   const { mutate: changePassword, isPending: changePwLoading } = useMutation({
     mutationFn: () => userService.changePassword({ currentPassword: currentPw, newPassword: newPw, confirmPassword: confirmPw }),
     onSuccess: () => {
-      successNotification("Password updated successfully.");
+      successNotification(t("passwordUpdated"));
       setCurrentPw(""); setNewPw(""); setConfirmPw(""); setPwError("");
     },
     onError: (e: any) => {
       if (e?.response?.status === 401 || e?.response?.data?.message?.toLowerCase().includes("incorrect")) {
-        setPwError("Incorrect current password");
+        setPwError(t("incorrectCurrentPassword"));
       } else {
         errorMessageHandler(e);
       }
@@ -390,7 +405,7 @@ function SecurityPageInner() {
         const isCurrent =
           session?.isCurrent === true || session?.is_current === true;
         const rawDevice = getStringField(session, ["device", "browser", "userAgent", "user_agent"]);
-        const device = describeUserAgent(rawDevice);
+        const device = describeUserAgent(rawDevice, t);
 
         return {
           id,
@@ -426,7 +441,7 @@ function SecurityPageInner() {
     mutationFn: (sessionId: string) => userService.revokeSession(sessionId),
     onMutate: (sessionId) => setRevokingId(sessionId),
     onSuccess: () => {
-      successNotification("Session revoked successfully");
+      successNotification(t("sessionRevoked"));
       queryClient.invalidateQueries({ queryKey: userKeys.sessions });
       setRevokeConfirmId(null);
     },
@@ -465,12 +480,12 @@ function SecurityPageInner() {
         const rawDevice = getStringField(log, ["device", "browser", "userAgent", "user_agent"]);
         return {
           id: getStringField(log, ["id", "_id"]) || `log-${index}`,
-          device: describeUserAgent(rawDevice).label,
+          device: describeUserAgent(rawDevice, t).label,
           rawDevice,
           location: getStringField(log, ["location", "country", "city"]),
           ip: getStringField(log, ["ip", "IP"]),
           createdAt: normalizeDateValue(getDateField(log, ["createdAt", "created_at", "loginAt", "login_at"])),
-          status: getStringField(log, ["status", "result"]) || "Success",
+          status: getStringField(log, ["status", "result"]) || "success",
         };
       });
     },
@@ -481,10 +496,10 @@ function SecurityPageInner() {
   return (
     <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 pb-8 page-enter max-[1150px]:pb-[100px]">
       <AccountPageHeader
-        title="Security & access"
-        description="Protect your account with strong authentication and monitor where you’re signed in."
+        title={t("pageTitle")}
+        description={t("pageDescription")}
         icon={<MdShield size={23} />}
-        eyebrow="Account protection"
+        eyebrow={t("pageEyebrow")}
       />
 
       {/* Card 1 — Two-Factor Authentication (2FA) */}
@@ -492,15 +507,15 @@ function SecurityPageInner() {
         <div className="flex items-start gap-4">
           <div className="mt-1"><Authenticator /></div>
           <div className="flex flex-col gap-1">
-            <h3 className="text-lg font-semibold">Two-Factor Authentication</h3>
-            <p className="text-sm text-white/50">Protect your account with an authenticator app.</p>
+            <h3 className="text-lg font-semibold">{t("twoFactor")}</h3>
+            <p className="text-sm text-white/50">{t("twoFactorDescription")}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
           {twoFAEnabled ? (
             <>
               <span className="px-3 py-1 bg-success-6/15 text-success-6 text-xs font-semibold rounded-full border border-success-6/30">
-                ENABLED
+                {t("enabled")}
               </span>
               <Button
                 onClick={openDisable}
@@ -508,19 +523,19 @@ function SecurityPageInner() {
                 color="red"
                 className="!border-error-1 !text-error-1 hover:!bg-error-1/10"
               >
-                Disable 2FA
+                {t("disable2fa")}
               </Button>
             </>
           ) : (
             <>
               <span className="px-3 py-1 bg-gray-9/15 text-gray-9 text-xs font-semibold rounded-full border border-gray-9/30">
-                DISABLED
+                {t("disabled")}
               </span>
               <Button
                 onClick={openSetup}
                 className="!bg-primary hover:!bg-primary/90"
               >
-                Enable 2FA
+                {t("enable2fa")}
               </Button>
             </>
           )}
@@ -532,15 +547,15 @@ function SecurityPageInner() {
         <div className="flex items-start gap-4">
           <div className="mt-1 flex items-center justify-center w-[30px] h-[30px] rounded bg-white/5"><MdMailOutline size={20} className="text-white" /></div>
           <div className="flex flex-col gap-1">
-            <h3 className="text-lg font-semibold">Email OTP Login</h3>
-            <p className="text-sm text-white/50">Require an email verification code when logging in from new devices.</p>
+            <h3 className="text-lg font-semibold">{t("emailOtpTitle")}</h3>
+            <p className="text-sm text-white/50">{t("emailOtpDescription")}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
           {emailOtpEnabled ? (
             <>
               <span className="px-3 py-1 bg-success-6/15 text-success-6 text-xs font-semibold rounded-full border border-success-6/30">
-                ENABLED
+                {t("enabled")}
               </span>
               <Button
                 onClick={() => disableEmailOtp()}
@@ -549,20 +564,20 @@ function SecurityPageInner() {
                 color="red"
                 className="!border-error-1 !text-error-1 hover:!bg-error-1/10"
               >
-                Disable Email OTP
+                {t("disableEmailOtp")}
               </Button>
             </>
           ) : (
             <>
               <span className="px-3 py-1 bg-gray-9/15 text-gray-9 text-xs font-semibold rounded-full border border-gray-9/30">
-                DISABLED
+                {t("disabled")}
               </span>
               <Button
                 onClick={() => enableEmailOtp()}
                 loading={enableEmailLoading}
                 className="!bg-primary hover:!bg-primary/90"
               >
-                Enable Email OTP
+                {t("enableEmailOtp")}
               </Button>
             </>
           )}
@@ -572,12 +587,12 @@ function SecurityPageInner() {
       {/* Card 2 — Change Password */}
       <div className="account-card flex flex-col gap-6 max-[1150px]:gap-4">
         <div>
-          <h3 className="text-lg font-semibold">Change password</h3>
-          <p className="mt-1 text-sm text-white/45">Use a unique password you don’t use on other sites.</p>
+          <h3 className="text-lg font-semibold">{t("changePassword")}</h3>
+          <p className="mt-1 text-sm text-white/45">{t("changePasswordHint")}</p>
         </div>
         <div className="flex flex-col gap-5 max-w-md">
           <TextInput
-            label="Current Password"
+            label={t("currentPassword")}
             type="password"
             value={currentPw}
             onChange={(e) => { setCurrentPw(e.target.value); setPwError(""); }}
@@ -585,7 +600,7 @@ function SecurityPageInner() {
             classNames={{ input: "!bg-gray-1 !border-gray-9/40 !text-white focus:!border-primary", label: "!text-white/70 !mb-1.5 !text-sm" }}
           />
           <TextInput
-            label="New Password"
+            label={t("newPassword")}
             type="password"
             value={newPw}
             onChange={(e) => setNewPw(e.target.value)}
@@ -604,21 +619,21 @@ function SecurityPageInner() {
                 <span className={strengthColors[Math.max(0, strength - 1)]?.replace("bg-", "text-")}>{strength > 0 ? strengthLabels[strength - 1] : ""}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 mt-2">
-                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.length ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> ≥ 8 chars</div>
-                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.upper ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> Uppercase</div>
-                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.lower ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> Lowercase</div>
-                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.number ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> Number</div>
-                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.special ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> Special character</div>
+                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.length ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> {t("passwordChars")}</div>
+                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.upper ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> {t("passwordUppercase")}</div>
+                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.lower ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> {t("passwordLowercase")}</div>
+                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.number ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> {t("passwordNumber")}</div>
+                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.special ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> {t("passwordSpecial")}</div>
               </div>
             </div>
           )}
 
           <TextInput
-            label="Confirm New Password"
+            label={t("confirmNewPassword")}
             type="password"
             value={confirmPw}
             onChange={(e) => setConfirmPw(e.target.value)}
-            error={confirmPw && newPw !== confirmPw ? "Passwords do not match" : null}
+            error={confirmPw && newPw !== confirmPw ? t("passwordsDoNotMatch") : null}
             classNames={{ input: "!bg-gray-1 !border-gray-9/40 !text-white focus:!border-primary", label: "!text-white/70 !mb-1.5 !text-sm", error: "!mt-1.5 !text-xs !text-error-1" }}
           />
 
@@ -628,7 +643,7 @@ function SecurityPageInner() {
             loading={changePwLoading}
             className="w-fit !mt-2 !bg-primary hover:!bg-primary/90"
           >
-            Update Password
+            {t("updatePassword")}
           </Button>
         </div>
       </div>
@@ -637,10 +652,10 @@ function SecurityPageInner() {
       <div className="account-card flex flex-col gap-6 max-[1150px]:gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <h3 className="text-lg font-semibold">Active Sessions</h3>
+            <h3 className="text-lg font-semibold">{t("sessions")}</h3>
             {!sessionsLoading && !sessionsError && (
               <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-2xs font-semibold text-white/50">
-                {activeSessions.length} {activeSessions.length === 1 ? "session" : "sessions"}
+                {t("sessionCount", { count: activeSessions.length })}
               </span>
             )}
           </div>
@@ -653,7 +668,7 @@ function SecurityPageInner() {
           >
             <span className="inline-flex items-center gap-1.5">
               <MdRefresh size={14} className={sessionsFetching ? "animate-spin" : ""} />
-              Refresh
+              {t("refresh")}
             </span>
           </Button>
         </div>
@@ -662,13 +677,13 @@ function SecurityPageInner() {
           <div className="flex justify-center py-6"><Loader color="blue" /></div>
         ) : sessionsError ? (
           <div className="flex flex-col items-start gap-3">
-            <p className="text-sm text-white/55">Unable to load active sessions.</p>
+            <p className="text-sm text-white/55">{t("sessionsLoadError")}</p>
             <Button
               variant="subtle"
               size="xs"
               onClick={() => void refetchSessions()}
             >
-              Retry
+              {t("retry")}
             </Button>
           </div>
         ) : activeSessions.length > 0 ? (
@@ -697,22 +712,22 @@ function SecurityPageInner() {
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="truncate text-sm font-medium text-white/90" title={session.rawDevice || undefined}>
-                        {session.device || "Unknown device"}
+                        {session.device || t("unknownDevice")}
                       </span>
                       {session.isCurrent && (
                         <span className="shrink-0 rounded-full bg-success-6/20 px-2 py-0.5 text-2xs font-bold text-success-6">
-                          CURRENT SESSION
+                          {t("currentSession")}
                         </span>
                       )}
                     </div>
                     <span className="truncate text-xs text-white/40">
-                      {session.location || "Unknown location"} • {session.ip || "Unknown IP"}
+                      {session.location || t("unknownLocation")} • {session.ip || t("unknownIp")}
                     </span>
                     <span
                       className="text-xs text-white/40"
                       title={session.lastActive ? new Date(session.lastActive).toLocaleString() : undefined}
                     >
-                      Last active: {session.lastActive ? formatRelativeTime(session.lastActive) : "Unknown"}
+                      {t("lastActive")}: {session.lastActive ? formatRelativeTime(session.lastActive, t) : t("unknown")}
                     </span>
                   </div>
                 </div>
@@ -720,7 +735,7 @@ function SecurityPageInner() {
                 {!session.isCurrent && session.canRevoke && (
                   revokeConfirmId === session.id ? (
                     <div className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-warning-1/20 bg-warning-1/[0.06] px-3 py-2 sm:w-auto">
-                      <span className="mr-auto text-xs text-warning-1">Revoke this session?</span>
+                      <span className="mr-auto text-xs text-warning-1">{t("revokeSessionQuestion")}</span>
                       <Button
                         size="xs"
                         variant="subtle"
@@ -728,7 +743,7 @@ function SecurityPageInner() {
                         disabled={revokingId !== null}
                         onClick={() => setRevokeConfirmId(null)}
                       >
-                        Cancel
+                        {t("cancel")}
                       </Button>
                       <Button
                         size="xs"
@@ -737,7 +752,7 @@ function SecurityPageInner() {
                         disabled={revokingId !== null && revokingId !== session.id}
                         onClick={() => revokeSession(session.id)}
                       >
-                        Confirm
+                        {t("confirm")}
                       </Button>
                     </div>
                   ) : (
@@ -748,7 +763,7 @@ function SecurityPageInner() {
                       onClick={() => setRevokeConfirmId(session.id)}
                       className="w-full !border-error-1 !text-error-1 hover:!bg-error-1/10 sm:w-auto"
                     >
-                      Revoke
+                      {t("revoke")}
                     </Button>
                   )
                 )}
@@ -758,15 +773,15 @@ function SecurityPageInner() {
         ) : (
           <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-white/[0.08] bg-white/[0.01] px-4 py-8 text-center">
             <MdDesktopMac size={22} className="text-white/25" />
-            <p className="text-sm text-white/45">No active sessions found</p>
-            <p className="text-xs text-white/30">Sessions appear here when you sign in from another device.</p>
+            <p className="text-sm text-white/45">{t("noActiveSessions")}</p>
+            <p className="text-xs text-white/30">{t("noActiveSessionsHint")}</p>
           </div>
         )}
       </div>
 
       {/* Card 4 — Login History */}
       <div className="account-card flex flex-col gap-6 max-[1150px]:gap-4">
-        <h3 className="text-lg font-semibold">Login History</h3>
+        <h3 className="text-lg font-semibold">{t("loginLogs")}</h3>
         {logsLoading ? (
           <div className="flex justify-center py-6"><Loader color="blue" /></div>
         ) : logs?.length > 0 ? (
@@ -774,11 +789,11 @@ function SecurityPageInner() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-white/[0.06]">
-                  <th className="pb-3 pr-4 text-xs font-semibold text-white/50 whitespace-nowrap">Date / Time</th>
-                  <th className="pb-3 pr-4 text-xs font-semibold text-white/50 whitespace-nowrap">IP Address</th>
-                  <th className="pb-3 pr-4 text-xs font-semibold text-white/50 whitespace-nowrap">Location</th>
-                  <th className="pb-3 pr-4 text-xs font-semibold text-white/50 whitespace-nowrap">Device / Browser</th>
-                  <th className="pb-3 text-xs font-semibold text-white/50 whitespace-nowrap">Status</th>
+                  <th className="pb-3 pr-4 text-xs font-semibold text-white/50 whitespace-nowrap">{t("dateTime")}</th>
+                  <th className="pb-3 pr-4 text-xs font-semibold text-white/50 whitespace-nowrap">{t("ipAddress")}</th>
+                  <th className="pb-3 pr-4 text-xs font-semibold text-white/50 whitespace-nowrap">{t("location")}</th>
+                  <th className="pb-3 pr-4 text-xs font-semibold text-white/50 whitespace-nowrap">{t("deviceBrowser")}</th>
+                  <th className="pb-3 text-xs font-semibold text-white/50 whitespace-nowrap">{t("status")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -789,7 +804,7 @@ function SecurityPageInner() {
                     <td className="py-4 pr-4 text-sm text-white/80 whitespace-nowrap">{log.location ?? "—"}</td>
                     <td className="py-4 pr-4 text-sm text-white/80" title={log.rawDevice || undefined}>{log.device ?? "—"}</td>
                     <td className="py-4 text-sm">
-                      <span className={`px-2 py-1 text-xs font-medium rounded ${log.status.toLowerCase() === "success" ? "bg-success-6/15 text-success-6" : "bg-error-1/15 text-error-1"}`}>{log.status}</span>
+                      <span className={`px-2 py-1 text-xs font-medium rounded ${log.status.toLowerCase() === "success" ? "bg-success-6/15 text-success-6" : "bg-error-1/15 text-error-1"}`}>{log.status.toLowerCase() === "success" ? t("loginSuccess") : log.status}</span>
                     </td>
                   </tr>
                 ))}
@@ -797,7 +812,7 @@ function SecurityPageInner() {
             </table>
           </div>
         ) : (
-          <p className="text-sm text-white/40 italic">No login history available.</p>
+          <p className="text-sm text-white/40 italic">{t("noLoginHistory")}</p>
         )}
       </div>
 
@@ -805,7 +820,7 @@ function SecurityPageInner() {
       <Modal
         opened={setupOpen}
         onClose={() => { closeSetup(); setSetupStep(1); setSetupCode(""); }}
-        title={<span className="font-bold text-lg">Enable 2FA</span>}
+        title={<span className="font-bold text-lg">{t("enable2fa")}</span>}
         classNames={{ content: "!bg-gray-7", header: "!bg-gray-7" }}
         size="md"
         centered
@@ -818,7 +833,7 @@ function SecurityPageInner() {
               ) : (
                 <div className="flex flex-col gap-6 items-center">
                   <p className="text-sm text-white/70 text-center">
-                    Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.).
+                    {t("scanQrHint")}
                   </p>
                   
                   {hasQrCode ? (
@@ -826,14 +841,14 @@ function SecurityPageInner() {
                       {qrCodeUrl ? (
                         <img
                           src={qrCodeUrl}
-                          alt="2FA QR Code"
-                          className="w-48 h-48"
+                        alt={t("qrCodeAlt")}
+                        className="w-48 h-48"
                         />
                       ) : (
                         <QRCode
                           value={qrSetupUri}
                           size={192}
-                          aria-label="2FA QR Code"
+                          aria-label={t("qrCodeAlt")}
                           className="w-48 h-48"
                         />
                       )}
@@ -841,7 +856,7 @@ function SecurityPageInner() {
                   ) : (
                     <div className="w-full rounded-xl border border-warning-1/30 bg-warning-1/10 p-4 text-center">
                       <p className="text-sm text-warning-1">
-                        2FA setup data was not returned. Please retry setup.
+                        {t("twoFactorSetupMissing")}
                       </p>
                       <Button
                         onClick={() => refetchQr()}
@@ -850,14 +865,14 @@ function SecurityPageInner() {
                         size="xs"
                         className="!mt-3"
                       >
-                        Retry
+                        {t("retry")}
                       </Button>
                     </div>
                   )}
 
                   {qrIsError && (
                     <p className="text-xs text-error-1 text-center">
-                      Unable to start 2FA setup. Please try again.
+                      {t("twoFactorSetupError")}
                     </p>
                   )}
 
@@ -874,7 +889,7 @@ function SecurityPageInner() {
                     className="w-full !mt-2 !bg-primary hover:!bg-primary/90"
                     size="md"
                   >
-                    I&apos;ve scanned it - Next
+                    {t("scannedNext")}
                   </Button>
                 </div>
               )}
@@ -884,25 +899,25 @@ function SecurityPageInner() {
           {setupStep === 2 && (
             <div className="flex flex-col gap-6">
               <p className="text-sm text-white/70 text-center">
-                Enter the 6-digit code generated by your authenticator app.
+                {t("enterCodeHint")}
               </p>
-              
+
               <div className={`flex flex-col gap-2 items-center ${setupError ? 'animate-shake' : ''}`}>
                 <OtpInput digits={6} value={setupCode} onChange={setSetupCode} error={setupError} />
-                {setupError && <span className="text-xs text-error-1 mt-1">Invalid code. Please try again.</span>}
+                {setupError && <span className="text-xs text-error-1 mt-1">{t("invalidCode")}</span>}
               </div>
 
               <div className="flex gap-3 mt-4">
                 <Button variant="default" onClick={() => setSetupStep(1)} className="flex-1 !bg-white/5 !border-white/10 !text-white hover:!bg-white/10">
-                  Back
+                  {t("back")}
                 </Button>
-                <Button 
-                  onClick={() => verify2FA(setupCode)} 
+                <Button
+                  onClick={() => verify2FA(setupCode)}
                   loading={verifyLoading}
                   disabled={setupCode.length !== 6}
                   className="flex-1 !bg-primary hover:!bg-primary/90"
                 >
-                  Activate 2FA
+                  {t("activate2fa")}
                 </Button>
               </div>
             </div>
@@ -913,7 +928,7 @@ function SecurityPageInner() {
       <Modal
         opened={disableOpen}
         onClose={() => { closeDisable(); setDisableCode(""); setDisableError(false); }}
-        title={<span className="font-bold text-lg">Disable 2FA</span>}
+        title={<span className="font-bold text-lg">{t("disable2fa")}</span>}
         classNames={{ content: "!bg-gray-7", header: "!bg-gray-7" }}
         size="md"
         centered
@@ -921,27 +936,27 @@ function SecurityPageInner() {
         <div className="flex flex-col gap-6 py-2">
           <div className="p-4 bg-warning-1/10 border border-warning-1/30 rounded-xl">
             <p className="text-sm text-warning-1 font-medium">
-              Disabling 2FA reduces account security. Only proceed if you&apos;re resetting your authenticator app.
+              {t("disable2faWarning")}
             </p>
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-sm text-white/70 text-center mb-2">Enter the 6-digit code from your authenticator app.</span>
+            <span className="text-sm text-white/70 text-center mb-2">{t("enterCodeHint")}</span>
             <div className={`flex flex-col gap-2 items-center ${disableError ? 'animate-shake' : ''}`}>
               <OtpInput digits={6} value={disableCode} onChange={setDisableCode} error={disableError} />
-              {disableError && <span className="text-xs text-error-1 mt-1">Invalid code. Please try again.</span>}
+              {disableError && <span className="text-xs text-error-1 mt-1">{t("invalidCode")}</span>}
             </div>
           </div>
 
-          <Button 
-            onClick={() => disable2FA(disableCode)} 
+          <Button
+            onClick={() => disable2FA(disableCode)}
             loading={disableLoading}
             disabled={disableCode.length !== 6}
             color="red"
             className="w-full !mt-2 !bg-error-1 hover:!bg-error-1/90"
             size="md"
           >
-            Confirm Disable
+            {t("confirmDisable")}
           </Button>
         </div>
       </Modal>

@@ -40,18 +40,18 @@ export type DrawingLineWidth = 1 | 2 | 3 | 4;
 
 export type DrawingPoint = { time: number; price: number };
 
-/** Human names, shared by the toolbar's tooltips and the selected-drawing label. */
-export const DRAWING_LABELS: Record<DrawingTool, string> = {
-  trendline: "Trend line",
-  ray: "Ray",
-  extended: "Extended line",
-  hray: "Horizontal ray",
-  hline: "Horizontal line",
-  vline: "Vertical line",
-  rectangle: "Rectangle",
-  channel: "Parallel channel",
-  fib: "Fibonacci retracement",
-  fibext: "Fibonacci extension",
+/** Message keys for the human names, shared by the toolbar's tooltips and the selected-drawing label. */
+export const DRAWING_LABEL_KEYS: Record<DrawingTool, string> = {
+  trendline: "drawingTrendline",
+  ray: "drawingRay",
+  extended: "drawingExtended",
+  hray: "drawingHorizontalRay",
+  hline: "drawingHorizontalLine",
+  vline: "drawingVerticalLine",
+  rectangle: "drawingRectangle",
+  channel: "drawingChannel",
+  fib: "drawingFibonacciRetracement",
+  fibext: "drawingFibonacciExtension",
 };
 
 

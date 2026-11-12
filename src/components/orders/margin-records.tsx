@@ -4,6 +4,7 @@ import { Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } f
 import React, { useState } from "react";
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 import {
@@ -19,9 +20,8 @@ import {
   ResponsiveFilters,
 } from "./orders-shared";
 
-const filters = ["Cross", "Isolated"];
-
 export const MarginRecords = () => {
+  const t = useTranslations("Orders");
   const [filter, setFilter] = useState("Cross");
   const [pair, setPair] = useState("");
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
@@ -45,12 +45,12 @@ export const MarginRecords = () => {
       />
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
-          <ChipToggle value={filter} options={filters} onChange={setFilter} />
+          <ChipToggle value={filter} options={["Cross", "Isolated"]} onChange={setFilter} labels={{ Cross: t("cross"), Isolated: t("isolated") }} />
         </ResponsiveFilters>
         <div className="flex items-center gap-4">
           <TextInput
             classNames={searchInputClass}
-            placeholder="Search pair..."
+            placeholder={t("searchPair")}
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
             onChange={(e) => setPair(e.currentTarget.value)}
           />
@@ -58,21 +58,21 @@ export const MarginRecords = () => {
             className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
             onClick={() => setPair("")}
           >
-            Reset
+            {t("reset")}
           </button>
         </div>
       </div>
 
-      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No margin records found.">
+      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle={t("emptyMarginRecords")}>
         <Table classNames={tableClassNames}>
           <TableThead>
             <TableTr>
-              <TableTh className="pl-5">Pair</TableTh>
-              <TableTh>Side</TableTh>
-              <TableTh>Time</TableTh>
-              <TableTh>Price</TableTh>
-              <TableTh>Quantity</TableTh>
-              <TableTh>Status</TableTh>
+              <TableTh className="pl-5">{t("pair")}</TableTh>
+              <TableTh>{t("side")}</TableTh>
+              <TableTh>{t("time")}</TableTh>
+              <TableTh>{t("price")}</TableTh>
+              <TableTh>{t("quantity")}</TableTh>
+              <TableTh>{t("status")}</TableTh>
             </TableTr>
           </TableThead>
           <TableTbody>

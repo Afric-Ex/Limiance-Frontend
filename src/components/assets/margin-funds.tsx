@@ -1,11 +1,15 @@
+"use client";
+
 import { Table, TableTr, TableTh, TableTd, Menu } from "@mantine/core";
 import React from "react";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { InlineLoading } from "../shared/inline-loading";
 import { useRouter } from "next/navigation";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { useTranslations } from "next-intl";
 
 export const MarginFunds = () => {
+  const t = useTranslations("Wallet");
   const router = useRouter();
   const { coins: portfolio, isLoading } = usePortfolioWs({ coins: true });
 
@@ -24,11 +28,11 @@ export const MarginFunds = () => {
         >
           <thead>
             <TableTr>
-              <TableTh className="!pl-6">Coin</TableTh>
-              <TableTh>Total Balance</TableTh>
-              <TableTh>Available Balance</TableTh>
-              <TableTh>Locked</TableTh>
-              <TableTh className="!pr-6 !text-right">Action</TableTh>
+              <TableTh className="!pl-6">{t("coin")}</TableTh>
+              <TableTh>{t("totalBalance")}</TableTh>
+              <TableTh>{t("availableBalance")}</TableTh>
+              <TableTh>{t("locked")}</TableTh>
+              <TableTh className="!pr-6 !text-right">{t("action")}</TableTh>
             </TableTr>
           </thead>
           <tbody>
@@ -36,7 +40,7 @@ export const MarginFunds = () => {
               <TableTr>
                 <TableTd colSpan={5}>
                   <div className="flex flex-col items-center justify-center py-12 gap-2 text-white/25">
-                    <span className="text-sm font-medium">No margin assets</span>
+                    <span className="text-sm font-medium">{t("noMarginAssets")}</span>
                   </div>
                 </TableTd>
               </TableTr>
@@ -100,19 +104,19 @@ export const MarginFunds = () => {
                       >
                         <Menu.Target>
                           <button className="inline-flex items-center gap-1 bg-white/[0.05] text-white/70 hover:bg-white/10 hover:text-white py-1.5 px-3 rounded-lg cursor-pointer transition-all active:scale-95 border border-white/[0.05]">
-                            <span className="text-xs font-semibold">Action</span>
+                            <span className="text-xs font-semibold">{t("action")}</span>
                             <MdKeyboardArrowDown size={14} />
                           </button>
                         </Menu.Target>
 
                         <Menu.Dropdown>
                           <Menu.Item onClick={() => router.push(`/trades/spot?pair=${item.symbol}_USDT`)}>
-                            Trade
+                            {t("trade")}
                           </Menu.Item>
-                          <Menu.Item>Borrow</Menu.Item>
-                          <Menu.Item>Repay</Menu.Item>
+                          <Menu.Item>{t("borrow")}</Menu.Item>
+                          <Menu.Item>{t("repay")}</Menu.Item>
                           <Menu.Divider className="!border-white/[0.06]" />
-                          <Menu.Item>Transfer</Menu.Item>
+                          <Menu.Item>{t("transfer")}</Menu.Item>
                         </Menu.Dropdown>
                       </Menu>
                     </TableTd>

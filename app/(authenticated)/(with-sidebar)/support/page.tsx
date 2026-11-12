@@ -33,15 +33,18 @@ import { useChatWs, useTypingIndicator } from "@/src/hooks/use-chat-ws";
 import { useUserStore } from "@/src/stores/user-store";
 import type { ChatWsMessage } from "@/src/lib/chat-ws";
 import { AccountPageHeader } from "@/src/components/settings/account-page-header";
+import { useTranslations } from "next-intl";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const STATUS_STYLES: Record<string, { label: string; className: string }> = {
-  open: { label: "Open", className: "bg-error-1/10 text-error-1" },
-  in_progress: { label: "In Progress", className: "bg-warning-1/10 text-warning-1" },
-  pending_user: { label: "Pending You", className: "bg-primary/10 text-primary" },
-  resolved: { label: "Resolved", className: "bg-success-6/10 text-success-6" },
-  closed: { label: "Closed", className: "bg-white/10 text-white/50" },
+type TranslateFn = (key: string, values?: Record<string, string | number | Date>) => string;
+
+const STATUS_STYLES: Record<string, { labelKey: string; className: string }> = {
+  open: { labelKey: "statusOpen", className: "bg-error-1/10 text-error-1" },
+  in_progress: { labelKey: "statusInProgress", className: "bg-warning-1/10 text-warning-1" },
+  pending_user: { labelKey: "statusPendingYou", className: "bg-primary/10 text-primary" },
+  resolved: { labelKey: "statusResolved", className: "bg-success-6/10 text-success-6" },
+  closed: { labelKey: "statusClosed", className: "bg-white/10 text-white/50" },
 };
 
 const inputClassNames = {
@@ -51,14 +54,14 @@ const inputClassNames = {
   description: "!text-white/50 !text-xs",
 };
 
-function timeAgo(iso: string) {
+function timeAgo(iso: string, t: TranslateFn) {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "Just now";
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return t("justNow");
+  if (m < 60) return t("minutesAgo", { count: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  if (h < 24) return t("hoursAgo", { count: h });
+  return t("daysAgo", { count: Math.floor(h / 24) });
 }
 
 const toSupportMessages = (
@@ -97,6 +100,7 @@ const toSupportMessages = (
 };
 
 function StatusBadge({ status }: { status: string }) {
+  const t = useTranslations("Support");
   const st = STATUS_STYLES[status] ?? STATUS_STYLES.open;
   return (
     <span
@@ -105,7 +109,7 @@ function StatusBadge({ status }: { status: string }) {
         st.className
       )}
     >
-      {st.label}
+      {t(st.labelKey)}
     </span>
   );
 }
@@ -113,6 +117,7 @@ function StatusBadge({ status }: { status: string }) {
 // ─── Create Ticket Modal ──────────────────────────────────────────────────────
 
 function CreateTicketModal({ onClose }: { onClose: () => void }) {
+  const t = useTranslations("Support");
   const qc = useQueryClient();
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -125,11 +130,11 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
         permission: [],
       }),
     onSuccess: () => {
-      successNotification("Support ticket created!");
+      successNotification(t("ticketCreated"));
       qc.invalidateQueries({ queryKey: supportKeys.tickets() });
       onClose();
     },
-    onError: () => errorNotification("Failed to create ticket. Please try again."),
+    onError: () => errorNotification(t("ticketCreateFailed")),
   });
 
   const valid = subject.trim().length > 3 && message.trim().length > 10;
@@ -145,10 +150,10 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
           </span>
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-              Support center
+              {t("supportCenter")}
             </p>
             <h2 className="mt-0.5 text-base font-semibold leading-tight text-white sm:text-lg">
-              Create a support ticket
+              {t("createTicket")}
             </h2>
           </div>
         </div>
@@ -171,14 +176,14 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
           <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/[0.06] p-3.5">
             <MdOutlineSecurity className="mt-0.5 shrink-0 text-primary" size={18} />
             <p className="text-xs leading-5 text-white/55">
-              Tell us what happened and include any relevant details. Never share your password, verification codes, or API secrets.
+              {t("ticketSafetyNotice")}
             </p>
           </div>
 
           <TextInput
-            label="Subject"
-            description="A short summary helps our team route your request."
-            placeholder="e.g. I need help with a deposit"
+            label={t("subject")}
+            description={t("subjectDescription")}
+            placeholder={t("subjectPlaceholder")}
             maxLength={80}
             value={subject}
             onChange={(e) => setSubject(e.currentTarget.value)}
@@ -190,9 +195,9 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
           />
 
           <Textarea
-            label="How can we help?"
-            description="Include steps you have already tried, if applicable."
-            placeholder="Describe the issue in detail…"
+            label={t("howCanWeHelp")}
+            description={t("messageDescription")}
+            placeholder={t("messagePlaceholder")}
             minRows={5}
             maxRows={8}
             autosize
@@ -206,7 +211,7 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
           />
 
           <p className="text-xs leading-5 text-white/40">
-            Please provide at least 4 characters in the subject and 11 characters in the description.
+            {t("ticketLengthHint")}
           </p>
         </div>
 
@@ -217,7 +222,7 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
             disabled={isPending}
             className="min-h-11 rounded-xl border border-white/[0.09] bg-white/[0.025] text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Cancel
+            {t("cancel")}
           </button>
           <Button
             size="md"
@@ -228,7 +233,7 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
               root: "!min-h-11 !rounded-xl !bg-primary !text-sm !font-semibold hover:!bg-primary/90",
             }}
           >
-            {isPending ? "Submitting…" : "Submit ticket"}
+            {isPending ? t("submitting") : t("submitTicket")}
           </Button>
         </div>
       </div>
@@ -239,6 +244,7 @@ function CreateTicketModal({ onClose }: { onClose: () => void }) {
 // ─── Ticket Thread ────────────────────────────────────────────────────────────
 
 function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () => void }) {
+  const t = useTranslations("Support");
   const qc = useQueryClient();
   const [reply, setReply] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -321,7 +327,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
       notifyTyping(false);
       qc.invalidateQueries({ queryKey: supportKeys.ticket(ticket.id) });
     },
-    onError: () => errorNotification("Failed to send reply"),
+    onError: () => errorNotification(t("replyFailed")),
   });
 
   useEffect(() => {
@@ -337,7 +343,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
         <button
           type="button"
           onClick={onBack}
-          aria-label="Back to tickets"
+          aria-label={t("backToTickets")}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.03] text-white/55 transition-colors hover:bg-white/[0.07] hover:text-white lg:hidden"
         >
           <RiArrowLeftLine size={18} />
@@ -353,7 +359,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
         </div>
         <span className="hidden items-center gap-1.5 text-[10px] font-medium text-white/40 sm:inline-flex">
           <span className={clsx("h-1.5 w-1.5 rounded-full", connected ? "bg-success-6" : "bg-white/25")} />
-          {connected ? "Live" : "Connecting"}
+          {connected ? t("live") : t("connecting")}
         </span>
         <StatusBadge status={thread.status} />
       </div>
@@ -370,14 +376,14 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
           : isError
             ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 py-8 text-center">
-                <p className="text-sm text-white/60">Unable to load this conversation.</p>
+                <p className="text-sm text-white/60">{t("conversationLoadError")}</p>
                 <Button
                   variant="subtle"
                   size="xs"
                   onClick={() => void refetch()}
                   className="!text-primary"
                 >
-                  Try again
+                  {t("tryAgain")}
                 </Button>
               </div>
             )
@@ -385,7 +391,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
             ? (
               <EmptyState
                 icon={<RiCustomerService2Line size={36} />}
-                caption="No messages yet"
+                caption={t("noMessagesYet")}
               />
             )
             : messages.map((msg, i) => {
@@ -410,7 +416,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
                       )}
                     >
                       {isAdmin && <MdOutlineSupportAgent size={12} />}
-                      {isAdmin ? "Support Team" : "You"}
+                      {isAdmin ? t("supportTeam") : t("you")}
                     </div>
                     <p className="break-words whitespace-pre-wrap text-sm leading-6">
                       {msg.message}
@@ -421,7 +427,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
                         isAdmin ? "text-white/35" : "text-white/75"
                       )}
                     >
-                      {timeAgo(msg.created_at)}
+                      {timeAgo(msg.created_at, t)}
                     </div>
                   </div>
                 </div>
@@ -435,13 +441,13 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
         <div className="flex flex-shrink-0 flex-col gap-2 border-t border-white/[0.06] bg-elevated p-3 sm:p-4">
           {peerTyping && (
             <div className="px-1 text-micro text-[var(--color-text-secondary)]">
-              Support is typing…
+              {t("supportTyping")}
             </div>
           )}
           <div className="flex items-end gap-2">
             <Textarea
               className="flex-1"
-              placeholder="Type your reply…"
+              placeholder={t("replyPlaceholder")}
               minRows={1}
               maxRows={4}
               autosize
@@ -478,7 +484,7 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
                 notifyTyping(false);
                 sendReply();
               }}
-              aria-label="Send reply"
+              aria-label={t("sendReply")}
             >
               <RiSendPlaneFill size={18} />
             </ActionIcon>
@@ -486,7 +492,9 @@ function TicketThread({ ticket, onBack }: { ticket: SupportTicket; onBack: () =>
         </div>
       ) : (
         <div className="flex-shrink-0 border-t border-white/[0.06] px-4 py-4 text-center text-xs text-white/40">
-          This ticket is {thread.status}
+          {t("ticketIsStatus", {
+            status: t(STATUS_STYLES[thread.status]?.labelKey ?? "statusOpen"),
+          })}
         </div>
       )}
     </div>
@@ -504,6 +512,7 @@ function TicketItem({
   isActive: boolean;
   onClick: () => void;
 }) {
+  const t = useTranslations("Support");
   return (
     <button
       type="button"
@@ -531,10 +540,10 @@ function TicketItem({
       </div>
       <div className="flex items-center justify-between gap-3">
         <span className="truncate text-xs text-white/40">
-          {ticket.category ?? "General"} <span className="px-1 text-white/20">·</span> #{ticket.id}
+          {ticket.category ?? t("general")} <span className="px-1 text-white/20">·</span> #{ticket.id}
         </span>
         <span className="shrink-0 text-2xs text-white/35">
-          {timeAgo(ticket.updated_at || ticket.created_at)}
+          {timeAgo(ticket.updated_at || ticket.created_at, t)}
         </span>
       </div>
     </button>
@@ -544,6 +553,7 @@ function TicketItem({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 function SupportPageInner() {
+  const t = useTranslations("Support");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [mobileView, setMobileView] = useState<"list" | "thread">("list");
@@ -592,10 +602,10 @@ function SupportPageInner() {
     <main className="mx-auto flex h-full min-h-0 w-full max-w-[1180px] flex-col gap-4 pb-2 page-enter">
       <AccountPageHeader
         compact
-        title="Support center"
-        description="Get help from our team, follow your requests, and continue conversations in one place."
+        title={t("supportCenter")}
+        description={t("supportCenterDescription")}
         icon={<RiCustomerService2Line size={20} />}
-        eyebrow="We're here to help"
+        eyebrow={t("eyebrow")}
         action={
           <button
             type="button"
@@ -603,7 +613,7 @@ function SupportPageInner() {
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(77,119,240,0.2)] transition-all hover:bg-primary/90 active:scale-[0.98]"
           >
             <RiAddLine size={17} />
-            New ticket
+            {t("newTicket")}
           </button>
         }
       />
@@ -620,26 +630,26 @@ function SupportPageInner() {
           <div className="flex flex-col gap-3 border-b border-white/[0.06] p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-white">Your tickets</h2>
+                <h2 className="text-sm font-semibold text-white">{t("yourTickets")}</h2>
                 <p className="mt-1 text-xs text-white/40">
-                  {openCount} active <span className="px-1 text-white/20">·</span> {tickets.length} total
+                  {t("ticketSummary", { active: openCount, total: tickets.length })}
                 </p>
               </div>
               <ActionIcon
                 variant="subtle"
-                aria-label="Refresh tickets"
+                aria-label={t("refreshTickets")}
                 onClick={() => void refetch()}
                 disabled={isFetching}
                 className="!text-white/45 hover:!text-white"
               >
-                <RiRefreshLine className={isFetching ? "animate-spin" : ""} size={18} />
+                <RiRefreshLine size={18} className={isFetching ? "animate-spin" : ""} />
               </ActionIcon>
             </div>
             <TextInput
               value={ticketSearch}
               onChange={(event) => setTicketSearch(event.currentTarget.value)}
-              placeholder="Search tickets"
-              aria-label="Search support tickets"
+              placeholder={t("searchTickets")}
+              aria-label={t("searchTicketsLabel")}
               leftSection={<RiSearchLine size={15} />}
               classNames={{
                 input: "!min-h-10 !rounded-xl !border-white/[0.07] !bg-black/15 !pl-10 !text-sm !text-white placeholder:!text-white/30 focus:!border-primary/50",
@@ -657,15 +667,15 @@ function SupportPageInner() {
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-error-1/[0.08] text-error-1">
                   <RiRefreshLine size={19} />
                 </span>
-                <p className="text-sm font-medium text-white/75">Unable to load your tickets</p>
-                <p className="text-xs text-white/40">Check your connection and try again.</p>
+                <p className="text-sm font-medium text-white/75">{t("ticketsLoadError")}</p>
+                <p className="text-xs text-white/40">{t("connectionErrorHint")}</p>
                 <Button
                   variant="subtle"
                   size="xs"
                   onClick={() => void refetch()}
                   className="!text-primary"
                 >
-                  Try again
+                  {t("tryAgain")}
                 </Button>
               </div>
             ) : tickets.length === 0 ? (
@@ -673,9 +683,9 @@ function SupportPageInner() {
                 icon={<RiCustomerService2Line size={36} />}
                 caption={
                   <>
-                    No tickets yet
+                    {t("noTicketsYet")}
                     <span className="mt-1 block text-xs text-[var(--color-text-secondary)]">
-                      Open one if you need help
+                      {t("openOneIfYouNeedHelp")}
                     </span>
                   </>
                 }
@@ -685,9 +695,9 @@ function SupportPageInner() {
                 icon={<RiSearchLine size={30} />}
                 caption={
                   <>
-                    No matching tickets
+                    {t("noMatchingTickets")}
                     <span className="mt-1 block text-xs text-[var(--color-text-secondary)]">
-                      Try a different subject or ticket ID.
+                      {t("noMatchingTicketsHint")}
                     </span>
                   </>
                 }
@@ -723,16 +733,16 @@ function SupportPageInner() {
               </div>
               <div className="relative">
                 <h2 className="text-lg font-semibold text-white">
-                  Your conversations
+                  {t("yourConversations")}
                 </h2>
                 <p className="mt-1 max-w-xs text-sm leading-6 text-white/45">
-                  Select a ticket to read and reply, or open a new request to get help from our team.
+                  {t("yourConversationsDescription")}
                 </p>
               </div>
               <div className="relative flex flex-wrap justify-center gap-2">
                 {[
-                  { icon: <RiTimeLine size={14} />, label: "24h response time" },
-                  { icon: <RiCheckDoubleLine size={14} />, label: "Real-time updates" },
+                  { icon: <RiTimeLine size={14} />, label: t("responseTime") },
+                  { icon: <RiCheckDoubleLine size={14} />, label: t("realTimeUpdates") },
                 ].map(({ icon, label }) => (
                   <span
                     key={label}

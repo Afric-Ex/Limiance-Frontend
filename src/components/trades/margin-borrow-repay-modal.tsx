@@ -1,6 +1,9 @@
+"use client";
+
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTab, Button, Select } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { tradingService } from "@/src/services/trading";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -14,6 +17,7 @@ import { useTradeConfirmations } from "@/src/hooks/use-trade-confirmations";
 const MIN_MARGIN_LEVEL = 1.3;
 
 export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, initialTab = "borrow" }: { pair: string; tradeMode?: "cross" | "isolated"; onClose: () => void; initialTab?: "borrow" | "repay" }) => {
+  const t = useTranslations("Trading");
   const [activeTab, setActiveTab] = useState(initialTab);
   const [amount, setAmount] = useState<string>("");
   
@@ -96,13 +100,13 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
       });
       // Some backends return 200 but with a non-success status/message in the body
       if (res?.status === false || res?.success === false) {
-        const errorMsg = res?.error || res?.message || res?.data?.message || res?.data?.error || "Borrow failed";
+        const errorMsg = res?.error || res?.message || res?.data?.message || res?.data?.error || t("borrowFailed");
         throw new Error(errorMsg);
       }
       return res;
     },
     onSuccess: (_res) => {
-      successNotification(`Successfully borrowed ${amount} ${selectedAsset}`);
+      successNotification(t("borrowedSuccessfully", { amount, asset: selectedAsset }));
       // Immediate refresh
       refreshBalances();
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
@@ -127,13 +131,13 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
         symbol: `${base}/${quote}`.toUpperCase(),
       });
       if (res?.status === false || res?.success === false) {
-        const errorMsg = res?.error || res?.message || res?.data?.message || res?.data?.error || "Repay failed";
+        const errorMsg = res?.error || res?.message || res?.data?.message || res?.data?.error || t("repayFailed");
         throw new Error(errorMsg);
       }
       return res;
     },
     onSuccess: (_res) => {
-      successNotification(`Successfully repaid ${amount} ${selectedAsset}`);
+      successNotification(t("repaidSuccessfully", { amount, asset: selectedAsset }));
       refreshBalances();
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["margin-balance"] });
@@ -160,23 +164,23 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
     }
 
     openTradeOrderConfirmation({
-      title: isBorrowTab ? "Confirm borrow" : "Confirm repay",
+      title: isBorrowTab ? t("confirmBorrow") : t("confirmRepay"),
       description: isBorrowTab
-        ? "Review the amount below before borrowing against your margin account."
-        : "Review the amount below before repaying your margin debt.",
+        ? t("reviewAmountBeforeBorrowing")
+        : t("reviewAmountBeforeRepaying"),
       rows: [
-        { label: "Account", value: tradeMode === "cross" ? "Cross Margin" : "Isolated Margin" },
-        { label: "Asset", value: selectedAsset },
-        { label: "Action", value: isBorrowTab ? "Borrow" : "Repay" },
+        { label: t("account"), value: tradeMode === "cross" ? t("crossMargin") : t("isolatedMargin") },
+        { label: t("asset"), value: selectedAsset },
+        { label: t("action"), value: isBorrowTab ? t("borrow") : t("repay") },
         {
-          label: "Amount",
+          label: t("amount"),
           value: `${enteredAmount.toLocaleString("en-US", { maximumFractionDigits: 6 })} ${selectedAsset}`,
         },
       ],
       warning: isBorrowTab
-        ? "Borrowed funds accrue interest. Your collateral may be liquidated if the margin level falls below the maintenance requirement."
+        ? t("borrowedFundsAccrueInterest")
         : undefined,
-      confirmLabel: isBorrowTab ? "Confirm Borrow" : "Confirm Repay",
+      confirmLabel: isBorrowTab ? t("confirmBorrowAction") : t("confirmRepayAction"),
       onConfirm: submit,
     });
   };
@@ -194,14 +198,14 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
         }}
       >
         <TabsList>
-          <TabsTab value="borrow">Borrow</TabsTab>
-          <TabsTab value="repay">Repay</TabsTab>
+          <TabsTab value="borrow">{t("borrow")}</TabsTab>
+          <TabsTab value="repay">{t("repay")}</TabsTab>
         </TabsList>
       </Tabs>
 
       {/* Asset Selector */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-white/50">Asset</label>
+        <label className="text-xs text-white/50">{t("asset")}</label>
         {tradeMode === "isolated" ? (
           <div className="flex bg-white/[0.03] border border-white/[0.06] rounded-lg p-1">
             <button
@@ -251,8 +255,7 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
         <div className="flex items-start gap-2 bg-[#f3ba2f]/10 border border-[#f3ba2f]/20 rounded-lg px-3 py-2.5">
           <MdWarning className="text-[#f3ba2f] mt-0.5 shrink-0" size={15} />
           <p className="text-micro text-[#f3ba2f]/90 leading-relaxed">
-            You have no collateral in your Margin wallet. Use{" "}
-            <strong>Transfer</strong> first to move funds from your Spot wallet.
+            {t("noCollateralInMarginWallet")} <strong>{t("transfer")}</strong> {t("moveFundsFromSpotWallet")}
           </p>
         </div>
       )}
@@ -261,13 +264,13 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
       {isBorrowTab && totalAssetsUsd > 0 && (
         <div className="flex flex-col gap-1 bg-white/[0.02] border border-white/[0.05] rounded-lg px-3 py-2.5">
           <div className="flex justify-between text-micro">
-            <span className="text-white/40">Total Margin Collateral</span>
+            <span className="text-white/40">{t("totalMarginCollateral")}</span>
             <span className="font-mono text-white/80">${totalAssetsUsd.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between text-micro">
             <span className="text-white/40 flex items-center gap-1">
-              Max Borrowable
-              <MdInfoOutline size={11} className="opacity-50" title={`Limited by Margin Level floor (1.3) or Max Leverage (${maxLeverage}x)`} />
+              {t("maxBorrowable")}
+              <MdInfoOutline size={11} className="opacity-50" title={t("maxBorrowableHint", { leverage: maxLeverage })} />
             </span>
             <span className="font-mono text-primary font-semibold">
               {maxBorrowable > 0 ? maxBorrowable.toLocaleString("en-US", { maximumFractionDigits: 6 }) : "0.00"} {selectedAsset}
@@ -280,11 +283,11 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
       {!isBorrowTab && (
         <div className="flex flex-col gap-1 bg-white/[0.02] border border-white/[0.05] rounded-lg px-3 py-2.5">
           <div className="flex justify-between text-micro">
-            <span className="text-white/40">Current Debt</span>
+            <span className="text-white/40">{t("currentDebt")}</span>
             <span className="font-mono text-white/80">{currentBorrowed.toLocaleString("en-US", { maximumFractionDigits: 6 })} {selectedAsset}</span>
           </div>
           <div className="flex justify-between text-micro">
-            <span className="text-white/40">Free Balance</span>
+            <span className="text-white/40">{t("freeBalance")}</span>
             <span className="font-mono text-white/80">{marginBalance.toLocaleString("en-US", { maximumFractionDigits: 6 })} {selectedAsset}</span>
           </div>
         </div>
@@ -293,10 +296,10 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
       {/* Amount Input */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
-          <label className="text-xs text-white/50">Amount</label>
+          <label className="text-xs text-white/50">{t("amount")}</label>
           {!isBorrowTab && (
             <span className="text-2xs text-white/40">
-              Balance: {marginBalance.toLocaleString("en-US", { maximumFractionDigits: 6 })} {selectedAsset}
+              {t("balanceLabel", { balance: marginBalance.toLocaleString("en-US", { maximumFractionDigits: 6 }), asset: selectedAsset })}
             </span>
           )}
         </div>
@@ -330,7 +333,7 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
         {exceedsMax && (
           <p className="text-micro text-red-400 px-1 flex items-center gap-1">
             <MdWarning size={12} />
-            Exceeds max borrowable. Reduce to {maxBorrowable.toLocaleString("en-US", { maximumFractionDigits: 6 })} {selectedAsset}.
+            {t("exceedsMaxBorrowable", { amount: maxBorrowable.toLocaleString("en-US", { maximumFractionDigits: 6 }), asset: selectedAsset })}
           </p>
         )}
       </div>
@@ -338,22 +341,22 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
       {/* Projected Margin Level (borrow tab, valid amount, has collateral) */}
       {isBorrowTab && projectedMarginLevel !== null && enteredAmount > 0 && !exceedsMax && totalAssetsUsd > 0 && (
         <div className="flex justify-between items-center px-3 py-2 bg-white/[0.02] rounded-lg border border-white/[0.05] text-micro">
-          <span className="text-white/40">Projected Margin Level</span>
+          <span className="text-white/40">{t("projectedMarginLevel")}</span>
           <span className={clsx(
             "font-mono font-semibold",
             projectedMarginLevel >= 2 ? "text-green-400" :
             projectedMarginLevel >= 1.5 ? "text-[#f3ba2f]" : "text-red-400"
           )}>
             {projectedMarginLevel.toFixed(2)}x
-            {projectedMarginLevel >= 2 ? " ✓ Safe" :
-             projectedMarginLevel >= 1.5 ? " ⚠ Caution" : " ✗ Risky"}
+            {projectedMarginLevel >= 2 ? ` ✓ ${t("safe")}` :
+             projectedMarginLevel >= 1.5 ? ` ⚠ ${t("caution")}` : ` ✗ ${t("risky")}`}
           </span>
         </div>
       )}
 
         <div className="flex gap-3 pt-2">
         <Button variant="default" fullWidth onClick={onClose} size="md" className="border-white/10 hover:bg-white/5 font-semibold">
-          Cancel
+          {t("cancel")}
         </Button>
         <Button
           fullWidth
@@ -363,12 +366,12 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
           loading={isPending}
           onClick={requestConfirm}
         >
-          {isBorrowTab ? "Confirm Borrow" : "Confirm Repay"}
+          {isBorrowTab ? t("confirmBorrowAction") : t("confirmRepayAction")}
         </Button>
       </div> 
       {noCollateral && (
         <p className="text-center text-micro text-white/30">
-          Close this modal and click <span className="text-primary font-semibold">Transfer</span> to add collateral.
+          {t("closeModalAndClick")} <span className="text-primary font-semibold">{t("transfer")}</span> {t("toAddCollateral")}
         </p>
       )}
     </div>

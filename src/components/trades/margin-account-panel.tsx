@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { modals } from "@mantine/modals";
 import { Checkbox, Table, TableTh, TableTr, TableTd } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { MarginBorrowRepayModal } from "./margin-borrow-repay-modal";
@@ -46,6 +47,7 @@ function formatDate(v: unknown) {
 }
 
 export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeChange }: Props) {
+  const t = useTranslations("Trading");
   const [hideZero, setHideZero]     = useState(false);
   const [assetSearch, setAssetSearch] = useState("");
   const [panelTab, setPanelTab]     = useState("funds");
@@ -140,8 +142,8 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
     marginLevel.toFixed(2);
 
   const marginLevelNote =
-    marginLevelTone === "success" ? "Healthy" :
-    marginLevelTone === "warning" ? "Under margin" : "Liquidation risk";
+    marginLevelTone === "success" ? t("healthy") :
+    marginLevelTone === "warning" ? t("underMargin") : t("liquidationRisk");
 
   // ── Filtered fund rows ─────────────────────────────────────────────────────
   // Use marginAccount.assets instead of portfolio because it includes borrowed funds
@@ -161,7 +163,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
     modals.open({
       ...DEFAULT_MODAL_SETTINGS,
       size: "lg",
-      title: <span className="font-bold text-base text-white">Borrow / Repay Margin</span>,
+      title: <span className="font-bold text-base text-white">{t("borrowRepayMargin")}</span>,
       styles: modalStyles,
       children: <MarginBorrowRepayModal pair={pair} tradeMode={tradeMode} initialTab={mode} onClose={() => modals.closeAll()} />,
     });
@@ -171,7 +173,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
     modals.open({
       ...DEFAULT_MODAL_SETTINGS,
       size: "lg",
-      title: <span className="font-bold text-base text-white">Transfer Assets</span>,
+      title: <span className="font-bold text-base text-white">{t("transferAssets")}</span>,
       styles: modalStyles,
       children: <MarginTransferModal pair={pair} onClose={() => modals.closeAll()} />,
     });
@@ -183,8 +185,8 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
       <div className="flex items-center justify-between flex-wrap gap-3">
         <SegmentedControl
           options={[
-            { value: "cross", label: "Cross Margin" },
-            { value: "isolated", label: "Isolated Margin" },
+            { value: "cross", label: t("crossMargin") },
+            { value: "isolated", label: t("isolatedMargin") },
           ]}
           value={tradeMode}
           onChange={(m) => onTradeModeChange(m as "cross" | "isolated")}
@@ -195,19 +197,19 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
             onClick={() => openBorrow("borrow")}
             className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] bg-primary px-4 text-sm font-semibold text-white transition-all hover:bg-primary/90 active:scale-[0.98]"
           >
-            Borrow
+            {t("borrow")}
           </button>
           <button
             onClick={() => openBorrow("repay")}
             className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] border border-line bg-transparent px-4 text-sm font-semibold text-[var(--color-text-primary)] transition-all hover:bg-muted active:scale-[0.98]"
           >
-            Repay
+            {t("repay")}
           </button>
           <button
             onClick={openTransfer}
             className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] border border-line bg-transparent px-4 text-sm font-semibold text-[var(--color-text-primary)] transition-all hover:bg-muted active:scale-[0.98]"
           >
-            Transfer
+            {t("transfer")}
           </button>
         </div>
       </div>
@@ -217,14 +219,14 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
         {/* Total Balance + PnL */}
         <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-micro font-medium uppercase tracking-[0.08em] text-white/40">Total Balance</span>
+            <span className="text-micro font-medium uppercase tracking-[0.08em] text-white/40">{t("totalBalance")}</span>
             <div className="flex items-center gap-2">
               <BalanceRevealControl />
               <button
                 type="button"
                 onClick={refreshBalances}
-                aria-label="Refresh margin account balances"
-                title="Refresh balances"
+                aria-label={t("refreshMarginBalances")}
+                title={t("refreshBalances")}
                 className="text-white/40 hover:text-white transition-colors"
               >
                 <MdRefresh size={16} className={isRefreshing ? "animate-spin" : ""} />
@@ -240,7 +242,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
             </div>
           )}
           <div className="mt-auto flex items-center gap-2">
-            <span className="text-micro font-medium text-white/40">Today&apos;s PnL</span>
+            <span className="text-micro font-medium text-white/40">{t("todaysPnl")}</span>
             {balLoading ? (
               <Skeleton variant="text" width="90px" height="14px" />
             ) : (
@@ -263,7 +265,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
         <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <span className={clsx("w-2 h-2 rounded-full", marginLevelTone === "success" ? "bg-success-6" : marginLevelTone === "warning" ? "bg-warning-1" : "bg-error-1 animate-pulse")} />
-            <span className="text-micro font-medium uppercase tracking-[0.08em] text-white/40">Margin Level</span>
+            <span className="text-micro font-medium uppercase tracking-[0.08em] text-white/40">{t("marginLevel")}</span>
           </div>
           {balLoading ? (
             <Skeleton variant="text" width="90px" height="30px" />
@@ -281,12 +283,12 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
         {/* Account Equity + Collateral */}
         <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-micro font-medium uppercase tracking-[0.08em] text-white/40">Account Equity</span>
+            <span className="text-micro font-medium uppercase tracking-[0.08em] text-white/40">{t("accountEquity")}</span>
             <button
               type="button"
               onClick={refreshBalances}
-              aria-label="Refresh account equity"
-              title="Refresh balances"
+              aria-label={t("refreshAccountEquity")}
+              title={t("refreshBalances")}
               className="text-white/40 hover:text-white transition-colors"
             >
               <MdRefresh size={16} className={isRefreshing ? "animate-spin" : ""} />
@@ -301,19 +303,19 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
             </div>
           )}
           <span className="mt-auto text-micro text-white/40">
-            Collateral <span className="font-semibold text-white/70">{fmt(collateralUsd, 2)}</span> USDT
+            {t("collateral")} <span className="font-semibold text-white/70">{fmt(collateralUsd, 2)}</span> USDT
           </span>
         </div>
 
         {/* Total Debt */}
         <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-micro font-medium uppercase tracking-[0.08em] text-white/40">Total Debt</span>
+            <span className="text-micro font-medium uppercase tracking-[0.08em] text-white/40">{t("totalDebt")}</span>
             <button
               type="button"
               onClick={refreshBalances}
-              aria-label="Refresh account debt"
-              title="Refresh balances"
+              aria-label={t("refreshAccountDebt")}
+              title={t("refreshBalances")}
               className="text-white/40 hover:text-white transition-colors"
             >
               <MdRefresh size={16} className={isRefreshing ? "animate-spin" : ""} />
@@ -327,7 +329,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
               <span className="text-xs font-medium text-white/40">USDT</span>
             </div>
           )}
-          <span className="mt-auto text-micro text-white/40">Outstanding borrow + interest</span>
+          <span className="mt-auto text-micro text-white/40">{t("outstandingBorrowAndInterest")}</span>
         </div>
       </div>
 
@@ -337,23 +339,23 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
           <div className="min-w-0 max-[1150px]:-mx-2 max-[1150px]:overflow-x-auto max-[1150px]:px-2">
             <div className="flex w-max items-center gap-1 whitespace-nowrap">
               {[
-                { value: "funds", label: "Funds" },
-                { value: "positions", label: "Positions" },
-                { value: "borrow_history", label: "Borrow History" },
-                { value: "liquidation_history", label: "Liquidation History" },
-              ].map((t) => (
+                { value: "funds", labelKey: "funds" },
+                { value: "positions", labelKey: "positions" },
+                { value: "borrow_history", labelKey: "borrowHistory" },
+                { value: "liquidation_history", labelKey: "liquidationHistory" },
+              ].map((t2) => (
                 <button
-                  key={t.value}
-                  onClick={() => setPanelTab(t.value)}
+                  key={t2.value}
+                  onClick={() => setPanelTab(t2.value)}
                   className={clsx(
                     "relative px-4 pt-4 pb-3 text-sm font-semibold transition-colors",
-                    panelTab === t.value
+                    panelTab === t2.value
                       ? "text-white"
                       : "text-white/40 hover:text-white/70"
                   )}
                 >
-                  {t.label}
-                  {panelTab === t.value && (
+                  {t(t2.labelKey)}
+                  {panelTab === t2.value && (
                     <span className="absolute inset-x-3 bottom-0 h-[2px] rounded-full bg-primary" />
                   )}
                 </button>
@@ -369,7 +371,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                   input: "!bg-transparent !border-white/20 checked:!bg-primary checked:!border-primary",
                   label: "!whitespace-nowrap !text-xs !text-white/40",
                 }}
-                label="Hide zero-balance assets"
+                label={t("hideZeroBalanceAssets")}
                 checked={hideZero}
                 onChange={(e) => setHideZero(e.target.checked)}
               />
@@ -379,7 +381,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                   type="text"
                   value={assetSearch}
                   onChange={(e) => setAssetSearch(e.target.value)}
-                  placeholder="Search"
+                  placeholder={t("search")}
                   className="bg-white/[0.04] border border-white/[0.06] rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-primary/40 w-28 transition-colors"
                 />
               </div>
@@ -393,12 +395,12 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
             <Table classNames={tableClassNames}>
               <thead>
                 <TableTr>
-                  <TableTh>Coin</TableTh>
-                  <TableTh>Total Balance</TableTh>
-                  <TableTh>Available Balance</TableTh>
-                  <TableTh>Borrowed</TableTh>
-                  <TableTh>Interest</TableTh>
-                  <TableTh>Action</TableTh>
+                  <TableTh>{t("coin")}</TableTh>
+                  <TableTh>{t("totalBalance")}</TableTh>
+                  <TableTh>{t("availableBalance")}</TableTh>
+                  <TableTh>{t("borrowed")}</TableTh>
+                  <TableTh>{t("interest")}</TableTh>
+                  <TableTh>{t("action")}</TableTh>
                 </TableTr>
               </thead>
               <tbody>
@@ -414,8 +416,8 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                   <TableTr>
                     <TableTd colSpan={5}>
                       <div className="py-10 flex flex-col items-center gap-2">
-                        <p className="text-xs text-white/30">No assets in margin wallet</p>
-                        <button onClick={openTransfer} className="text-xs text-primary hover:underline">Transfer funds to get started</button>
+                        <p className="text-xs text-white/30">{t("noAssetsInMarginWallet")}</p>
+                        <button onClick={openTransfer} className="text-xs text-primary hover:underline">{t("transferFundsToGetStarted")}</button>
                       </div>
                     </TableTd>
                   </TableTr>
@@ -459,10 +461,10 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                         </TableTd>
                         <TableTd>
                           <div className="flex items-center gap-3 whitespace-nowrap">
-                            <button onClick={openTransfer} className="text-xs font-semibold text-primary hover:underline">Transfer</button>
-                            <button onClick={() => openBorrow()} className="text-xs font-semibold text-warning-1 hover:underline">Borrow</button>
+                            <button onClick={openTransfer} className="text-xs font-semibold text-primary hover:underline">{t("transfer")}</button>
+                            <button onClick={() => openBorrow()} className="text-xs font-semibold text-warning-1 hover:underline">{t("borrow")}</button>
                             {borrowed > 0 && (
-                              <button onClick={() => openBorrow("repay")} className="text-xs font-semibold text-success-6 hover:underline">Repay</button>
+                              <button onClick={() => openBorrow("repay")} className="text-xs font-semibold text-success-6 hover:underline">{t("repay")}</button>
                             )}
                           </div>
                         </TableTd>
@@ -481,13 +483,13 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
             <Table classNames={tableClassNames}>
               <thead>
                 <TableTr>
-                  <TableTh>Pair</TableTh>
-                  <TableTh>Side</TableTh>
-                  <TableTh>Type</TableTh>
-                  <TableTh>Price</TableTh>
-                  <TableTh>Quantity</TableTh>
-                  <TableTh>Leverage</TableTh>
-                  <TableTh>Status</TableTh>
+                  <TableTh>{t("pair")}</TableTh>
+                  <TableTh>{t("side")}</TableTh>
+                  <TableTh>{t("type")}</TableTh>
+                  <TableTh>{t("price")}</TableTh>
+                  <TableTh>{t("quantity")}</TableTh>
+                  <TableTh>{t("leverage")}</TableTh>
+                  <TableTh>{t("status")}</TableTh>
                 </TableTr>
               </thead>
               <tbody>
@@ -495,7 +497,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                   <TableTr>
                     <TableTd colSpan={7}>
                       <div className="py-10 flex items-center justify-center">
-                        <p className="text-xs text-white/30">No open margin positions</p>
+                        <p className="text-xs text-white/30">{t("noOpenMarginPositions")}</p>
                       </div>
                     </TableTd>
                   </TableTr>
@@ -534,11 +536,11 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
             <Table classNames={tableClassNames}>
               <thead>
                 <TableTr>
-                  <TableTh>Asset</TableTh>
-                  <TableTh>Amount</TableTh>
-                  <TableTh>Interest</TableTh>
-                  <TableTh>Status</TableTh>
-                  <TableTh>Time</TableTh>
+                  <TableTh>{t("asset")}</TableTh>
+                  <TableTh>{t("amount")}</TableTh>
+                  <TableTh>{t("interest")}</TableTh>
+                  <TableTh>{t("status")}</TableTh>
+                  <TableTh>{t("time")}</TableTh>
                 </TableTr>
               </thead>
               <tbody>
@@ -548,7 +550,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
                   <TableTr>
                     <TableTd colSpan={5}>
                       <div className="py-10 flex items-center justify-center">
-                        <p className="text-xs text-white/30">No borrow history found</p>
+                        <p className="text-xs text-white/30">{t("noBorrowHistoryFound")}</p>
                       </div>
                     </TableTd>
                   </TableTr>
@@ -580,11 +582,11 @@ String(o.status) === "repaid" || String(o.status) === "completed" ? "bg-success-
             <Table classNames={tableClassNames}>
               <thead>
                 <TableTr>
-                  <TableTh>Pair</TableTh>
-                  <TableTh>Side</TableTh>
-                  <TableTh>Size</TableTh>
-                  <TableTh>Price</TableTh>
-                  <TableTh>Time</TableTh>
+                  <TableTh>{t("pair")}</TableTh>
+                  <TableTh>{t("side")}</TableTh>
+                  <TableTh>{t("size")}</TableTh>
+                  <TableTh>{t("price")}</TableTh>
+                  <TableTh>{t("time")}</TableTh>
                 </TableTr>
               </thead>
               <tbody>
@@ -594,7 +596,7 @@ String(o.status) === "repaid" || String(o.status) === "completed" ? "bg-success-
                   <TableTr>
                     <TableTd colSpan={5}>
                       <div className="py-10 flex items-center justify-center">
-                        <p className="text-xs text-white/30">No liquidation history found</p>
+                        <p className="text-xs text-white/30">{t("noLiquidationHistoryFound")}</p>
                       </div>
                     </TableTd>
                   </TableTr>

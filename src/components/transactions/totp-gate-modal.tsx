@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { PinInput, Button } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { ModalClose } from "../icons/modal-close";
 import { modals } from "@mantine/modals";
 
 function TotpCountdown() {
+  const t = useTranslations("Transactions");
   const [remaining, setRemaining] = useState(() => 30 - (Math.floor(Date.now() / 1000) % 30));
 
   useEffect(() => {
@@ -35,12 +37,13 @@ function TotpCountdown() {
         />
         <text x="16" y="20" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">{remaining}s</text>
       </svg>
-      <span className="text-xs text-white/40">Refreshes every 30s</span>
+      <span className="text-xs text-white/40">{t("refreshesEvery30s")}</span>
     </div>
   );
 }
 
 export const TotpGateModal = ({ onComplete }: { onComplete: (code: string) => void }) => {
+  const t = useTranslations("Transactions");
   const [code, setCode] = useState("");
   const [shake, setShake] = useState(false);
 
@@ -56,17 +59,17 @@ export const TotpGateModal = ({ onComplete }: { onComplete: (code: string) => vo
   return (
     <div className="bg-elevated border border-white/[0.08] w-full max-w-md rounded-3xl p-6 sm:p-8 flex flex-col gap-8 shadow-2xl relative overflow-hidden mx-auto">
       <div className="flex items-center justify-between">
-        <h4 className="text-lg font-bold text-white/90 tracking-tight">Security Verification</h4>
+        <h4 className="text-lg font-bold text-white/90 tracking-tight">{t("securityVerification")}</h4>
         <ModalClose className="cursor-pointer hover:bg-white/5 p-1 rounded-full transition-colors" onClick={modals.closeAll} />
       </div>
 
       <div className="flex flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <h2 className="text-3xl font-extrabold tracking-tight">
-            <span className="text-primary">Authenticator</span> Code
+            <span className="text-primary">{t("authenticator")}</span> {t("code")}
           </h2>
           <p className="text-sm font-medium text-white/60 leading-relaxed">
-            Open your authenticator app and enter the<br />6-digit code to confirm this withdrawal
+            {t("authenticatorInstruction1")}<br />{t("authenticatorInstruction2")}
           </p>
         </div>
 
@@ -108,7 +111,7 @@ export const TotpGateModal = ({ onComplete }: { onComplete: (code: string) => vo
             color: code.length === 6 ? 'white' : undefined
           }}
         >
-          <span className="font-bold">Proceed</span>
+          <span className="font-bold">{t("proceed")}</span>
         </Button>
       </div>
     </div>

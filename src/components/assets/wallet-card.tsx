@@ -20,6 +20,16 @@ import { MdRefresh } from "react-icons/md";
 import { Skeleton } from "../shared/skeleton";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import type { PortfolioBalanceAccount } from "@/src/lib/portfolio-store";
+import { useTranslations } from "next-intl";
+
+/** Maps the account title used as a prop onto its translation key. */
+const TITLE_KEYS: Record<string, string> = {
+  "Funding Account": "fundingAccount",
+  "Spot": "spot",
+  "Futures": "futures",
+  "Margin": "margin",
+  "Total Assets": "totalAssets",
+};
 
 export const WalletCard = ({
   title,
@@ -30,6 +40,7 @@ export const WalletCard = ({
   children?: React.ReactNode;
   variant?: "account" | "dashboard";
 }) => {
+  const t = useTranslations("Wallet");
   const { push } = useRouter();
   const {
     handleOpenInternalTransferModal,
@@ -42,6 +53,8 @@ export const WalletCard = ({
     "Margin": "margin",
   };
   const singleAccount = title ? accountMap[title] : undefined;
+  const titleKey = title ? TITLE_KEYS[title] : undefined;
+  const titleLabel = titleKey ? t(titleKey) : title ? title : t("totalAssets");
 
   // Account pages request their own balance alongside portfolio holdings;
   // the overview requests the overall balance.
@@ -98,27 +111,27 @@ export const WalletCard = ({
     modals.open({
       children: (
         <MethodSheet
-          title="Select withdrawal method"
-          subtitle="Choose how you want to withdraw"
+          title={t("selectWithdrawalMethod")}
+          subtitle={t("chooseWithdrawalMethod")}
           onClose={modals.closeAll}
           options={[
             {
               icon: <Withdraw />,
-              title: "Crypto withdrawal",
-              description: "On-chain withdrawal | Bybit UID/email/mobile number",
+              title: t("cryptoWithdrawal"),
+              description: t("cryptoWithdrawalDescription"),
               onSelect: () => go("/transactions/withdrawal"),
             },
             {
               icon: <FiatOtc />,
-              title: "Sell for NGN",
-              description: "Receive cash instantly in your bank account or e-wallet",
+              title: t("sellForNgn"),
+              description: t("sellForNgnDescription"),
               ...SUCCESS_METHOD_STYLES,
               onSelect: () => go("/transactions/fiat-withdraw"),
             },
             {
               icon: <P2pTrading />,
-              title: "P2P Trading",
-              description: "Sell directly to users | Competitive prices | Local payments",
+              title: t("p2pTrading"),
+              description: t("p2pTradingDescription"),
               ...SUCCESS_METHOD_STYLES,
               onSelect: () => go("/trades/p2p"),
             },
@@ -131,8 +144,9 @@ export const WalletCard = ({
 
   const buttons = [
     {
+      id: "withdraw",
       icon: Withdraw,
-      text: "Withdraw",
+      text: t("withdraw"),
       isPrimary: false,
       action: () => {
         if (isDashboard) {
@@ -143,8 +157,9 @@ export const WalletCard = ({
       },
     },
     {
+      id: "transfer",
       icon: Transfer,
-      text: "Transfer",
+      text: t("transfer"),
       isPrimary: false,
       action: () => {
         if (title === "Futures") {
@@ -157,23 +172,26 @@ export const WalletCard = ({
     ...(isDashboard
       ? [
           {
+            id: "earn",
             icon: Pocket,
-            text: "Earn",
+            text: t("earn"),
             isPrimary: false,
             action: () => push("/assets/earn"),
           },
         ]
       : [
           {
+            id: "external-transfer",
             icon: Transfer,
-            text: "Ext. Transfer",
+            text: t("externalTransfer"),
             isPrimary: false,
             action: handleOpenExternalTransferModal,
           },
         ]),
     {
+      id: "convert",
       icon: Convert,
-      text: "Convert",
+      text: t("convert"),
       isPrimary: false,
       action: () =>
         modals.open({
@@ -195,15 +213,15 @@ export const WalletCard = ({
           <div className="flex flex-col gap-3 max-w-md">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-bold uppercase tracking-widest text-primary/70">
-                {title ?? "Total Assets"}
+                {titleLabel}
               </span>
               <div className="flex items-center gap-2">
                 <BalanceRevealControl />
                 <button
                   type="button"
                   onClick={refreshBalances}
-                  aria-label={`Refresh ${title ?? "total assets"} balance`}
-                  title="Refresh balance"
+                  aria-label={t("refreshBalanceLabel", { account: titleLabel })}
+                  title={t("refreshBalance")}
                   className="text-white/40 hover:text-white transition-colors"
                 >
                   <MdRefresh size={17} className={isRefreshing ? "animate-spin" : ""} />
@@ -232,7 +250,7 @@ export const WalletCard = ({
             {/* P&L line */}
             <div className="mt-1 flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-white/40">
-                Today&apos;s P&L
+                {t("todaysPnl")}
               </span>
               {showBalanceLoader ? (
                 <Skeleton variant="text" width="100px" height="14px" />
@@ -249,7 +267,7 @@ export const WalletCard = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 lg:shrink-0">
             {buttons.map((item) => (
               <button
-                key={item.text}
+                key={item.id}
                 onClick={item.action}
                 className={clsx(
                   "flex flex-col items-center justify-center gap-1 rounded-xl p-3.5 min-w-[96px] transition-all duration-200 active:scale-95",

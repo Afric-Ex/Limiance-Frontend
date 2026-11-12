@@ -15,10 +15,12 @@ import clsx from "clsx";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountPaymentMethodsSkeleton } from "@/src/components/skeletons/account";
 import { AccountPageHeader } from "@/src/components/settings/account-page-header";
+import { useTranslations } from "next-intl";
 
 type Step = 1 | 2;
 
 function PaymentMethodsPageInner() {
+  const t = useTranslations("Settings");
   const queryClient = useQueryClient();
 
   // Queries
@@ -65,14 +67,14 @@ function PaymentMethodsPageInner() {
   const { mutate: addMethod, isPending: addLoading } = useMutation({
     mutationFn: () => p2p.addPaymentMethod({ method: "bank_transfer", bankName, accountNumber, accountName }),
     onSuccess: () => {
-      successNotification("Payment method added.");
+      successNotification(t("paymentMethodAdded"));
       handleClose();
       queryClient.invalidateQueries({ queryKey: p2pKey.paymentMethods() });
     },
     onError: (e: any) => {
       const msg = e?.response?.data?.message ?? "";
       if (msg.toLowerCase().includes("max") || msg.toLowerCase().includes("limit")) {
-        errorMessageHandler(new Error("You've reached the maximum of 5 payment methods."));
+        errorMessageHandler(new Error(t("paymentMethodsLimit")));
       } else {
         errorMessageHandler(e);
       }
@@ -83,7 +85,7 @@ function PaymentMethodsPageInner() {
   const { mutate: deleteMethod, isPending: deleteLoading } = useMutation({
     mutationFn: (id: string) => p2p.deletePaymentMethod(id),
     onSuccess: () => {
-      successNotification("Payment method removed.");
+      successNotification(t("paymentMethodRemoved"));
       closeDeleteModal();
       setDeleteConfirmId(null);
       queryClient.invalidateQueries({ queryKey: p2pKey.paymentMethods() });
@@ -93,10 +95,10 @@ function PaymentMethodsPageInner() {
 
   const validate = () => {
     const errors: Record<string, string> = {};
-    if (!bankName.trim()) errors.bankName = "Bank name is required";
-    if (!accountNumber.trim()) errors.accountNumber = "Account number is required";
-    else if (!/^\d{10}$/.test(accountNumber)) errors.accountNumber = "Account number must be exactly 10 digits";
-    if (!accountName.trim()) errors.accountName = "Account name is required";
+    if (!bankName.trim()) errors.bankName = t("bankNameRequired");
+    if (!accountNumber.trim()) errors.accountNumber = t("accountNumberRequired");
+    else if (!/^\d{10}$/.test(accountNumber)) errors.accountNumber = t("accountNumberDigits");
+    if (!accountName.trim()) errors.accountName = t("accountNameRequired");
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -114,10 +116,10 @@ function PaymentMethodsPageInner() {
   return (
     <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 pb-8 page-enter max-[1150px]:pb-[100px]">
       <AccountPageHeader
-        title="Payment methods"
-        description="Manage the bank accounts you use to send and receive payments on P2P."
+        title={t("paymentMethodsTitle")}
+        description={t("paymentMethodsDescription")}
         icon={<MdAccountBalance size={23} />}
-        eyebrow="P2P payments"
+        eyebrow={t("p2pPayments")}
         action={
           !atLimit ? (
             <button
@@ -126,7 +128,7 @@ function PaymentMethodsPageInner() {
               className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(77,119,240,0.2)] transition-all hover:bg-primary/90 active:scale-[0.98]"
             >
               <Add />
-              Add payment method
+              {t("addPaymentMethod")}
             </button>
           ) : undefined
         }
@@ -138,9 +140,9 @@ function PaymentMethodsPageInner() {
           <MdAccountBalance size={18} />
         </span>
         <div>
-          <p className="text-sm font-semibold text-white/90">Your P2P payout methods</p>
+          <p className="text-sm font-semibold text-white/90">{t("p2pPayoutMethods")}</p>
           <p className="mt-1 text-sm leading-6 text-white/55">
-            These bank details are shared with your P2P trade counterparties when needed. Account numbers stay masked until you choose to reveal them.
+            {t("p2pPayoutMethodsDescription")}
           </p>
         </div>
       </div>
@@ -149,7 +151,7 @@ function PaymentMethodsPageInner() {
       {atLimit && (
         <div className="p-4 bg-warning-1/10 border border-warning-1/30 rounded-xl flex items-center gap-3">
           <span className="text-warning-1 shrink-0">⚠</span>
-          <p className="text-sm text-warning-1">You&apos;ve reached the maximum of 5 payment methods.</p>
+          <p className="text-sm text-warning-1">{t("paymentMethodsLimit")}</p>
         </div>
       )}
 
@@ -170,9 +172,9 @@ function PaymentMethodsPageInner() {
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold">{method.data?.bankName ?? method.bankName ?? method.bank_name ?? "Bank"}</span>
+                      <span className="font-semibold">{method.data?.bankName ?? method.bankName ?? method.bank_name ?? t("bank")}</span>
                       {method.isDefault && (
-                        <span className="px-2 py-0.5 bg-success-6/20 text-success-6 text-micro font-bold rounded-full border border-success-6/30">Default</span>
+                        <span className="px-2 py-0.5 bg-success-6/20 text-success-6 text-micro font-bold rounded-full border border-success-6/30">{t("default")}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -182,7 +184,7 @@ function PaymentMethodsPageInner() {
                       <button
                         onClick={() => toggleReveal(id)}
                         className="text-white/40 hover:text-white transition-colors"
-                        title={revealed ? "Hide" : "Reveal"}
+                        title={revealed ? t("hide") : t("reveal")}
                       >
                         {revealed ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
                       </button>
@@ -196,7 +198,7 @@ function PaymentMethodsPageInner() {
                   className="flex items-center justify-center max-[1150px]:w-full gap-1.5 px-3 py-2 text-sm text-error-1 border border-error-1/30 rounded-lg hover:bg-error-1/10 transition-all"
                 >
                   <Trash />
-                  Delete
+                  {t("delete")}
                 </button>
               </div>
             );
@@ -208,15 +210,15 @@ function PaymentMethodsPageInner() {
             <MdAccountBalance size={32} />
           </div>
           <div className="flex flex-col items-center gap-2 text-center">
-            <h3 className="font-semibold text-lg">No payment methods added yet</h3>
-            <p className="text-sm text-white/50 max-w-xs">Add a payment method to start trading on P2P.</p>
+            <h3 className="font-semibold text-lg">{t("noPaymentMethods")}</h3>
+            <p className="text-sm text-white/50 max-w-xs">{t("noPaymentMethodsDesc")}</p>
           </div>
           <button
             onClick={openModal}
             className="flex items-center gap-2 px-5 py-3 bg-primary rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all"
           >
             <Add />
-            Add Payment Method
+            {t("addPaymentMethod")}
           </button>
         </div>
       )}
@@ -225,14 +227,14 @@ function PaymentMethodsPageInner() {
       <Modal
         opened={modalOpen}
         onClose={handleClose}
-        title={<span className="font-bold text-lg">{step === 1 ? "Add Payment Method" : "Bank Details"}</span>}
+        title={<span className="font-bold text-lg">{step === 1 ? t("addPaymentMethod") : t("bankDetails")}</span>}
         classNames={{ content: "!bg-gray-7", header: "!bg-gray-7" }}
         size="md"
         centered
       >
         {step === 1 ? (
           <div className="flex flex-col gap-5 py-2">
-            <p className="text-sm text-white/60">Select a payment method type to add.</p>
+            <p className="text-sm text-white/60">{t("selectPaymentType")}</p>
             {/* Bank Transfer — selectable */}
             <button
               onClick={() => setStep(2)}
@@ -242,8 +244,8 @@ function PaymentMethodsPageInner() {
                 <MdAccountBalance size={24} />
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="font-semibold">Bank Transfer</span>
-                <span className="text-xs text-white/50">Send and receive via bank account</span>
+                <span className="font-semibold">{t("bankTransfer")}</span>
+                <span className="text-xs text-white/50">{t("bankTransferDesc")}</span>
               </div>
             </button>
 
@@ -256,9 +258,9 @@ function PaymentMethodsPageInner() {
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">{label}</span>
-                    <span className="px-2 py-0.5 bg-white/10 text-white/40 text-2xs font-bold rounded-full">Coming soon</span>
+                    <span className="px-2 py-0.5 bg-white/10 text-white/40 text-2xs font-bold rounded-full">{t("comingSoon")}</span>
                   </div>
-                  <span className="text-xs text-white/40">Not yet available</span>
+                  <span className="text-xs text-white/40">{t("notYetAvailable")}</span>
                 </div>
               </div>
             ))}
@@ -268,12 +270,12 @@ function PaymentMethodsPageInner() {
             <div className="flex flex-col gap-4">
               {/* Bank Name */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-white/70">Bank Name <span className="text-error-1">*</span></label>
+                <label className="text-sm font-medium text-white/70">{t("bankName")} <span className="text-error-1">*</span></label>
                 <input
                   type="text"
                   value={bankName}
                   onChange={(e) => { setBankName(e.target.value); setFormErrors((p) => ({ ...p, bankName: "" })); }}
-                  placeholder="e.g. First Bank"
+                  placeholder={t("bankNamePlaceholder")}
                   className={clsx("w-full px-4 py-3 rounded-xl bg-gray-1 border text-sm text-white outline-none transition-all", formErrors.bankName ? "border-error-1" : "border-gray-9/40 focus:border-primary")}
                 />
                 {formErrors.bankName && <span className="text-xs text-error-1">{formErrors.bankName}</span>}
@@ -281,7 +283,7 @@ function PaymentMethodsPageInner() {
 
               {/* Account Number */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-white/70">Account Number <span className="text-error-1">*</span></label>
+                <label className="text-sm font-medium text-white/70">{t("accountNumber")} <span className="text-error-1">*</span></label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -291,7 +293,7 @@ function PaymentMethodsPageInner() {
                     setAccountNumber(val);
                     setFormErrors((p) => ({ ...p, accountNumber: "" }));
                   }}
-                  placeholder="10-digit account number"
+                  placeholder={t("accountNumberPlaceholder")}
                   maxLength={10}
                   className={clsx("w-full px-4 py-3 rounded-xl bg-gray-1 border text-sm text-white outline-none transition-all font-mono tracking-widest", formErrors.accountNumber ? "border-error-1" : "border-gray-9/40 focus:border-primary")}
                 />
@@ -300,12 +302,12 @@ function PaymentMethodsPageInner() {
 
               {/* Account Name */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-white/70">Account Name <span className="text-error-1">*</span></label>
+                <label className="text-sm font-medium text-white/70">{t("accountName")} <span className="text-error-1">*</span></label>
                 <input
                   type="text"
                   value={accountName}
                   onChange={(e) => { setAccountName(e.target.value); setFormErrors((p) => ({ ...p, accountName: "" })); }}
-                  placeholder="Full account holder name"
+                  placeholder={t("accountNamePlaceholder")}
                   className={clsx("w-full px-4 py-3 rounded-xl bg-gray-1 border text-sm text-white outline-none transition-all", formErrors.accountName ? "border-error-1" : "border-gray-9/40 focus:border-primary")}
                 />
                 {formErrors.accountName && <span className="text-xs text-error-1">{formErrors.accountName}</span>}
@@ -314,7 +316,7 @@ function PaymentMethodsPageInner() {
 
             <div className="flex gap-3">
               <button onClick={() => setStep(1)} className="flex-1 py-3 border border-white/20 rounded-xl text-sm font-medium text-white/70 hover:bg-white/[0.04] transition-all">
-                Back
+                {t("back")}
               </button>
               <button
                 onClick={handleSubmit}
@@ -322,7 +324,7 @@ function PaymentMethodsPageInner() {
                 className="flex-1 py-3 bg-primary rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {addLoading && <Loader size="xs" color="white" />}
-                Add Method
+                {t("addMethod")}
               </button>
             </div>
           </div>
@@ -333,21 +335,21 @@ function PaymentMethodsPageInner() {
       <Modal
         opened={deleteModalOpen}
         onClose={() => { closeDeleteModal(); setDeleteConfirmId(null); }}
-        title={<span className="font-bold text-lg">Delete Payment Method</span>}
+        title={<span className="font-bold text-lg">{t("deletePaymentMethod")}</span>}
         classNames={{ content: "!bg-gray-7", header: "!bg-gray-7" }}
         size="sm"
         centered
       >
         <div className="flex flex-col gap-6 py-2">
           <p className="text-sm text-white/70">
-            Delete this payment method? It will no longer be available during P2P trades.
+            {t("deletePaymentMethodQuestion")}
           </p>
           <div className="flex gap-3">
             <button
               onClick={() => { closeDeleteModal(); setDeleteConfirmId(null); }}
               className="flex-1 py-3 border border-white/20 rounded-xl text-sm font-medium text-white/70 hover:bg-white/[0.04] transition-all"
             >
-              Cancel
+              {t("cancel")}
             </button>
             <button
               onClick={() => { if (deleteConfirmId) deleteMethod(deleteConfirmId); }}
@@ -355,7 +357,7 @@ function PaymentMethodsPageInner() {
               className="flex-1 py-3 bg-error-1 rounded-xl text-sm font-semibold hover:bg-error-1/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {deleteLoading && <Loader size="xs" color="white" />}
-              Delete
+              {t("delete")}
             </button>
           </div>
         </div>

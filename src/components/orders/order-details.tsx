@@ -4,6 +4,7 @@ import { Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } f
 import React, { useState } from "react";
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import {
   fmtDateTime,
@@ -22,6 +23,7 @@ export const normalizeSymbol = (value: string) =>
     .toUpperCase();
 
 export const OrderDetails = () => {
+  const t = useTranslations("Orders");
   const [symbol, setSymbol] = useState("BTCUSDT");
 
   const { data: trades, isLoading } = useQuery({
@@ -34,26 +36,26 @@ export const OrderDetails = () => {
   const filtered = allTrades;
   const resetPair = () => setSymbol("BTCUSDT");
 
-  const fee = (t: any) =>
-    t.fee ?? t.commission ?? (t.feeAmount !== undefined ? t.feeAmount : null);
+  const fee = (t2: any) =>
+    t2.fee ?? t2.commission ?? (t2.feeAmount !== undefined ? t2.feeAmount : null);
 
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold text-white">Trade fills</h2>
-          <p className="mt-1 text-xs text-white/40">Individual executions, fees and settled amounts by trading pair.</p>
+          <h2 className="text-base font-semibold text-white">{t("tradeFills")}</h2>
+          <p className="mt-1 text-xs text-white/40">{t("tradeFillsDescription")}</p>
         </div>
         <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium tabular-nums text-white/55">
-          {isLoading ? "Loading fills" : `${filtered.length} ${filtered.length === 1 ? "fill" : "fills"}`}
+          {isLoading ? t("loadingFills") : t("fillsCount", { count: filtered.length })}
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <div className="min-w-[180px] flex-1">
           <TextInput
             classNames={searchInputClass}
-            aria-label="Search trade fills by pair"
-            placeholder="Search pair (e.g. BTCUSDT)"
+            aria-label={t("searchTradeFillsByPair")}
+            placeholder={t("searchPairExample")}
             value={symbol}
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
             onChange={(e) => setSymbol(normalizeSymbol(e.currentTarget.value))}
@@ -65,7 +67,7 @@ export const OrderDetails = () => {
             className="h-9 rounded-lg px-2 text-xs font-semibold text-white/45 transition-colors hover:text-white"
             onClick={resetPair}
           >
-            Reset pair
+            {t("resetPair")}
           </button>
         )}
       </div>
@@ -75,25 +77,25 @@ export const OrderDetails = () => {
           <Table classNames={tableClassNames}>
             <TableThead>
               <TableTr>
-                <TableTh className="pl-5">Time</TableTh>
-                <TableTh>Trading Pair</TableTh>
-                <TableTh>Side</TableTh>
-                <TableTh>Price</TableTh>
-                <TableTh>Filled</TableTh>
-                <TableTh>Fee</TableTh>
-                <TableTh>Total</TableTh>
+                <TableTh className="pl-5">{t("time")}</TableTh>
+                <TableTh>{t("tradingPair")}</TableTh>
+                <TableTh>{t("side")}</TableTh>
+                <TableTh>{t("price")}</TableTh>
+                <TableTh>{t("filledAmount")}</TableTh>
+                <TableTh>{t("fee")}</TableTh>
+                <TableTh>{t("total")}</TableTh>
               </TableTr>
             </TableThead>
             <TableTbody>
-              {filtered.map((t: any, idx: number) => (
-                <TableTr key={t.id ?? t.tradeId ?? idx}>
-                  <TableTd className="pl-5 text-white/50">{fmtDateTime(t.createdAt ?? t.time ?? t.ts)}</TableTd>
-                  <TableTd className="!text-white !font-bold">{getPair(t) !== "—" ? getPair(t) : t.symbol ?? "—"}</TableTd>
-                  <TableTd className={sideTone(t.side)}>{String(t.side ?? "—").toUpperCase()}</TableTd>
-                  <TableTd>{fmtNum(t.price)}</TableTd>
-                  <TableTd>{fmtNum(t.quantity ?? t.qty ?? t.filled)}</TableTd>
-                  <TableTd>{fmtNum(fee(t))}</TableTd>
-                  <TableTd>{fmtNum(t.total ?? (t.price && t.quantity ? t.price * t.quantity : null))}</TableTd>
+              {filtered.map((t2: any, idx: number) => (
+                <TableTr key={t2.id ?? t2.tradeId ?? idx}>
+                  <TableTd className="pl-5 text-white/50">{fmtDateTime(t2.createdAt ?? t2.time ?? t2.ts)}</TableTd>
+                  <TableTd className="!text-white !font-bold">{getPair(t2) !== "—" ? getPair(t2) : t2.symbol ?? "—"}</TableTd>
+                  <TableTd className={sideTone(t2.side)}>{String(t2.side ?? "—").toUpperCase()}</TableTd>
+                  <TableTd>{fmtNum(t2.price)}</TableTd>
+                  <TableTd>{fmtNum(t2.quantity ?? t2.qty ?? t2.filled)}</TableTd>
+                  <TableTd>{fmtNum(fee(t2))}</TableTd>
+                  <TableTd>{fmtNum(t2.total ?? (t2.price && t2.quantity ? t2.price * t2.quantity : null))}</TableTd>
                 </TableTr>
               ))}
             </TableTbody>
@@ -101,9 +103,9 @@ export const OrderDetails = () => {
         </TableCard>
       ) : (
         <OrdersEmptyState
-          title="No trade fills found"
-          description={`There are no recent executions for ${symbol}. Try another trading pair or place a spot trade.`}
-          actionLabel="Browse spot markets"
+          title={t("emptyTradeFills")}
+          description={t("emptyTradeFillsDescription", { symbol })}
+          actionLabel={t("browseSpotMarkets")}
           actionHref="/trades/spot"
         />
       )}

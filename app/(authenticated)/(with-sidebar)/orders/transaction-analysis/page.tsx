@@ -1,4 +1,7 @@
+"use client";
+
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { SpotRecords } from "@/src/components/orders/spot-records";
 import { MarginRecords } from "@/src/components/orders/margin-records";
 import { FundingWallet } from "@/src/components/orders/funding-wallet";
@@ -8,14 +11,15 @@ import { TransactionAnalysisSkeleton } from "@/src/components/skeletons/orders";
 import { OrdersPageFrame, ordersTabsClassNames } from "@/src/components/orders/orders-shared";
 
 function TransactionAnalysisInner() {
+  const t = useTranslations("Orders");
   return (
-    <OrdersPageFrame title="Transaction analysis" description="Activity across your spot, margin, crypto and funding wallets.">
+    <OrdersPageFrame title={t("transactionAnalysis")} description={t("transactionAnalysisDescription")}>
       <Tabs classNames={ordersTabsClassNames} defaultValue="crypto">
         <TabsList>
-          <TabsTab value="crypto">Crypto</TabsTab>
-          <TabsTab value="spot">Spot Records</TabsTab>
-          <TabsTab value="margin">Margin Records</TabsTab>
-          <TabsTab value="funding">Funding Wallet</TabsTab>
+          <TabsTab value="crypto">{t("crypto")}</TabsTab>
+          <TabsTab value="spot">{t("spotRecords")}</TabsTab>
+          <TabsTab value="margin">{t("marginRecords")}</TabsTab>
+          <TabsTab value="funding">{t("fundingWallet")}</TabsTab>
         </TabsList>
 
         <TabsPanel value="crypto">

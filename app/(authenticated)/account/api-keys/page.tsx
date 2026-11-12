@@ -26,6 +26,7 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountApiKeysSkeleton } from "@/src/components/skeletons/account";
 import { AccountPageHeader } from "@/src/components/settings/account-page-header";
 import { MdVpnKey } from "react-icons/md";
+import { useTranslations } from "next-intl";
 
 const unwrapPayload = (value: any): any => {
   let payload = value;
@@ -62,6 +63,7 @@ const normalizeApiKeys = (response: any): any[] => {
 };
 
 function ApiKeysPageInner() {
+  const t = useTranslations("Security");
   const queryClient = useQueryClient();
 
   // Queries
@@ -120,7 +122,7 @@ function ApiKeysPageInner() {
       const statusCode = Number(result.statusCode);
       if (result.success === false || (Number.isFinite(statusCode) && statusCode >= 400)) {
         const error = new Error(
-          result.message || result.error || "Failed to create API key"
+          result.message || result.error || t("apiKeyCreateFailed")
         ) as Error & { response: { data: typeof response; status: number } };
         error.response = {
           data: response,
@@ -148,7 +150,7 @@ function ApiKeysPageInner() {
   const { mutate: deleteKey, isPending: deleteLoading } = useMutation({
     mutationFn: (keyId: string) => userService.deleteApiKey(keyId),
     onSuccess: () => {
-      successNotification("API key deleted.");
+      successNotification(t("apiKeyDeleted"));
       setDeleteConfirmId(null);
       queryClient.invalidateQueries({ queryKey: userKeys.apiKeys });
     },
@@ -157,11 +159,11 @@ function ApiKeysPageInner() {
 
   const handleCreate = () => {
     let valid = true;
-    if (!label.trim()) { setLabelError("Label is required"); valid = false; } else setLabelError("");
+    if (!label.trim()) { setLabelError(t("labelRequired")); valid = false; } else setLabelError("");
     if (permissionsLoading || permissionsError || !permissionData?.permissions.length) {
       valid = false;
     }
-    if (selectedPerms.length === 0) { setPermsError("Select at least one permission"); valid = false; } else setPermsError("");
+    if (selectedPerms.length === 0) { setPermsError(t("selectPermission")); valid = false; } else setPermsError("");
     if (valid) createKey();
   };
 
@@ -173,10 +175,10 @@ function ApiKeysPageInner() {
   return (
     <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 pb-8 page-enter max-[1150px]:pb-[100px]">
       <AccountPageHeader
-        title="API access"
-        description="Create and manage keys for trusted applications and trading tools."
+        title={t("apiAccessTitle")}
+        description={t("apiAccessDescription")}
         icon={<MdVpnKey size={22} />}
-        eyebrow="Developer access"
+        eyebrow={t("developerAccess")}
         action={
           <button
             type="button"
@@ -184,7 +186,7 @@ function ApiKeysPageInner() {
             className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(77,119,240,0.2)] transition-all hover:bg-primary/90 active:scale-[0.98]"
           >
             <Add />
-            Create API key
+            {t("createApiKey")}
           </button>
         }
       />
@@ -193,7 +195,7 @@ function ApiKeysPageInner() {
       {!bannerDismissed && (
         <div className="flex items-start justify-between gap-4 p-4 bg-warning-1/10 border border-warning-1/30 rounded-xl">
           <p className="text-sm text-warning-1">
-            <strong>Security Notice:</strong> API keys provide programmatic access to your account. Treat your secret key like a password — never share it. Keys are only shown once at creation.
+            <strong>{t("securityNotice")}</strong> {t("apiKeySecurityNotice")}
           </p>
           <button onClick={dismissBanner} className="text-warning-1/60 hover:text-warning-1 transition-colors shrink-0 mt-0.5">
             <MdClose size={18} />
@@ -207,25 +209,25 @@ function ApiKeysPageInner() {
           <div className="flex justify-center py-16"><Loader color="blue" /></div>
         ) : isError ? (
           <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-            <p className="text-sm text-white/60">Unable to load API keys.</p>
+            <p className="text-sm text-white/60">{t("apiKeysLoadError")}</p>
             <button
               type="button"
               onClick={() => void refetch()}
               className="rounded-lg border border-white/15 px-4 py-2 text-sm text-white/80 transition-colors hover:bg-white/[0.05]"
             >
-              Retry
+              {t("retry")}
             </button>
           </div>
         ) : apiKeys?.length > 0 ? (
           <div className="overflow-x-auto">
             <Table classNames={{ th: "!text-white/50 !text-xs !font-semibold !py-4 !px-5 !bg-black/20", td: "!py-4 !px-5 !border-b !border-white/[0.04]" }}>
               <TableTr>
-                <TableTh>Label</TableTh>
-                <TableTh>API Key</TableTh>
-                <TableTh>Permissions</TableTh>
-                <TableTh>Created</TableTh>
-                <TableTh>Last Used</TableTh>
-                <TableTh>Action</TableTh>
+                <TableTh>{t("label")}</TableTh>
+                <TableTh>{t("apiKey")}</TableTh>
+                <TableTh>{t("permissions")}</TableTh>
+                <TableTh>{t("created")}</TableTh>
+                <TableTh>{t("lastUsed")}</TableTh>
+                <TableTh>{t("action")}</TableTh>
               </TableTr>
               {apiKeys.map((k: any, index: number) => (
                 <TableTr key={k.id ?? `${k.apiKey ?? "api-key"}-${index}`} className="hover:bg-white/[0.02] transition-colors">
@@ -252,19 +254,19 @@ function ApiKeysPageInner() {
                     </div>
                   </TableTd>
                   <TableTd><span className="text-xs text-white/50">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : "—"}</span></TableTd>
-                  <TableTd><span className="text-xs text-white/50">{k.lastUsed ? new Date(k.lastUsed).toLocaleString() : "Never"}</span></TableTd>
+                  <TableTd><span className="text-xs text-white/50">{k.lastUsed ? new Date(k.lastUsed).toLocaleString() : t("never")}</span></TableTd>
                   <TableTd>
                     {deleteConfirmId === k.id ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-white/60 whitespace-nowrap">Sure?</span>
-                        <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-white/50 hover:text-white px-2 py-1 rounded border border-white/20 hover:border-white/40 transition-all">Cancel</button>
+                        <span className="text-xs text-white/60 whitespace-nowrap">{t("sure")}</span>
+                        <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-white/50 hover:text-white px-2 py-1 rounded border border-white/20 hover:border-white/40 transition-all">{t("cancel")}</button>
                         <button onClick={() => deleteKey(k.id)} disabled={deleteLoading || !k.id} className="text-xs text-error-1 px-2 py-1 rounded border border-error-1/40 hover:bg-error-1/10 transition-all flex items-center gap-1">
                           {deleteLoading && <Loader size={10} />}
-                          Confirm
+                          {t("confirm")}
                         </button>
                       </div>
                     ) : (
-                      <button onClick={() => setDeleteConfirmId(k.id)} disabled={!k.id} aria-label={`Delete ${k.label ?? "API key"}`} className="p-2 text-white/40 hover:text-error-1 transition-colors rounded-lg hover:bg-error-1/10 disabled:cursor-not-allowed disabled:opacity-30">
+                      <button onClick={() => setDeleteConfirmId(k.id)} disabled={!k.id} aria-label={`${t("delete")} ${k.label ?? t("apiKey")}`} className="p-2 text-white/40 hover:text-error-1 transition-colors rounded-lg hover:bg-error-1/10 disabled:cursor-not-allowed disabled:opacity-30">
                         <Trash />
                       </button>
                     )}
@@ -277,12 +279,12 @@ function ApiKeysPageInner() {
           <div className="flex flex-col items-center justify-center gap-5 py-20 px-8">
             <EmptyTable />
             <div className="flex flex-col items-center gap-2 text-center">
-              <h3 className="font-semibold text-lg">No API keys yet</h3>
-              <p className="text-sm text-white/50 max-w-xs">Create your first API key to connect trading bots or third-party applications.</p>
+              <h3 className="font-semibold text-lg">{t("noApiKeys")}</h3>
+              <p className="text-sm text-white/50 max-w-xs">{t("noApiKeysDesc")}</p>
             </div>
             <button onClick={openCreate} className="flex items-center gap-2 px-5 py-3 bg-primary rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all">
               <Add />
-              Create API Key
+              {t("createApiKey")}
             </button>
           </div>
         )}
@@ -299,10 +301,10 @@ function ApiKeysPageInner() {
             </span>
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-                Developer access
+                {t("developerAccess")}
               </p>
               <h2 className="mt-0.5 text-base font-semibold leading-tight text-white sm:text-lg">
-                Create API key
+                {t("createApiKey")}
               </h2>
             </div>
           </div>
@@ -325,7 +327,7 @@ function ApiKeysPageInner() {
             <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/[0.06] p-3.5">
               <MdOutlineSecurity className="mt-0.5 shrink-0 text-primary" size={18} />
               <p className="text-xs leading-5 text-white/55">
-                API keys can access your account based on the permissions you select. Only grant the access your application needs.
+                {t("apiKeyPermissionsHint")}
               </p>
             </div>
 
@@ -333,10 +335,10 @@ function ApiKeysPageInner() {
               <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <label htmlFor="api-key-label" className="text-sm font-semibold text-white/85">
-                    Key label <span className="text-error-1">*</span>
+                    {t("keyLabel")} <span className="text-error-1">*</span>
                   </label>
                   <p className="mt-1 text-xs text-white/40">
-                    Use a name that helps you recognize this integration.
+                    {t("keyLabelHint")}
                   </p>
                 </div>
                 <span className={clsx("text-xs tabular-nums", label.length >= 45 ? "text-warning-1" : "text-white/35")}>
@@ -351,7 +353,7 @@ function ApiKeysPageInner() {
                   setLabel(event.target.value.slice(0, 50));
                   setLabelError("");
                 }}
-                placeholder="e.g. Portfolio tracker"
+                placeholder={t("keyLabelPlaceholder")}
                 aria-invalid={Boolean(labelError)}
                 aria-describedby={labelError ? "api-key-label-error" : undefined}
                 maxLength={50}
@@ -373,14 +375,14 @@ function ApiKeysPageInner() {
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <legend className="text-sm font-semibold text-white/85">
-                    Permissions <span className="text-error-1">*</span>
+                    {t("permissions")} <span className="text-error-1">*</span>
                   </legend>
                   <p className="mt-1 text-xs text-white/40">
-                    Select only the capabilities this key requires.
+                    {t("permissionsHint")}
                   </p>
                 </div>
                 <span className="shrink-0 rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-white/50">
-                  {selectedPerms.length} selected
+                  {t("selectedCount", { count: selectedPerms.length })}
                 </span>
               </div>
               <ApiKeyPermissionPicker
@@ -402,7 +404,7 @@ function ApiKeysPageInner() {
               disabled={createLoading}
               className="min-h-11 rounded-xl border border-white/[0.09] bg-white/[0.025] text-sm font-semibold text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Cancel
+              {t("cancel")}
             </button>
             <button
               type="button"
@@ -418,7 +420,7 @@ function ApiKeysPageInner() {
               className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(77,119,240,0.18)] transition-all hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {createLoading ? <Loader size="xs" color="white" /> : <Add />}
-              {createLoading ? "Creating key…" : "Create API key"}
+              {createLoading ? t("creatingKey") : t("createApiKey")}
             </button>
           </div>
         </div>
@@ -439,25 +441,25 @@ function ApiKeysPageInner() {
             <div className="w-14 h-14 rounded-full bg-success-6/20 flex items-center justify-center">
               <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path stroke="#0ECB81" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" d="M5 12l5 5L20 7"/></svg>
             </div>
-            <h3 className="text-xl font-bold">API Key Created</h3>
+            <h3 className="text-xl font-bold">{t("apiKeyCreated")}</h3>
           </div>
 
           <div className="p-4 bg-error-1/10 border border-error-1/30 rounded-xl">
             <p className="text-sm text-error-1 font-medium text-center">
-              Your secret key is shown only once. Copy it now and store it securely. You cannot retrieve it again.
+              {t("secretShownOnce")}
             </p>
           </div>
 
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-white/50 font-medium">API Key</label>
+              <label className="text-xs text-white/50 font-medium">{t("apiKey")}</label>
               <div className="flex items-center gap-3 p-3 bg-black/30 rounded-xl border border-white/10">
                 <span className="font-mono text-sm text-white flex-1 break-all">{newKey?.apiKey}</span>
                 <CopyButton text={newKey?.apiKey ?? ""} />
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-white/50 font-medium">Secret Key</label>
+              <label className="text-xs text-white/50 font-medium">{t("secretKey")}</label>
               <div className="flex items-center gap-3 p-3 bg-black/30 rounded-xl border border-white/10">
                 <span className="font-mono text-sm text-white flex-1 break-all">
                   {secretVisible ? newKey?.secretKey : "••••••••••••••••••••••••••••••••"}
@@ -472,7 +474,7 @@ function ApiKeysPageInner() {
 
           <label className="flex items-start gap-3 cursor-pointer p-4 rounded-xl border border-white/[0.08] hover:border-white/20 transition-all">
             <Checkbox checked={confirmedCopy} onChange={(e) => setConfirmedCopy(e.currentTarget.checked)} color="blue" size="sm" className="mt-0.5" />
-            <span className="text-sm text-white/70">I have copied and stored my API key securely</span>
+            <span className="text-sm text-white/70">{t("copiedStoredConfirm")}</span>
           </label>
 
           <button
@@ -480,7 +482,7 @@ function ApiKeysPageInner() {
             disabled={!confirmedCopy}
             className="w-full py-3 bg-primary rounded-xl text-sm font-semibold hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Done
+            {t("done")}
           </button>
         </div>
       </Modal>

@@ -1,0 +1,22 @@
+{
+  "Withdrawal": {
+    "withdrawCryptoToExternalWallet": "Krypto an eine externe Wallet auszahlen"
+  },
+  "Earn": {
+    "cancel": "Abbrechen"
+  },
+  "Wallet": {
+    "noMarginPositions": "Keine Margin-Positionen",
+    "status": "Status"
+  },
+  "Assets": {
+    "colAction": "Aktion"
+  },
+  "Navigation": {
+    "profileUnavailable": "Profil nicht verf?gbar",
+    "retry": "Erneut versuchen"
+  },
+  "Transactions": {
+    "emailVerification": "E-Mail-Best?tigung"
+  }
+}

@@ -3,6 +3,7 @@
 import { type ReactNode } from "react";
 import { Loader } from "@mantine/core";
 import clsx from "clsx";
+import { useTranslations } from "next-intl";
 import { MdContentCopy } from "react-icons/md";
 import { successNotification } from "@/src/lib/notification-handler";
 import { parseDate } from "@/src/lib/parse-date";
@@ -19,9 +20,9 @@ import type { HistoryMarket, MarketHistoryPage } from "@/src/hooks/use-order-his
 
 export type StatusFilter = "all" | "closed" | "FILLED" | "CANCELLED" | "REJECTED";
 export const DATE_RANGES = [
-  { days: 7, label: "Last 7D" },
-  { days: 30, label: "Last 30D" },
-  { days: 180, label: "Last 180D" },
+  { days: 7, labelKey: "last7Days" },
+  { days: 30, labelKey: "last30Days" },
+  { days: 180, labelKey: "last180Days" },
 ] as const;
 
 export interface OrderHistoryRow {
@@ -78,7 +79,7 @@ function toRow(raw: any, market: HistoryMarket, index: number): OrderHistoryRow 
 
   const side = text(raw?.side).toLowerCase();
   const direction =
-    side === "long" ? "Long" : side === "short" ? "Short" : side === "buy" ? "Buy" : side === "sell" ? "Sell" : text(raw?.side) || "—";
+    side === "long" ? "long" : side === "short" ? "short" : side === "buy" ? "buy" : side === "sell" ? "sell" : text(raw?.side) || "—";
 
   const price = num(firstDefined(raw?.price, raw?.orderPrice, raw?.order_price));
   const quantity = num(firstDefined(raw?.quantity, raw?.amount, raw?.size, raw?.origQty));
@@ -169,13 +170,17 @@ const fmt = (value: number | null, maxDigits = 8, minDigits = 0) =>
 const fmtPrice = (value: number | null) => fmt(value, 8, 2);
 const fmtMoney = (value: number | null) => fmt(value, 2, 2);
 
-const typeLabel = (type: string) => {
-  if (!type) return "—";
-  if (type === "oco") return "OCO";
-  return type.charAt(0).toUpperCase() + type.slice(1);
+const typeLabelKey = (type: string) => {
+  if (!type) return null;
+  if (type === "limit") return "limit";
+  if (type === "market") return "market";
+  if (type === "stop" || type === "stop_limit" || type === "stop_limit_order") return "stopLimit";
+  if (type === "stop_market" || type === "stop_market_order") return "stopMarket";
+  if (type === "tpsl") return "tpSl";
+  return null;
 };
 
-const MARKET_LABEL: Record<HistoryMarket, string> = { spot: "Spot", margin: "Margin", futures: "Futures" };
+const MARKET_LABEL_KEY: Record<HistoryMarket, string> = { spot: "spot", margin: "margin", futures: "futures" };
 
 const STATUS_STYLE: Record<string, string> = {
   FILLED: "bg-[#25AB42]/15 text-[#25AB42]",
@@ -195,18 +200,19 @@ function Th({ children }: { children: ReactNode }) {
 }
 
 function Pagination({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (page: number) => void }) {
+  const t = useTranslations("Trading");
   const btn =
     "rounded bg-white/[0.06] px-2.5 py-1 text-micro font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40";
   return (
     <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-3 py-2">
       <button type="button" className={btn} disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        Previous
+        {t("previous")}
       </button>
       <span className="text-micro tabular-nums text-white/50">
-        Page {page} of {totalPages}
+        {t("pageOf", { page, totalPages })}
       </span>
       <button type="button" className={btn} disabled={page >= totalPages} onClick={() => onPage(page + 1)}>
-        Next
+        {t("next")}
       </button>
     </div>
   );
@@ -223,6 +229,7 @@ interface OrderHistoryTableProps {
 }
 
 export function OrderHistoryTable({ rows, loading, emptyState, page, totalPages, onPage, mobile = false }: OrderHistoryTableProps) {
+  const t = useTranslations("Trading");
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -234,10 +241,23 @@ export function OrderHistoryTable({ rows, loading, emptyState, page, totalPages,
   const copyId = async (id: string) => {
     try {
       await navigator.clipboard.writeText(id);
-      successNotification("Order ID copied");
+      successNotification(t("orderIdCopied"));
     } catch {
       /* clipboard unavailable — nothing to do */
     }
+  };
+
+  const typeText = (type: string) => {
+    const key = typeLabelKey(type);
+    return key ? t(key) : type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
+  const directionText = (direction: string) => {
+    if (direction === "buy") return t("buy");
+    if (direction === "sell") return t("sell");
+    if (direction === "long") return t("long");
+    if (direction === "short") return t("short");
+    return direction;
   };
 
   if (mobile) {
@@ -250,20 +270,20 @@ export function OrderHistoryTable({ rows, loading, emptyState, page, totalPages,
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm text-white">{row.pair}</span>
-                    <span className={clsx("text-xs font-bold", row.isBuy ? "text-[#25AB42]" : "text-[#F6465D]")}>{row.direction}</span>
-                    <span className="text-2xs bg-white/[0.06] px-1.5 py-0.5 rounded text-white/50">{typeLabel(row.type)}</span>
+                    <span className={clsx("text-xs font-bold", row.isBuy ? "text-[#25AB42]" : "text-[#F6465D]")}>{directionText(row.direction)}</span>
+                    <span className="text-2xs bg-white/[0.06] px-1.5 py-0.5 rounded text-white/50">{typeText(row.type)}</span>
                   </div>
                   <span className={clsx("text-micro font-semibold px-2 py-0.5 rounded", STATUS_STYLE[row.status] ?? "bg-white/10 text-white/60")}>
                     {row.status ? row.status.charAt(0) + row.status.slice(1).toLowerCase().replace(/_/g, " ") : "—"}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                  <div className="flex justify-between"><span className="text-white/40">Avg Price</span><span className="text-white/90 font-mono">{fmtPrice(row.avgPrice)}</span></div>
-                  <div className="flex justify-between"><span className="text-white/40">Order Price</span><span className="text-white/90 font-mono">{row.price ? fmtPrice(row.price) : row.type.includes("market") ? "Market" : "—"}</span></div>
-                  <div className="flex justify-between"><span className="text-white/40">Filled</span><span className="text-white/90 font-mono">{fmt(row.filledQuantity)} {row.base}</span></div>
-                  <div className="flex justify-between"><span className="text-white/40">Total</span><span className="text-white/90 font-mono">{fmt(row.quantity)} {row.base}</span></div>
-                  <div className="flex justify-between"><span className="text-white/40">Value</span><span className="text-white/90 font-mono">{fmtMoney(row.filledValue)} {row.quote}</span></div>
-                  <div className="flex justify-between"><span className="text-white/40">Time</span><span className="text-white/70 font-mono">{row.timeMs !== null ? new Date(row.timeMs).toLocaleString() : "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-white/40">{t("avgPrice")}</span><span className="text-white/90 font-mono">{fmtPrice(row.avgPrice)}</span></div>
+                  <div className="flex justify-between"><span className="text-white/40">{t("orderPrice")}</span><span className="text-white/90 font-mono">{row.price ? fmtPrice(row.price) : row.type.includes("market") ? t("market") : "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-white/40">{t("filled")}</span><span className="text-white/90 font-mono">{fmt(row.filledQuantity)} {row.base}</span></div>
+                  <div className="flex justify-between"><span className="text-white/40">{t("total")}</span><span className="text-white/90 font-mono">{fmt(row.quantity)} {row.base}</span></div>
+                  <div className="flex justify-between"><span className="text-white/40">{t("value")}</span><span className="text-white/90 font-mono">{fmtMoney(row.filledValue)} {row.quote}</span></div>
+                  <div className="flex justify-between"><span className="text-white/40">{t("time")}</span><span className="text-white/70 font-mono">{row.timeMs !== null ? new Date(row.timeMs).toLocaleString() : "—"}</span></div>
                 </div>
                 {row.id && (
                   <button type="button" onClick={() => void copyId(row.id)} className="flex items-center gap-1 text-2xs text-white/30 self-start">
@@ -288,30 +308,30 @@ export function OrderHistoryTable({ rows, loading, emptyState, page, totalPages,
           <table className="w-full min-w-[1180px] text-xs">
             <thead className="sticky top-0 z-10 bg-[#181a20]">
               <tr className="border-b border-white/[0.06]">
-                <Th>Market</Th>
-                <Th>Instrument</Th>
-                <Th>Order Type</Th>
-                <Th>Direction</Th>
-                <Th>Avg. Filled Price/Order Price</Th>
-                <Th>Filled/Order Quantity</Th>
-                <Th>Order Time</Th>
-                <Th>Order ID</Th>
-                <Th>Filled/Order Value</Th>
-                <Th>Status</Th>
+                <Th>{t("market")}</Th>
+                <Th>{t("instrument")}</Th>
+                <Th>{t("orderType")}</Th>
+                <Th>{t("direction")}</Th>
+                <Th>{t("avgFilledPriceOrderPrice")}</Th>
+                <Th>{t("filledOrderQuantity")}</Th>
+                <Th>{t("orderTime")}</Th>
+                <Th>{t("orderId")}</Th>
+                <Th>{t("filledOrderValue")}</Th>
+                <Th>{t("status")}</Th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.key} className="border-b border-white/[0.02] hover:bg-white/[0.02]">
-                  <td className="px-3 py-2.5 text-white/70">{MARKET_LABEL[row.market]}</td>
+                  <td className="px-3 py-2.5 text-white/70">{t(MARKET_LABEL_KEY[row.market])}</td>
                   <td className="px-3 py-2.5 font-semibold text-white/90">{row.pair}</td>
-                  <td className="px-3 py-2.5 text-white/70">{typeLabel(row.type)}</td>
+                  <td className="px-3 py-2.5 text-white/70">{typeText(row.type)}</td>
                   <td className="px-3 py-2.5">
-                    <span className={clsx("font-bold", row.isBuy ? "text-[#25AB42]" : "text-[#F6465D]")}>{row.direction}</span>
+                    <span className={clsx("font-bold", row.isBuy ? "text-[#25AB42]" : "text-[#F6465D]")}>{directionText(row.direction)}</span>
                   </td>
                   <td className="px-3 py-2.5 font-mono text-white/90">
                     {fmtPrice(row.avgPrice)} <span className="text-white/30">/</span>{" "}
-                    {row.price ? fmtPrice(row.price) : row.type.includes("market") ? "Market" : "—"}
+                    {row.price ? fmtPrice(row.price) : row.type.includes("market") ? t("market") : "—"}
                   </td>
                   <td className="px-3 py-2.5 font-mono text-white/90">
                     {fmt(row.filledQuantity)} <span className="text-white/30">/</span> {fmt(row.quantity)}{" "}
@@ -325,7 +345,7 @@ export function OrderHistoryTable({ rows, loading, emptyState, page, totalPages,
                       <button
                         type="button"
                         onClick={() => void copyId(row.id)}
-                        title={`${row.id} (click to copy)`}
+                        title={t("idClickToCopy", { id: row.id })}
                         className="inline-flex items-center gap-1 font-mono text-white/70 transition-colors hover:text-white"
                       >
                         {shortId(row.id)}

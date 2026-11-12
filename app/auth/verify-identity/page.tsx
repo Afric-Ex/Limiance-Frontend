@@ -1,3 +1,5 @@
+"use client";
+
 import { Secure } from "@/src/components/icons/secure";
 import VerifyIcon from "@/public/verify-icon.png";
 import Pattern from "@/public/pattern.png";
@@ -7,13 +9,15 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { VerifyIdentityPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 import { AuthMobileBrand } from "@/src/components/shared/auth-mobile-brand";
+import { useTranslations } from "next-intl";
 
-const instructions = [
-  "Identity Documents and Facial Verification",
-  "Personal Information",
+const instructionKeys = [
+  "identityDocumentsAndFace",
+  "personalInformation",
 ];
 
 function VerifyIdentity() {
+  const t = useTranslations("Auth");
   return (
     <main className="flex items-center justify-center overflow-x-hidden px-4 min-h-hero relative bg-verifyIdentityBg bg-cover bg-no-repeat">
       <HeroDecorations />
@@ -23,24 +27,23 @@ function VerifyIdentity() {
           <div className="flex flex-col">
             <div className="relative w-fit h-fit self-center">
               <p className="text-white/65 w-fit border-b border-b-white/65 pb-1 absolute text-center inset-x-0 top-0">
-                How do I verify an individual account?
+                {t("verifyIndividualAccount")}
               </p>
               <Image
                 src={VerifyIcon}
-                alt="Verify icon"
+                alt={t("verifyIconAlt")}
                 width={303}
                 height={303}
               />
             </div>
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-bold self-center">Verify your identity</h2>
+              <h2 className="text-xl font-bold self-center">{t("verifyYourIdentity")}</h2>
               <p className="py-10px relative">
-                To ensure the security of your account and comply with
-                regulations, we require users to complete verification process
+                {t("verificationRequirement")}
                 <div className="absolute inset-x-0 flex justify-center -bottom-5">
                   <Image
                     src={Pattern}
-                    alt="Pattern icon"
+                    alt={t("patternIconAlt")}
                     width={100}
                     height={70}
                   />
@@ -49,9 +52,9 @@ function VerifyIdentity() {
             </div>
           </div>
           <div className="flex flex-col gap-6">
-            <p className="font-bold">You&apos;ll need to provide your:</p>
+            <p className="font-bold">{t("youWillNeedToProvide")}</p>
             <ul className="flex flex-col gap-2">
-              {instructions.map((item, index) => (
+              {instructionKeys.map((item, index) => (
                 <li key={index} className="flex items-center gap-10px">
                   <svg
                     width="6"
@@ -62,7 +65,7 @@ function VerifyIdentity() {
                   >
                     <circle cx="3" cy="3.38135" r="3" fill="#4D77F0" />
                   </svg>
-                  <span className="text-sm">{item}</span>
+                  <span className="text-sm">{t(item)}</span>
                 </li>
               ))}
             </ul>
@@ -72,12 +75,12 @@ function VerifyIdentity() {
           <span className="flex items-center gap-2 self-center">
             <Secure />
             <span className="text-xs text-white/55">
-              Your information is only used for identity verification.
+              {t("infoUsedForVerificationOnly")}
             </span>
           </span>
           <Link href="/auth/verify-identity/start">
             <button className="w-full rounded-full py-23px bg-primary text-base font-semibold">
-              Verify now
+              {t("verifyNow")}
             </button>
           </Link>
         </div>

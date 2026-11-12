@@ -4,6 +4,7 @@ import { Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } f
 import React, { useState } from "react";
 import { Search } from "../icons/search";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { cancelSpotOrderWs } from "@/src/lib/order-ws";
 import { successNotification } from "@/src/lib/notification-handler";
@@ -24,6 +25,7 @@ import {
 } from "./orders-shared";
 
 export const OpenTab = () => {
+  const t = useTranslations("Orders");
   const queryClient = useQueryClient();
   const [side, setSide] = useState("All");
   const [pair, setPair] = useState("");
@@ -37,7 +39,7 @@ export const OpenTab = () => {
   const { mutate: cancelOrder } = useMutation({
     mutationFn: (orderId: string): Promise<any> => cancelSpotOrderWs(orderId),
     onSuccess: () => {
-      successNotification("Order cancelled");
+      successNotification(t("orderCancelled"));
       queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
       queryClient.invalidateQueries({ queryKey: ["order-history"] });
     },
@@ -56,34 +58,34 @@ export const OpenTab = () => {
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold tracking-tight text-white">Open orders</h2>
-          <p className="mt-1 text-xs text-white/45">Manage live orders on your spot markets.</p>
+          <h2 className="text-base font-semibold tracking-tight text-white">{t("openOrders")}</h2>
+          <p className="mt-1 text-xs text-white/45">{t("openOrdersDescription")}</p>
         </div>
         <span className="inline-flex items-center gap-2 text-xs font-medium tabular-nums text-white/55">
           {!isLoading && filtered.length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-buy" />}
-          {isLoading ? "Loading" : `${filtered.length} active`}
+          {isLoading ? t("loading") : t("activeCount", { count: filtered.length })}
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
-          <div role="group" aria-label="Filter open orders by side" className="inline-flex shrink-0 items-center gap-0.5 rounded-lg bg-white/[0.035] p-1">
-            {["All", "Buy", "Sell"].map((item) => (
+          <div role="group" aria-label={t("filterBySide")} className="inline-flex shrink-0 items-center gap-0.5 rounded-lg bg-white/[0.035] p-1">
+            {[{ value: "All", label: t("all") }, { value: "Buy", label: t("buy") }, { value: "Sell", label: t("sell") }].map((item) => (
               <button
-                key={item}
+                key={item.value}
                 type="button"
-                aria-pressed={side === item}
-                onClick={() => setSide(item)}
+                aria-pressed={side === item.value}
+                onClick={() => setSide(item.value)}
                 className={clsx(
                   "h-8 rounded-md px-3 text-xs font-semibold transition-colors",
-                  side === item
+                  side === item.value
                     ? clsx(
                         "bg-white/[0.09]",
-                        item === "Buy" ? "text-buy" : item === "Sell" ? "text-sell" : "text-white"
+                        item.value === "Buy" ? "text-buy" : item.value === "Sell" ? "text-sell" : "text-white"
                       )
                     : "text-white/45 hover:text-white/80"
                 )}
               >
-                {item}
+                {item.label}
               </button>
             ))}
           </div>
@@ -91,8 +93,8 @@ export const OpenTab = () => {
         <div className="min-w-[150px] flex-1">
           <TextInput
             classNames={searchInputClass}
-            aria-label="Search open orders by pair"
-            placeholder="Search pair"
+            aria-label={t("searchByPair")}
+            placeholder={t("searchPair")}
             value={pair}
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
             onChange={(e) => setPair(e.currentTarget.value)}
@@ -104,7 +106,7 @@ export const OpenTab = () => {
             className="h-9 shrink-0 rounded-lg px-2 text-xs font-semibold text-white/45 transition-colors hover:text-white"
             onClick={() => { setPair(""); setSide("All"); }}
           >
-            Reset
+            {t("reset")}
           </button>
         )}
       </div>
@@ -114,15 +116,15 @@ export const OpenTab = () => {
           <Table classNames={tableClassNames}>
             <TableThead>
               <TableTr>
-                <TableTh className="pl-5">Pair</TableTh>
-                <TableTh>Side</TableTh>
-                <TableTh>Type</TableTh>
-                <TableTh>Price</TableTh>
-                <TableTh>Amount</TableTh>
-                <TableTh>Filled</TableTh>
-                <TableTh>Total</TableTh>
-                <TableTh>Time</TableTh>
-                <TableTh className="pr-5 text-right">Action</TableTh>
+                <TableTh className="pl-5">{t("pair")}</TableTh>
+                <TableTh>{t("side")}</TableTh>
+                <TableTh>{t("type")}</TableTh>
+                <TableTh>{t("price")}</TableTh>
+                <TableTh>{t("amount")}</TableTh>
+                <TableTh>{t("filledAmount")}</TableTh>
+                <TableTh>{t("total")}</TableTh>
+                <TableTh>{t("time")}</TableTh>
+                <TableTh className="pr-5 text-right">{t("action")}</TableTh>
               </TableTr>
             </TableThead>
             <TableTbody>
@@ -143,7 +145,7 @@ export const OpenTab = () => {
                       className="text-[#F6465D] hover:text-[#F6465D]/80 bg-[#F6465D]/10 hover:bg-[#F6465D]/20 transition-all font-semibold text-xs px-3 py-1.5 rounded-lg active:scale-95"
                       onClick={() => cancelOrder(order.id)}
                     >
-                      Cancel
+                      {t("cancel")}
                     </button>
                   </TableTd>
                 </TableTr>
@@ -153,13 +155,13 @@ export const OpenTab = () => {
         </TableCard>
       ) : (
         <OrdersEmptyState
-          title={allOrders.length === 0 ? "You're all caught up" : "No orders match these filters"}
+          title={allOrders.length === 0 ? t("caughtUpTitle") : t("noOrdersMatchFilters")}
           description={
             allOrders.length === 0
-              ? "When you place a spot order, you can track its status and manage it here."
-              : "Try another pair or reset your filters to see your active orders."
+              ? t("caughtUpDescription")
+              : t("noOrdersMatchFiltersDescription")
           }
-          actionLabel={allOrders.length === 0 ? "Start trading" : "Reset filters"}
+          actionLabel={allOrders.length === 0 ? t("startTrading") : t("resetFilters")}
           actionHref={allOrders.length === 0 ? "/trades/spot" : undefined}
           onAction={allOrders.length > 0 ? () => { setPair(""); setSide("All"); } : undefined}
         />

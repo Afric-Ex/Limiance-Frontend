@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { usePathname } from "@/src/hooks/use-pathname";
 import clsx from "clsx";
 import { Account } from "@/src/components/icons/account";
 import { Secure } from "@/src/components/icons/secure";
@@ -12,32 +13,33 @@ import { Authorization } from "@/src/components/icons/authorization";
 import { Wallet } from "@/src/components/icons/wallet";
 
 const accountNavLinks = [
-  { name: "Profile", link: "/account/profile", icon: Account },
-  { name: "Verification", link: "/account/kyc", icon: Authorization },
-  { name: "Security", link: "/account/security", icon: Secure },
-  { name: "API Keys", link: "/account/api-keys", icon: UserKey },
-  { name: "Whitelisted Wallets", link: "/account/whitelisted-wallets", icon: Wallet },
-  { name: "Settings", link: "/account/settings", icon: Settings },
-  { name: "Payment Methods", link: "/account/payment-methods", icon: BusinessCard },
+  { nameKey: "profile", link: "/account/profile", icon: Account },
+  { nameKey: "identity", link: "/account/kyc", icon: Authorization },
+  { nameKey: "security", link: "/account/security", icon: Secure },
+  { nameKey: "apiKeys", link: "/account/api-keys", icon: UserKey },
+  { nameKey: "whitelistedWallets", link: "/account/whitelisted-wallets", icon: Wallet },
+  { nameKey: "settings", link: "/account/settings", icon: Settings },
+  { nameKey: "paymentMethods", link: "/account/payment-methods", icon: BusinessCard },
 ];
 
 export const AccountSidebar = () => {
   const pathname = usePathname();
+  const tn = useTranslations("Navigation");
 
   return (
     <div className="flex w-full flex-col gap-1.5 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-elevated to-surface p-3 shadow-[0_16px_40px_rgba(0,0,0,0.22)]">
       {/* Header */}
       <div className="mb-1 border-b border-white/[0.07] px-3 pb-4">
-        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Personal hub</p>
-        <h2 className="text-base font-bold text-white">Account center</h2>
-        <p className="mt-1 text-xs text-white/40">Profile, security & preferences</p>
+        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">{tn("personalHub")}</p>
+        <h2 className="text-base font-bold text-white">{tn("accountCenter")}</h2>
+        <p className="mt-1 text-xs text-white/40">{tn("profileSecurityPreferences")}</p>
       </div>
 
       {/* Nav Links */}
       {accountNavLinks.map((item) => {
         const isActive = pathname === item.link || pathname.startsWith(`${item.link}/`);
         return (
-          <div key={item.name} className="relative flex items-center">
+          <div key={item.nameKey} className="relative flex items-center">
             {/* Active accent bar */}
             <span
               className={clsx(
@@ -67,7 +69,7 @@ export const AccountSidebar = () => {
                   />
                 </span>
                 <span className={clsx("text-sm", isActive ? "font-semibold" : "font-medium")}>
-                  {item.name}
+                  {tn(item.nameKey)}
                 </span>
               </div>
             </a>

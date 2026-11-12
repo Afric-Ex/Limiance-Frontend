@@ -4,6 +4,7 @@ import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextI
 import React, { useState } from "react";
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import {
   fmtDate,
@@ -18,9 +19,8 @@ import {
   ResponsiveFilters,
 } from "./orders-shared";
 
-const filters = ["Borrowing", "Repayment", "Interest"];
-
 export const DebtHistory = () => {
+  const t = useTranslations("Orders");
   const [filter, setFilter] = useState("Borrowing");
 
   const { data: records, isLoading } = useQuery({
@@ -35,6 +35,8 @@ export const DebtHistory = () => {
   const borrowed = (r: any) => r.borrowAmount ?? r.amount ?? r.quantity ?? r.borrowed ?? r.principal ?? 0;
   const interest = (r: any) => (r.interest !== undefined ? r.interest : 0);
   const category = (r: any) => (r.category && String(r.category).trim() !== "" ? r.category : (r.type && String(r.type).trim() !== "" ? r.type : (r.isRepay ? "Repayment" : "Borrowing")));
+  const categoryLabel = (raw: string) =>
+    raw === "Repayment" ? t("repayment") : raw === "Borrowing" ? t("borrowing") : raw;
 
   const display = allRecords.filter((r) => {
     const cat = String(category(r)).toLowerCase();
@@ -47,10 +49,10 @@ export const DebtHistory = () => {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
-          <ChipToggle value={filter} options={filters} onChange={setFilter} />
+          <ChipToggle value={filter} options={["Borrowing", "Repayment", "Interest"]} onChange={setFilter} labels={{ Borrowing: t("borrowing"), Repayment: t("repayment"), Interest: t("interest") }} />
           <Select
-            label="Coin"
-            data={["All"]}
+            label={t("coin")}
+            data={[{ value: "All", label: t("all") }]}
             classNames={selectStyles}
             className="w-[120px]"
           />
@@ -58,28 +60,28 @@ export const DebtHistory = () => {
         <div className="flex items-center gap-4">
           <TextInput
             classNames={searchInputClass}
-            placeholder="Search..."
+            placeholder={t("search")}
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
           />
           <button
             className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
             onClick={() => setFilter("Borrowing")}
           >
-            Reset
+            {t("reset")}
           </button>
         </div>
       </div>
 
-      <TableCard loading={isLoading} hasData={display.length > 0} emptyTitle="No debt history found.">
+      <TableCard loading={isLoading} hasData={display.length > 0} emptyTitle={t("emptyDebtHistory")}>
         <Table classNames={tableClassNames}>
           <TableThead>
             <TableTr>
-              <TableTh className="pl-5">Coin</TableTh>
-              <TableTh>Date</TableTh>
-              <TableTh>Borrowing</TableTh>
-              <TableTh>Interest</TableTh>
-              <TableTh>Sum</TableTh>
-              <TableTh>Category</TableTh>
+              <TableTh className="pl-5">{t("coin")}</TableTh>
+              <TableTh>{t("date")}</TableTh>
+              <TableTh>{t("borrowing")}</TableTh>
+              <TableTh>{t("interest")}</TableTh>
+              <TableTh>{t("sum")}</TableTh>
+              <TableTh>{t("category")}</TableTh>
             </TableTr>
           </TableThead>
           <TableTbody>
@@ -93,7 +95,7 @@ export const DebtHistory = () => {
                   <TableTd className="tabular-nums">{fmtNum(principal)}</TableTd>
                   <TableTd className="tabular-nums">{fmtNum(int)}</TableTd>
                   <TableTd className="!text-white tabular-nums">{fmtNum(principal + int)}</TableTd>
-                  <TableTd><StatusPill status={category(r)} /></TableTd>
+                  <TableTd><StatusPill status={categoryLabel(category(r))} /></TableTd>
                 </TableTr>
               );
             })}

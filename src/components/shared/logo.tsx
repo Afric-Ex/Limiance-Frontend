@@ -2,7 +2,7 @@
 
 import LogoImage from "@/public/limiance-wordmark.png";
 import { useUserStore } from "@/src/stores/user-store";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/src/hooks/use-pathname";
 import clsx from "clsx";
 import Image from "next/image";
 import Link from "next/link";

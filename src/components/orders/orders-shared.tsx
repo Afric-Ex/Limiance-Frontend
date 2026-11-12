@@ -5,6 +5,7 @@ import { Skeleton } from "@/src/components/shared/skeleton";
 import { parseDate } from "@/src/lib/parse-date";
 import Link from "next/link";
 import { FiActivity, FiArrowUpRight } from "react-icons/fi";
+import { useTranslations } from "next-intl";
 export { ResponsiveFilters } from "../shared/responsive-filters";
 
 export { parseDate };
@@ -12,7 +13,7 @@ export { parseDate };
 export const OrdersPageFrame = ({
   title,
   description,
-  actionLabel = "Trade spot",
+  actionLabel,
   actionHref = "/trades/spot",
   children,
 }: {
@@ -21,30 +22,35 @@ export const OrdersPageFrame = ({
   actionLabel?: string | null;
   actionHref?: string;
   children: React.ReactNode;
-}) => (
-  <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 pb-8 page-enter max-[1150px]:gap-4 max-[1150px]:pb-[90px]">
-    <header className="flex flex-wrap items-end justify-between gap-4 border-b border-white/[0.08] pb-5 max-[640px]:pb-4">
-      <div className="min-w-0">
-        <div className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-          Account activity
+}) => {
+  const t = useTranslations("Orders");
+  const resolvedActionLabel = actionLabel === undefined ? t("tradeSpot") : actionLabel;
+
+  return (
+    <main className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 pb-8 page-enter max-[1150px]:gap-4 max-[1150px]:pb-[90px]">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-white/[0.08] pb-5 max-[640px]:pb-4">
+        <div className="min-w-0">
+          <div className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            {t("accountActivity")}
+          </div>
+          <h1 className="text-[26px] font-semibold tracking-tight text-white max-[640px]:text-[22px]">{title}</h1>
+          <p className="mt-1 text-sm text-white/50">{description}</p>
         </div>
-        <h1 className="text-[26px] font-semibold tracking-tight text-white max-[640px]:text-[22px]">{title}</h1>
-        <p className="mt-1 text-sm text-white/50">{description}</p>
-      </div>
-      {actionLabel && actionHref && (
-        <Link
-          href={actionHref}
-          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-primary-strong px-4 text-sm font-semibold text-white transition-colors hover:bg-primary"
-        >
-          {actionLabel}
-          <FiArrowUpRight aria-hidden="true" size={15} />
-        </Link>
-      )}
-    </header>
-    {children}
-  </main>
-);
+        {resolvedActionLabel && actionHref && (
+          <Link
+            href={actionHref}
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-primary-strong px-4 text-sm font-semibold text-white transition-colors hover:bg-primary"
+          >
+            {resolvedActionLabel}
+            <FiArrowUpRight aria-hidden="true" size={15} />
+          </Link>
+        )}
+      </header>
+      {children}
+    </main>
+  );
+};
 
 export const ordersTabsClassNames = {
   root: "flex flex-col gap-3",
@@ -179,10 +185,12 @@ export const ChipToggle = ({
   value,
   options,
   onChange,
+  labels,
 }: {
   value: string;
   options: string[];
   onChange: (value: string) => void;
+  labels?: Record<string, string>;
 }) => (
   <div className="flex self-end bg-white/[0.04] p-1 rounded-lg border border-white/[0.06]">
     {options.map((item) => (
@@ -193,7 +201,7 @@ export const ChipToggle = ({
           value === item ? CHIP_STYLE.active : CHIP_STYLE.idle
         }`}
       >
-        {item}
+        {labels?.[item] ?? item}
       </button>
     ))}
   </div>

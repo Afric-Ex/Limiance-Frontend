@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Table, TableTd, TableTh, TableTr } from "@mantine/core";
 import classes from "@/src/styles/assets-overview.module.css";
@@ -6,8 +8,10 @@ import { InlineLoading } from "../shared/inline-loading";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { ConvertAsset } from "../transactions/convert-asset";
+import { useTranslations } from "next-intl";
 
 export const CoinAssets = () => {
+  const t = useTranslations("Wallet");
   const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs({ coins: true });
 
   return (
@@ -18,10 +22,10 @@ export const CoinAssets = () => {
       }}
     >
       <TableTr>
-        <TableTh>Coin</TableTh>
-        <TableTh>Amount</TableTh>
-        <TableTh>Price</TableTh>
-        <TableTh>Action</TableTh>
+        <TableTh>{t("coin")}</TableTh>
+        <TableTh>{t("amount")}</TableTh>
+        <TableTh>{t("price")}</TableTh>
+        <TableTh>{t("action")}</TableTh>
       </TableTr>
       {portfolioLoading ? (
         <InlineLoading />
@@ -64,7 +68,7 @@ export const CoinAssets = () => {
                 }
                 className="text-sm font-bold text-primary cursor-pointer"
               >
-                Convert
+                {t("convert")}
               </span>
             </TableTd>
           </TableTr>

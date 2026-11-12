@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/src/hooks/use-pathname";
 import clsx from "clsx";
 import { SidebarContent, UserProfileCard } from "./sidebar";
 import Logo from "./logo";

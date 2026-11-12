@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 type TradeRecord = Record<string, unknown>;
 
 type TradeRecordsListProps = {
@@ -30,8 +34,9 @@ export function TradeRecordsList({
   emptyMessage,
   limit = 50,
 }: TradeRecordsListProps) {
+  const t = useTranslations("Trading");
   if (isLoading) {
-    return <div className="p-4 text-center text-xs text-white/40">Loading trades...</div>;
+    return <div className="p-4 text-center text-xs text-white/40">{t("loadingTrades")}</div>;
   }
 
   if (!trades.length) {
@@ -47,7 +52,7 @@ export function TradeRecordsList({
   return (
     <div className="flex flex-col">
       <div className="grid grid-cols-4 px-3 py-1.5 text-2xs text-white/40">
-        <span>Time</span><span className="text-center">Side</span><span className="text-right">Price</span><span className="text-right">Qty</span>
+        <span>{t("time")}</span><span className="text-center">{t("side")}</span><span className="text-right">{t("price")}</span><span className="text-right">{t("qty")}</span>
       </div>
       <div className="flex flex-col divide-y divide-white/[0.04]">
         {sortedTrades.slice(0, limit).map((trade, index) => {

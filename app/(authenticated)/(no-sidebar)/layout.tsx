@@ -1,7 +1,7 @@
 "use client"
 
 import { ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/src/hooks/use-pathname";
 import { SidebarMenuButton, SidebarMenuProvider } from "@/src/components/shared/sidebar-menu";
 import { FCMInitializer } from "@/src/components/shared/fcm-initializer";
 

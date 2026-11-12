@@ -7,8 +7,10 @@ import { tradingService } from "@/src/services/trading";
 import { InlineLoading } from "../shared/inline-loading";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export const MarginPositions = () => {
+  const t = useTranslations("Wallet");
   const router = useRouter();
   const { data: rawPositions = [], isLoading } = useQuery({
     queryKey: ["margin-positions"],
@@ -35,14 +37,14 @@ export const MarginPositions = () => {
           }}
         >
           <thead>
-            <TableTr>
-              <TableTh className="!pl-6">Trading Pair</TableTh>
-              <TableTh>Assets</TableTh>
-              <TableTh>Size</TableTh>
-              <TableTh>Leverage</TableTh>
-              <TableTh>Margin Used</TableTh>
-              <TableTh className="!pr-6 !text-right">Action</TableTh>
-            </TableTr>
+                <TableTr>
+                  <TableTh className="!pl-6">{t("tradingPair")}</TableTh>
+                  <TableTh>{t("assets")}</TableTh>
+                  <TableTh>{t("size")}</TableTh>
+                  <TableTh>{t("leverage")}</TableTh>
+                  <TableTh>{t("marginUsed")}</TableTh>
+                  <TableTh className="!pr-6 !text-right">{t("action")}</TableTh>
+                </TableTr>
           </thead>
           <tbody>
             {!positions.length ? (
@@ -60,7 +62,7 @@ export const MarginPositions = () => {
                     >
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                     </svg>
-                    <span className="text-sm font-medium">No open margin positions</span>
+                    <span className="text-sm font-medium">{t("noMarginPositions")}</span>
                   </div>
                 </TableTd>
               </TableTr>
@@ -90,7 +92,7 @@ export const MarginPositions = () => {
                           </span>
                         </div>
                         <span className="text-xs text-white/40">
-                          ID: {pos.id?.slice(0, 8)}...
+                          {t("positionId", { id: pos.id?.slice(0, 8) })}
                         </span>
                       </div>
                     </TableTd>
@@ -136,18 +138,18 @@ export const MarginPositions = () => {
                       >
                         <Menu.Target>
                           <button className="inline-flex items-center gap-1 bg-white/[0.05] text-white/70 hover:bg-white/10 hover:text-white py-1.5 px-3 rounded-lg cursor-pointer transition-all active:scale-95 border border-white/[0.05]">
-                            <span className="text-xs font-semibold">Manage</span>
+                            <span className="text-xs font-semibold">{t("manage")}</span>
                             <MdKeyboardArrowDown size={14} />
                           </button>
                         </Menu.Target>
 
                         <Menu.Dropdown>
                           <Menu.Item onClick={() => router.push(`/trades/spot?pair=${pair.replace('/', '_')}`)}>
-                            Trade {pair}
+                            {t("tradePair", { pair })}
                           </Menu.Item>
                           <Menu.Divider className="!border-white/[0.06]" />
                           <Menu.Item className="!text-red-400 hover:!bg-red-400/10 hover:!text-red-400">
-                            Close Position
+                            {t("closePosition")}
                           </Menu.Item>
                         </Menu.Dropdown>
                       </Menu>

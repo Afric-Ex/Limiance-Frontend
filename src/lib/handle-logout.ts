@@ -4,6 +4,7 @@ import { useUserStore } from "../stores/user-store";
 import { auth } from "../services/auth";
 import { authDebug } from "./auth-debug";
 import { isInLoginGrace } from "./login-grace";
+import { stripLocalePrefix, withLocale } from "./locale-path";
 
 /**
  * True for the duration of a backend revocation call.
@@ -22,13 +23,13 @@ function clearSession(reason: "manual" | "unauthorized" | "expired" | "account-s
 }
 
 const redirectToLogin = () => {
-  if (
-    typeof location !== "undefined" &&
-    location.pathname !== "/auth/login" &&
-    !location.pathname.includes("/auth/signup")
-  ) {
-    window.location.href = "/auth/login";
-  }
+  if (typeof location === "undefined") return;
+  // Routes are locale-prefixed (e.g. /fr/auth/login), so compare the
+  // prefix-free path and keep the active locale when redirecting.
+  const path = stripLocalePrefix(location.pathname);
+  if (path === "/auth/login" || path.includes("/auth/signup")) return;
+  const locale = document.documentElement.lang || "en";
+  window.location.href = withLocale(locale, "/auth/login");
 };
 
 /**

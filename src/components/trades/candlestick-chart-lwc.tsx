@@ -26,11 +26,12 @@ import {
 } from "lightweight-charts";
 import { useCandleFeed } from "@/src/components/trades/use-candle-feed";
 import { calculateSMA, calculateSingleSMA } from "@/src/components/trades/indicators";
+import { useTranslations } from "next-intl";
 import {
   CLICKS_REQUIRED,
   DrawingPrimitive,
   createDrawing,
-  DRAWING_LABELS,
+  DRAWING_LABEL_KEYS,
   type Drawing,
   type DrawingLineWidth,
   type DrawingPick,
@@ -393,6 +394,7 @@ export function LwcCandlestickChart({
   /** true = green up / red down, false = red up / green down. */
   chartColor?: boolean;
 }) {
+  const t = useTranslations("Trading");
   const upColor = chartColor ? BULL_COLOR : BEAR_COLOR;
   const downColor = chartColor ? BEAR_COLOR : BULL_COLOR;
   const volumeUpColor = chartColor ? VOLUME_UP_COLOR : VOLUME_DOWN_COLOR;
@@ -1623,7 +1625,7 @@ export function LwcCandlestickChart({
       {n > 0 && !isLoading && (
         <div className="absolute bottom-2 right-2 z-10 flex flex-col rounded-md overflow-hidden border border-white/10 bg-black/50">
           <button
-            aria-label="Show most recent candles"
+            aria-label={t("showMostRecentCandles")}
             onClick={() => chartRef.current?.timeScale().scrollToRealTime()}
             className="flex items-center justify-center w-7 h-7 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
           >
@@ -1644,7 +1646,7 @@ export function LwcCandlestickChart({
             className="pointer-events-none absolute top-0 left-0 z-20 flex items-stretch rounded border border-white/15 bg-[#181a20]/95 shadow-lg shadow-black/40"
           >
             <div className="flex min-w-0 flex-col justify-center px-1.5 py-0.5">
-              <span className="text-2xs leading-tight text-white/45">{DRAWING_LABELS[selectedDrawing.tool]}</span>
+              <span className="text-2xs leading-tight text-white/45">{t(DRAWING_LABEL_KEYS[selectedDrawing.tool])}</span>
               <span className="whitespace-nowrap font-mono text-2xs leading-tight text-white/90">
                 {selectedDrawing.points.map((p) => formatPrice(p.price)).join(" → ")}
               </span>
@@ -1652,8 +1654,8 @@ export function LwcCandlestickChart({
             <button
               type="button"
               onClick={() => removeDrawing(selectedDrawing.id)}
-              aria-label={`Delete ${DRAWING_LABELS[selectedDrawing.tool]}`}
-              title="Delete this drawing"
+              aria-label={t("deleteSelectedDrawing")}
+              title={t("deleteThisDrawing")}
               className="pointer-events-auto flex w-5 items-center justify-center border-l border-white/10 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
             >
               <FaXmark size={10} />

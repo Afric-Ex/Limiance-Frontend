@@ -2,6 +2,7 @@
 
 import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import {
   fmtDateTime,
@@ -16,6 +17,7 @@ import {
 const TERMINAL = new Set(["completed", "success", "successful", "filled", "cancelled", "canceled", "rejected", "failed", "expired"]);
 
 export const ConvertOpenOrders = () => {
+  const t = useTranslations("Orders");
   const { data: history, isLoading } = useQuery({
     queryKey: tradingKeys.convertHistory,
     queryFn: () => tradingService.convertHistory(),
@@ -30,25 +32,25 @@ export const ConvertOpenOrders = () => {
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
           <Select
-            label="Wallet"
-            data={["All", "Spot", "Funding"]}
+            label={t("wallet")}
+            data={[{ value: "All", label: t("all") }, { value: "Spot", label: "Spot" }, { value: "Funding", label: "Funding" }]}
             classNames={selectStyles}
             className="w-[140px]"
           />
         </ResponsiveFilters>
       </div>
 
-      <TableCard loading={isLoading} hasData={openRecords.length > 0} emptyTitle="No open conversions right now.">
+      <TableCard loading={isLoading} hasData={openRecords.length > 0} emptyTitle={t("emptyOpenConversions")}>
         <Table classNames={tableClassNames}>
           <TableThead>
             <TableTr>
-              <TableTh className="pl-5">Conversion Time</TableTh>
-              <TableTh>Wallet</TableTh>
-              <TableTh>Trading Pair</TableTh>
-              <TableTh>From</TableTh>
-              <TableTh>To</TableTh>
-              <TableTh>Price</TableTh>
-              <TableTh>Status</TableTh>
+              <TableTh className="pl-5">{t("conversionTime")}</TableTh>
+              <TableTh>{t("wallet")}</TableTh>
+              <TableTh>{t("tradingPair")}</TableTh>
+              <TableTh>{t("from")}</TableTh>
+              <TableTh>{t("to")}</TableTh>
+              <TableTh>{t("price")}</TableTh>
+              <TableTh>{t("status")}</TableTh>
             </TableTr>
           </TableThead>
           <TableTbody>

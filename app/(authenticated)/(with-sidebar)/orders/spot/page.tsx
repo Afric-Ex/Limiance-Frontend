@@ -1,4 +1,7 @@
+"use client";
+
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { OpenTab } from "@/src/components/orders/history-tab";
 import { OrderHistory } from "@/src/components/orders/order-history";
 import { OrderDetails } from "@/src/components/orders/order-details";
@@ -7,13 +10,14 @@ import { SpotOrdersSkeleton } from "@/src/components/skeletons/orders";
 import { OrdersPageFrame, ordersTabsClassNames } from "@/src/components/orders/orders-shared";
 
 function SpotOrdersInner() {
+  const t = useTranslations("Orders");
   return (
-    <OrdersPageFrame title="Orders & trades" description="Your spot activity, all in one place.">
+    <OrdersPageFrame title={t("ordersAndTrades")} description={t("spotActivityDescription")}>
       <Tabs classNames={ordersTabsClassNames} defaultValue="open">
-        <TabsList aria-label="Spot order activity">
-          <TabsTab value="open" aria-label="Open orders">Open orders</TabsTab>
-          <TabsTab value="history" aria-label="Order history">Order history</TabsTab>
-          <TabsTab value="details" aria-label="Trade fills">Trade fills</TabsTab>
+        <TabsList aria-label={t("spotOrderActivity")}>
+          <TabsTab value="open" aria-label={t("openOrders")}>{t("openOrders")}</TabsTab>
+          <TabsTab value="history" aria-label={t("orderHistory")}>{t("orderHistory")}</TabsTab>
+          <TabsTab value="details" aria-label={t("tradeFills")}>{t("tradeFills")}</TabsTab>
         </TabsList>
 
         <TabsPanel value="open">

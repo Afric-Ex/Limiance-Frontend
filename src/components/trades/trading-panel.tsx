@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   tradingKeys,
@@ -54,6 +55,7 @@ const MARGIN_TOOL_MODAL_STYLES = {
 };
 
 function TradingCalculatorModal({ pair }: { pair: string }) {
+  const tp = useTranslations("Trading");
   const [price, setPrice] = useState<number | string>("");
   const [quantity, setQuantity] = useState<number | string>("");
   const [leverage, setLeverage] = useState<number | string>(1);
@@ -70,23 +72,24 @@ function TradingCalculatorModal({ pair }: { pair: string }) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-4 text-white">
       <div className="grid grid-cols-2 gap-3">
-        <NumberInput label="Entry price" value={price} onChange={setPrice} min={0} hideControls classNames={inputClassNames} />
-        <NumberInput label={`Quantity (${base})`} value={quantity} onChange={setQuantity} min={0} hideControls classNames={inputClassNames} />
-        <NumberInput label="Leverage" value={leverage} onChange={setLeverage} min={1} max={100} hideControls suffix="x" classNames={inputClassNames} />
-        <NumberInput label="Fee rate" value={feePercent} onChange={setFeePercent} min={0} hideControls suffix="%" classNames={inputClassNames} />
+        <NumberInput label={tp("entryPrice")} value={price} onChange={setPrice} min={0} hideControls classNames={inputClassNames} />
+        <NumberInput label={tp("quantityWithBase", { base })} value={quantity} onChange={setQuantity} min={0} hideControls classNames={inputClassNames} />
+        <NumberInput label={tp("leverage")} value={leverage} onChange={setLeverage} min={1} max={100} hideControls suffix="x" classNames={inputClassNames} />
+        <NumberInput label={tp("feeRate")} value={feePercent} onChange={setFeePercent} min={0} hideControls suffix="%" classNames={inputClassNames} />
       </div>
       <div className="flex flex-col gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-        <div className="flex justify-between gap-3 text-xs"><span className="text-white/45">Pair</span><span className="font-semibold">{pair}</span></div>
-        <div className="flex justify-between gap-3 text-xs"><span className="text-white/45">Order value</span><span className="font-mono tabular-nums">{orderValue.toLocaleString(undefined, { maximumFractionDigits: 8 })} {quote}</span></div>
-        <div className="flex justify-between gap-3 text-xs"><span className="text-white/45">Estimated margin</span><span className="font-mono tabular-nums">{requiredMargin.toLocaleString(undefined, { maximumFractionDigits: 8 })} {quote}</span></div>
-        <div className="flex justify-between gap-3 text-xs"><span className="text-white/45">Estimated fee</span><span className="font-mono tabular-nums">{estimatedFee.toLocaleString(undefined, { maximumFractionDigits: 8 })} {quote}</span></div>
+        <div className="flex justify-between gap-3 text-xs"><span className="text-white/45">{tp("pair")}</span><span className="font-semibold">{pair}</span></div>
+        <div className="flex justify-between gap-3 text-xs"><span className="text-white/45">{tp("orderValue")}</span><span className="font-mono tabular-nums">{orderValue.toLocaleString(undefined, { maximumFractionDigits: 8 })} {quote}</span></div>
+        <div className="flex justify-between gap-3 text-xs"><span className="text-white/45">{tp("estimatedMargin")}</span><span className="font-mono tabular-nums">{requiredMargin.toLocaleString(undefined, { maximumFractionDigits: 8 })} {quote}</span></div>
+        <div className="flex justify-between gap-3 text-xs"><span className="text-white/45">{tp("estimatedFee")}</span><span className="font-mono tabular-nums">{estimatedFee.toLocaleString(undefined, { maximumFractionDigits: 8 })} {quote}</span></div>
       </div>
-      <p className="text-2xs leading-relaxed text-white/35">Estimates only. Actual margin and fees depend on your account and the executed order.</p>
+      <p className="text-2xs leading-relaxed text-white/35">{tp("estimatesDisclaimer")}</p>
     </div>
   );
 }
 
 export function TradingPanel({ selectedPair, market = "spot", className, mobile = false }: TradingPanelProps) {
+  const t = useTranslations("Trading");
   const [activeMainTab, setActiveMainTab] = useState<MainTab>("open_orders");
   const [historyDays, setHistoryDays] = useState<number>(7);
   const [historyStatus, setHistoryStatus] = useState<StatusFilter>("all");
@@ -209,7 +212,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
       return cancelSpotOrderWs(orderId);
     },
     onSuccess: () => {
-      successNotification("Order cancelled");
+      successNotification(t("orderCancelled"));
       queryClient.invalidateQueries({ queryKey: ["open-orders"] });
       queryClient.invalidateQueries({ queryKey: [ORDER_HISTORY_QUERY_KEY] });
       refreshBalances();
@@ -230,7 +233,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
       ]);
     },
     onSuccess: () => {
-      successNotification("All open orders cancelled");
+      successNotification(t("allOpenOrdersCancelled"));
       queryClient.invalidateQueries({ queryKey: ["open-orders"] });
       queryClient.invalidateQueries({ queryKey: [ORDER_HISTORY_QUERY_KEY] });
       refreshBalances();
@@ -243,7 +246,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const { mutate: closePosition } = useMutation({
     mutationFn: (positionId: string) => closeFuturesPositionWs(positionId),
     onSuccess: () => {
-      successNotification("Position closed");
+      successNotification(t("positionClosed"));
       refreshPositions();
       refreshBalances();
     },
@@ -264,7 +267,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
     mutationFn: (data: { positionId: string; close_quantity: string }) =>
       tradingService.partialCloseFuturesPosition(data),
     onSuccess: () => {
-      successNotification("Partial close executed");
+      successNotification(t("partialCloseExecuted"));
       refreshPositions();
       refreshBalances();
       modals.closeAll();
@@ -275,7 +278,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
     mutationFn: (data: { positionId: string; take_profit_price?: string; stop_loss_price?: string }) =>
       tradingService.updateFuturesPositionTPSL(data),
     onSuccess: () => {
-      successNotification("TP/SL updated");
+      successNotification(t("tpSlUpdated"));
       refreshPositions();
       modals.closeAll();
     },
@@ -360,7 +363,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
       centered: true,
       withCloseButton: true,
       styles: MARGIN_TOOL_MODAL_STYLES,
-      title: "Trading Calculator",
+      title: t("tradingCalculator"),
       children: <TradingCalculatorModal pair={selectedPair} />,
     });
   };
@@ -372,7 +375,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
       centered: true,
       withCloseButton: true,
       styles: MARGIN_TOOL_MODAL_STYLES,
-      title: "Borrow / Repay Margin",
+      title: t("borrowRepayMargin"),
       children: <MarginBorrowRepayModal pair={selectedPair} tradeMode="cross" initialTab={initialTab} onClose={() => modals.closeAll()} />,
     });
   };
@@ -384,7 +387,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
       centered: true,
       withCloseButton: true,
       styles: MARGIN_TOOL_MODAL_STYLES,
-      title: "Transfer Assets",
+      title: t("transferAssets"),
       children: <MarginTransferModal pair={selectedPair} initialMode="cross" onClose={() => modals.closeAll()} />,
     });
   };
@@ -396,22 +399,22 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
         <div className="flex min-w-0 items-center gap-3 border-b border-white/[0.06] px-3 py-2.5 text-xs sm:px-4">
           <div className="min-w-0 flex-1 overflow-x-auto scrollbar-none">
             <div className="flex w-max items-center gap-1.5 whitespace-nowrap text-[10px] text-white/60 sm:gap-2 sm:text-xs">
-            <span className="font-semibold text-white/45">Margin steps</span>
+            <span className="font-semibold text-white/45">{t("marginSteps")}</span>
             <button onClick={handleTransferCollateral} className="text-primary hover:underline">
-              Transfer collateral
+              {t("transferCollateral")}
             </button>
             <span aria-hidden="true">›</span>
             <button onClick={() => openBorrowRepay("borrow")} className="text-primary hover:underline">
-              Borrow/Trade &gt;
+              {t("borrowTrade")}
             </button>
             <button onClick={() => openBorrowRepay("repay")} className="text-white/60 hover:text-white">
-              Manual repay
+              {t("manualRepay")}
             </button>
             </div>
           </div>
-          <button type="button" onClick={handleCalculator} aria-label="Open trading calculator" title="Calculator" className="flex shrink-0 items-center gap-1 text-white/60 hover:text-white">
+          <button type="button" onClick={handleCalculator} aria-label={t("openTradingCalculator")} title={t("calculator")} className="flex shrink-0 items-center gap-1 text-white/60 hover:text-white">
             <MdCalculate size={16} />
-            <span className="hidden sm:inline">Calculator</span>
+            <span className="hidden sm:inline">{t("calculator")}</span>
           </button>
         </div>
       )}
@@ -420,30 +423,30 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
       <div className="flex items-center border-b border-white/[0.06] shrink-0">
         <div className="flex items-center gap-1 px-4 overflow-x-auto scrollbar-none">
           <Tab active={activeMainTab === "open_orders"} onClick={() => selectMainTab("open_orders")}>
-            Open Orders <span className="text-white/40">({openOrderCount})</span>
+            {t("openOrdersTab")} <span className="text-white/40">({openOrderCount})</span>
           </Tab>
           <Tab active={activeMainTab === "positions"} onClick={() => selectMainTab("positions")}>
-            Positions <span className="text-white/40">({positionCount})</span>
+            {t("positions")} <span className="text-white/40">({positionCount})</span>
           </Tab>
           <Tab active={activeMainTab === "order_history"} onClick={() => selectMainTab("order_history")}>
-            Order History
+            {t("orderHistoryTab")}
           </Tab>
           <Tab active={activeMainTab === "trade_history"} onClick={() => selectMainTab("trade_history")}>
-            Trade History
+            {t("tradeHistoryTab")}
           </Tab>
           <Tab active={activeMainTab === "assets"} onClick={() => selectMainTab("assets")}>
-            Assets
+            {t("assetsTab")}
           </Tab>
           {market === "margin" && (
             <Tab active={activeMainTab === "borrowings"} onClick={() => selectMainTab("borrowings")}>
-              Borrowings <span className="text-white/40">({borrowingCount})</span>
+              {t("borrowingsTab")} <span className="text-white/40">({borrowingCount})</span>
             </Tab>
           )}
           <Tab active={activeMainTab === "tools"} onClick={() => selectMainTab("tools")}>
-            Tools <span className="text-white/40">(0)</span>
+            {t("toolsTab")} <span className="text-white/40">(0)</span>
           </Tab>
           <Tab active={activeMainTab === "pnl"} onClick={() => selectMainTab("pnl")}>
-            P&amp;L
+            {t("pnlTab")}
           </Tab>
         </div>
       </div>
@@ -453,31 +456,31 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
         <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.06] shrink-0">
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
             <SubTab active={activeOrderTypeTab === "limit_market"} onClick={() => setActiveOrderTypeTab("limit_market")}>
-              Limit &amp; Market Orders
+              {t("limitMarketOrders")}
             </SubTab>
             <SubTab active={activeOrderTypeTab === "conditional"} onClick={() => setActiveOrderTypeTab("conditional")} disabled>
-              Conditional
+              {t("conditional")}
             </SubTab>
             <SubTab active={activeOrderTypeTab === "tpsl"} onClick={() => setActiveOrderTypeTab("tpsl")}>
-              TP/SL
+              {t("tpSl")}
             </SubTab>
             <SubTab active={activeOrderTypeTab === "trailing_stop"} onClick={() => setActiveOrderTypeTab("trailing_stop")} disabled>
-              Trailing Stop
+              {t("trailingStop")}
             </SubTab>
             <SubTab active={activeOrderTypeTab === "oco"} onClick={() => setActiveOrderTypeTab("oco")}>
-              OCO
+              {t("oco")}
             </SubTab>
             <SubTab active={activeOrderTypeTab === "mmr_close"} onClick={() => setActiveOrderTypeTab("mmr_close")} disabled>
-              MMR Close
+              {t("mmrClose")}
             </SubTab>
             <SubTab active={activeOrderTypeTab === "spread_trading"} onClick={() => setActiveOrderTypeTab("spread_trading")} disabled>
-              Spread Trading
+              {t("spreadTrading")}
             </SubTab>
           </div>
           {activeMainTab === "order_history" && (
             <div className="ml-3 shrink-0">
               <select
-                aria-label="Order history date range"
+                aria-label={t("orderHistoryDateRange")}
                 value={historyDays}
                 onChange={(event) => {
                   setHistoryDays(Number(event.currentTarget.value));
@@ -486,7 +489,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
                 className="h-8 max-w-[126px] rounded border border-white/10 bg-white/[0.05] px-2 text-xs font-semibold text-white/80 outline-none"
               >
                 {DATE_RANGES.map((range) => (
-                  <option key={range.days} value={range.days}>{range.label}</option>
+                  <option key={range.days} value={range.days}>{t(range.labelKey)}</option>
                 ))}
               </select>
             </div>
@@ -504,13 +507,13 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
               setSelectedMarket(e.target.value as TradingMarketFilter);
               setHistoryPage(1);
             }}
-            aria-label="Market"
+            aria-label={t("market")}
             className="h-6 px-2 text-xs bg-white/[0.05] border border-white/10 rounded text-white/80 outline-none"
           >
-            <option value="all">All Markets</option>
-            <option value="spot">Spot</option>
-            <option value="margin">Margin</option>
-            <option value="futures">Futures</option>
+            <option value="all">{t("allMarkets")}</option>
+            <option value="spot">{t("spot")}</option>
+            <option value="margin">{t("margin")}</option>
+            <option value="futures">{t("futures")}</option>
           </select>
 
           <select
@@ -518,7 +521,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
             onChange={(e) => setSelectedInstrument(e.target.value)}
             className="h-6 px-2 text-xs bg-white/[0.05] border border-white/10 rounded text-white/80 outline-none"
           >
-            <option value="all">All Instruments</option>
+              <option value="all">{t("allInstruments")}</option>
             {instrumentOptions.map((pair) => (
               <option key={pair} value={pair}>
                 {pair}
@@ -533,14 +536,14 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
                 setHistoryStatus(e.target.value as StatusFilter);
                 setHistoryPage(1);
               }}
-              aria-label="Order status"
+              aria-label={t("orderStatus")}
               className="ml-auto h-6 rounded border border-white/10 bg-white/[0.05] px-2 text-xs font-semibold text-primary outline-none"
             >
-              <option value="all">All Orders</option>
-              <option value="closed">Closed (All)</option>
-              <option value="FILLED">Filled</option>
-              <option value="CANCELLED">Cancelled</option>
-              <option value="REJECTED">Rejected</option>
+              <option value="all">{t("allOrders")}</option>
+              <option value="closed">{t("closedAll")}</option>
+              <option value="FILLED">{t("filled")}</option>
+              <option value="CANCELLED">{t("cancelled")}</option>
+              <option value="REJECTED">{t("rejected")}</option>
             </select>
           )}
           </ResponsiveFilters>
@@ -553,7 +556,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
               className="ml-auto flex items-center gap-1.5 rounded border border-error-1/40 bg-error-1/10 px-2.5 py-1 text-xs font-semibold text-error-1 transition-colors hover:bg-error-1/20 disabled:opacity-50"
             >
               {cancelAllPending && <Loader size={11} color="red" />}
-              Cancel All
+              {t("cancelAll")}
             </button>
           )}
 
@@ -569,7 +572,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
                   label: "!text-xs !text-white/80",
                   input: "!border-white/20 !bg-transparent checked:!bg-primary",
                 }}
-                label="Hide Other Pairs"
+                label={t("hideOtherPairs")}
                 checked={hideOtherPairs}
                 onChange={(e) => setHideOtherPairs(e.target.checked)}
               />
@@ -583,13 +586,13 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
         <div className="flex flex-col border-b border-white/[0.06] shrink-0">
           <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.04]">
             <select
-              aria-label="Trade history date range"
+              aria-label={t("tradeHistoryDateRange")}
               value={tradeHistoryDays}
               onChange={(event) => setTradeHistoryDays(Number(event.currentTarget.value))}
               className="h-8 max-w-[126px] rounded border border-white/10 bg-white/[0.05] px-2 text-xs font-semibold text-white/80 outline-none"
             >
               {DATE_RANGES.map((range) => (
-                <option key={range.days} value={range.days}>{range.label}</option>
+                <option key={range.days} value={range.days}>{t(range.labelKey)}</option>
               ))}
             </select>
             <button
@@ -597,14 +600,14 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
               className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors font-semibold shrink-0"
               onClick={() => {/* Trading Performance modal - stub */}}
             >
-              Trading Performance <MdInfo size={13} className="opacity-60" />
+              {t("tradingPerformance")} <MdInfo size={13} className="opacity-60" />
             </button>
           </div>
           {/* Filters row */}
           <div className="flex items-center gap-3 px-4 py-2">
             <Checkbox
               classNames={{ label: "!text-xs !text-white/60", input: "!border-white/20 !bg-transparent checked:!bg-primary" }}
-              label="All Markets"
+              label={t("allMarkets")}
               checked={tradeHistoryAllMarkets}
               onChange={(e) => setTradeHistoryAllMarkets(e.target.checked)}
             />
@@ -613,7 +616,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
               onChange={(e) => setTradeHistoryInstrument(e.target.value)}
               className="h-6 px-2 text-xs bg-white/[0.05] border border-white/10 rounded text-white/80 outline-none"
             >
-              <option value="all">All Instruments</option>
+            <option value="all">{t("allInstruments")}</option>
               {Array.from(new Set((tradeHistory ?? []).map((t: any) => t.pair ?? t.symbol ?? "").filter(Boolean))).sort().map((pair) => (
                 <option key={String(pair)} value={String(pair)}>{String(pair)}</option>
               ))}
@@ -730,6 +733,7 @@ const hasConditional = (order: any) =>
 
 // Table Components
 function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mobile }: any) {
+  const tp = useTranslations("Trading");
   const formatOrderNumber = (value: unknown) => {
     const numberValue = Number(value);
     return Number.isFinite(numberValue) ? numberValue.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "—";
@@ -871,18 +875,18 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
                 <span className={clsx("text-xs font-bold uppercase", isBuySide(order.side) ? "text-success-5" : "text-error-1")}>{order.side}</span>
                 <span className="text-2xs text-white/40 capitalize bg-white/[0.06] px-1.5 py-0.5 rounded">{getOrderTypeLabel(order)}</span>
               </div>
-              <button onClick={() => onCancel({ id: order.id, market: getOrderMarket(order) })} disabled={cancelling} className="text-xs font-semibold text-white/40 active:text-primary transition-colors">Cancel</button>
+              <button onClick={() => onCancel({ id: order.id, market: getOrderMarket(order) })} disabled={cancelling} className="text-xs font-semibold text-white/40 active:text-primary transition-colors">{tp("cancel")}</button>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-              <MobileRow label="Price" value={formatOrderNumber(getOrderPrice(order))} />
-              <MobileRow label="Avg Fill" value={formatOrderNumber(getAvgPrice(order))} />
-              <MobileRow label="Amount" value={`${formatOrderNumber(getFilledQuantity(order))} / ${formatOrderNumber(getOrderQuantity(order))}`} />
-              <MobileRow label="Total" value={getOrderTotal(order)?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"} />
-              <MobileRow label="Fee" value={getFee(order) ? `${formatOrderNumber(getFee(order))} ${order.feeCurrency ?? ""}`.trim() : "—"} />
-              <MobileRow label="Status" value={formatStatus(getOrderStatus(order))} />
-              <MobileRow label="Time" value={formatOrderDate(order.createdAt)} />
+              <MobileRow label={tp("price")} value={formatOrderNumber(getOrderPrice(order))} />
+              <MobileRow label={tp("avgFill")} value={formatOrderNumber(getAvgPrice(order))} />
+              <MobileRow label={tp("amount")} value={`${formatOrderNumber(getFilledQuantity(order))} / ${formatOrderNumber(getOrderQuantity(order))}`} />
+              <MobileRow label={tp("total")} value={getOrderTotal(order)?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"} />
+              <MobileRow label={tp("fee")} value={getFee(order) ? `${formatOrderNumber(getFee(order))} ${order.feeCurrency ?? ""}`.trim() : "—"} />
+              <MobileRow label={tp("status")} value={formatStatus(getOrderStatus(order))} />
+              <MobileRow label={tp("time")} value={formatOrderDate(order.createdAt)} />
               {(order.takeProfit || order.stopLoss) && (
-                <MobileRow label="TP/SL" value={
+                <MobileRow label={tp("tpSl")} value={
                   <span>{order.takeProfit ? <span className="text-success-6">{formatOrderNumber(order.takeProfit)}</span> : "—"} / {order.stopLoss ? <span className="text-error-1">{formatOrderNumber(order.stopLoss)}</span> : "—"}</span>
                 } />
               )}
@@ -898,19 +902,19 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
       <table className="w-full text-xs">
         <thead className="sticky top-0 bg-[#181a20] z-10">
           <tr className="border-b border-white/[0.06]">
-            <TableHeader>Market</TableHeader>
-            <TableHeader>Instrument</TableHeader>
-            <TableHeader>Order Type</TableHeader>
-            <TableHeader>Direction</TableHeader>
-            <TableHeader>Order Price</TableHeader>
-            <TableHeader>Filled/Order Quantity</TableHeader>
-            <TableHeader>Order Value</TableHeader>
-            <TableHeader>TP/SL</TableHeader>
-            <TableHeader>Fee</TableHeader>
-            <TableHeader>Status</TableHeader>
-            <TableHeader>Order Time</TableHeader>
-            <TableHeader>Order ID</TableHeader>
-            <TableHeader align="right">Action</TableHeader>
+            <TableHeader>{tp("market")}</TableHeader>
+            <TableHeader>{tp("instrument")}</TableHeader>
+            <TableHeader>{tp("orderType")}</TableHeader>
+            <TableHeader>{tp("direction")}</TableHeader>
+            <TableHeader>{tp("orderPrice")}</TableHeader>
+            <TableHeader>{tp("filledOrderQuantity")}</TableHeader>
+            <TableHeader>{tp("orderValue")}</TableHeader>
+            <TableHeader>{tp("tpSl")}</TableHeader>
+            <TableHeader>{tp("fee")}</TableHeader>
+            <TableHeader>{tp("status")}</TableHeader>
+            <TableHeader>{tp("orderTime")}</TableHeader>
+            <TableHeader>{tp("orderId")}</TableHeader>
+            <TableHeader align="right">{tp("action")}</TableHeader>
           </tr>
         </thead>
         <tbody>
@@ -927,7 +931,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
               <td className="px-3 py-2.5 text-white/90 font-mono">
                 <div>{formatOrderNumber(getOrderPrice(order))}</div>
                 {getAvgPrice(order) && String(getAvgPrice(order)) !== String(getOrderPrice(order)) && (
-                  <div className="text-2xs text-white/40">Avg {formatOrderNumber(getAvgPrice(order))}</div>
+                  <div className="text-2xs text-white/40">{tp("avgPrefix")} {formatOrderNumber(getAvgPrice(order))}</div>
                 )}
               </td>
               <td className="px-3 py-2.5 text-white/90 font-mono">
@@ -937,7 +941,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
                 <div>{getOrderTotal(order)?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "—"}</div>
                 {getFilledValue(order) && (
                   <div className="text-2xs text-white/40">
-                    Filled {formatOrderNumber(getFilledValue(order))}
+                    {tp("filled")} {formatOrderNumber(getFilledValue(order))}
                   </div>
                 )}
               </td>
@@ -960,7 +964,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
                   disabled={cancelling}
                   className="text-xs font-semibold text-white/40 hover:text-primary transition-colors"
                 >
-                  Cancel
+                  {tp("cancel")}
                 </button>
               </td>
             </tr>
@@ -972,6 +976,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
 }
 
 function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
+  const tp = useTranslations("Trading");
   const fmt = (value: unknown, decimals = 8) => {
     const n = Number(value);
     return Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: decimals }) : "—";
@@ -1001,7 +1006,7 @@ function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
     return tb - ta;
   });
 
-  if (!filtered.length) return <EmptyState message="No trade history" />;
+  if (!filtered.length) return <EmptyState message={tp("noTradeHistory")} />;
 
   if (mobile) {
     return (
@@ -1032,11 +1037,11 @@ function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                <MobileRow label="Filled Price" value={fmt(filledPrice, 6)} />
-                <MobileRow label="Filled Qty" value={fmt(filledQty, 6)} />
-                <MobileRow label="Filled Value" value={fmt(filledValue, 2)} />
-                {Number.isFinite(fee) && fee !== 0 && <MobileRow label="Trading Fee" value={`${fmt(fee, 8)} ${feeAsset}`} />}
-                <MobileRow label="Time" value={fmtDate(time)} />
+                <MobileRow label={tp("filledPrice")} value={fmt(filledPrice, 6)} />
+                <MobileRow label={tp("filledQty")} value={fmt(filledQty, 6)} />
+                <MobileRow label={tp("filledValue")} value={fmt(filledValue, 2)} />
+                {Number.isFinite(fee) && fee !== 0 && <MobileRow label={tp("tradingFee")} value={`${fmt(fee, 8)} ${feeAsset}`} />}
+                <MobileRow label={tp("time")} value={fmtDate(time)} />
                 {txId && (
                   <div className="col-span-2 flex items-center gap-1 text-2xs text-white/30">
                     <span>ID: {txId.length > 12 ? txId.slice(0, 12) + "…" : txId}</span>
@@ -1056,17 +1061,17 @@ function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
       <table className="w-full min-w-[1100px] text-xs">
         <thead className="sticky top-0 bg-[#181a20] z-10">
           <tr className="border-b border-white/[0.06]">
-            <TableHeader>Market</TableHeader>
-            <TableHeader>Instrument</TableHeader>
-            <TableHeader>Order Type</TableHeader>
-            <TableHeader>Direction</TableHeader>
-            <TableHeader>Filled Value</TableHeader>
-            <TableHeader>Filled Price</TableHeader>
-            <TableHeader>Filled Qty</TableHeader>
-            <TableHeader>Filled Type</TableHeader>
-            <TableHeader>Trading Fees</TableHeader>
-            <TableHeader>Transaction Time</TableHeader>
-            <TableHeader>Transaction ID</TableHeader>
+            <TableHeader>{tp("market")}</TableHeader>
+            <TableHeader>{tp("instrument")}</TableHeader>
+            <TableHeader>{tp("orderType")}</TableHeader>
+            <TableHeader>{tp("direction")}</TableHeader>
+            <TableHeader>{tp("filledValue")}</TableHeader>
+            <TableHeader>{tp("filledPrice")}</TableHeader>
+            <TableHeader>{tp("filledQty")}</TableHeader>
+            <TableHeader>{tp("filledType")}</TableHeader>
+            <TableHeader>{tp("tradingFees")}</TableHeader>
+            <TableHeader>{tp("transactionTime")}</TableHeader>
+            <TableHeader>{tp("transactionId")}</TableHeader>
           </tr>
         </thead>
         <tbody>
@@ -1116,7 +1121,7 @@ function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
                     <button
                       type="button"
                       onClick={() => navigator.clipboard?.writeText(txId).catch(() => {})}
-                      title={`${txId} (click to copy)`}
+                      title={tp("idClickToCopy", { id: txId })}
                       className="inline-flex items-center gap-1 font-mono text-white/60 hover:text-white transition-colors"
                     >
                       {txId.length > 12 ? txId.slice(0, 12) + "…" : txId}
@@ -1134,8 +1139,9 @@ function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
 }
 
 function AssetsTable({ assets, mobile }: any) {
+  const tp = useTranslations("Trading");
   if (!assets || assets.length === 0) {
-    return <EmptyState message="No assets found" />;
+    return <EmptyState message={tp("noAssetsFound")} />;
   }
 
   if (mobile) {
@@ -1152,11 +1158,11 @@ function AssetsTable({ assets, mobile }: any) {
             <div key={asset.symbol ?? idx} className="px-4 py-3 flex flex-col gap-2">
               <span className="font-bold text-sm text-white">{asset.symbol}</span>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                <MobileRow label="Spot" value={spot.toLocaleString(undefined, { maximumFractionDigits: 6 })} />
-                <MobileRow label="Available" value={available.toLocaleString(undefined, { maximumFractionDigits: 6 })} />
-                <MobileRow label="In Order" value={locked.toLocaleString(undefined, { maximumFractionDigits: 6 })} />
-                <MobileRow label="USD Value" value={`$${usdValue.toFixed(2)}`} />
-                {margin > 0 && <MobileRow label="Margin" value={margin.toLocaleString(undefined, { maximumFractionDigits: 6 })} />}
+                <MobileRow label={tp("spot")} value={spot.toLocaleString(undefined, { maximumFractionDigits: 6 })} />
+                <MobileRow label={tp("available")} value={available.toLocaleString(undefined, { maximumFractionDigits: 6 })} />
+                <MobileRow label={tp("inOrder")} value={locked.toLocaleString(undefined, { maximumFractionDigits: 6 })} />
+                <MobileRow label={tp("usdValue")} value={`$${usdValue.toFixed(2)}`} />
+                {margin > 0 && <MobileRow label={tp("margin")} value={margin.toLocaleString(undefined, { maximumFractionDigits: 6 })} />}
               </div>
             </div>
           );
@@ -1170,12 +1176,12 @@ function AssetsTable({ assets, mobile }: any) {
       <table className="w-full text-xs">
         <thead className="sticky top-0 bg-[#181a20] z-10">
           <tr className="border-b border-white/[0.06]">
-            <TableHeader>Asset</TableHeader>
-            <TableHeader>Spot Balance</TableHeader>
-            <TableHeader>Margin Balance</TableHeader>
-            <TableHeader>Available</TableHeader>
-            <TableHeader>In Order</TableHeader>
-            <TableHeader>USD Value</TableHeader>
+            <TableHeader>{tp("asset")}</TableHeader>
+            <TableHeader>{tp("spotBalance")}</TableHeader>
+            <TableHeader>{tp("marginBalance")}</TableHeader>
+            <TableHeader>{tp("available")}</TableHeader>
+            <TableHeader>{tp("inOrder")}</TableHeader>
+            <TableHeader>{tp("usdValue")}</TableHeader>
           </tr>
         </thead>
         <tbody>
@@ -1206,6 +1212,7 @@ function AssetsTable({ assets, mobile }: any) {
 }
 
 function BorrowingsTable({ borrowings, loading, mobile }: any) {
+  const tp = useTranslations("Trading");
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -1215,7 +1222,7 @@ function BorrowingsTable({ borrowings, loading, mobile }: any) {
   }
 
   if (!borrowings || borrowings.length === 0) {
-    return <EmptyState message="No borrowings" />;
+    return <EmptyState message={tp("noBorrowings")} />;
   }
 
   const assetOf = (b: any) => b.base ?? b.asset ?? b.symbol ?? b.coin ?? "—";
@@ -1238,13 +1245,13 @@ function BorrowingsTable({ borrowings, loading, mobile }: any) {
           <div key={borrow.id ?? idx} className="px-4 py-3 flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="font-bold text-sm text-white">{assetOf(borrow)}</span>
-              <button className="text-xs font-semibold text-primary">Repay</button>
+              <button className="text-xs font-semibold text-primary">{tp("repay")}</button>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-              <MobileRow label="Borrowed" value={borrowedOf(borrow)} />
-              <MobileRow label="Interest" value={interestOf(borrow)} />
-              <MobileRow label="Total Debt" value={totalDebtOf(borrow)} />
-              <MobileRow label="Time" value={borrow.createdAt ? new Date(borrow.createdAt).toLocaleDateString() : "—"} />
+              <MobileRow label={tp("borrowed")} value={borrowedOf(borrow)} />
+              <MobileRow label={tp("interest")} value={interestOf(borrow)} />
+              <MobileRow label={tp("totalDebt")} value={totalDebtOf(borrow)} />
+              <MobileRow label={tp("time")} value={borrow.createdAt ? new Date(borrow.createdAt).toLocaleDateString() : "—"} />
             </div>
           </div>
         ))}
@@ -1257,12 +1264,12 @@ function BorrowingsTable({ borrowings, loading, mobile }: any) {
       <table className="w-full text-xs">
         <thead className="sticky top-0 bg-[#181a20] z-10">
           <tr className="border-b border-white/[0.06]">
-            <TableHeader>Asset</TableHeader>
-            <TableHeader>Borrowed</TableHeader>
-            <TableHeader>Interest</TableHeader>
-            <TableHeader>Total Debt</TableHeader>
-            <TableHeader>Time</TableHeader>
-            <TableHeader align="right">Action</TableHeader>
+            <TableHeader>{tp("asset")}</TableHeader>
+            <TableHeader>{tp("borrowed")}</TableHeader>
+            <TableHeader>{tp("interest")}</TableHeader>
+            <TableHeader>{tp("totalDebt")}</TableHeader>
+            <TableHeader>{tp("time")}</TableHeader>
+            <TableHeader align="right">{tp("action")}</TableHeader>
           </tr>
         </thead>
         <tbody>
@@ -1276,7 +1283,7 @@ function BorrowingsTable({ borrowings, loading, mobile }: any) {
                 {borrow.createdAt ? new Date(borrow.createdAt).toLocaleString() : "—"}
               </td>
               <td className="px-3 py-2.5 text-right">
-                <button className="text-xs font-semibold text-white/40 hover:text-primary">Repay</button>
+                <button className="text-xs font-semibold text-white/40 hover:text-primary">{tp("repay")}</button>
               </td>
             </tr>
           ))}
@@ -1287,18 +1294,20 @@ function BorrowingsTable({ borrowings, loading, mobile }: any) {
 }
 
 function ToolsPanel() {
+  const tp = useTranslations("Trading");
   return (
     <div className="flex flex-col items-center justify-center py-12 gap-3">
       <MdInfo size={32} className="text-white/20" />
-      <p className="text-xs text-white/40">No active tools</p>
+      <p className="text-xs text-white/40">{tp("noActiveTools")}</p>
       <p className="text-xs text-white/30 max-w-md text-center">
-        Trading tools like automated strategies, grid bots, and DCA bots will appear here when configured.
+        {tp("toolsDescription")}
       </p>
     </div>
   );
 }
 
 function PnLPanel({ selectedPair, market = "spot" }: { selectedPair?: string; market?: TradingMarket }) {
+  const tp = useTranslations("Trading");
   const { data: pnlData = [], isLoading } = useQuery({
     queryKey:
       market === "futures"
@@ -1326,15 +1335,15 @@ function PnLPanel({ selectedPair, market = "spot" }: { selectedPair?: string; ma
     );
   }
 
-  const marketTitle = market === "futures" ? "Futures" : market === "margin" ? "Margin" : "Spot";
+  const marketTitle = market === "futures" ? tp("futures") : market === "margin" ? tp("margin") : tp("spot");
 
   if (!pnlData.length) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <MdInfo size={32} className="text-white/20" />
-        <p className="text-xs text-white/40">No {marketTitle} PnL records</p>
+        <p className="text-xs text-white/40">{tp("noPnlRecords", { market: marketTitle })}</p>
         <p className="text-xs text-white/30 max-w-md text-center">
-          Realized profit and loss will be displayed here as your {market} orders are executed.
+          {tp("pnlDescription", { market: marketTitle })}
         </p>
       </div>
     );
@@ -1345,17 +1354,17 @@ function PnLPanel({ selectedPair, market = "spot" }: { selectedPair?: string; ma
       <table className="w-full min-w-[1120px] text-left text-xs">
         <thead className="border-b border-white/[0.06] bg-white/[0.02]">
           <tr>
-            <TableHeader>Date</TableHeader>
-            <TableHeader>Pair</TableHeader>
-            <TableHeader>Side</TableHeader>
-            <TableHeader align="right">Entry Price</TableHeader>
-            <TableHeader align="right">Exit Price</TableHeader>
-            <TableHeader align="right">Closed Qty</TableHeader>
-            <TableHeader align="right">Entry Value</TableHeader>
-            <TableHeader align="right">Exit Value</TableHeader>
-            <TableHeader align="right">Fee</TableHeader>
-            <TableHeader align="right">Realized PnL</TableHeader>
-            <TableHeader>Status</TableHeader>
+            <TableHeader>{tp("date")}</TableHeader>
+            <TableHeader>{tp("pair")}</TableHeader>
+            <TableHeader>{tp("side")}</TableHeader>
+            <TableHeader align="right">{tp("entryPrice")}</TableHeader>
+            <TableHeader align="right">{tp("exitPrice")}</TableHeader>
+            <TableHeader align="right">{tp("closedQty")}</TableHeader>
+            <TableHeader align="right">{tp("entryValue")}</TableHeader>
+            <TableHeader align="right">{tp("exitValue")}</TableHeader>
+            <TableHeader align="right">{tp("fee")}</TableHeader>
+            <TableHeader align="right">{tp("realizedPnl")}</TableHeader>
+            <TableHeader>{tp("status")}</TableHeader>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/[0.04]">
@@ -1426,7 +1435,8 @@ function TableHeader({ children, align = "left" }: { children: React.ReactNode; 
   );
 }
 
-function EmptyState({ message = "No Available Data" }: { message?: string }) {
+function EmptyState({ message }: { message?: string }) {
+  const tp = useTranslations("Trading");
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
       <svg width="84" height="92" viewBox="0 0 84 92" fill="none" className="opacity-60">
@@ -1453,7 +1463,7 @@ function EmptyState({ message = "No Available Data" }: { message?: string }) {
           </linearGradient>
         </defs>
       </svg>
-      <span className="text-xs font-medium text-white/30">{message}</span>
+      <span className="text-xs font-medium text-white/30">{message ?? tp("noAvailableData")}</span>
     </div>
   );
 }

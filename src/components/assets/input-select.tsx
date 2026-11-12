@@ -4,6 +4,7 @@ import { Input, Popover, PopoverDropdown, PopoverTarget } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import Image from "next/image";
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 
 interface InputSelectProps {
   data: { name: string; logo: string; short: string }[];
@@ -16,6 +17,7 @@ export const InputSelect = ({
   initialValue,
   handleCurrencyUpdate,
 }: InputSelectProps) => {
+  const t = useTranslations("Wallet");
   const [currency, setCurrency] = useState(
     initialValue
       ? data?.find((item) => item.short === initialValue) ?? data[0]
@@ -27,7 +29,7 @@ export const InputSelect = ({
   return (
     <div className="flex bg-[#2B2F36E5] rounded-[4px] justify-between w-[268px] px-3 py-2.5">
       <Input
-        placeholder="Enter Amount"
+        placeholder={t("enterAmount")}
         classNames={{
           input:
             "!border-0 !bg-transparent focus:!border-0 !px-0 !py-0 placeholder:!text-caption placeholder:!text-[#848E9C] !flex-1",
@@ -70,7 +72,7 @@ export const InputSelect = ({
           <div className="flex flex-col">
             <div className="px-1 gap-1 bg-gray-17 pb-[9px] pt-3">
               <div className="flex flex-col gap-2">
-                <h4 className="text-xs text-gray-14 pl-2">Currency</h4>
+                <h4 className="text-xs text-gray-14 pl-2">{t("currency")}</h4>
                 <ul className="bg-gray-7 rounded-lg flex flex-col px-2 py-1.5 max-w-[234px] overflow-auto h-[200px]">
                   {data.map((item, index) => (
                     <li

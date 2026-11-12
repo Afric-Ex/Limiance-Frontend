@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { modals } from "@mantine/modals";
+import { useTranslations } from "next-intl";
 import { MdOutlineClose } from "react-icons/md";
 import { NumberInput, Popover, PopoverDropdown, PopoverTarget, TextInput } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ import { IoChevronDown } from "react-icons/io5";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) => {
+  const t = useTranslations("Transactions");
   const { coins: portfolio, refreshBalances } = usePortfolioWs({ coins: true });
   const [activeStep, setActiveStep] = useState<"request" | "transfer">("request");
   const [selectedCoin, setSelectedCoin] = useState<SelectedCoin>({
@@ -34,8 +36,8 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
   const [requestedCode, setRequestedCode] = useState("");
 
   const balanceOptions = [
-    { label: "Spot", value: "spot_balance" },
-    { label: "Funding", value: "funding_balance" },
+    { label: t("spot"), value: "spot_balance" },
+    { label: t("funding"), value: "funding_balance" },
   ];
 
   const selectedFromLabel =
@@ -48,7 +50,7 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
   const recipientLooksLikeEmail = trimmedRecipient.includes("@");
   const recipientError =
     recipientLooksLikeEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedRecipient)
-      ? "Enter a valid email address"
+      ? t("invalidEmail")
       : null;
 
   const walletBalanceKey = fromBalance === "spot_balance" ? "spotBalance" : "fundingBalance";
@@ -73,7 +75,9 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
       if (code) {
         setReleaseCode(String(code));
       }
-      successNotification(response?.message || "Release code requested");
+      successNotification(
+        response?.message || t("releaseCodeRequested")
+      );
       setActiveStep("transfer");
     },
     onError: (e) => errorMessageHandler(e),
@@ -92,7 +96,7 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
     onSuccess: () => {
       // WebSocket auto-refreshes balances
       refreshBalances();
-      successNotification("Transfer successful");
+      successNotification(t("transferSuccessful"));
       if (!embedded) modals.closeAll();
     },
     onError: (e) => errorMessageHandler(e),
@@ -157,9 +161,9 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-xl font-bold text-white">External Transfer</h4>
+          <h4 className="text-xl font-bold text-white">{t("externalTransferTitle")}</h4>
           <p className="text-sm text-white/40 mt-1">
-            Request a one-time release code, then review and confirm the transfer
+            {t("externalTransferSubtitle")}
           </p>
         </div>
         {!embedded && (
@@ -183,7 +187,7 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
               : "text-white/50 hover:text-white hover:bg-white/[0.04]"
           }`}
         >
-          Request Code
+          {t("requestCode")}
         </button>
         <button
           type="button"
@@ -194,7 +198,7 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
               : "text-white/50 hover:text-white hover:bg-white/[0.04]"
           }`}
         >
-          Transfer
+          {t("transfer")}
         </button>
       </div>
 
@@ -202,7 +206,7 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
       <div className={sectionClass}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <BalanceSelector
-            label="From Wallet"
+            label={t("fromWallet")}
             value={fromBalance}
             opened={fromOpen}
             toggle={fromHandlers.toggle}
@@ -210,7 +214,7 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
             onSelect={setFromBalance}
           />
           <BalanceSelector
-            label="Recipient Wallet"
+            label={t("recipientWallet")}
             value={toBalance}
             opened={toOpen}
             toggle={toHandlers.toggle}
@@ -223,7 +227,7 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
       {/* Asset */}
       <div className={sectionClass}>
         <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-          Asset
+          {t("asset")}
         </label>
         <SupportedListingsDropdown
           selectedCoin={selectedCoin}
@@ -234,10 +238,10 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
       {/* Amount */}
       <div className={sectionClass}>
         <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Amount</label>
+          <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">{t("amount")}</label>
           {assetSymbol && (
             <span className="text-xs text-white/40">
-              Available:{" "}
+              {t("available")}:{" "}
               <span className="font-bold text-primary">
                 {(+availableBalance).toLocaleString("en-US", { maximumFractionDigits: 8 })}{" "}
                 {assetSymbol}
@@ -275,7 +279,7 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
                 onClick={() => setAmount(availableBalance)}
                 className="px-2 py-1 bg-primary/15 hover:bg-primary/30 rounded-md text-xs text-primary font-bold transition-colors"
               >
-                MAX
+                {t("max")}
               </button>
             </span>
           }
@@ -288,43 +292,45 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
       {/* Recipient User ID or Email */}
       <div className={sectionClass}>
         <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-          Recipient User ID or Email
+          {t("recipientUserIdOrEmail")}
         </label>
         <TextInput
-          placeholder="User ID or email address"
+          placeholder={t("recipientPlaceholder")}
           value={toUserId}
           onChange={(e) => setToUserId(e.target.value)}
           classNames={{ input: inputClass }}
           error={recipientError}
         />
         <p className="text-xs text-white/30">
-          Enter the recipient&apos;s Limiance user ID or their account email address.
+          {t("recipientHint")}
         </p>
       </div>
 
       {activeStep === "request" && (
         <div className={sectionClass}>
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-white">Code Request</span>
+            <span className="text-sm font-semibold text-white">{t("codeRequest")}</span>
             <span className="text-xs text-white/40">
-              Request a one-time code for {selectedCoin.symbol || "the selected asset"} before confirming transfer.
+              {t("codeRequestHint", {
+                asset: selectedCoin.symbol || t("asset"),
+              })}
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="rounded-lg bg-white/[0.03] px-3 py-2">
-              <span className="text-white/35">Asset</span>
+              <span className="text-white/35">{t("asset")}</span>
               <div className="mt-1 font-semibold text-white/90">{selectedCoin.symbol || "—"}</div>
             </div>
             <div className="rounded-lg bg-white/[0.03] px-3 py-2">
-              <span className="text-white/35">Amount</span>
+              <span className="text-white/35">{t("amount")}</span>
               <div className="mt-1 font-semibold text-white/90">{amount || "—"}</div>
             </div>
           </div>
 
           {requestedCode && (
             <div className="rounded-lg border border-primary/20 bg-primary/[0.08] px-3 py-3">
-              <span className="text-xs text-white/40">Requested code</span>
+              <span className="text-xs text-white/40">{t("requestedCode")}</span>
               <div className="mt-1 text-lg font-bold tracking-[0.2em] text-primary">{requestedCode}</div>
             </div>
           )}
@@ -336,7 +342,7 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
               disabled={!selectedCoin.symbol || !amount || +amount <= 0 || requestingCode}
               className="h-[52px] flex-1 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold transition-all active:scale-[0.98] disabled:bg-white/[0.04] disabled:text-white/30"
             >
-              {requestingCode ? <InlineLoading /> : requestedCode ? "Request Again" : "Request Code"}
+              {requestingCode ? <InlineLoading /> : requestedCode ? t("requestAgain") : t("requestCode")}
             </button>
             <button
               type="button"
@@ -344,8 +350,8 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
               disabled={!selectedCoin.symbol || !amount || +amount <= 0}
               className="h-[52px] flex-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white font-bold transition-all active:scale-[0.98] disabled:text-white/30"
             >
-              <span className="sm:hidden">Transfer</span>
-              <span className="hidden sm:inline">Continue to Transfer</span>
+              <span className="sm:hidden">{t("transfer")}</span>
+              <span className="hidden sm:inline">{t("continueToTransfer")}</span>
             </button>
           </div>
         </div>
@@ -354,22 +360,20 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
       {/* Release Code */}
       <div className={sectionClass}>
         <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-          Release Code
+          {t("releaseCode")}
         </label>
         <TextInput
-          placeholder="6-digit release code"
+          placeholder={t("releaseCodePlaceholder")}
           value={releaseCode}
           onChange={(e) => setReleaseCode(e.target.value)}
           classNames={{ input: inputClass }}
         />
         <p className="text-xs text-white/30">
-          Required to authorize the transfer for this asset.
+          {t("releaseCodeHint")}
         </p>
         <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
           <span className="text-xs text-white/40">
-            {requestedCode
-              ? "Requested code ready. Review the receipt below before submitting."
-              : "Request the asset release code first, then enter it here."}
+            {requestedCode ? t("codeReadyHint") : t("requestCodeFirstHint")}
           </span>
           {!!requestedCode && (
             <button
@@ -377,7 +381,7 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
               onClick={() => setReleaseCode(requestedCode)}
               className="text-xs font-bold text-primary hover:text-primary/80 transition-colors"
             >
-              Use code
+              {t("useCode")}
             </button>
           )}
         </div>
@@ -385,30 +389,30 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
 
       {activeStep === "transfer" && (
         <div className={sectionClass}>
-          <span className="text-sm font-semibold text-white">Transfer Receipt</span>
+          <span className="text-sm font-semibold text-white">{t("transferReceipt")}</span>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="rounded-lg bg-white/[0.03] px-3 py-2">
-              <span className="text-white/35">Recipient</span>
+              <span className="text-white/35">{t("recipient")}</span>
               <div className="mt-1 font-semibold text-white/90">{toUserId || "—"}</div>
             </div>
             <div className="rounded-lg bg-white/[0.03] px-3 py-2">
-              <span className="text-white/35">Asset</span>
+              <span className="text-white/35">{t("asset")}</span>
               <div className="mt-1 font-semibold text-white/90">{selectedCoin.symbol || "—"}</div>
             </div>
             <div className="rounded-lg bg-white/[0.03] px-3 py-2">
-              <span className="text-white/35">Amount</span>
+              <span className="text-white/35">{t("amount")}</span>
               <div className="mt-1 font-semibold text-white/90">{amount || "—"}</div>
             </div>
             <div className="rounded-lg bg-white/[0.03] px-3 py-2">
-              <span className="text-white/35">Release Code</span>
+              <span className="text-white/35">{t("releaseCode")}</span>
               <div className="mt-1 font-semibold text-white/90">{releaseCode || "—"}</div>
             </div>
             <div className="rounded-lg bg-white/[0.03] px-3 py-2">
-              <span className="text-white/35">From Wallet</span>
+              <span className="text-white/35">{t("fromWallet")}</span>
               <div className="mt-1 font-semibold text-white/90">{selectedFromLabel}</div>
             </div>
             <div className="rounded-lg bg-white/[0.03] px-3 py-2">
-              <span className="text-white/35">Recipient Wallet</span>
+              <span className="text-white/35">{t("recipientWallet")}</span>
               <div className="mt-1 font-semibold text-white/90">{selectedToLabel}</div>
             </div>
           </div>
@@ -429,7 +433,7 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
         }
         className="h-[56px] rounded-xl bg-primary hover:bg-primary/90 hover:shadow-[0_0_16px_rgba(77,119,240,0.3)] text-white font-bold transition-all active:scale-[0.98] disabled:bg-white/[0.04] disabled:text-white/30 disabled:shadow-none flex items-center justify-center gap-2"
       >
-        {transferring ? <InlineLoading /> : "Confirm Transfer"}
+        {transferring ? <InlineLoading /> : t("confirmTransfer")}
       </button>
     </div>
   );

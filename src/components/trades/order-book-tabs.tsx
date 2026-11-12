@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { FiChevronDown } from "react-icons/fi";
 import { IoArrowDown, IoArrowUp } from "react-icons/io5";
 import type { OrderBookEntry } from "@/src/hooks/use-order-book";
@@ -117,9 +118,10 @@ function ViewModeButton({
   active: boolean;
   onSelect: (mode: ViewMode) => void;
 }) {
+  const t = useTranslations("Trading");
   const top = mode === "bids" ? "bg-success-6" : "bg-error-1";
   const bottom = mode === "asks" ? "bg-error-1" : "bg-success-6";
-  const label = mode === "both" ? "Show bids and asks" : mode === "bids" ? "Show bids only" : "Show asks only";
+  const label = mode === "both" ? t("showBidsAndAsks") : mode === "bids" ? t("showBidsOnly") : t("showAsksOnly");
   return (
     <button
       type="button"
@@ -145,20 +147,21 @@ function RecentTradesPanel({
   trades: RecentTrade[];
   isLoading: boolean;
 }) {
+  const t = useTranslations("Trading");
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="grid shrink-0 grid-cols-3 px-3 py-2 text-2xs text-white/40">
-        <span>Price</span>
-        <span className="text-right">Qty</span>
-        <span className="text-right">Time</span>
+        <span>{t("price")}</span>
+        <span className="text-right">{t("qty")}</span>
+        <span className="text-right">{t("time")}</span>
       </div>
       {isLoading ? (
         <div className="flex flex-1 items-center justify-center text-xs text-white/35">
-          Waiting for recent trades…
+          {t("waitingForRecentTrades")}
         </div>
       ) : trades.length === 0 ? (
         <div className="flex flex-1 items-center justify-center text-xs text-white/35">
-          No recent trades
+          {t("noRecentTrades")}
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -207,6 +210,7 @@ export function OrderBookTabs({
   fixedHeight,
   className = "",
 }: OrderBookTabsProps) {
+  const t = useTranslations("Trading");
   const [viewMode, setViewMode] = useState<ViewMode>("both");
   const [selectedStep, setSelectedStep] = useState<number | null>(null);
   const [priceDir, setPriceDir] = useState<"up" | "down" | null>(null);
@@ -336,8 +340,8 @@ export function OrderBookTabs({
     lastTradedPrice !== null && quote && USD_PEGGED.has(String(quote).toUpperCase())
       ? `≈${formatCenter(lastTradedPrice)} USD`
       : spread === null
-        ? "Last Price"
-        : `Spread ${formatPrice(spread)}`;
+        ? t("lastPrice")
+        : t("spreadValue", { spread: formatPrice(spread) });
 
   const renderRow = (order: Level, side: "ask" | "bid", distance: number) => (
     <button
@@ -379,8 +383,8 @@ export function OrderBookTabs({
       }}
     >
       <TabsList>
-        <TabsTab value="orderbook">Order Book</TabsTab>
-        <TabsTab value="recentTrades">Recent Trade</TabsTab>
+        <TabsTab value="orderbook">{t("orderBook")}</TabsTab>
+        <TabsTab value="recentTrades">{t("recentTrade")}</TabsTab>
       </TabsList>
       <TabsPanel value="orderbook">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-1">
@@ -393,7 +397,7 @@ export function OrderBookTabs({
             </div>
             <div className="relative flex h-6 items-center">
               <select
-                aria-label="Price grouping"
+                aria-label={t("priceGrouping")}
                 value={activeStep}
                 onChange={(event) => setSelectedStep(Number(event.currentTarget.value))}
                 className="h-6 w-[88px] cursor-pointer appearance-none rounded bg-white/[0.06] pl-2 pr-6 text-micro font-semibold text-white outline-none"
@@ -408,22 +412,22 @@ export function OrderBookTabs({
             </div>
           </div>
           <div className="grid shrink-0 grid-cols-2 px-3 py-1 min-[1150px]:grid-cols-3">
-            <span className="text-2xs text-white/40">Price({quote})</span>
-            <span className="text-right text-2xs text-white/40">Qty({base})</span>
-            <span className="hidden text-right text-2xs text-white/40 min-[1150px]:block">Total({base})</span>
+            <span className="text-2xs text-white/40">{t("priceOf", { quote })}</span>
+            <span className="text-right text-2xs text-white/40">{t("qtyOf", { base })}</span>
+            <span className="hidden text-right text-2xs text-white/40 min-[1150px]:block">{t("totalOf", { base })}</span>
           </div>
           {empty ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center text-xs text-white/35">
               <span>
                 {lastUpdated
-                  ? "Order book update received, but no bid/ask levels were returned."
+                  ? t("orderBookNoLevelsReturned")
                   : isConnected
-                    ? "Waiting for order book update…"
-                    : "Connecting to order book…"}
+                    ? t("waitingForOrderBookUpdate")
+                    : t("connectingToOrderBook")}
               </span>
               {lastUpdated && (
                 <span className="text-2xs text-white/25">
-                  Last update {lastUpdated.toLocaleTimeString()}
+                  {t("lastUpdate", { time: lastUpdated.toLocaleTimeString() })}
                 </span>
               )}
             </div>
@@ -454,7 +458,7 @@ export function OrderBookTabs({
             <div
               className="mt-1 flex shrink-0 items-center gap-2 px-2 pb-1 pt-1"
               role="img"
-              aria-label={`Buy pressure ${buyPercent}%, sell pressure ${sellPercent}%`}
+              aria-label={t("buySellPressure", { buy: buyPercent, sell: sellPercent })}
             >
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[3px] border border-[#25AB42]/60 text-2xs font-bold text-[#25AB42]">
                 B

@@ -16,30 +16,31 @@ import {
   FaTrashCan,
 } from "react-icons/fa6";
 import type { DrawingTool } from "@/src/components/trades/drawing-primitives";
-import { DRAWING_LABELS } from "@/src/components/trades/drawing-primitives";
+import { DRAWING_LABEL_KEYS } from "@/src/components/trades/drawing-primitives";
+import { useTranslations } from "next-intl";
 
 export type ToolbarTool = DrawingTool | "pointer";
 
-type ToolEntry = { tool: ToolbarTool; label: string; Icon: IconType; hint: string };
+type ToolEntry = { tool: ToolbarTool; labelKey: string; Icon: IconType; hintKey: string };
 
 const POINTER: ToolEntry = {
   tool: "pointer",
-  label: "Select and move",
+  labelKey: "drawingSelectAndMove",
   Icon: FaHandPointer,
-  hint: "Select a drawing, or drag to pan and zoom",
+  hintKey: "drawingSelectAndMoveHint",
 };
 
 const TOOLS: ToolEntry[] = [
-  { tool: "trendline", label: DRAWING_LABELS.trendline, Icon: FaArrowTrendUp, hint: "Click two points" },
-  { tool: "ray", label: DRAWING_LABELS.ray, Icon: FaChartLine, hint: "Click an anchor, then a direction" },
-  { tool: "extended", label: DRAWING_LABELS.extended, Icon: FaArrowsLeftRight, hint: "Click two points; extend both directions" },
-  { tool: "hray", label: DRAWING_LABELS.hray, Icon: FaRulerHorizontal, hint: "Click one price" },
-  { tool: "hline", label: DRAWING_LABELS.hline, Icon: FaRulerHorizontal, hint: "Click one price; draw across the chart" },
-  { tool: "vline", label: DRAWING_LABELS.vline, Icon: FaRulerVertical, hint: "Click one time; draw through the chart" },
-  { tool: "rectangle", label: DRAWING_LABELS.rectangle, Icon: FaShapes, hint: "Click two opposite corners" },
-  { tool: "channel", label: DRAWING_LABELS.channel, Icon: FaLayerGroup, hint: "Click base start, base end, then channel width" },
-  { tool: "fib", label: DRAWING_LABELS.fib, Icon: FaDivide, hint: "Click the 0% and 100% anchors" },
-  { tool: "fibext", label: DRAWING_LABELS.fibext, Icon: FaChartArea, hint: "Click A, B, then the extension origin" },
+  { tool: "trendline", labelKey: DRAWING_LABEL_KEYS.trendline, Icon: FaArrowTrendUp, hintKey: "drawingHintTwoPoints" },
+  { tool: "ray", labelKey: DRAWING_LABEL_KEYS.ray, Icon: FaChartLine, hintKey: "drawingHintAnchorDirection" },
+  { tool: "extended", labelKey: DRAWING_LABEL_KEYS.extended, Icon: FaArrowsLeftRight, hintKey: "drawingHintTwoPointsBoth" },
+  { tool: "hray", labelKey: DRAWING_LABEL_KEYS.hray, Icon: FaRulerHorizontal, hintKey: "drawingHintOnePrice" },
+  { tool: "hline", labelKey: DRAWING_LABEL_KEYS.hline, Icon: FaRulerHorizontal, hintKey: "drawingHintPriceAcrossChart" },
+  { tool: "vline", labelKey: DRAWING_LABEL_KEYS.vline, Icon: FaRulerVertical, hintKey: "drawingHintOneTime" },
+  { tool: "rectangle", labelKey: DRAWING_LABEL_KEYS.rectangle, Icon: FaShapes, hintKey: "drawingHintOppositeCorners" },
+  { tool: "channel", labelKey: DRAWING_LABEL_KEYS.channel, Icon: FaLayerGroup, hintKey: "drawingHintChannelWidth" },
+  { tool: "fib", labelKey: DRAWING_LABEL_KEYS.fib, Icon: FaDivide, hintKey: "drawingHintFibAnchors" },
+  { tool: "fibext", labelKey: DRAWING_LABEL_KEYS.fibext, Icon: FaChartArea, hintKey: "drawingHintFibExtension" },
 ];
 
 // Desktop (>=1150px): docked column with slightly larger hit targets.
@@ -82,6 +83,7 @@ export function DrawingToolbar({
   onUndo: () => void;
   onRedo: () => void;
 }) {
+  const t = useTranslations("Trading");
   return (
     <div className="absolute left-2 top-1/2 z-30 flex max-h-[78%] -translate-y-1/2 flex-col overflow-y-auto rounded-md border border-white/10 bg-[#181a20]/95 [scrollbar-width:none] min-[1150px]:static min-[1150px]:z-auto min-[1150px]:max-h-full min-[1150px]:w-10 min-[1150px]:shrink-0 min-[1150px]:translate-y-0 min-[1150px]:items-center min-[1150px]:rounded-none min-[1150px]:border-0 min-[1150px]:border-r min-[1150px]:border-white/[0.06] min-[1150px]:bg-transparent min-[1150px]:py-1">
       <ToolButton entry={POINTER} active={tool === "pointer"} onSelect={onSelectTool} />
@@ -101,8 +103,8 @@ export function DrawingToolbar({
         type="button"
         onClick={onUndo}
         disabled={!canUndo}
-        aria-label="Undo"
-        title={canUndo ? "Undo (Ctrl+Z)" : "Nothing to undo"}
+        aria-label={t("undo")}
+        title={canUndo ? t("undoShortcut") : t("nothingToUndo")}
         className={`${BUTTON} ${canUndo ? IDLE : "text-white/20"}`}
       >
         <FaRotateLeft size={14} />
@@ -111,8 +113,8 @@ export function DrawingToolbar({
         type="button"
         onClick={onRedo}
         disabled={!canRedo}
-        aria-label="Redo"
-        title={canRedo ? "Redo (Ctrl+Shift+Z)" : "Nothing to redo"}
+        aria-label={t("redo")}
+        title={canRedo ? t("redoShortcut") : t("nothingToRedo")}
         className={`${BUTTON} ${canRedo ? IDLE : "text-white/20"}`}
       >
         <FaRotateRight size={14} />
@@ -121,8 +123,8 @@ export function DrawingToolbar({
         type="button"
         onClick={onDelete}
         disabled={!canDelete}
-        aria-label="Delete selected drawing"
-        title={canDelete ? "Delete selected drawing" : "Select a drawing to delete it"}
+        aria-label={t("deleteSelectedDrawing")}
+        title={canDelete ? t("deleteSelectedDrawing") : t("selectDrawingToDelete")}
         className={`${BUTTON} ${canDelete ? IDLE : "text-white/20"}`}
       >
         <FaTrashCan size={14} />
@@ -144,14 +146,16 @@ function ToolButton({
   pendingHint?: string;
   onSelect: (tool: ToolbarTool) => void;
 }) {
-  const { tool, label, hint, Icon } = entry;
+  const t = useTranslations("Trading");
+  const { tool, labelKey, hintKey, Icon } = entry;
+  const label = t(labelKey);
   return (
     <button
       type="button"
       onClick={() => onSelect(tool)}
       aria-label={label}
       aria-pressed={active}
-      title={pending ? (pendingHint ?? "Next anchor") + " · Escape to cancel" : label + " — " + hint}
+      title={pending ? (pendingHint ?? t("nextAnchor")) + t("escapeToCancel") : label + " — " + t(hintKey)}
       className={`${BUTTON} ${active ? ACTIVE : IDLE}`}
     >
       <Icon size={14} />

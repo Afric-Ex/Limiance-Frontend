@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { Loader, TextInput } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import clsx from "clsx";
+import { useTranslations } from "next-intl";
 import { MdEdit } from "react-icons/md";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 
@@ -101,7 +102,7 @@ function toRow(raw: any, market: "futures" | "margin", index: number): PositionR
     entryPrice,
     markPrice,
     leverage,
-    modeLabel: mode === "isolated" ? "Isolated" : mode === "cross" ? "Cross" : "",
+    modeLabel: mode === "isolated" ? "isolated" : mode === "cross" ? "cross" : "",
     value: size * priceForValue,
     liqPrice: positive(firstDefined(raw?.liquidationPrice, raw?.liquidation_price)),
     initialMargin,
@@ -142,20 +143,21 @@ const MODAL_STYLES = {
 };
 
 function PartialCloseForm({ row, onSubmit }: { row: PositionRow; onSubmit: (quantity: string) => void }) {
+  const t = useTranslations("Trading");
   const [quantity, setQuantity] = useState("");
   const amount = Number(quantity);
   const valid = quantity !== "" && Number.isFinite(amount) && amount > 0 && amount <= row.size;
   return (
     <div className="flex min-w-[300px] flex-col gap-3">
       <p className="text-xs text-white/60">
-        Position size: <span className="font-semibold text-white">{fmt(row.size)} {row.base}</span>
+        {t("positionSize")} <span className="font-semibold text-white">{fmt(row.size)} {row.base}</span>
       </p>
       <TextInput
-        label="Close quantity"
-        placeholder={`Max ${fmt(row.size)}`}
+        label={t("closeQuantity")}
+        placeholder={t("maxValue", { value: fmt(row.size) })}
         value={quantity}
         onChange={(e) => setQuantity(e.currentTarget.value)}
-        error={quantity !== "" && !valid ? `Enter a quantity up to ${fmt(row.size)}` : undefined}
+        error={quantity !== "" && !valid ? t("enterQuantityUpTo", { value: fmt(row.size) }) : undefined}
       />
       <button
         type="button"
@@ -163,7 +165,7 @@ function PartialCloseForm({ row, onSubmit }: { row: PositionRow; onSubmit: (quan
         onClick={() => onSubmit(quantity)}
         className="mt-1 h-10 w-full rounded bg-primary text-sm font-semibold text-white transition-opacity disabled:opacity-40"
       >
-        Confirm partial close
+        {t("confirmPartialClose")}
       </button>
     </div>
   );
@@ -176,6 +178,7 @@ function TpslForm({
   row: PositionRow;
   onSubmit: (takeProfit: string, stopLoss: string) => void;
 }) {
+  const t = useTranslations("Trading");
   const [takeProfit, setTakeProfit] = useState(row.takeProfit !== null ? String(row.takeProfit) : "");
   const [stopLoss, setStopLoss] = useState(row.stopLoss !== null ? String(row.stopLoss) : "");
   const isPrice = (v: string) => v === "" || (Number.isFinite(Number(v)) && Number(v) > 0);
@@ -183,18 +186,18 @@ function TpslForm({
   return (
     <div className="flex min-w-[300px] flex-col gap-3">
       <TextInput
-        label="Take profit price"
-        placeholder="Enter target price"
+        label={t("takeProfitPrice")}
+        placeholder={t("enterTargetPrice")}
         value={takeProfit}
         onChange={(e) => setTakeProfit(e.currentTarget.value)}
-        error={!isPrice(takeProfit) ? "Enter a valid price" : undefined}
+        error={!isPrice(takeProfit) ? t("enterValidPrice") : undefined}
       />
       <TextInput
-        label="Stop loss price"
-        placeholder="Enter trigger price"
+        label={t("stopLossPrice")}
+        placeholder={t("enterTriggerPrice")}
         value={stopLoss}
         onChange={(e) => setStopLoss(e.currentTarget.value)}
-        error={!isPrice(stopLoss) ? "Enter a valid price" : undefined}
+        error={!isPrice(stopLoss) ? t("enterValidPrice") : undefined}
       />
       <button
         type="button"
@@ -202,7 +205,7 @@ function TpslForm({
         onClick={() => onSubmit(takeProfit.trim(), stopLoss.trim())}
         className="mt-1 h-10 w-full rounded bg-primary text-sm font-semibold text-white transition-opacity disabled:opacity-40"
       >
-        Confirm update
+        {t("confirmUpdate")}
       </button>
     </div>
   );
@@ -242,6 +245,7 @@ export function PositionsTable({
   onUpdateTpsl,
   mobile = false,
 }: PositionsTableProps) {
+  const t = useTranslations("Trading");
   if (loading && rows.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -256,14 +260,18 @@ export function PositionsTable({
       ...DEFAULT_MODAL_SETTINGS,
       size: "sm",
       styles: MODAL_STYLES,
-      title: <span className="text-base font-bold text-white">Close position</span>,
+      title: <span className="text-base font-bold text-white">{t("closePosition")}</span>,
       children: (
         <p className="text-sm text-white/70">
-          Close your {row.isLong ? "long" : "short"} {fmt(row.size)} {row.base} position on {row.pair} at the market
-          price?
+          {t("closePositionConfirm", {
+            direction: row.isLong ? t("long") : t("short"),
+            size: fmt(row.size),
+            base: row.base,
+            pair: row.pair,
+          })}
         </p>
       ),
-      labels: { confirm: "Close at market", cancel: "Cancel" },
+      labels: { confirm: t("closeAtMarket"), cancel: t("cancel") },
       confirmProps: { color: "red" },
       onConfirm: () => onClose(row.id),
     });
@@ -273,7 +281,7 @@ export function PositionsTable({
       ...DEFAULT_MODAL_SETTINGS,
       size: "sm",
       styles: MODAL_STYLES,
-      title: <span className="text-base font-bold text-white">Partial close · {row.pair}</span>,
+      title: <span className="text-base font-bold text-white">{t("partialClose", { pair: row.pair })}</span>,
       children: <PartialCloseForm row={row} onSubmit={(quantity) => onPartialClose(row.id, quantity)} />,
     });
 
@@ -282,7 +290,7 @@ export function PositionsTable({
       ...DEFAULT_MODAL_SETTINGS,
       size: "sm",
       styles: MODAL_STYLES,
-      title: <span className="text-base font-bold text-white">TP/SL · {row.pair}</span>,
+      title: <span className="text-base font-bold text-white">{t("tpSlFor", { pair: row.pair })}</span>,
       children: <TpslForm row={row} onSubmit={(tp, sl) => onUpdateTpsl(row.id, tp, sl)} />,
     });
 
@@ -302,7 +310,7 @@ export function PositionsTable({
                   <span className={clsx("h-full w-0.5 rounded-full self-stretch min-h-[20px]", row.isLong ? "bg-[#25AB42]" : "bg-[#F6465D]")} />
                   <div>
                     <span className="font-bold text-sm text-white">{row.pair}</span>
-                    <span className={clsx("ml-2 text-xs font-semibold", row.isLong ? "text-[#25AB42]" : "text-[#F6465D]")}>{row.isLong ? "Long" : "Short"}</span>
+                    <span className={clsx("ml-2 text-xs font-semibold", row.isLong ? "text-[#25AB42]" : "text-[#F6465D]")}>{row.isLong ? t("long") : t("short")}</span>
                     <span className="ml-1 text-2xs text-white/40">{row.leverage}x</span>
                   </div>
                 </div>
@@ -315,11 +323,11 @@ export function PositionsTable({
               </div>
               {/* Data grid */}
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                <div className="flex justify-between"><span className="text-white/40">Size</span><span className="text-white/90 font-mono">{fmt(row.size)} {row.base}</span></div>
-                <div className="flex justify-between"><span className="text-white/40">Value</span><span className="text-white/90 font-mono">{fmtMoney(row.value)} {row.quote}</span></div>
-                <div className="flex justify-between"><span className="text-white/40">Entry</span><span className="text-white/90 font-mono">{fmtPrice(row.entryPrice)}</span></div>
-                <div className="flex justify-between"><span className="text-white/40">Mark</span><span className="text-white/90 font-mono">{fmtPrice(row.markPrice)}</span></div>
-                <div className="flex justify-between"><span className="text-white/40">Liq.</span><span className="text-white/90 font-mono">{fmtPrice(row.liqPrice)}</span></div>
+                <div className="flex justify-between"><span className="text-white/40">{t("size")}</span><span className="text-white/90 font-mono">{fmt(row.size)} {row.base}</span></div>
+                <div className="flex justify-between"><span className="text-white/40">{t("value")}</span><span className="text-white/90 font-mono">{fmtMoney(row.value)} {row.quote}</span></div>
+                <div className="flex justify-between"><span className="text-white/40">{t("entry")}</span><span className="text-white/90 font-mono">{fmtPrice(row.entryPrice)}</span></div>
+                <div className="flex justify-between"><span className="text-white/40">{t("mark")}</span><span className="text-white/90 font-mono">{fmtPrice(row.markPrice)}</span></div>
+                <div className="flex justify-between"><span className="text-white/40">{t("liqPrice")}</span><span className="text-white/90 font-mono">{fmtPrice(row.liqPrice)}</span></div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/40">TP/SL</span>
                   <div className="flex items-center gap-1">
@@ -334,10 +342,10 @@ export function PositionsTable({
               {canManage && (
                 <div className="flex gap-2 pt-1">
                   <button disabled={closing} onClick={() => confirmClose(row)} className="flex-1 py-1.5 rounded-lg bg-[#F6465D]/10 text-[#F6465D] text-xs font-semibold active:opacity-70 disabled:opacity-50">
-                    {closing ? "Closing…" : "Market Close"}
+                    {closing ? t("closing") : t("marketClose")}
                   </button>
                   <button disabled={closing} onClick={() => openPartialClose(row)} className="flex-1 py-1.5 rounded-lg bg-white/[0.06] text-white/80 text-xs font-semibold active:opacity-70 disabled:opacity-50">
-                    Partial Close
+                    {t("partialCloseAction")}
                   </button>
                 </div>
               )}
@@ -353,17 +361,17 @@ export function PositionsTable({
       <table className="w-full min-w-[1180px] text-xs">
         <thead className="sticky top-0 z-10 bg-[#181a20]">
           <tr className="border-b border-white/[0.06]">
-            <Th>Contracts</Th>
-            <Th>Qty</Th>
-            <Th>Value</Th>
-            <Th>Entry Price</Th>
-            <Th>Mark Price</Th>
-            <Th>Liq. Price</Th>
-            <Th>IM</Th>
-            <Th>MM</Th>
-            <Th>Unrealized P&amp;L (ROE%)</Th>
-            <Th>TP/SL</Th>
-            <Th align="right">Close By</Th>
+            <Th>{t("contracts")}</Th>
+            <Th>{t("qty")}</Th>
+            <Th>{t("value")}</Th>
+            <Th>{t("entryPrice")}</Th>
+            <Th>{t("markPrice")}</Th>
+            <Th>{t("liqPrice")}</Th>
+            <Th>{t("initialMargin")}</Th>
+            <Th>{t("maintenanceMargin")}</Th>
+            <Th>{t("unrealizedPnl")}</Th>
+            <Th>{t("tpSl")}</Th>
+            <Th align="right">{t("closeBy")}</Th>
           </tr>
         </thead>
         <tbody>
@@ -373,7 +381,7 @@ export function PositionsTable({
             const sign = (row.pnl ?? 0) >= 0 ? "+" : "";
             const closing = closingIds.has(row.id);
             const canManage = row.market === "futures" && row.id !== "";
-            const subtitle = [row.market === "futures" ? "Futures" : "Margin", row.modeLabel, `${row.leverage}x`]
+            const subtitle = [row.market === "futures" ? t("futures") : t("margin"), row.modeLabel ? t(row.modeLabel) : "", `${row.leverage}x`]
               .filter(Boolean)
               .join(" · ");
             return (
@@ -424,8 +432,8 @@ export function PositionsTable({
                       <button
                         type="button"
                         onClick={() => openTpsl(row)}
-                        aria-label={`Edit TP/SL for ${row.pair}`}
-                        title="Edit TP/SL"
+                        aria-label={t("editTpSlFor", { pair: row.pair })}
+                        title={t("editTpSl")}
                         className="text-white/40 transition-colors hover:text-white"
                       >
                         <MdEdit size={14} />
@@ -442,7 +450,7 @@ export function PositionsTable({
                         onClick={() => confirmClose(row)}
                         className="rounded bg-white/[0.06] px-2.5 py-1 text-micro font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
                       >
-                        {closing ? "Closing…" : "Market"}
+                        {closing ? t("closing") : t("market")}
                       </button>
                       <button
                         type="button"
@@ -450,11 +458,11 @@ export function PositionsTable({
                         onClick={() => openPartialClose(row)}
                         className="rounded bg-white/[0.06] px-2.5 py-1 text-micro font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
                       >
-                        Partial
+                        {t("partial")}
                       </button>
                     </div>
                   ) : (
-                    <div className="text-right text-white/30" title="Margin positions can't be closed from here yet">
+                    <div className="text-right text-white/30" title={t("marginPositionsCannotCloseHere")}>
                       —
                     </div>
                   )}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { modals } from "@mantine/modals";
+import { useTranslations } from "next-intl";
 import { NumberInput } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Select } from "@mantine/core";
@@ -21,6 +22,7 @@ interface ConvertAssetProps {
 }
 
 export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
+  const t = useTranslations("Transactions");
   useQueryClient();
   const [fromCoin, setFromCoin] = useState<SelectedCoin>({
     name: "",
@@ -134,8 +136,11 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
       modals.open({
         children: (
           <SuccessModal
-            title="Conversion Successful"
-            description={`Your ${fromCoin.symbol} has been converted to ${toCoin.symbol}`}
+            title={t("conversionSuccessTitle")}
+            description={t("conversionSuccessDescription", {
+              from: fromCoin.symbol,
+              to: toCoin.symbol,
+            })}
             onProceed={modals.closeAll}
             onClose={modals.closeAll}
           />
@@ -168,8 +173,8 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-xl font-bold text-white">Convert</h4>
-          <p className="text-sm text-white/40 mt-1">Swap one asset for another instantly</p>
+          <h4 className="text-xl font-bold text-white">{t("convertTitle")}</h4>
+          <p className="text-sm text-white/40 mt-1">{t("convertSubtitle")}</p>
         </div>
         <button
           onClick={() => modals.closeAll()}
@@ -182,10 +187,10 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
       {/* From */}
       <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">From</label>
+          <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">{t("from")}</label>
           {fromCoin.symbol && (
             <span className="text-xs text-white/40">
-              Available:{" "}
+              {t("available")}:{" "}
               <span className="font-bold text-primary">
                 {(+fromBalance).toLocaleString("en-US", { maximumFractionDigits: 6 })}{" "}
                 {fromCoin.symbol}
@@ -206,13 +211,13 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
 
       {/* Account Selector */}
       <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
-        <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Source Account</label>
+        <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">{t("sourceAccount")}</label>
         <Select
           data={[
-            { value: "funding", label: "Funding Account" },
-            { value: "spot", label: "Spot Account" },
-            { value: "margin", label: "Margin Account" },
-            { value: "futures", label: "Futures Account" },
+            { value: "funding", label: t("fundingAccount") },
+            { value: "spot", label: t("spotAccount") },
+            { value: "margin", label: t("marginAccount") },
+            { value: "futures", label: t("futuresAccount") },
           ]}
           value={sourceWallet}
           onChange={(val) => setSourceWallet(val || "funding")}
@@ -224,7 +229,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
           }}
         />
         <span className="text-micro text-white/35">
-          Conversion currently runs against your selected balance.
+          {t("convertBalanceHint")}
         </span>
       </div>
 
@@ -240,7 +245,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
 
       {/* To */}
       <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
-        <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">To</label>
+        <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">{t("to")}</label>
         <SupportedListingsDropdown
           selectedCoin={toCoin}
           setSelectedCoin={setToCoin}
@@ -250,7 +255,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
 
       {/* Amount */}
       <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
-        <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Amount</label>
+        <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">{t("amount")}</label>
         <NumberInput
           hideControls
           classNames={{
@@ -273,7 +278,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
                 onClick={() => setAmount(fromBalance)}
                 className="px-2 py-1 bg-primary/15 hover:bg-primary/30 rounded-md text-xs text-primary font-bold transition-colors"
               >
-                MAX
+                {t("max")}
               </button>
             </span>
           }
@@ -288,11 +293,11 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
       {/* Rate Preview */}
       {rateEnabled && (
         <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border border-white/[0.04] rounded-xl">
-          <span className="text-xs text-white/40">Rate</span>
+          <span className="text-xs text-white/40">{t("rate")}</span>
           {rateFetching ? (
             <InlineLoading />
           ) : rateError ? (
-            <span className="text-xs text-error-1 font-medium">Price unavailable for this pair</span>
+            <span className="text-xs text-error-1 font-medium">{t("priceUnavailable")}</span>
           ) : rate?.baseInQuote !== undefined && rate.baseInQuote !== "" ? (
             <span className="text-xs font-semibold text-white/80">
               1 {fromCoin.symbol} ≈{" "}
@@ -311,7 +316,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
         disabled={!canSubmit}
         className="h-[56px] rounded-xl bg-primary hover:bg-primary/90 hover:shadow-[0_0_16px_rgba(77,119,240,0.3)] text-white font-bold transition-all active:scale-[0.98] disabled:bg-white/[0.04] disabled:text-white/30 disabled:shadow-none flex items-center justify-center gap-2"
       >
-        {isPending ? <InlineLoading /> : "Convert"}
+        {isPending ? <InlineLoading /> : t("convert")}
       </button>
     </div>
   );

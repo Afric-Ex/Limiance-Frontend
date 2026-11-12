@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Accordion,
   AccordionControl,
@@ -34,29 +35,24 @@ import { useSearchParams } from "next/navigation";
 
 const faqs = [
   {
-    question: "How long does a bank transfer deposit take to be credited?",
-    answer:
-      "Once you transfer to your one-time virtual account and confirm the deposit, Monnify verifies that the transfer actually settled before we credit your account. This is usually instant, but can take a few minutes during bank downtime.",
+    question: "fiatFaqQ1",
+    answer: "fiatFaqA1",
   },
   {
-    question: "Can I use the same virtual account number twice?",
-    answer:
-      "No. Every deposit request creates a fresh one-time NGN virtual account that expires automatically after the displayed duration. Always transfer to the account number shown on screen.",
+    question: "fiatFaqQ2",
+    answer: "fiatFaqA2",
   },
   {
-    question: "What happens if I transfer more or less than the requested amount?",
-    answer:
-      "Transfers that do not match the expected settlement amount may not be auto-credited. Transfer exactly the total payable amount shown to ensure a smooth deposit.",
+    question: "fiatFaqQ3",
+    answer: "fiatFaqA3",
   },
   {
-    question: "Why do I need to confirm my deposit?",
-    answer:
-      "The confirm step asks Monnify whether your bank transfer actually settled before we credit your crypto. You should only tap confirm after your bank shows the transfer as successful.",
+    question: "fiatFaqQ4",
+    answer: "fiatFaqA4",
   },
   {
-    question: "Is there a minimum or maximum deposit?",
-    answer:
-      "Minimum and maximum limits follow your account's deposit rules. The buy page and the quote endpoint enforce the exact window for your account tier.",
+    question: "fiatFaqQ5",
+    answer: "fiatFaqA5",
   },
 ];
 
@@ -75,6 +71,8 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 function FiatDepositInner() {
+  const t = useTranslations("Deposit");
+  const tt = useTranslations("Transactions");
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const limit = 30;
   const searchParams = useSearchParams();
@@ -110,9 +108,9 @@ function FiatDepositInner() {
 
       {/* Page header */}
       <div className="flex max-[410px]:flex-col items-center gap-3">
-        <h1 className="text-xl max-[1150px]:text-lg font-bold text-white tracking-tight">Fiat Deposit</h1>
+        <h1 className="text-xl max-[1150px]:text-lg font-bold text-white tracking-tight">{t("fiatDeposit")}</h1>
         <span className="text-xs max-[1150px]:text-2xs font-medium text-white/40">
-          Fund your account with NGN via bank transfer or card
+          {t("fiatDepositSubtitle")}
         </span>
       </div>
 
@@ -121,8 +119,8 @@ function FiatDepositInner() {
         <div className="flex flex-col gap-4 w-full min-w-0">
           <Tabs keepMounted={false} classNames={classes} defaultValue={defaultTab}>
             <TabsList>
-              <TabsTab value="bank">Bank Transfer</TabsTab>
-              <TabsTab value="card">Card</TabsTab>
+              <TabsTab value="bank">{t("bankTransfer")}</TabsTab>
+              <TabsTab value="card">{t("card")}</TabsTab>
             </TabsList>
             <TabsPanel value="bank" pt="lg">
               <FiatBankDeposit />
@@ -135,14 +133,15 @@ function FiatDepositInner() {
           <div className="flex items-start gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
             <IoMdInformationCircleOutline size={16} className="text-primary shrink-0 mt-0.5" />
             <p className="text-xs max-[1150px]:text-2xs text-white/45 leading-relaxed">
-              Fiat deposits are NGN-only and settled via Monnify. Prefer trading with merchants instead?{" "}
+              {t("fiatDepositNote")}{" "}
               <Link href="/trades/p2p" className="text-primary font-semibold hover:text-primary/70 transition-colors">
-                Buy on P2P
+                {t("buyOnP2P")}
               </Link>{" "}
-              or{" "}
+              {t("or")}{" "}
               <Link href="/transactions/deposit" className="text-primary font-semibold hover:text-primary/70 transition-colors">
-                deposit crypto
-              </Link>.
+                {t("depositCrypto")}
+              </Link>
+              .
             </p>
           </div>
         </div>
@@ -153,7 +152,7 @@ function FiatDepositInner() {
             <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center text-white/50">
               <MdOutlineHelp size={18} />
             </div>
-            <h3 className="text-lg font-bold text-white">Fiat Deposit FAQ</h3>
+            <h3 className="text-lg font-bold text-white">{t("fiatFaqTitle")}</h3>
           </div>
           <Accordion
             classNames={{
@@ -174,9 +173,9 @@ function FiatDepositInner() {
                     </span>
                   }
                 >
-                  {item.question}
+                  {t(item.question)}
                 </AccordionControl>
-                <AccordionPanel>{item.answer}</AccordionPanel>
+                <AccordionPanel>{t(item.answer)}</AccordionPanel>
               </AccordionItem>
             ))}
           </Accordion>
@@ -186,7 +185,7 @@ function FiatDepositInner() {
       {/* History */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3 px-1">
-          <h3 className="text-lg font-bold text-white">Fiat History</h3>
+          <h3 className="text-lg font-bold text-white">{t("fiatHistoryTitle")}</h3>
           <div className="h-px flex-1 bg-white/[0.06]" />
         </div>
 
@@ -200,11 +199,11 @@ function FiatDepositInner() {
             }}>
               <TableThead>
                 <TableTr>
-                  <TableTh className="pl-6">Date & Time</TableTh>
-                  <TableTh>Type</TableTh>
-                  <TableTh>Fiat Amount</TableTh>
-                  <TableTh>Received</TableTh>
-                  <TableTh className="pr-6">Status</TableTh>
+                  <TableTh className="pl-6">{tt("tableDateTime")}</TableTh>
+                  <TableTh>{tt("tableType")}</TableTh>
+                  <TableTh>{tt("tableFiatAmount")}</TableTh>
+                  <TableTh>{tt("tableReceived")}</TableTh>
+                  <TableTh className="pr-6">{tt("tableStatus")}</TableTh>
                 </TableTr>
               </TableThead>
               <TableTbody>
@@ -247,7 +246,7 @@ function FiatDepositInner() {
           {!history?.length && !historyLoading && (
             <div className="h-40 flex items-center justify-center flex-col gap-3 opacity-60">
               <MdOutlineHelp size={32} className="text-white/20" />
-              <span className="text-sm font-semibold text-white/30">No fiat transactions yet</span>
+              <span className="text-sm font-semibold text-white/30">{t("fiatEmptyHistory")}</span>
             </div>
           )}
         </div>

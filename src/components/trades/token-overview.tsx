@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { asset, assetKeys } from "@/src/services/asset";
 
 type TokenInfo = {
@@ -56,6 +57,7 @@ function DetailRow({ label, value, title }: { label: string; value: string; titl
  * API doesn't return is simply left out (no placeholder numbers).
  */
 export function TokenOverview({ base }: { base: string }) {
+  const t = useTranslations("Trading");
   const [expanded, setExpanded] = useState(false);
 
   const { data: token, isLoading } = useQuery({
@@ -70,33 +72,33 @@ export function TokenOverview({ base }: { base: string }) {
   });
 
   if (isLoading) {
-    return <div className="flex flex-1 items-center justify-center text-xs text-white/40">Loading token info…</div>;
+    return <div className="flex flex-1 items-center justify-center text-xs text-white/40">{t("loadingTokenInfo")}</div>;
   }
   if (!token) {
     return (
       <div className="flex flex-1 items-center justify-center text-xs text-white/40">
-        No token information available for {base}.
+        {t("noTokenInfoFor", { base })}
       </div>
     );
   }
 
   const details: { label: string; value: string; title?: string }[] = [];
-  if (token.name) details.push({ label: "Name", value: token.name });
-  details.push({ label: "Symbol", value: base.toUpperCase() });
-  if (token.blockchain) details.push({ label: "Network", value: token.blockchain });
+  if (token.name) details.push({ label: t("tokenName"), value: token.name });
+  details.push({ label: t("tokenSymbol"), value: base.toUpperCase() });
+  if (token.blockchain) details.push({ label: t("tokenNetwork"), value: token.blockchain });
   if (token.decimals !== undefined && token.decimals !== null && token.decimals !== "")
-    details.push({ label: "Decimals", value: String(token.decimals) });
+    details.push({ label: t("tokenDecimals"), value: String(token.decimals) });
   if (typeof token.isStablecoin === "boolean")
-    details.push({ label: "Type", value: token.isStablecoin ? "Stablecoin" : "Token" });
+    details.push({ label: t("tokenType"), value: token.isStablecoin ? t("stablecoin") : t("token") });
   if (token.contractAddress)
-    details.push({ label: "Contract", value: shorten(token.contractAddress), title: token.contractAddress });
+    details.push({ label: t("tokenContract"), value: shorten(token.contractAddress), title: token.contractAddress });
   const listed = formatDate(token.listedAt);
-  if (listed) details.push({ label: "Listed", value: listed });
+  if (listed) details.push({ label: t("tokenListed"), value: listed });
 
   const links = [
-    { label: "Website", href: safeUrl(token.website) },
-    { label: "Whitepaper", href: safeUrl(token.whitepaperUrl) },
-    { label: "Explorer", href: safeUrl(token.explorerUrl) },
+    { label: t("tokenWebsite"), href: safeUrl(token.website) },
+    { label: t("tokenWhitepaper"), href: safeUrl(token.whitepaperUrl) },
+    { label: t("tokenExplorer"), href: safeUrl(token.explorerUrl) },
   ].filter((l): l is { label: string; href: string } => Boolean(l.href));
 
   const description = token.description?.trim();
@@ -105,7 +107,7 @@ export function TokenOverview({ base }: { base: string }) {
     <div className="min-h-0 flex-1 overflow-y-auto p-4">
       <div className="grid grid-cols-1 gap-x-10 gap-y-6 min-[1300px]:grid-cols-2">
         <section>
-          <h3 className="mb-1 text-base font-bold text-white">Token details</h3>
+          <h3 className="mb-1 text-base font-bold text-white">{t("tokenDetails")}</h3>
           <div>
             {details.map((row) => (
               <DetailRow key={row.label} {...row} />
@@ -116,7 +118,7 @@ export function TokenOverview({ base }: { base: string }) {
         <div className="flex flex-col gap-6">
           {description && (
             <section>
-              <h3 className="mb-2 text-base font-bold text-white">About {token.name || base}</h3>
+              <h3 className="mb-2 text-base font-bold text-white">{t("aboutToken", { name: token.name || base })}</h3>
               <p className={expanded ? "text-sm leading-6 text-white/80" : "line-clamp-4 text-sm leading-6 text-white/80"}>
                 {description}
               </p>
@@ -126,7 +128,7 @@ export function TokenOverview({ base }: { base: string }) {
                   onClick={() => setExpanded((v) => !v)}
                   className="mt-1 text-xs font-semibold text-white/60 transition-colors hover:text-white"
                 >
-                  {expanded ? "Show Less" : "Show More"}
+                  {expanded ? t("showLess") : t("showMore")}
                 </button>
               )}
             </section>
@@ -134,7 +136,7 @@ export function TokenOverview({ base }: { base: string }) {
 
           {links.length > 0 && (
             <section>
-              <h3 className="mb-2 text-base font-bold text-white">Explore</h3>
+              <h3 className="mb-2 text-base font-bold text-white">{t("explore")}</h3>
               <div className="flex flex-wrap gap-2">
                 {links.map((link) => (
                   <a

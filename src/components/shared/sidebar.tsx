@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/src/hooks/use-pathname";
 import clsx from "clsx";
 import { useUserStore } from "@/src/stores/user-store";
 import { handleLogout } from "@/src/lib/handle-logout";

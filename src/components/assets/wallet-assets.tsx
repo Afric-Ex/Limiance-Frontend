@@ -5,14 +5,16 @@ import { Table, TableTd, TableTh, TableTr } from "@mantine/core";
 import classes from "@/src/styles/assets-overview.module.css";
 import { InlineLoading } from "../shared/inline-loading";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { useTranslations } from "next-intl";
 
 export const WalletAssets = () => {
+  const t = useTranslations("Wallet");
   const { allocations, isAllocationsLoading: isLoading } = usePortfolioWs({ allocations: true });
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 px-1">
-        <span className="text-sm text-gray-46">Total Value</span>
+        <span className="text-sm text-gray-46">{t("totalValue")}</span>
         <span className="text-base font-bold">
           ₦{allocations?.totalValue
             ? (+allocations.totalValue).toLocaleString("en-US", {
@@ -29,10 +31,10 @@ export const WalletAssets = () => {
         }}
       >
         <TableTr>
-          <TableTh>Coin</TableTh>
-          <TableTh>Balance</TableTh>
-          <TableTh>Value (NGN)</TableTh>
-          <TableTh>Percentage</TableTh>
+          <TableTh>{t("coin")}</TableTh>
+          <TableTh>{t("balance")}</TableTh>
+          <TableTh>{t("valueNgn")}</TableTh>
+          <TableTh>{t("percentage")}</TableTh>
         </TableTr>
         {isLoading ? (
           <InlineLoading />
@@ -65,7 +67,7 @@ export const WalletAssets = () => {
           <TableTr>
             <TableTd colSpan={4}>
               <span className="flex justify-center py-10 text-sm text-gray-46">
-                No allocation data
+                {t("noAllocationData")}
               </span>
             </TableTd>
           </TableTr>

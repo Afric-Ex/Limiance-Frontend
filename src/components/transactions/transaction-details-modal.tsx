@@ -2,6 +2,7 @@
 
 import { Modal } from "@mantine/core";
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   MdOutlineArrowDownward,
   MdOutlineArrowUpward,
@@ -40,47 +41,59 @@ const STATUS_TONES: Record<string, string> = {
   canceled: "border-error-1/25 bg-error-1/10 text-error-1",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  completed: "Completed",
-  success: "Successful",
-  successful: "Successful",
-  credited: "Credited",
-  paid: "Paid",
-  pending: "Pending",
-  processing: "Processing",
-  confirming: "Confirming",
-  failed: "Failed",
-  rejected: "Rejected",
-  cancelled: "Cancelled",
-  canceled: "Canceled",
+type Translate = (key: string) => string;
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  completed: "statusCompleted",
+  success: "statusSuccessful",
+  successful: "statusSuccessful",
+  credited: "statusCredited",
+  paid: "statusPaid",
+  pending: "statusPending",
+  processing: "statusProcessing",
+  confirming: "statusConfirming",
+  failed: "statusFailed",
+  rejected: "statusRejected",
+  cancelled: "statusCancelled",
+  canceled: "statusCanceled",
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  p2p: "P2P Trade",
-  p2p_trade: "P2P Trade",
-  deposit: "Deposit",
-  withdrawal: "Withdrawal",
-  withdraw: "Withdrawal",
-  internal: "Internal Transfer",
-  internal_transfer: "Internal Transfer",
-  transfer: "Transfer",
-  conversion: "Conversion",
-  convert: "Conversion",
-  swap: "Swap",
-  fiat_deposit: "Fiat Deposit",
-  fiat_withdrawal: "Fiat Withdrawal",
-  reward: "Reward",
-  commission: "Commission",
+const TYPE_LABEL_KEYS: Record<string, string> = {
+  p2p: "typeP2pTrade",
+  p2p_trade: "typeP2pTrade",
+  deposit: "typeDeposit",
+  withdrawal: "typeWithdrawal",
+  withdraw: "typeWithdrawal",
+  internal: "typeInternalTransfer",
+  internal_transfer: "typeInternalTransfer",
+  transfer: "typeTransfer",
+  conversion: "typeConversion",
+  convert: "typeConversion",
+  swap: "typeSwap",
+  fiat_deposit: "typeFiatDeposit",
+  fiat_withdrawal: "typeFiatWithdrawal",
+  reward: "typeReward",
+  commission: "typeCommission",
 };
 
-const BALANCE_LABELS: Record<string, string> = {
-  spot_balance: "Spot Balance",
-  funding_balance: "Funding Balance",
-  locked_balance: "Locked Balance",
-  futures_balance: "Futures Balance",
-  margin_balance: "Margin Balance",
-  p2p_balance: "P2P Balance",
-  main_balance: "Main Balance",
+const BALANCE_LABEL_KEYS: Record<string, string> = {
+  spot_balance: "balanceSpot",
+  funding_balance: "balanceFunding",
+  locked_balance: "balanceLocked",
+  futures_balance: "balanceFutures",
+  margin_balance: "balanceMargin",
+  p2p_balance: "balanceP2p",
+  main_balance: "balanceMain",
+};
+
+const statusLabelFor = (t: Translate, status: string): string => {
+  const key = STATUS_LABEL_KEYS[status.toLowerCase()];
+  return key ? t(key) : status;
+};
+
+const balanceLabelFor = (t: Translate, value: string): string => {
+  const key = BALANCE_LABEL_KEYS[value.toLowerCase()];
+  return key ? t(key) : value;
 };
 
 const firstText = (...values: unknown[]): string => {
@@ -177,6 +190,7 @@ const formatTimestamp = (value: unknown): string => {
 };
 
 const StatusBadge = ({ status }: { status: string }) => {
+  const t = useTranslations("Transactions");
   const key = status.toLowerCase();
   return (
     <span
@@ -185,7 +199,7 @@ const StatusBadge = ({ status }: { status: string }) => {
       }`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {STATUS_LABELS[key] ?? status}
+      {statusLabelFor(t, status)}
     </span>
   );
 };
@@ -236,29 +250,32 @@ const PartyValue = ({
   id: string;
   role?: string;
   isYou: boolean;
-}) => (
-  <span className="flex min-w-0 items-center justify-end gap-1.5">
-    {role && (
-      <span className="shrink-0 rounded bg-white/[0.06] px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wide text-white/45">
-        {role}
-      </span>
-    )}
-    {isYou && (
-      <span className="shrink-0 rounded bg-primary/15 px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wide text-primary">
-        You
-      </span>
-    )}
+}) => {
+  const t = useTranslations("Transactions");
+  return (
+    <span className="flex min-w-0 items-center justify-end gap-1.5">
+      {role && (
+        <span className="shrink-0 rounded bg-white/[0.06] px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wide text-white/45">
+          {role}
+        </span>
+      )}
+      {isYou && (
+        <span className="shrink-0 rounded bg-primary/15 px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wide text-primary">
+          {t("you")}
+        </span>
+      )}
     <span className="break-all font-mono text-micro font-medium text-white/75">
       {id}
     </span>
     <Copy text={id} color="var(--primary)" />
   </span>
-);
+  );
+};
 
-const accountLabel = (value: string): string => {
+const accountLabel = (t: Translate, value: string): string => {
   if (!value || isZeroAddress(value)) return "";
-  const known = BALANCE_LABELS[value.toLowerCase()];
-  if (known) return known;
+  const known = BALANCE_LABEL_KEYS[value.toLowerCase()];
+  if (known) return balanceLabelFor(t, value);
   if (value.startsWith("0x") || value.length > 32) return truncateCryptoAddress(value);
   return humanize(value);
 };
@@ -276,6 +293,7 @@ export const TransactionDetailsModal = ({
   transaction,
   onClose,
 }: TransactionDetailsModalProps) => {
+  const t = useTranslations("Transactions");
   const tx = transaction ?? {};
   const metadata = parseMetadata(tx.metadata);
 
@@ -289,8 +307,8 @@ export const TransactionDetailsModal = ({
 
   const type = firstText(tx.type, tx.transactionType, tx.operation);
   const status = firstText(tx.status, tx.state);
-  const typeLabel =
-    TYPE_LABELS[type.toLowerCase()] ?? (type ? humanize(type) : "");
+  const typeKey = TYPE_LABEL_KEYS[type.toLowerCase()];
+  const typeLabel = typeKey ? t(typeKey) : type ? humanize(type) : "";
 
   const amount = firstText(
     tx.amount,
@@ -348,8 +366,9 @@ export const TransactionDetailsModal = ({
     : isIncoming
       ? "in"
       : "neutral";
-  const directionLabel =
-    direction === "in" ? "Incoming" : direction === "out" ? "Outgoing" : "";
+  const directionKey =
+    direction === "in" ? "incoming" : direction === "out" ? "outgoing" : "";
+  const directionLabel = directionKey ? t(directionKey) : "";
 
   const heroTone =
     direction === "out"
@@ -419,15 +438,15 @@ export const TransactionDetailsModal = ({
   const toUser = firstText(tx.toUserId, matcherId);
   const fromRole =
     fromUser && advertiserId && fromUser === advertiserId
-      ? "Advertiser"
+      ? t("advertiser")
       : undefined;
   const toRole =
-    toUser && matcherId && toUser === matcherId ? "Matcher" : undefined;
+    toUser && matcherId && toUser === matcherId ? t("matcher") : undefined;
 
   const fromAccountRaw = firstText(tx.fromBalance, tx.from);
   const toAccountRaw = firstText(tx.toBalance, tx.to);
-  const fromAccount = accountLabel(fromAccountRaw);
-  const toAccount = accountLabel(toAccountRaw);
+  const fromAccount = accountLabel(t, fromAccountRaw);
+  const toAccount = accountLabel(t, toAccountRaw);
   const fromAsset = firstText(
     tx.fromAsset,
     tx.asset,
@@ -649,10 +668,10 @@ export const TransactionDetailsModal = ({
           </span>
           <span className="flex flex-col">
             <span className="text-sm font-bold leading-tight text-white">
-              Transaction Details
+              {t("detailsTitle")}
             </span>
             <span className="text-2xs font-medium leading-tight text-white/35">
-              Receipt and movement details
+              {t("detailsSubtitle")}
             </span>
           </span>
         </span>
@@ -689,7 +708,7 @@ export const TransactionDetailsModal = ({
 
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
                 <span className="text-micro font-bold uppercase tracking-[0.14em] text-white/45">
-                  {typeLabel || "Transaction"}
+                  {typeLabel || t("transaction")}
                 </span>
                 {side && (
                   <span
@@ -699,7 +718,7 @@ export const TransactionDetailsModal = ({
                         : "border-error-1/25 bg-error-1/10 text-error-1"
                     }`}
                   >
-                    {side}
+                    {side === "Buy" ? t("sideBuy") : t("sideSell")}
                   </span>
                 )}
               </div>
@@ -730,35 +749,35 @@ export const TransactionDetailsModal = ({
           </div>
 
           {showOverview && (
-            <Section title="Overview">
+            <Section title={t("sectionOverview")}>
               {typeLabel && (
-                <DetailRow label="Type">
+                <DetailRow label={t("labelType")}>
                   <span>{typeLabel}</span>
                 </DetailRow>
               )}
 
               {status && (
-                <DetailRow label="Status">
+                <DetailRow label={t("labelStatus")}>
                   <span className="capitalize">
-                    {STATUS_LABELS[status.toLowerCase()] ?? status}
+                    {statusLabelFor(t, status)}
                   </span>
                 </DetailRow>
               )}
 
               {assetSymbol && (
-                <DetailRow label="Asset">
+                <DetailRow label={t("asset")}>
                   <span className="uppercase">{displayAssetSymbol}</span>
                 </DetailRow>
               )}
 
               {pair && (
-                <DetailRow label="Pair">
+                <DetailRow label={t("labelPair")}>
                   <span>{pair}</span>
                 </DetailRow>
               )}
 
               {!isFiat && amountText(amount) && (
-                <DetailRow label="Amount">
+                <DetailRow label={t("amount")}>
                   <span className="tabular-nums">
                     {amountText(amount)}
                     {assetSymbol && (
@@ -769,7 +788,7 @@ export const TransactionDetailsModal = ({
               )}
 
               {directionLabel && (
-                <DetailRow label="Direction">
+                <DetailRow label={t("labelDirection")}>
                   <span
                     className={
                       direction === "in" ? "text-success-6" : "text-error-1"
@@ -781,7 +800,7 @@ export const TransactionDetailsModal = ({
               )}
 
               {isFiat && primaryAmount && (
-                <DetailRow label="Fiat Amount">
+                <DetailRow label={t("labelFiatAmount")}>
                   <span className="tabular-nums">
                     {primaryAmount}{" "}
                     <span className="text-white/45">{primarySymbol}</span>
@@ -790,7 +809,7 @@ export const TransactionDetailsModal = ({
               )}
 
               {isFiat && receivedAmount && (
-                <DetailRow label="Received">
+                <DetailRow label={t("labelReceived")}>
                   <span className="tabular-nums">
                     {amountText(receivedAmount)}{" "}
                     <span className="text-white/45">{displayReceivedSymbol}</span>
@@ -799,7 +818,7 @@ export const TransactionDetailsModal = ({
               )}
 
               {fee && (
-                <DetailRow label="Fee">
+                <DetailRow label={t("labelFee")}>
                   <span className="tabular-nums">
                     {amountText(fee)}
                     {feeSymbol && (
@@ -810,37 +829,37 @@ export const TransactionDetailsModal = ({
               )}
 
               {rate && (
-                <DetailRow label="Rate">
+                <DetailRow label={t("rate")}>
                   <span className="tabular-nums">{rate}</span>
                 </DetailRow>
               )}
 
               {createdAt && (
-                <DetailRow label="Created">
+                <DetailRow label={t("labelCreated")}>
                   <span className="font-medium text-white/75">{createdAt}</span>
                 </DetailRow>
               )}
 
               {completedAt && (
-                <DetailRow label="Completed">
+                <DetailRow label={t("statusCompleted")}>
                   <span className="font-medium text-white/75">{completedAt}</span>
                 </DetailRow>
               )}
 
               {updatedAt && (
-                <DetailRow label="Updated">
+                <DetailRow label={t("labelUpdated")}>
                   <span className="font-medium text-white/75">{updatedAt}</span>
                 </DetailRow>
               )}
 
               {failedAt && (
-                <DetailRow label="Failed">
+                <DetailRow label={t("statusFailed")}>
                   <span className="font-medium text-error-1/90">{failedAt}</span>
                 </DetailRow>
               )}
 
               {failureReason && (
-                <DetailRow label="Failure Reason">
+                <DetailRow label={t("labelFailureReason")}>
                   <span className="font-medium text-error-1/90">
                     {failureReason}
                   </span>
@@ -850,38 +869,38 @@ export const TransactionDetailsModal = ({
           )}
 
           {hasOrderDetails && (
-            <Section title="Order Details">
-              {orderMarket && <DetailRow label="Market"><span className="capitalize">{orderMarket}</span></DetailRow>}
-              {orderType && <DetailRow label="Order Type"><span className="capitalize">{orderType}</span></DetailRow>}
-              {orderSide && <DetailRow label="Side"><span className="uppercase">{orderSide}</span></DetailRow>}
-              {orderStatus && <DetailRow label="Order Status"><span className="capitalize">{orderStatus}</span></DetailRow>}
-              {orderPrice && <DetailRow label="Order Price"><span className="tabular-nums">{amountText(orderPrice)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
-              {averagePrice && <DetailRow label="Average Price"><span className="tabular-nums">{amountText(averagePrice)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
-              {amount && <DetailRow label="Order Quantity"><span className="tabular-nums">{amountText(amount)} {firstText(tx.base).toUpperCase()}</span></DetailRow>}
-              {filledQuantity && <DetailRow label="Filled Quantity"><span className="tabular-nums">{amountText(filledQuantity)} {firstText(tx.base).toUpperCase()}</span></DetailRow>}
-              {remainingQuantity && <DetailRow label="Remaining Quantity"><span className="tabular-nums">{amountText(remainingQuantity)} {firstText(tx.base).toUpperCase()}</span></DetailRow>}
-              {executionValue && <DetailRow label="Execution Value"><span className="tabular-nums">{amountText(executionValue)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
-              {executionFee && <DetailRow label="Execution Fee"><span className="tabular-nums">{amountText(executionFee)} {executionFeeCurrency.toUpperCase()}</span></DetailRow>}
-              {closedPnl && <DetailRow label="Closed P&amp;L"><span className="tabular-nums">{amountText(closedPnl)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
-              {timeInForce && <DetailRow label="Time in Force"><span>{timeInForce}</span></DetailRow>}
-              {clientOrderId && <DetailRow label="Client Order ID"><IdValue value={clientOrderId} /></DetailRow>}
-              {tx.postOnly !== undefined && <DetailRow label="Post Only"><span>{tx.postOnly ? "Yes" : "No"}</span></DetailRow>}
-              {tx.reduceOnly !== undefined && <DetailRow label="Reduce Only"><span>{tx.reduceOnly ? "Yes" : "No"}</span></DetailRow>}
-              {tx.stopLoss && <DetailRow label="Stop Loss"><span className="tabular-nums">{amountText(tx.stopLoss)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
-              {tx.takeProfit && <DetailRow label="Take Profit"><span className="tabular-nums">{amountText(tx.takeProfit)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
+            <Section title={t("sectionOrderDetails")}>
+              {orderMarket && <DetailRow label={t("labelMarket")}><span className="capitalize">{orderMarket}</span></DetailRow>}
+              {orderType && <DetailRow label={t("labelOrderType")}><span className="capitalize">{orderType}</span></DetailRow>}
+              {orderSide && <DetailRow label={t("labelSide")}><span className="uppercase">{orderSide}</span></DetailRow>}
+              {orderStatus && <DetailRow label={t("labelOrderStatus")}><span className="capitalize">{orderStatus}</span></DetailRow>}
+              {orderPrice && <DetailRow label={t("labelOrderPrice")}><span className="tabular-nums">{amountText(orderPrice)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
+              {averagePrice && <DetailRow label={t("labelAveragePrice")}><span className="tabular-nums">{amountText(averagePrice)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
+              {amount && <DetailRow label={t("labelOrderQuantity")}><span className="tabular-nums">{amountText(amount)} {firstText(tx.base).toUpperCase()}</span></DetailRow>}
+              {filledQuantity && <DetailRow label={t("labelFilledQuantity")}><span className="tabular-nums">{amountText(filledQuantity)} {firstText(tx.base).toUpperCase()}</span></DetailRow>}
+              {remainingQuantity && <DetailRow label={t("labelRemainingQuantity")}><span className="tabular-nums">{amountText(remainingQuantity)} {firstText(tx.base).toUpperCase()}</span></DetailRow>}
+              {executionValue && <DetailRow label={t("labelExecutionValue")}><span className="tabular-nums">{amountText(executionValue)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
+              {executionFee && <DetailRow label={t("labelExecutionFee")}><span className="tabular-nums">{amountText(executionFee)} {executionFeeCurrency.toUpperCase()}</span></DetailRow>}
+              {closedPnl && <DetailRow label={t("labelClosedPnl")}><span className="tabular-nums">{amountText(closedPnl)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
+              {timeInForce && <DetailRow label={t("labelTimeInForce")}><span>{timeInForce}</span></DetailRow>}
+              {clientOrderId && <DetailRow label={t("labelClientOrderId")}><IdValue value={clientOrderId} /></DetailRow>}
+              {tx.postOnly !== undefined && <DetailRow label={t("labelPostOnly")}><span>{tx.postOnly ? t("yes") : t("no")}</span></DetailRow>}
+              {tx.reduceOnly !== undefined && <DetailRow label={t("labelReduceOnly")}><span>{tx.reduceOnly ? t("yes") : t("no")}</span></DetailRow>}
+              {tx.stopLoss && <DetailRow label={t("labelStopLoss")}><span className="tabular-nums">{amountText(tx.stopLoss)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
+              {tx.takeProfit && <DetailRow label={t("labelTakeProfit")}><span className="tabular-nums">{amountText(tx.takeProfit)} {firstText(tx.quote).toUpperCase()}</span></DetailRow>}
             </Section>
           )}
 
           {hasTransfer && (
-            <Section title="Transfer">
+            <Section title={t("sectionTransfer")}>
               {fromAccount && (
-                <DetailRow label="From Balance">
+                <DetailRow label={t("labelFromBalance")}>
                   <AccountValue raw={fromAccountRaw} label={fromAccount} />
                 </DetailRow>
               )}
 
               {fromUser && (
-                <DetailRow label="From User">
+                <DetailRow label={t("labelFromUser")}>
                   <PartyValue
                     id={fromUser}
                     role={fromRole}
@@ -891,7 +910,7 @@ export const TransactionDetailsModal = ({
               )}
 
               {showFromAmount && (
-                <DetailRow label="From Amount">
+                <DetailRow label={t("labelFromAmount")}>
                   <span className="tabular-nums">
                     {amountText(fromAmount)}
                     {fromAsset && (
@@ -902,13 +921,13 @@ export const TransactionDetailsModal = ({
               )}
 
               {toAccount && (
-                <DetailRow label="To Balance">
+                <DetailRow label={t("labelToBalance")}>
                   <AccountValue raw={toAccountRaw} label={toAccount} />
                 </DetailRow>
               )}
 
               {toUser && (
-                <DetailRow label="To User">
+                <DetailRow label={t("labelToUser")}>
                   <PartyValue
                     id={toUser}
                     role={toRole}
@@ -918,7 +937,7 @@ export const TransactionDetailsModal = ({
               )}
 
               {showToAmount && (
-                <DetailRow label="To Amount">
+                <DetailRow label={t("labelToAmount")}>
                   <span className="tabular-nums">
                     {amountText(toAmount)}
                     {toAsset && (
@@ -929,7 +948,7 @@ export const TransactionDetailsModal = ({
               )}
 
               {ownerId && (
-                <DetailRow label="User ID">
+                <DetailRow label={t("labelUserId")}>
                   <PartyValue id={ownerId} isYou />
                 </DetailRow>
               )}
@@ -937,69 +956,69 @@ export const TransactionDetailsModal = ({
           )}
 
           {showReferences && (
-            <Section title="Reference Details">
+            <Section title={t("sectionReferenceDetails")}>
               {transactionId && (
-                <DetailRow label="Transaction ID">
+                <DetailRow label={t("labelTransactionId")}>
                   <IdValue value={transactionId} />
                 </DetailRow>
               )}
 
               {orderId && orderId !== transactionId && (
-                <DetailRow label="Order ID">
+                <DetailRow label={t("labelOrderId")}>
                   <IdValue value={orderId} />
                 </DetailRow>
               )}
 
               {orderMatchId && (
-                <DetailRow label="Order Match ID">
+                <DetailRow label={t("labelOrderMatchId")}>
                   <IdValue value={orderMatchId} />
                 </DetailRow>
               )}
 
               {advertiserId && (
-                <DetailRow label="Advertiser ID">
+                <DetailRow label={t("labelAdvertiserId")}>
                   <IdValue value={advertiserId} />
                 </DetailRow>
               )}
 
               {matcherId && (
-                <DetailRow label="Matcher ID">
+                <DetailRow label={t("labelMatcherId")}>
                   <IdValue value={matcherId} />
                 </DetailRow>
               )}
 
               {reference && reference !== transactionId && (
-                <DetailRow label="Reference">
+                <DetailRow label={t("labelReference")}>
                   <IdValue value={reference} />
                 </DetailRow>
               )}
 
               {network && (
-                <DetailRow label="Network">
+                <DetailRow label={t("labelNetwork")}>
                   <span className="uppercase">{network}</span>
                 </DetailRow>
               )}
 
               {hash && (
-                <DetailRow label="Transaction Hash">
+                <DetailRow label={t("labelTransactionHash")}>
                   <IdValue value={hash} />
                 </DetailRow>
               )}
 
               {wallet && (
-                <DetailRow label="Wallet">
+                <DetailRow label={t("labelWallet")}>
                   <IdValue value={wallet} />
                 </DetailRow>
               )}
 
               {walletId && (
-                <DetailRow label="Wallet ID">
+                <DetailRow label={t("labelWalletId")}>
                   <IdValue value={walletId} />
                 </DetailRow>
               )}
 
               {address && address !== wallet && (
-                <DetailRow label="Address">
+                <DetailRow label={t("labelAddress")}>
                   <IdValue value={address} />
                 </DetailRow>
               )}
@@ -1007,21 +1026,21 @@ export const TransactionDetailsModal = ({
           )}
 
           {showBank && (
-            <Section title="Bank Details">
+            <Section title={t("sectionBankDetails")}>
               {bankName && (
-                <DetailRow label="Bank">
+                <DetailRow label={t("labelBank")}>
                   <span>{bankName}</span>
                 </DetailRow>
               )}
 
               {accountName && (
-                <DetailRow label="Account Name">
+                <DetailRow label={t("labelAccountName")}>
                   <span>{accountName}</span>
                 </DetailRow>
               )}
 
               {accountNumber && (
-                <DetailRow label="Account Number">
+                <DetailRow label={t("labelAccountNumber")}>
                   <span className="tabular-nums">{accountNumber}</span>
                 </DetailRow>
               )}
@@ -1029,9 +1048,9 @@ export const TransactionDetailsModal = ({
           )}
 
           {hasAdditional && (
-            <Section title="Metadata">
+            <Section title={t("sectionMetadata")}>
               {quantity && (
-                <DetailRow label="Quantity">
+                <DetailRow label={t("labelQuantity")}>
                   <span className="tabular-nums">
                     {amountText(quantity)}
                     {assetSymbol && (
@@ -1042,21 +1061,21 @@ export const TransactionDetailsModal = ({
               )}
 
               {metaRole && (
-                <DetailRow label="Role">
+                <DetailRow label={t("labelRole")}>
                   <span className="uppercase">{metaRole}</span>
                 </DetailRow>
               )}
 
               {metaType && (
                 <DetailRow
-                  label={normalizeSide(metaType) ? "Side" : "Metadata Type"}
+                  label={normalizeSide(metaType) ? t("labelSide") : t("labelMetadataType")}
                 >
                   <span className="uppercase">{metaType}</span>
                 </DetailRow>
               )}
 
               {showNote && (
-                <DetailRow label="Note">
+                <DetailRow label={t("labelNote")}>
                   <span className="break-words font-medium text-white/75">
                     {metaNote}
                   </span>
@@ -1084,7 +1103,7 @@ export const TransactionDetailsModal = ({
           )}
 
           {showOther && (
-            <Section title="Other Details">
+            <Section title={t("sectionOtherDetails")}>
               {otherEntries.map(([key, value]) => {
                 const text = metaValue(value);
                 const isId = /(^|_)id$/i.test(key);

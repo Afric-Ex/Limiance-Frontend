@@ -1,9 +1,10 @@
 "use client";
 
 import clsx from "clsx";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/src/hooks/use-pathname";
 import React, { ReactNode, useEffect, useRef } from "react";
 import { Footer } from "./footer";
+import { stripLocalePrefix } from "@/src/lib/locale-path";
 
 const bgImagePages: string[] = [];
 
@@ -24,8 +25,11 @@ const NO_FOOTER_ROUTES = [
 export const AppContainer = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Paths are locale-prefixed (e.g. /fr/dashboard), so compare against the
+  // prefix-free path when deciding whether a route opts out of the footer.
+  const routePath = stripLocalePrefix(pathname);
   // The landing page ("/") renders its own footer.
-  const showFooter = pathname !== "/" && !NO_FOOTER_ROUTES.some((route) => pathname.startsWith(route));
+  const showFooter = routePath !== "/" && !NO_FOOTER_ROUTES.some((route) => routePath.startsWith(route));
 
   // Reset scroll to top when pathname changes, because Next.js built-in scroll-to-top
   // only operates on the window object, not our custom overflow container.
@@ -39,7 +43,7 @@ export const AppContainer = ({ children }: { children: ReactNode }) => {
     <div
       ref={scrollRef}
       className={clsx(
-        bgImagePages.some((each) => pathname.includes(each)) && "bg-landing",
+        bgImagePages.some((each) => routePath.includes(each)) && "bg-landing",
         "flex min-h-0 flex-1 flex-col overflow-auto"
       )}
     >

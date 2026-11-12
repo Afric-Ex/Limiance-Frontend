@@ -11,31 +11,32 @@ import { Loader } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { errorNotification } from "@/src/lib/notification-handler";
+import { useTranslations } from "next-intl";
 
 export const UploadSelfie = () => {
+  const t = useTranslations("Kyc");
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const { mutate: confirmSelfie, isPending } = useMutation({
     mutationFn: async (): Promise<any> => {
       if (!selfieFile) throw new Error("No selfie selected");
-      errorNotification("Direct selfie upload is no longer supported here. Please use the Persona verification flow.");
+      errorNotification(t("selfieUploadNotSupported"));
       throw new Error("Legacy KYC upload flow is disabled");
     },
     onSuccess: () => {
       modals.open({
         children: (
           <SuccessModal
-            buttonText="Close"
-            title="Verification Submitted"
+            buttonText={t("close")}
+            title={t("verificationSubmitted")}
             description={
               <div className="flex flex-col gap-2">
                 <span className="text-center text-2xl">
-                  We are now processing your verification
+                  {t("processingVerification")}
                 </span>
                 <span className="text-center text-white/55 text-base">
-                  This typically takes 12hrs - 24hrs. You will be notified
-                  via email upon successful verification.
+                  {t("verificationProcessingTime")}
                 </span>
               </div>
             }
@@ -63,15 +64,15 @@ export const UploadSelfie = () => {
     <div className="flex max-w-533px mx-auto flex-col gap-5 p-5">
       <div className="flex flex-col gap-2 items-center">
         <h2 className="text-2xl font-bold text-center">
-          Take a selfie from webcam
+          {t("takeSelfieWebcam")}
         </h2>
-        <p className="font-medium">Position your Face in the oval</p>
+        <p className="font-medium">{t("positionFaceInOval")}</p>
       </div>
 
       {previewUrl ? (
         <img
           src={previewUrl}
-          alt="Selfie preview"
+          alt={t("selfiePreview")}
           className="w-full object-cover rounded-xl"
         />
       ) : (
@@ -91,7 +92,7 @@ export const UploadSelfie = () => {
               className="w-full max-h-48 object-cover opacity-50"
             />
             <p className="text-sm text-white/55 text-center">
-              Drop your selfie here or click to upload
+              {t("dropSelfieHere")}
             </p>
           </div>
         </Dropzone>
@@ -102,7 +103,7 @@ export const UploadSelfie = () => {
           onClick={handleTakeAgain}
           className="w-full self-center rounded-full py-23px bg-transparent border border-white/55 text-base font-semibold"
         >
-          Take again
+          {t("takeAgain")}
         </button>
         <button
           onClick={() => confirmSelfie()}
@@ -110,7 +111,7 @@ export const UploadSelfie = () => {
           className="w-full self-center rounded-full py-23px bg-primary text-base font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isPending && <Loader size="xs" color="white" />}
-          Confirm
+          {t("confirm")}
         </button>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { modals } from "@mantine/modals";
 import clsx from "clsx";
+import { useTranslations } from "next-intl";
 import { MdClose, MdOutlineCheckCircleOutline, MdWarning } from "react-icons/md";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 
@@ -31,11 +32,12 @@ const TradeOrderConfirmationModal = ({
   description,
   rows,
   warning,
-  confirmLabel = "Confirm",
+  confirmLabel,
   side = "default",
   onCancel,
   onConfirm,
 }: Props) => {
+  const t = useTranslations("Trading");
   const accent =
     side === "buy"
       ? "bg-buy/10 border-buy/20 text-buy"
@@ -67,7 +69,7 @@ const TradeOrderConfirmationModal = ({
         <button
           type="button"
           onClick={onCancel}
-          aria-label="Cancel"
+          aria-label={t("cancel")}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-white/60 transition-all hover:bg-white/[0.08] hover:text-white active:scale-95"
         >
           <MdClose size={18} />
@@ -100,7 +102,7 @@ const TradeOrderConfirmationModal = ({
           onClick={onCancel}
           className="h-11 rounded-xl border border-white/[0.08] bg-white/[0.05] text-sm font-semibold text-white transition-all hover:bg-white/[0.08] active:scale-[0.98]"
         >
-          Cancel
+          {t("cancel")}
         </button>
         <button
           type="button"
@@ -110,7 +112,7 @@ const TradeOrderConfirmationModal = ({
             confirmClass
           )}
         >
-          {confirmLabel}
+          {confirmLabel ?? t("confirm")}
         </button>
       </div>
     </div>

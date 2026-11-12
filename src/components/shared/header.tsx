@@ -8,7 +8,7 @@ import { FiDownload } from "react-icons/fi";
 import { CiMenuBurger, CiSearch } from "react-icons/ci";
 import { PiBellFill } from "react-icons/pi";
 import { FaGlobe } from "react-icons/fa";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/src/hooks/use-pathname";
 import { PopoverWrapper } from "./popover-wrapper";
 import { MarketDropdown } from "./market-dropdown";
 import { useUserStore } from "@/src/stores/user-store";

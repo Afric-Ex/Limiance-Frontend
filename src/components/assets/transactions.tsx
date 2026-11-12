@@ -12,6 +12,7 @@ import { InlineLoading } from "../shared/inline-loading";
 import { truncateCryptoAddress, isZeroAddress } from "@/src/utils/truncate-address";
 import { formatTransactionAmount, formatTransactionAsset } from "@/src/utils/transaction";
 import { fmtDate, parseDate } from "../orders/orders-shared";
+import { useTranslations } from "next-intl";
 
 export enum TransactionViews {
   RECENT = "recent",
@@ -19,6 +20,7 @@ export enum TransactionViews {
 }
 
 export const Transactions = () => {
+  const t = useTranslations("Wallet");
   // const [view, setView] = useState(TransactionViews.RECENT);
 
   const limit = 30;
@@ -42,7 +44,7 @@ export const Transactions = () => {
     <div className="py-5 h-292px border border-gray-9 rounded-32px bg-gray-7 px-7 pb-9 ">
       <div className="flex flex-col h-full gap-5">
         <div className="flex items-center gap-6">
-          <h3 className="text-xl font-bold">Transactions</h3>
+          <h3 className="text-xl font-bold">{t("transactions")}</h3>
           {/* <SegmentedControl
             classNames={classes}
             data={[
@@ -61,14 +63,14 @@ export const Transactions = () => {
             }}
           >
             <TableTr className="!bg-gray-22">
-              <TableTh>Date & Time</TableTh>
-              <TableTh>Coin</TableTh>
-              <TableTh>Amount</TableTh>
-              <TableTh>Transaction Type</TableTh>
-              <TableTh>Address</TableTh>
-              <TableTh>Network</TableTh>
-              <TableTh>Transaction id</TableTh>
-              <TableTh>Status</TableTh>
+              <TableTh>{t("dateTime")}</TableTh>
+              <TableTh>{t("coin")}</TableTh>
+              <TableTh>{t("amount")}</TableTh>
+              <TableTh>{t("transactionType")}</TableTh>
+              <TableTh>{t("address")}</TableTh>
+              <TableTh>{t("network")}</TableTh>
+              <TableTh>{t("transactionId")}</TableTh>
+              <TableTh>{t("status")}</TableTh>
               {/* <TableTh>Action</TableTh> */}
             </TableTr>
             {history?.map((item: any) => (
@@ -123,13 +125,13 @@ export const Transactions = () => {
                   <span className="flex items-center gap-1">
                     {item.status === "pending" ? (
                       <>
-                        <span>Pending</span>
+                        <span>{t("pending")}</span>
                         <Tooltip
                           multiline
                           withArrow
                           arrowSize={8}
                           w={220}
-                          label="Assets will be debited from your account once the required number of confirmations is reached or exceeded."
+                          label={t("pendingTooltip")}
                           color="elevated"
                         >
                           <span className="cursor-help">
@@ -144,7 +146,7 @@ export const Transactions = () => {
                 </TableTd>
                 {/* <TableTd>
                               <span className="flex items-center cursor-pointer gap-2">
-                                <span>Delete</span>
+                                <span>{t("deleteAction")}</span>
                                 <FaTrash color="var(--primary)" />
                               </span>
                             </TableTd> */}
@@ -157,7 +159,7 @@ export const Transactions = () => {
               <div className="flex flex-col items-center gap-4">
                 <EmptyTable />
                 <span className="text-xs font-medium text-gray-9">
-                  No Records
+                  {t("noRecords")}
                 </span>
               </div>
             </div>

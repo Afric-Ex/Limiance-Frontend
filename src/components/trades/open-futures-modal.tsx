@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Loader } from "@mantine/core";
 import { modals } from "@mantine/modals";
+import { useTranslations } from "next-intl";
 import { tradingService } from "@/src/services/trading";
 import toast from "react-hot-toast";
 import { useUserStore } from "@/src/stores/user-store";
@@ -15,6 +16,7 @@ interface OpenFuturesModalProps {
 }
 
 export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) => {
+  const t = useTranslations("Trading");
   const { fetchUser } = useUserStore();
   const [checked, setChecked] = useState(false);
   const [checked2, setChecked2] = useState(false);
@@ -26,13 +28,13 @@ export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) =
     setIsLoading(true);
     try {
       await tradingService.acceptFutures();
-      toast.success("Futures Account activated successfully!");
+      toast.success(t("futuresAccountActivated"));
       // Refetch user data from backend to ensure isFuturesAccepted is updated
       await fetchUser();
       onConfirm();
       modals.closeAll();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to activate Futures Account");
+      toast.error(error?.response?.data?.message || t("futuresAccountActivateFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -48,7 +50,7 @@ export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) =
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
             <MdTrendingUp size={18} className="text-primary" />
           </div>
-          <span className="font-bold text-white text-base">Open Futures Account</span>
+          <span className="font-bold text-white text-base">{t("openFuturesAccount")}</span>
         </div>
         <button
           type="button"
@@ -65,8 +67,7 @@ export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) =
         {/* Description card */}
         <div className="rounded-xl bg-white/[0.03] border border-white/[0.05] px-4 py-3.5">
           <p className="text-sm text-white/55 leading-relaxed">
-            Futures trading lets you buy or sell contracts obligating delivery of an asset at a
-            fixed price on a future date. Contracts are standardized and traded on futures exchanges.
+            {t("futuresDescription")}
           </p>
         </div>
 
@@ -74,7 +75,7 @@ export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) =
         <div className="flex items-start gap-3 rounded-xl bg-[#F6465D]/[0.07] border border-[#F6465D]/20 px-4 py-3">
           <MdWarning size={17} className="text-[#F6465D] mt-0.5 shrink-0" />
           <p className="text-xs text-[#F6465D]/90 leading-relaxed">
-            Futures trading carries significant risk and may result in losses exceeding your initial deposit. Only trade with funds you can afford to lose.
+            {t("futuresRiskWarning")}
           </p>
         </div>
 
@@ -82,7 +83,7 @@ export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) =
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 mb-2">
             <MdShield size={14} className="text-white/40" />
-            <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Regulations</span>
+            <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">{t("regulations")}</span>
           </div>
 
           {/* Checkbox 1 */}
@@ -115,12 +116,12 @@ export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) =
               onChange={(e) => setChecked(e.target.checked)}
             />
             <span className="text-sm text-white/70 leading-snug">
-              I have read and agree to{" "}
+              {t("agreeToRegulationsPrefix")}{" "}
               <span
                 className="text-primary underline underline-offset-2 cursor-pointer"
                 onClick={(e) => e.stopPropagation()}
               >
-                Limiance Futures regulations
+                {t("limianceFuturesRegulations")}
               </span>
             </span>
           </label>
@@ -155,7 +156,7 @@ export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) =
               onChange={(e) => setChecked2(e.target.checked)}
             />
             <span className="text-sm text-white/70 leading-snug">
-              I understand the rules and risks of futures trading, and agree that any loss is my own responsibility, regardless of the platform
+              {t("futuresRulesAgreement")}
             </span>
           </label>
         </div>
@@ -175,11 +176,11 @@ export const OpenFuturesModal = ({ onConfirm, onExit }: OpenFuturesModalProps) =
           )}
         >
           {isLoading && <Loader size={14} color="white" />}
-          {isLoading ? "Activating…" : "Create Futures Account"}
+          {isLoading ? t("activating") : t("createFuturesAccount")}
         </button>
         {!canCreate && (checked || checked2) && (
           <p className="text-center text-xs text-white/30 mt-2">
-            Please agree to both regulations to continue
+            {t("agreeBothRegulations")}
           </p>
         )}
       </div>

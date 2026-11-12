@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Accordion,
   AccordionControl,
@@ -33,24 +34,20 @@ import { TransactionDetailsModal } from "@/src/components/transactions/transacti
 
 const faqs = [
   {
-    question: "How long does a fiat withdrawal take?",
-    answer:
-      "Fiat payouts are processed through Monnify and typically reach your bank within minutes, though some banks may take up to 24 hours to reflect the credit.",
+    question: "fiatFaqQ1",
+    answer: "fiatFaqA1",
   },
   {
-    question: "Why do I need to authorize some withdrawals?",
-    answer:
-      "When 2FA disbursement is enabled, Monnify sends a confirmation code to your registered phone. Enter that code to authorize the payout before it is released.",
+    question: "fiatFaqQ2",
+    answer: "fiatFaqA2",
   },
   {
-    question: "What are the limits on fiat withdrawals?",
-    answer:
-      "Withdrawals require KYC Tier 1, an enabled withdrawal account, and are rate-limited to 5 per minute per user. Your account balance caps the maximum amount.",
+    question: "fiatFaqQ3",
+    answer: "fiatFaqA3",
   },
   {
-    question: "Which currencies can I withdraw?",
-    answer:
-      "Payouts go to Nigerian banks in NGN. Your crypto is converted to NGN at the settlement rate before the bank transfer is initiated.",
+    question: "fiatFaqQ4",
+    answer: "fiatFaqA4",
   },
 ];
 
@@ -79,6 +76,8 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 function FiatWithdrawInner() {
+  const t = useTranslations("Withdrawal");
+  const tt = useTranslations("Transactions");
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const {
     banks,
@@ -128,9 +127,9 @@ function FiatWithdrawInner() {
 
       {/* Page header */}
       <div className="flex items-center gap-3">
-        <h1 className="text-xl font-bold text-white tracking-tight">Fiat Withdrawal</h1>
+        <h1 className="text-xl font-bold text-white tracking-tight">{t("fiatWithdraw")}</h1>
         <span className="text-xs font-medium text-white/40">
-          Withdraw crypto to a Nigerian bank account in NGN
+          {t("fiatWithdrawSubtitle")}
         </span>
       </div>
 
@@ -140,15 +139,15 @@ function FiatWithdrawInner() {
         <div className="flex flex-col gap-4 w-full min-w-0">
           <div className="bg-[#181a20] border border-white/[0.06] rounded-2xl p-6 flex flex-col gap-6">
             <div className="flex flex-col gap-1">
-              <h3 className="text-base font-bold text-white">Withdrawal Details</h3>
+              <h3 className="text-base font-bold text-white">{t("withdrawalDetails")}</h3>
               <p className="text-xs text-white/40">
-                Convert crypto to NGN and pay out to your bank account.
+                {t("fiatWithdrawDescription")}
               </p>
             </div>
 
             {/* Asset */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Asset</label>
+              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">{t("asset")}</label>
               <Select
                 data={["USDT", "USDC", "BTC", "ETH", "SOL"]}
                 classNames={bankSelectClass}
@@ -159,9 +158,9 @@ function FiatWithdrawInner() {
             {/* Amount */}
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
-                <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Amount</label>
+                <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">{t("amount")}</label>
                 <span className="text-xs font-medium text-white/40">
-                  Available:{" "}
+                  {t("available")}:{" "}
                   <span className="text-primary font-bold">
                     {portfolioLoading ? "..." : assetBalance.toFixed(8)}{" "}
                     <span className="text-white/40">{form.values.symbol}</span>
@@ -181,13 +180,13 @@ function FiatWithdrawInner() {
                       onClick={() => form.setFieldValue("amount", String(assetBalance))}
                       className="px-2 py-1 bg-primary/15 hover:bg-primary/30 rounded-md text-xs text-primary font-bold transition-colors"
                     >
-                      MAX
+                      {t("max")}
                     </button>
                   </span>
                 }
                 error={
                   Number(form.values.amount) > assetBalance
-                    ? "Amount exceeds your available balance"
+                    ? t("amountExceedsBalance")
                     : null
                 }
                 {...form.getInputProps("amount")}
@@ -196,12 +195,12 @@ function FiatWithdrawInner() {
 
             {/* Bank */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Bank</label>
+              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">{t("bank")}</label>
               <Select
                 data={banks?.map((b) => ({ value: b.code, label: b.name })) ?? []}
-                placeholder={banksLoading ? "Loading banks…" : "Select destination bank"}
+                placeholder={banksLoading ? t("loadingBanks") : t("selectBank")}
                 searchable
-                nothingFoundMessage="No banks found"
+                nothingFoundMessage={t("noBanksFound")}
                 classNames={bankSelectClass}
                 {...form.getInputProps("bankCode")}
               />
@@ -209,7 +208,7 @@ function FiatWithdrawInner() {
 
             {/* Account Number */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Account Number</label>
+              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">{t("accountNumber")}</label>
               <TextInput
                 placeholder="0123456789"
                 inputMode="numeric"
@@ -217,7 +216,7 @@ function FiatWithdrawInner() {
                 classNames={{ input: inputClass, section: "!w-fit !right-3" }}
                 error={
                   form.values.accountNumber && form.values.accountNumber.replace(/\D/g, "").length < 10
-                    ? "Account number must be 10 digits"
+                    ? t("accountNumberError")
                     : null
                 }
                 {...form.getInputProps("accountNumber")}
@@ -226,9 +225,9 @@ function FiatWithdrawInner() {
 
             {/* Account Name */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Account Name</label>
+              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">{t("accountName")}</label>
               <TextInput
-                placeholder="e.g. Jane Doe"
+                placeholder={t("accountNamePlaceholder")}
                 classNames={{ input: inputClass }}
                 {...form.getInputProps("accountName")}
               />
@@ -237,7 +236,7 @@ function FiatWithdrawInner() {
             {/* Details */}
             <div className="flex flex-col gap-0 bg-white/[0.02] border border-white/[0.04] rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04]">
-                <span className="text-sm text-white/50">Amount Received (NGN)</span>
+                <span className="text-sm text-white/50">{t("amountReceivedNgn")}</span>
                 <span className="text-sm font-bold text-primary">
                   {Number(form.values.amount) > 0
                     ? `${Number(form.values.amount).toLocaleString()} ${form.values.symbol} → NGN`
@@ -245,20 +244,19 @@ function FiatWithdrawInner() {
                 </span>
               </div>
               <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04]">
-                <span className="text-sm text-white/50">Rate</span>
-                <span className="text-sm font-medium text-white/70">Settled at current rate</span>
+                <span className="text-sm text-white/50">{t("rate")}</span>
+                <span className="text-sm font-medium text-white/70">{t("settledAtCurrentRate")}</span>
               </div>
               <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm text-white/50">Channel</span>
-                <span className="text-sm font-semibold text-white/80">Monnify Bank Payout</span>
+                <span className="text-sm text-white/50">{t("channel")}</span>
+                <span className="text-sm font-semibold text-white/80">{t("monnifyPayout")}</span>
               </div>
             </div>
 
             <div className="flex items-start gap-2 rounded-xl border border-warning-1/20 bg-warning-1/[0.06] p-3">
               <IoMdInformationCircleOutline size={16} className="text-warning-1 shrink-0 mt-0.5" />
               <span className="text-xs font-medium text-warning-1/80 leading-relaxed">
-                Double-check the bank and account number. Limiance cannot recover funds sent to an
-                incorrect account. You may be asked to enter an authorization code sent by your bank.
+                {t("bankWarning")}
               </span>
             </div>
 
@@ -269,24 +267,25 @@ function FiatWithdrawInner() {
               className="!h-[56px] !rounded-xl !bg-primary hover:!bg-primary/90 !text-white !font-bold !transition-all active:!scale-[0.98] disabled:!opacity-40"
               leftSection={<MdOutlineSendToMobile size={18} />}
             >
-              Confirm Withdrawal
+              {t("confirmWithdrawal")}
             </Button>
             <p className="text-xs text-white/30 text-center -mt-2">
-              Requires KYC Tier 1 and an enabled withdrawal account. Rate-limited to 5 withdrawals per minute.
+              {t("requiresKycNote")}
             </p>
           </div>
 
           <div className="flex items-start gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] p-4">
             <IoMdInformationCircleOutline size={16} className="text-primary shrink-0 mt-0.5" />
             <p className="text-xs text-white/45 leading-relaxed">
-              Prefer paying a merchant directly?{" "}
+              {t("payMerchantNote")}{" "}
               <Link href="/trades/p2p" className="text-primary font-semibold hover:text-primary/70 transition-colors">
-                Sell on P2P
+                {t("sellOnP2P")}
               </Link>{" "}
-              or{" "}
+              {t("or")}{" "}
               <Link href="/transactions/withdrawal" className="text-primary font-semibold hover:text-primary/70 transition-colors">
-                withdraw crypto
-              </Link> to an external wallet.
+                {t("withdrawCryptoToExternalWallet")}
+              </Link>
+              .
             </p>
           </div>
         </div>
@@ -297,7 +296,7 @@ function FiatWithdrawInner() {
             <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center text-white/50">
               <MdOutlineHelp size={18} />
             </div>
-            <h3 className="text-lg font-bold text-white">Fiat Withdrawal FAQ</h3>
+            <h3 className="text-lg font-bold text-white">{t("fiatFaqTitle")}</h3>
           </div>
           <Accordion
             classNames={{
@@ -318,9 +317,9 @@ function FiatWithdrawInner() {
                     </span>
                   }
                 >
-                  {item.question}
+                  {t(item.question)}
                 </AccordionControl>
-                <AccordionPanel>{item.answer}</AccordionPanel>
+                <AccordionPanel>{t(item.answer)}</AccordionPanel>
               </AccordionItem>
             ))}
           </Accordion>
@@ -330,7 +329,7 @@ function FiatWithdrawInner() {
       {/* History */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3 px-1">
-          <h3 className="text-lg font-bold text-white">Fiat History</h3>
+          <h3 className="text-lg font-bold text-white">{t("fiatHistoryTitle")}</h3>
           <div className="h-px flex-1 bg-white/[0.06]" />
         </div>
 
@@ -344,11 +343,11 @@ function FiatWithdrawInner() {
             }}>
               <TableThead>
                 <TableTr>
-                  <TableTh className="pl-6">Date & Time</TableTh>
-                  <TableTh>Type</TableTh>
-                  <TableTh>Fiat Amount</TableTh>
-                  <TableTh>Received</TableTh>
-                  <TableTh className="pr-6">Status</TableTh>
+                  <TableTh className="pl-6">{tt("tableDateTime")}</TableTh>
+                  <TableTh>{tt("tableType")}</TableTh>
+                  <TableTh>{tt("tableFiatAmount")}</TableTh>
+                  <TableTh>{tt("tableReceived")}</TableTh>
+                  <TableTh className="pr-6">{tt("tableStatus")}</TableTh>
                 </TableTr>
               </TableThead>
               <TableTbody>
@@ -391,7 +390,7 @@ function FiatWithdrawInner() {
           {!history?.length && !historyLoading && (
             <div className="h-40 flex items-center justify-center flex-col gap-3 opacity-60">
               <MdOutlineSendToMobile size={32} className="text-white/20" />
-              <span className="text-sm font-semibold text-white/30">No fiat transactions yet</span>
+              <span className="text-sm font-semibold text-white/30">{t("noFiatTransactions")}</span>
             </div>
           )}
         </div>

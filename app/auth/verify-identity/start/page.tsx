@@ -13,8 +13,10 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { VerifyIdentityStartPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 import { AuthMobileBrand } from "@/src/components/shared/auth-mobile-brand";
+import { useTranslations } from "next-intl";
 
 function StartInner() {
+  const t = useTranslations("Auth");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -27,7 +29,7 @@ function StartInner() {
       const res = await auth.startKyc();
       const token = getKycAccessToken(res as any);
       if (!token || typeof token !== "string") {
-        setError("Unable to start verification. Please try again.");
+        setError(t("unableToStartVerification"));
         setLoading(false);
         return;
       }
@@ -35,7 +37,7 @@ function StartInner() {
       setLoading(false);
     } catch {
       setLoading(false);
-      setError("Could not start verification. Please try again.");
+      setError(t("couldNotStartVerification"));
     }
   };
 
@@ -44,13 +46,13 @@ function StartInner() {
       const res = await auth.startKyc();
       const freshToken = getKycAccessToken(res as any);
       if (!freshToken || typeof freshToken !== "string") {
-        throw new Error("Unable to refresh verification session");
+        throw new Error(t("unableToRefreshVerification"));
       }
       setActiveToken(freshToken);
       return freshToken;
     } catch {
       setActiveToken(null);
-      setError("Verification session expired. Please start again.");
+      setError(t("verificationSessionExpired"));
       return "";
     }
   };
@@ -61,12 +63,12 @@ function StartInner() {
     }
     if (type === "idCheck.onCancel") {
       setActiveToken(null);
-      setError("Verification cancelled.");
+      setError(t("verificationCancelled"));
     }
   };
 
   const sumsubError = (error: any) => {
-    setError(error?.message || "Verification failed. Please try again.");
+    setError(error?.message || t("verificationFailed"));
     setActiveToken(null);
   };
 
@@ -76,9 +78,9 @@ function StartInner() {
       <div className="flex max-w-1199px w-11/12 mx-auto flex-col gap-8">
       <AuthMobileBrand className="mb-0" />
         <h1 className="pb-3 border-b border-b-white/25 text-3xl font-semibold">
-          Identity verification
+          {t("identityVerification")}
         </h1>
-        <h2 className="text-4xl max-[600px]:text-2xl font-bold">Verify your identity</h2>
+        <h2 className="text-4xl max-[600px]:text-2xl font-bold">{t("verifyYourIdentity")}</h2>
       </div>
       <div className="flex items-center justify-center flex-1">
         {activeToken ? (
@@ -95,8 +97,7 @@ function StartInner() {
         ) : (
           <div className="flex flex-col items-center gap-6 max-w-md w-full">
             <p className="text-center text-white/70">
-              We use Sumsub to securely verify your identity. You will need a
-              government-issued ID and your device camera.
+              {t("sumsubDisclosure")}
             </p>
             {error && (
               <p className="text-red-400 text-sm text-center">{error}</p>
@@ -106,7 +107,7 @@ function StartInner() {
               disabled={loading}
               className="w-full py-3 px-6 bg-primary text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Starting..." : "Start Verification"}
+              {loading ? t("starting") : t("startVerification")}
             </button>
           </div>
         )}

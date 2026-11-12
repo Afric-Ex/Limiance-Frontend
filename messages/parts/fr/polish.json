@@ -1,0 +1,38 @@
+{
+  "Earn": {
+    "brandTitle": "Limiance Earn",
+    "onThisPage": "Sur cette page",
+    "totalStaked": "Total stak?",
+    "totalEarned": "Total gagn?",
+    "noActivePositions": "Aucune position active"
+  },
+  "Navigation": {
+    "personalHub": "Espace personnel",
+    "accountCenter": "Centre du compte",
+    "profileSecurityPreferences": "Profil, s?curit? et pr?f?rences",
+    "accountNavigation": "Navigation du compte",
+    "verifyShort": "V?rifier",
+    "walletsShort": "Portefeuilles",
+    "paymentsShort": "Paiements"
+  },
+  "Footer": {
+    "community": "Communaut?",
+    "startTradingNow": "Commencez ? trader maintenant"
+  },
+  "Settings": {
+    "theme": "Th?me",
+    "themeDescription": "Choisissez votre th?me de couleurs pr?f?r?."
+  },
+  "Wallet": {
+    "deleteAction": "Supprimer"
+  },
+  "Withdrawal": {
+    "noFiatTransactions": "Aucune transaction en monnaie fiduciaire pour l?instant"
+  },
+  "Orders": {
+    "marketTypeSpot": "Spot"
+  },
+  "Profile": {
+    "userPicture": "photo de l?utilisateur"
+  }
+}

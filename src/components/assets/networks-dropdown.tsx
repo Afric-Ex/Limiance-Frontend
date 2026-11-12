@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Popover,
   PopoverTarget,
@@ -14,6 +16,7 @@ import { InlineLoading } from "../shared/inline-loading";
 import { assetKeys, asset } from "@/src/services/asset";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 export const NetworksDropdown = ({
   selectedNetwork,
@@ -22,6 +25,7 @@ export const NetworksDropdown = ({
   setSelectedNetwork: React.Dispatch<React.SetStateAction<SelectedNetwork>>;
   selectedNetwork: SelectedNetwork;
 }) => {
+  const t = useTranslations("Wallet");
   const [opened, { toggle, close }] = useDisclosure(false);
 
   const [chainQuery, setChainQuery] = useState("");
@@ -56,7 +60,7 @@ export const NetworksDropdown = ({
             <>
               <span className="text-xs font-bold">{selectedNetwork?.name}</span>
               <span className="p-1 pl-2 border-l border-l-gray-46 cursor-pointer">
-                <Image src={icons.shortDownArrow} alt="arrow" />
+                <Image src={icons.shortDownArrow} alt={t("arrowAlt")} />
               </span>
             </>
           )}
@@ -75,13 +79,12 @@ export const NetworksDropdown = ({
           <div className="p-10px bg-gray-47 rounded-lg flex items-start gap-1">
             <Info />
             <span className="flex-1 text-2xs font-medium">
-              Ensure you select a network that matches the withdrawal platform
-              of the coin you are withdrawing to avoid permanent loss of assets.
+              {t("networkWarning")}
             </span>
           </div>
           <div className="flex flex-1 overflow-auto flex-col gap-[2px]">
             <span className="bg-gray-48 font-semibold text-2xs py-10px px-2 rounded-lg">
-              Network
+              {t("network")}
             </span>
             <div className="flex flex-1 overflow-auto flex-col">
               {supportedChains?.map((item: any, index: number) => (

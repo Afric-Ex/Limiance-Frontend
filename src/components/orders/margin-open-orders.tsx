@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import clsx from "clsx";
 import { Search } from "../icons/search";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { readList } from "@/src/lib/api-response";
 import { cancelMarginOrderWs } from "@/src/lib/order-ws";
@@ -18,8 +19,6 @@ const selectStyles = {
   dropdown: "!bg-elevated !border-white/[0.08]",
   option: "hover:!bg-white/[0.04] !text-sm data-[checked]:!bg-primary/20 data-[checked]:!text-primary"
 };
-
-const filters = ["Cross", "Isolated"];
 
 const formatNumber = (value: unknown) => {
   const numberValue = Number(value);
@@ -63,6 +62,7 @@ const getOrderLevels = (order: any) => {
 };
 
 export const MarginOpenOrders = () => {
+  const t = useTranslations("Orders");
   const [filter, setFilter] = useState("Cross");
   const [orderType, setOrderType] = useState("All");
   const [baseAsset, setBaseAsset] = useState("All");
@@ -82,7 +82,7 @@ export const MarginOpenOrders = () => {
     mutationFn: ({ orderId, symbol }: { orderId: string; symbol?: string }): Promise<any> =>
       cancelMarginOrderWs(orderId, symbol),
     onSuccess: () => {
-      successNotification("Order cancelled");
+      successNotification(t("orderCancelled"));
       queryClient.invalidateQueries({ queryKey: tradingKeys.marginOpenOrders });
       queryClient.invalidateQueries({ queryKey: ["order-history"] });
     },
@@ -109,18 +109,18 @@ export const MarginOpenOrders = () => {
 
   const filterControls = (
     <>
-      <Select label="Order Type" data={["All", "Limit", "Market", "Stop Loss", "Take Profit"]} value={orderType} onChange={(value) => setOrderType(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[140px]" />
-      <Select label="Base Asset" data={["All", "BTC", "ETH"]} value={baseAsset} onChange={(value) => setBaseAsset(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[120px]" />
-      <Select label="Quote Asset" data={["All", "USDT", "USDC"]} value={quoteAsset} onChange={(value) => setQuoteAsset(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[120px]" />
-      <Select label="Trade Side" data={["All", "Buy", "Sell"]} value={tradeSide} onChange={(value) => setTradeSide(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[120px]" />
+      <Select label={t("orderType")} data={[{ value: "All", label: t("all") }, { value: "Limit", label: t("limit") }, { value: "Market", label: t("market") }, { value: "Stop Loss", label: t("stopLoss") }, { value: "Take Profit", label: t("takeProfit") }]} value={orderType} onChange={(value) => setOrderType(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[140px]" />
+      <Select label={t("baseAsset")} data={[{ value: "All", label: t("all") }, { value: "BTC", label: "BTC" }, { value: "ETH", label: "ETH" }]} value={baseAsset} onChange={(value) => setBaseAsset(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[120px]" />
+      <Select label={t("quoteAsset")} data={[{ value: "All", label: t("all") }, { value: "USDT", label: "USDT" }, { value: "USDC", label: "USDC" }]} value={quoteAsset} onChange={(value) => setQuoteAsset(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[120px]" />
+      <Select label={t("tradeSide")} data={[{ value: "All", label: t("all") }, { value: "Buy", label: t("buy") }, { value: "Sell", label: t("sell") }]} value={tradeSide} onChange={(value) => setTradeSide(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[120px]" />
     </>
   );
 
   const modeToggle = (
     <div className="flex shrink-0 self-end rounded-lg border border-white/[0.06] bg-white/[0.04] p-1">
-      {filters.map((item) => (
+      {["Cross", "Isolated"].map((item) => (
         <button key={item} type="button" onClick={() => setFilter(item)} className={clsx("rounded-md px-4 py-1.5 text-xs font-semibold transition-colors", filter === item ? "bg-primary text-white" : "text-white/50 hover:bg-white/[0.04] hover:text-white")}>
-          {item}
+          {item === "Cross" ? t("cross") : t("isolated")}
         </button>
       ))}
     </div>
@@ -139,13 +139,13 @@ export const MarginOpenOrders = () => {
               classNames={{
                 input: "!h-11 !bg-white/[0.04] hover:!bg-white/[0.06] focus:!bg-white/[0.08] !border !border-white/[0.08] focus:!border-primary/50 focus:!shadow-[0_0_10px_rgba(77,119,240,0.12)] !w-full sm:!w-[280px] !rounded-xl !transition-all placeholder:!text-white/20",
               }}
-              placeholder="Search pair..."
+              placeholder={t("searchPair")}
               leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
               value={pairSearch}
               onChange={(event) => setPairSearch(event.currentTarget.value)}
               className="min-w-0 flex-1"
             />
-            <button type="button" className="h-10 shrink-0 px-2 text-sm font-semibold text-white/40 hover:text-white transition-colors" onClick={() => { setOrderType("All"); setBaseAsset("All"); setQuoteAsset("All"); setTradeSide("All"); setPairSearch(""); setFilter("Cross"); }}>Reset</button>
+            <button type="button" className="h-10 shrink-0 px-2 text-sm font-semibold text-white/40 hover:text-white transition-colors" onClick={() => { setOrderType("All"); setBaseAsset("All"); setQuoteAsset("All"); setTradeSide("All"); setPairSearch(""); setFilter("Cross"); }}>{t("reset")}</button>
         </div>
       </div>
 
@@ -167,17 +167,17 @@ export const MarginOpenOrders = () => {
             }}>
               <TableThead>
                 <TableTr>
-                  <TableTh className="pl-6">Pair</TableTh>
-                  <TableTh>Side</TableTh>
-                  <TableTh>Type</TableTh>
-                  <TableTh>Price</TableTh>
-                  <TableTh>Amount</TableTh>
-                  <TableTh>Filled</TableTh>
-                  <TableTh>Total</TableTh>
-                  <TableTh>TP / SL</TableTh>
-                  <TableTh>Status</TableTh>
-                  <TableTh>Time</TableTh>
-                  <TableTh className="pr-6 text-right">Action</TableTh>
+                  <TableTh className="pl-6">{t("pair")}</TableTh>
+                  <TableTh>{t("side")}</TableTh>
+                  <TableTh>{t("type")}</TableTh>
+                  <TableTh>{t("price")}</TableTh>
+                  <TableTh>{t("amount")}</TableTh>
+                  <TableTh>{t("filledAmount")}</TableTh>
+                  <TableTh>{t("total")}</TableTh>
+                  <TableTh>{t("tpSl")}</TableTh>
+                  <TableTh>{t("status")}</TableTh>
+                  <TableTh>{t("time")}</TableTh>
+                  <TableTh className="pr-6 text-right">{t("action")}</TableTh>
                 </TableTr>
               </TableThead>
               <TableTbody>
@@ -205,7 +205,7 @@ export const MarginOpenOrders = () => {
                     </TableTd>
                     <TableTd>
                       <span className="text-warning-1 bg-warning-1/10 px-2 py-1 flex items-center justify-center w-fit text-xs font-bold rounded-md uppercase tracking-wider">
-                        {order.status || "OPEN"}
+                        {order.status || t("open")}
                       </span>
                     </TableTd>
                     <TableTd className="text-white/50">{order.createdAt ? new Date(order.createdAt).toLocaleString(undefined, {
@@ -228,8 +228,8 @@ export const MarginOpenOrders = () => {
           </div>
         ) : (
           <OrdersEmptyState
-            title="No open margin orders"
-            description="Open margin orders will appear here when you place them."
+            title={t("emptyOpenMarginOrders")}
+            description={t("emptyOpenMarginOrdersDescription")}
           />
         )}
       </div>
