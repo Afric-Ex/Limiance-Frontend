@@ -5,8 +5,10 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { ForgotPasswordPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 import { AuthMobileBrand } from "@/src/components/shared/auth-mobile-brand";
+import { getTranslations } from "next-intl/server";
 
-function ForgotPassword() {
+async function ForgotPassword() {
+  const t = await getTranslations("Auth");
   return (
     <main className="flex items-center overflow-auto justify-center px-4 min-h-hero relative bg-landing bg-cover bg-no-repeat animate-fade-in max-[1150px]:bg-none max-[1150px]:bg-black page-enter">
       <HeroDecorations />
@@ -16,14 +18,14 @@ function ForgotPassword() {
 
         <Image
           src={LoginImage}
-          alt="ForgotPassword image"
+          alt={t("forgotPasswordTitle")}
           className="max-w-429px min-[1150px]:inline-block hidden w-full"
           width={429}
           height={523}
         />
         <div className="flex flex-col max-w-416px w-full max-sm:mx-auto min-[1150px]:ml-auto gap-8 max-[1150px]:gap-6">
           <h2 className="md:text-display sm:text-4xl text-2xl font-bold max-[1150px]:text-center">
-            Forgot Password
+            {t("forgotPasswordTitle")}
           </h2>
           <ForgotPasswordForm />
         </div>

@@ -8,8 +8,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 import { AuthMobileBrand } from "@/src/components/shared/auth-mobile-brand";
+import { useTranslations } from "next-intl";
 
 function TotpCountdown() {
+  const t = useTranslations("Auth");
   const [remaining, setRemaining] = useState(() => 30 - (Math.floor(Date.now() / 1000) % 30));
 
   useEffect(() => {
@@ -39,12 +41,13 @@ function TotpCountdown() {
         />
         <text x="16" y="20" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">{remaining}s</text>
       </svg>
-      <span className="text-xs text-white/40">Code expires shortly</span>
+      <span className="text-xs text-white/40">{t("codeExpiresShortly")}</span>
     </div>
   );
 }
 
 function Verify2FAPageInner() {
+  const t = useTranslations("Auth");
   const { push } = useRouter();
   const {
     emailOrPhone,
@@ -105,11 +108,11 @@ function Verify2FAPageInner() {
         <AuthMobileBrand className="mb-4" />
 
         <div className="flex flex-col items-center gap-2 text-center">
-          <h2 className="text-3xl font-bold">{isTotp ? "Authenticator Verification" : "Email Verification"}</h2>
+          <h2 className="text-3xl font-bold">{isTotp ? t("authenticatorVerification") : t("emailVerification")}</h2>
           <p className="text-sm text-white/55">
             {isTotp
-              ? "Enter the 6-digit code from your authenticator app"
-              : `Enter the 6-digit code sent to ${emailOrPhone || "your email"}`}
+              ? t("enterAuthenticatorCode")
+              : `${t("enterEmailCodeSentTo")} ${emailOrPhone || t("yourEmail")}`}
           </p>
         </div>
 
@@ -151,7 +154,7 @@ function Verify2FAPageInner() {
           className="w-full h-[52px] bg-primary rounded-xl text-base font-semibold disabled:opacity-50 flex items-center justify-center gap-2 transition-colors hover:bg-primary/90"
         >
           {verifyLogin2FALoading && <Loader size="xs" color="white" />}
-          Verify
+          {t("verify")}
         </button>
 
         <button
@@ -161,7 +164,7 @@ function Verify2FAPageInner() {
           }}
           className="text-sm text-white/40 hover:text-white/70"
         >
-          Back to login
+          {t("backToLogin")}
         </button>
       </div>
     </main>

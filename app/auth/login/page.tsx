@@ -7,8 +7,10 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { LoginPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 import { AuthMobileBrand } from "@/src/components/shared/auth-mobile-brand";
+import { getTranslations } from "next-intl/server";
 
-function Login() {
+async function Login() {
+  const t = await getTranslations("Auth");
   return (
     <main className="flex items-center overflow-auto px-4 justify-center min-h-hero relative bg-landing bg-cover bg-no-repeat animate-fade-in max-[1150px]:bg-none max-[1150px]:bg-black page-enter">
       <HeroDecorations />
@@ -18,19 +20,19 @@ function Login() {
 
         <Image
           src={LoginImage}
-          alt="Login image"
+          alt={t("loginTitle")}
           className="max-w-429px min-[1150px]:inline-block hidden w-full"
           width={429}
           height={523}
         />
         <div className="flex flex-col max-w-416px w-full max-sm:mx-auto min-[1150px]:ml-auto gap-8 max-[1150px]:gap-6">
           <h2 className="md:text-display sm:text-4xl text-2xl font-bold max-[1150px]:text-center">
-            Welcome <span className="text-primary">Back</span>
+            {t("loginTitle")}
           </h2>
           <Tabs classNames={classes} defaultValue="email">
             <TabsList className="max-[1150px]:justify-center">
-              <TabsTab value="email">Email/Mobile</TabsTab>
-              <TabsTab disabled value="subaccount">Sub-account</TabsTab>
+              <TabsTab value="email">{t("emailOrNumber")}</TabsTab>
+              <TabsTab disabled value="subaccount">{t("login")}</TabsTab>
             </TabsList>
             <TabsPanel value="email">
               <LoginForm />

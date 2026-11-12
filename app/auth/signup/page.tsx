@@ -11,8 +11,10 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { SignUpPageSkeleton } from "@/src/components/skeletons/auth";
 import { HeroDecorations } from "@/src/components/shared/hero-decorations";
 import { AuthMobileBrand } from "@/src/components/shared/auth-mobile-brand";
+import { useTranslations } from "next-intl";
 
 function SignUp() {
+  const t = useTranslations("Auth");
   const [isAgreed, setIsAgreed] = useState(false);
   const country = useAuthStore((state) => state.country);
   const setCountry = useAuthStore((state) => state.setCountry);
@@ -26,24 +28,23 @@ function SignUp() {
 
         <Image
           src={SignupImage}
-          alt="Sign up image"
+          alt={t("signUpTitle")}
           className="max-w-429px min-[1150px]:inline-block hidden w-full"
           width={429}
           height={523}
         />
         <div className="flex flex-col max-w-460px w-full max-sm:mx-auto min-[1150px]:ml-auto gap-7 max-[1150px]:gap-6">
           <h2 className="md:text-display sm:text-4xl text-2xl font-bold max-[1150px]:text-center">
-            Welcome to <span className="text-primary">Limiance</span>
+            {t("welcomeTo")} <span className="text-primary">Limiance</span>
           </h2>
           <form onSubmit={() => {}} className="flex flex-col gap-10">
             <div className="flex flex-col gap-30px">
               <div className="flex flex-col gap-6">
                 <h2 className="sm:text-xl text-base font-bold">
-                  To Get Started
+                  {t("toGetStarted")}
                 </h2>
                 <p className="sm:text-base text-sm text-white/70">
-                  Select the country/region that exactly matches the one on your
-                  ID or proof of address
+                  {t("signupCountryHint")}
                 </p>
               </div>
               <div className="flex flex-col gap-6">
@@ -54,8 +55,8 @@ function SignUp() {
                       "border !border-gray-9 focus:!border-primary focus-within:!border-primary !h-55px !rounded-xl !text-white !bg-transparent duration-200",
                     label: "!text-sm !text-white",
                   }}
-                  label="Country/region"
-                  placeholder="Select country/region"
+                  label={t("countryRegion")}
+                  placeholder={t("selectCountryRegion")}
                   searchable
                   value={country}
                   onChange={(value) => {
@@ -70,13 +71,13 @@ function SignUp() {
                     classNames={{ input: "!border-white/20 checked:!bg-primary" }}
                   />
                   <span className="text-white/70 text-sm">
-                    By creating an account, I agree to Limiance{" "}
+                    {t("agreePrefix")}{" "}
                     <span className="text-primary underline">
-                      User Agreement, Terms of Service
+                      {t("userAgreement")}, {t("termsOfService")}
                     </span>{" "}
-                    and{" "}
+                    {t("and")}{" "}
                     <span className="text-primary underline">
-                      Privacy Policy
+                      {t("privacyPolicy")}
                     </span>
                   </span>
                 </span>
@@ -90,10 +91,10 @@ function SignUp() {
                 fullWidth
                 disabled={!isAgreed || !country}
               >
-                Next
+                {t("next")}
               </Button>
               <span className="self-center text-sm text-white/70">
-                Already have an account?{" "}
+                {t("alreadyHaveAccount")}{" "}
                 <Link
                   href="/auth/login"
                   className="text-primary underline font-bold"

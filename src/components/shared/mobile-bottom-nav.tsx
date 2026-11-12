@@ -17,21 +17,22 @@ import {
   IoSwapHorizontal,
 } from "react-icons/io5";
 import { RiBarChartFill } from "react-icons/ri";
+import { useTranslations } from "next-intl";
 // ─── Trade Sheet ────────────────────────────────────────────────────────────
 
 const tradeOptions = [
   {
     icon: IoTrendingUp,
-    label: "Spot Trading",
-    sub: "Buy & sell crypto instantly",
+    labelKey: "spotTrading",
+    subKey: "spotTradingSub",
     href: "/trades/spot",
     color: "#ffffff",
     bg: "rgba(255,255,255,0.05)",
   },
   {
     icon: IoFlash,
-    label: "Futures Trading",
-    sub: "Trade with leverage up to 100x",
+    labelKey: "futuresTrading",
+    subKey: "futuresTradingSub",
     href: "/trades/futures",
     color: "#ffffff",
     bg: "rgba(255,255,255,0.05)",
@@ -39,32 +40,32 @@ const tradeOptions = [
   },
   {
     icon: RiBarChartFill,
-    label: "Margin Trading",
-    sub: "Trade with borrowed funds",
+    labelKey: "marginTrading",
+    subKey: "marginTradingSub",
     href: "/trades/margin",
     color: "#ffffff",
     bg: "rgba(255,255,255,0.05)",
   },
   {
     icon: IoStorefront,
-    label: "P2P Trading",
-    sub: "Trade directly with others",
+    labelKey: "p2pTrading",
+    subKey: "p2pTradingSub",
     href: "/trades/p2p",
     color: "#ffffff",
     bg: "rgba(255,255,255,0.05)",
   },
   {
     icon: IoWallet,
-    label: "Buy Crypto",
-    sub: "Purchase with local currency",
+    labelKey: "buyCrypto",
+    subKey: "buyCryptoSub",
     href: "/buy-crypto",
     color: "#ffffff",
     bg: "rgba(255,255,255,0.05)",
   },
   {
     icon: IoSwapHorizontal,
-    label: "Convert",
-    sub: "Instantly swap between assets",
+    labelKey: "convert",
+    subKey: "convertSub",
     href: "/assets/spot",
     color: "#ffffff",
     bg: "rgba(255,255,255,0.05)",
@@ -78,6 +79,7 @@ function TradeSheet({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations("Navigation");
   const router = useRouter();
 
   if (!open) return null;
@@ -99,7 +101,7 @@ function TradeSheet({
 
           {/* Header */}
           <div className="flex items-center justify-between px-5 pt-2 pb-4">
-            <h3 className="text-lg font-bold text-white/90">Trade</h3>
+            <h3 className="text-lg font-bold text-white/90">{t("tradeMenu")}</h3>
             <button
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-all"
@@ -130,7 +132,7 @@ function TradeSheet({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-body font-semibold text-white/90">
-                        {opt.label}
+                        {t(opt.labelKey as "spotTrading")}
                       </span>
                       {opt.badge && (
                         <span className="text-2xs font-bold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning border border-warning/30 tracking-wider">
@@ -138,7 +140,7 @@ function TradeSheet({
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-white/40">{opt.sub}</span>
+                    <span className="text-xs text-white/40">{t(opt.subKey as "spotTradingSub")}</span>
                   </div>
                   <svg
                     className="text-white/20 shrink-0"
@@ -165,26 +167,26 @@ function TradeSheet({
 
 const tabs = [
   {
-    name: "Home",
+    nameKey: "home",
     link: "/dashboard",
     icon: Dashboard,
     matchPath: "/dashboard",
   },
   {
-    name: "Markets",
+    nameKey: "markets",
     link: "/markets",
     icon: IoStatsChart,
     matchPath: "/markets",
   },
   // Center trade button — handled separately
   {
-    name: "Assets",
+    nameKey: "assets",
     link: "/assets/overview",
     icon: Assets,
     matchPath: "/assets",
   },
   {
-    name: "Profile",
+    nameKey: "profile",
     link: "/account/profile",
     icon: IoPersonOutline,
     matchPath: "/account",
@@ -192,6 +194,7 @@ const tabs = [
 ];
 
 export const MobileBottomNav = () => {
+  const t = useTranslations("Navigation");
   const pathname = usePathname();
   const [tradeOpen, setTradeOpen] = useState(false);
 
@@ -218,7 +221,7 @@ export const MobileBottomNav = () => {
             const Icon = tab.icon;
             return (
               <Link
-                key={tab.name}
+                key={tab.nameKey}
                 href={tab.link}
                 className="flex flex-col items-center gap-1 px-4 py-3 tap-scale relative"
               >
@@ -241,7 +244,7 @@ export const MobileBottomNav = () => {
                     isActive ? "text-primary" : "text-white/35"
                   )}
                 >
-                  {tab.name}
+                  {t(tab.nameKey as "home")}
                 </span>
               </Link>
             );
@@ -268,7 +271,7 @@ export const MobileBottomNav = () => {
             const Icon = tab.icon;
             return (
               <Link
-                key={tab.name}
+                key={t(tab.nameKey as "home")}
                 href={tab.link}
                 className="flex flex-col items-center gap-1 px-4 py-3 tap-scale relative"
               >
@@ -290,7 +293,7 @@ export const MobileBottomNav = () => {
                     isActive ? "text-primary" : "text-white/35"
                   )}
                 >
-                  {tab.name}
+                  {t(tab.nameKey as "home")}
                 </span>
               </Link>
             );

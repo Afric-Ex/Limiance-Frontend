@@ -2,6 +2,7 @@ import { auth } from "../services/auth";
 import { errorNotification, successNotification } from "./notification-handler";
 import { handleLogout } from "./handle-logout";
 import { useAuthStore } from "../stores/auth-store";
+import { errorMessage, localizeApiError } from "./api-error-i18n";
 
 export type ErrorType = {
   response?: {
@@ -64,7 +65,7 @@ export const errorMessageHandler = (obj: ErrorType) => {
 
   const notifyError = (msg: any) => {
     if (typeof msg === "string") {
-      errorNotification(formatErrorString(msg));
+      errorNotification(localizeApiError(formatErrorString(msg)));
     } else {
       errorNotification(String(msg));
     }
@@ -78,7 +79,7 @@ export const errorMessageHandler = (obj: ErrorType) => {
   // describe. Report it in plain language rather than leaking axios's
   // "timeout of 30000ms exceeded" string at the user.
   if (obj.code === "ECONNABORTED" || obj.code === "ETIMEDOUT") {
-    return notifyError("The request timed out. Please check your connection and try again.");
+    return notifyError(errorMessage("timeout"));
   }
   if (obj.response) {
     if (obj.response.status === 401) {
@@ -105,17 +106,17 @@ export const errorMessageHandler = (obj: ErrorType) => {
       }
     }
     if (obj.response.status === 500) {
-      return notifyError(obj?.response?.data?.message ?? "Internal Server Error");
+      return notifyError(obj?.response?.data?.message ?? errorMessage("server"));
     }
     if (obj.response.status === 404) {
       const error = obj.response?.data?.error;
       return notifyError(
-        error ?? "Page not found, Please contact the site administrator"
+        error ?? errorMessage("notFound")
       );
     }
-    const errorMessage = (obj as any)?.response?.data?.non_field_errors;
-    if (errorMessage) {
-      (errorMessage as string[]).forEach((item) => notifyError(item));
+    const nonFieldErrors = (obj as any)?.response?.data?.non_field_errors;
+    if (nonFieldErrors) {
+      (nonFieldErrors as string[]).forEach((item) => notifyError(item));
       return;
     }
     if (Array.isArray(obj?.response?.data)) {

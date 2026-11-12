@@ -9,6 +9,7 @@ import type { GeeTestValidateResult } from "react-geetest-v4";
 import type { Login } from "@/src/types/auth";
 import { Google } from "../icons/google";
 import { useGoogleLogin } from "@react-oauth/google";
+import { useTranslations } from "next-intl";
 
 const CaptchaButton = dynamic(
   () => import("./captcha-button").then((m) => m.CaptchaButton),
@@ -24,6 +25,7 @@ const inputStyles = {
 };
 
 export const LoginForm = () => {
+  const t = useTranslations("Auth");
   const { loginForm: form, submitLogin, loginLoading } = useAuth();
 
   const loginWithGoogle = useGoogleLogin({
@@ -100,16 +102,16 @@ export const LoginForm = () => {
           <div className="flex flex-col gap-6">
             <TextInput
               classNames={inputStyles}
-              label="Email / Number"
+              label={t("emailOrNumber")}
               type="text"
-              placeholder="Enter email or phone"
+              placeholder={t("emailOrPhonePlaceholder")}
               {...form.getInputProps("emailOrPhone")}
             />
             <div className="flex flex-col gap-4">
               <PasswordInput
                 classNames={inputStyles}
-                label="Password"
-                placeholder="Password"
+                label={t("password")}
+                placeholder={t("passwordPlaceholder")}
                 {...form.getInputProps("password")}
               />
               {/* <Checkbox
@@ -133,11 +135,11 @@ export const LoginForm = () => {
             href="/auth/forgot-password"
             className="text-primary cursor-pointer font-medium"
           >
-            Forgot your password?
+            {t("forgotPassword")}
           </Link>
         </div>
         <Divider
-          label="Or login with"
+          label={t("orLoginWith")}
           classNames={{
             label:
               "before:!border-t-white/20 after:!border-t-white/20 !text-white",
@@ -151,7 +153,7 @@ export const LoginForm = () => {
         className="flex items-center justify-center gap-3 w-full h-[55px] bg-[#181a20] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12] transition-colors rounded-xl"
       >
         <Google />
-        <span className="text-white/80 font-bold text-sm">Log In with Google</span>
+        <span className="text-white/80 font-bold text-sm">{t("logInWithGoogle")}</span>
       </button>
 
       {captchaId ? (

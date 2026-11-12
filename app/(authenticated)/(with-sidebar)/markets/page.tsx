@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { successNotification } from "@/src/lib/notification-handler";
+import { useTranslations } from "next-intl";
 
 type TokenRow = {
   symbol: string;
@@ -142,12 +143,13 @@ function Sparkline({ pair, values }: { pair: string; values: number[] }) {
 
 // Creative placeholder for market sections that aren't live yet.
 function ComingSoonEmpty({ tab }: { tab: string }) {
+  const t = useTranslations("Markets");
   const headline =
     tab === "derivatives"
-      ? "Derivatives trading is almost here"
+      ? t("derivativesSoon")
       : tab === "tradfi"
-        ? "TradFi markets are almost here"
-        : "Fresh listings are almost here";
+        ? t("tradfiSoon")
+        : t("newlyListedSoon");
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-4 text-center">
       <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary">
@@ -157,11 +159,11 @@ function ComingSoonEmpty({ tab }: { tab: string }) {
         <IoRocketOutline size={26} />
       </span>
       <span className="text-2xs font-bold uppercase tracking-[0.2em] text-primary bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
-        Coming soon
+        {t("comingSoon")}
       </span>
       <p className="text-sm font-semibold text-white/85">{headline}</p>
       <p className="text-xs text-white/40 max-w-[280px] leading-relaxed">
-        We&apos;re putting the finishing touches on this section — check back shortly.
+        {t("comingSoonDesc")}
       </p>
     </div>
   );
@@ -184,6 +186,7 @@ function getPageNumbers(current: number, total: number) {
 }
 
 function MarketsPageInner() {
+  const t = useTranslations("Markets");
   const router = useRouter();
   const [search, setSearch] = useState("");
   const feed = useMarketFeed("BTC/USDT");
@@ -265,7 +268,7 @@ function MarketsPageInner() {
       isFavorite ? tradingService.removeFavorite(pair) : tradingService.addFavorite(pair),
     onSuccess: (_data, variables) => {
       successNotification(
-        variables.isFavorite ? "Removed from favorites" : "Added to favorites"
+        variables.isFavorite ? t("favoriteRemoved") : t("favoriteAdded")
       );
       queryClient.invalidateQueries({ queryKey: ["trading-favorites"] });
     },
@@ -386,7 +389,7 @@ function MarketsPageInner() {
       {/* ─── Header Section ─── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
         <div>
-          <h1 className="text-2xl font-bold text-white">Markets</h1>
+          <h1 className="text-2xl font-bold text-white">{t("title")}</h1>
           <p className="text-sm text-white/40 mt-1">
             {isLoading ? "Loading listed pairs…" : `${spotTokens.length} active pairs`}
             {feed.isConnected && (
@@ -429,13 +432,13 @@ function MarketsPageInner() {
         <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5 overflow-x-auto scrollbar-none">
           <div className="flex items-center gap-8">
             {[
-              { id: "favorites", name: "Favorites", icon: true },
-              { id: "spot", name: "Spot" },
-              { id: "margin", name: "Margin" },
-              { id: "futures", name: "Futures" },
-              { id: "derivatives", name: "Derivatives" },
-              { id: "tradfi", name: "TradFi" },
-              { id: "newly-listed", name: "Newly Listed" }
+              { id: "favorites", name: "favorites", icon: true },
+              { id: "spot", name: "spot" },
+              { id: "margin", name: "margin" },
+              { id: "futures", name: "futures" },
+              { id: "derivatives", name: "derivatives" },
+              { id: "tradfi", name: "tradfi" },
+              { id: "newly-listed", name: "newlyListed" }
             ].map((cat) => {
               const active = mainTab === cat.id;
               return (
@@ -448,7 +451,7 @@ function MarketsPageInner() {
                   )}
                 >
                   {cat.icon && <MdStar size={16} className={clsx(active ? "text-yellow-500" : "text-white/30")} />}
-                  <span>{cat.name}</span>
+                  <span>{t(cat.name as "spot")}</span>
                   {active && (
                     <span className="absolute bottom-0 left-0 right-0 h-[2.5px] rounded-full bg-primary" />
                   )}
@@ -487,14 +490,14 @@ function MarketsPageInner() {
             <thead>
               <tr className="border-b border-white/[0.06]">
                 <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider pl-4 w-10"></th>
-                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">Coin</th>
-                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">Last Price</th>
-                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">24h Change</th>
-                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">24h High</th>
-                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">24h Low</th>
-                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">24h Volume</th>
-                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">Market Trend</th>
-                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider text-right pr-4">Action</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">{t("coin")}</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">{t("lastPrice")}</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">{t("change24h")}</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">{t("high24h")}</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">{t("low24h")}</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">{t("volume24h")}</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider">{t("marketTrend")}</th>
+                <th className="pb-3 text-white/35 font-semibold text-2xs uppercase tracking-wider text-right pr-4">{t("action")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04]">
@@ -512,7 +515,7 @@ function MarketsPageInner() {
                     ) : (
                       <div className="flex flex-col items-center justify-center gap-2">
                         <IoSearchOutline size={32} className="text-white/10" />
-                        <span className="text-sm">No assets found matching parameters.</span>
+                        <span className="text-sm">{t("noAssets")}</span>
                       </div>
                     )}
                   </td>
@@ -535,7 +538,7 @@ function MarketsPageInner() {
                       <td className="py-3 pl-4 w-10">
                         <button
                           type="button"
-                          aria-label={isFav ? `Remove ${token.pair} from favorites` : `Add ${token.pair} to favorites`}
+                          aria-label={isFav ? t("removeFavorite", { pair: token.pair }) : t("addFavorite", { pair: token.pair })}
                           disabled={pendingFavoritePair === token.pair}
                           onClick={(e) => toggleFav(token.pair, e)}
                           className="p-1 disabled:opacity-50"
@@ -637,7 +640,7 @@ function MarketsPageInner() {
               {mainTab === "derivatives" || mainTab === "tradfi" || mainTab === "newly-listed" ? (
                 <ComingSoonEmpty tab={mainTab} />
               ) : (
-                "No assets matching parameters."
+                t("noAssetsMatching")
               )}
             </div>
           ) : (
@@ -668,7 +671,7 @@ function MarketsPageInner() {
                         )}
                       </div>
                       <p className="text-micro text-white/40 mt-0.5">
-                        Vol: {hasData && token.volume > 0 ? formatVolume(token.volume) : "-"}
+                        {t("volLabel")} {hasData && token.volume > 0 ? formatVolume(token.volume) : "-"}
                       </p>
                     </div>
                   </div>

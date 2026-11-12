@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { IoClose } from "react-icons/io5";
+import { useTranslations } from "next-intl";
 
 export const AiBot = () => {
+  const t = useTranslations("Landing");
   const [open, setOpen] = useState(false);
 
   return (
@@ -22,16 +24,16 @@ export const AiBot = () => {
                 className="rounded-full"
               />
               <div className="flex flex-col">
-                <span className="text-sm font-semibold">Limiance AI</span>
+                <span className="text-sm font-semibold">{t("aiName")}</span>
                 <span className="flex items-center gap-1.5 text-2xs text-success-6">
                   <span className="w-1.5 h-1.5 rounded-full bg-success-6" />
-                  Online
+                  {t("online")}
                 </span>
               </div>
             </div>
             <button
               onClick={() => setOpen(false)}
-              aria-label="Close"
+              aria-label={t("close")}
               className="text-white/50 hover:text-white transition-colors"
             >
               <IoClose size={18} />
@@ -39,21 +41,20 @@ export const AiBot = () => {
           </div>
           <div className="flex flex-col gap-3 px-4 py-4">
             <div className="max-w-[85%] bg-primary/10 border border-primary/20 text-sm text-white/90 rounded-xl rounded-tl-sm px-3 py-2">
-              Hi there! I&apos;m your Limiance assistant. How can I help you
-              get started today?
+              {t("aiGreeting")}
             </div>
             <div className="flex flex-col gap-2 mt-1">
               <Link
                 href="/support"
                 className="text-xs font-medium text-primary hover:bg-primary/10 px-3 py-2 rounded-lg transition-colors"
               >
-                Visit Support Center
+                {t("visitSupport")}
               </Link>
               <Link
                 href="/auth/signup"
                 className="text-xs font-medium text-primary hover:bg-primary/10 px-3 py-2 rounded-lg transition-colors"
               >
-                Create an Account
+                {t("createAccount")}
               </Link>
             </div>
           </div>
@@ -62,12 +63,12 @@ export const AiBot = () => {
 
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label={open ? "Close AI assistant" : "Open AI assistant"}
+        aria-label={open ? t("closeAssistant") : t("openAssistant")}
         className="fixed right-5 bottom-6 sm:right-6 z-[90] rounded-full shadow-[0_8px_32px_rgba(77,119,240,0.45)] hover:scale-105 active:scale-95 transition-transform animate-float"
       >
         <Image
           src="/aibot.svg"
-          alt="Limiance AI assistant"
+          alt={t("aiName")}
           width={64}
           height={64}
           className="w-14 h-14 sm:w-16 sm:h-16 select-none pointer-events-none"

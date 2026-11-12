@@ -13,10 +13,13 @@ import { Toaster } from "react-hot-toast";
 import Providers from "@/src/components/providers";
 import { NotificationsProvider } from "@/src/components/shared/notifications-provider";
 import { WebSocketProvider } from "@/src/components/providers/websocket-provider";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Limiance Exchange — Trade Crypto with Confidence",
-  description: "Limiance Exchange is a secure, fast, and reliable cryptocurrency exchange. Trade Bitcoin, Ethereum, USDT, and 300+ digital assets with low fees and premium tools.",
+  description:
+    "Limiance Exchange is a secure, fast, and reliable cryptocurrency exchange. Trade Bitcoin, Ethereum, USDT, and 300+ digital assets with low fees and premium tools.",
   manifest: "/manifest.json",
 };
 
@@ -27,30 +30,35 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className="antialiased overflow-x-hidden">
-        <Toaster />
-        <MantineProvider theme={theme} forceColorScheme="dark">
-          <WebSocketProvider>
-            <Providers>
-              <QueryProvider>
-                <ModalsProvider>
-                  <NotificationsProvider />
-                  <div className="flex h-[100dvh] flex-col overflow-hidden">
-                    <Header />
-                    <AppContainer>{children}</AppContainer>
-                  </div>
-                </ModalsProvider>
-              </QueryProvider>
-            </Providers>
-          </WebSocketProvider>
-        </MantineProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <Toaster />
+          <MantineProvider theme={theme} forceColorScheme="dark">
+            <WebSocketProvider>
+              <Providers>
+                <QueryProvider>
+                  <ModalsProvider>
+                    <NotificationsProvider />
+                    <div className="flex h-[100dvh] flex-col overflow-hidden">
+                      <Header />
+                      <AppContainer>{children}</AppContainer>
+                    </div>
+                  </ModalsProvider>
+                </QueryProvider>
+              </Providers>
+            </WebSocketProvider>
+          </MantineProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

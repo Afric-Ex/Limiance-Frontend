@@ -5,6 +5,7 @@ import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { modals } from "@mantine/modals";
 import { ResetModal } from "./reset-modal";
 import { useAuthStore } from "@/src/stores/auth-store";
+import { useTranslations } from "next-intl";
 
 const inputStyles = {
   input:
@@ -13,6 +14,7 @@ const inputStyles = {
 };
 
 export const ForgotPasswordForm = () => {
+  const t = useTranslations("Auth");
   const setEmail = useAuthStore((state) => state.setEmail);
   const email = useAuthStore((state) => state.email);
   return (
@@ -20,9 +22,9 @@ export const ForgotPasswordForm = () => {
       <div className="flex flex-col gap-8">
         <TextInput
           classNames={inputStyles}
-          label="Email / Number"
+          label={t("emailOrNumber")}
           type="email"
-          placeholder="Enter email or phone"
+          placeholder={t("emailOrPhonePlaceholder")}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -38,7 +40,7 @@ export const ForgotPasswordForm = () => {
           className="!h-[55px] !rounded-xl !bg-primary hover:!bg-primary/90 hover:!shadow-[0_0_16px_rgba(77,119,240,0.3)] !text-white !font-bold !transition-all active:!scale-[0.98]"
           fullWidth
         >
-          Continue
+          {t("continue")}
         </Button>
       </div>
     </div>

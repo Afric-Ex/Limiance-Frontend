@@ -39,18 +39,19 @@ import { DashboardSkeleton } from "@/src/components/skeletons/with-sidebar";
 import { KickstartJourney } from "@/src/components/dashboard/kickstart-journey";
 import { isKycApproved } from "@/src/lib/normalize-kyc-status";
 import { DepositAlertProvider } from "@/src/components/shared/deposit-alert-provider";
+import { useTranslations } from "next-intl";
 
 const depositChannels = [
   {
-    name: "Buy Crypto",
-    channel: "Local currency, payment...",
+    nameKey: "buyCryptoName",
+    channelKey: "localCurrencyPayment",
     color: "var(--primary)",
     icon: Basket,
     link: "/transactions/fiat-deposit",
   },
   {
-    name: "Deposit",
-    channel: "Deposit crypto or fiat",
+    nameKey: "deposit",
+    channelKey: "depositCryptoOrFiat",
     color: "var(--yellow-1)",
     icon: CoinsIcon,
     modal: true,
@@ -89,15 +90,16 @@ function ChangeCell({ value, mobile }: { value: number; mobile?: boolean }) {
 }
 
 const marketTabs = [
-  "Holding",
-  "Hot",
-  "New listing",
-  "Favorite",
-  "Top Gainers",
-  "24h Volume",
+  { value: "Holding", labelKey: "tabHolding" },
+  { value: "Hot", labelKey: "tabHot" },
+  { value: "New listing", labelKey: "tabNewListing" },
+  { value: "Favorite", labelKey: "tabFavorite" },
+  { value: "Top Gainers", labelKey: "tabTopGainers" },
+  { value: "24h Volume", labelKey: "tabVolume24h" },
 ];
 
 function DashboardInner() {
+  const t = useTranslations("Dashboard");
   const user = useUserStore((state) => state.user);
   const userHydrated = useUserStore((state) => state.hydrated);
 
@@ -283,7 +285,7 @@ function DashboardInner() {
 
   const userInfo = [
     {
-      info: "User ID",
+      info: t("userId"),
       value: user?.id,
       withCopy: true,
     },
@@ -324,7 +326,7 @@ function DashboardInner() {
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-white/80">
-                  {item.info === "User ID"
+                  {item.info === t("userId")
                     ? item.value?.split("-")?.at(-1)
                     : item.value}
                 </span>
@@ -354,7 +356,7 @@ function DashboardInner() {
             {depositChannels.map((item) =>
               item.modal ? (
                 <button
-                  key={item.name}
+                  key={item.nameKey}
                   onClick={handleOpenDepositModal}
                   className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-white/[0.04] px-3.5 py-3 text-left transition-colors hover:bg-white/[0.06] hover:border-white/15"
                 >
@@ -366,8 +368,8 @@ function DashboardInner() {
                       <item.icon className="w-4 h-4" />
                     </span>
                     <div className="flex flex-col gap-0.5">
-                      <h5 className="text-sm font-semibold text-white">{item.name}</h5>
-                      <span className="text-micro text-white/40">{item.channel}</span>
+                      <h5 className="text-sm font-semibold text-white">{t(item.nameKey as "deposit")}</h5>
+                      <span className="text-micro text-white/40">{t(item.channelKey as "depositCryptoOrFiat")}</span>
                     </div>
                   </div>
                   <span className="text-white/40 group-hover:text-white transition-all shrink-0">
@@ -376,7 +378,7 @@ function DashboardInner() {
                 </button>
               ) : (
                 <Link
-                  key={item.name}
+                  key={item.nameKey}
                   href={item.link!}
                   className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-white/[0.04] px-3.5 py-3 transition-colors hover:bg-white/[0.06] hover:border-white/15"
                 >
@@ -388,8 +390,8 @@ function DashboardInner() {
                       <item.icon className="w-4 h-4" />
                     </span>
                     <div className="flex flex-col gap-0.5">
-                      <h5 className="text-sm font-semibold text-white">{item.name}</h5>
-                      <span className="text-micro text-white/40">{item.channel}</span>
+                      <h5 className="text-sm font-semibold text-white">{t(item.nameKey as "deposit")}</h5>
+                      <span className="text-micro text-white/40">{t(item.channelKey as "depositCryptoOrFiat")}</span>
                     </div>
                   </div>
                   <span className="text-white/40 group-hover:text-white transition-all shrink-0">
@@ -405,9 +407,9 @@ function DashboardInner() {
       {/* Markets Section */}
       <div className="animate-fade-up stagger-3 min-w-0 rounded-card border border-white/[0.06] bg-[#181a20] p-6 max-[768px]:p-4 flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <span className="text-lg font-bold text-white/90">Markets</span>
+          <span className="text-lg font-bold text-white/90">{t("marketsTitle")}</span>
           <Link href="/markets" className="flex items-center gap-1 text-xs font-medium text-white/50 hover:text-white transition-colors">
-            View All <MdKeyboardArrowRight />
+            {t("viewAll")} <MdKeyboardArrowRight />
           </Link>
         </div>
         <Tabs
@@ -432,16 +434,16 @@ function DashboardInner() {
         >
           <TabsList>
             {marketTabs.map((item) => (
-              <TabsTab key={item} value={item}>
-                {item}
+              <TabsTab key={item.value} value={item.value}>
+                {t(item.labelKey as "tabHolding")}
               </TabsTab>
             ))}
           </TabsList>
           {marketTabs.map((item) => (
             <TabsPanel
               className="!w-full !min-w-0 !overflow-hidden pt-2"
-              key={item}
-              value={item}
+              key={item.value}
+              value={item.value}
             >
               <div className="w-full overflow-x-auto overscroll-x-contain">
               <Table
@@ -454,13 +456,13 @@ function DashboardInner() {
               >
                 <thead>
                   <TableTr>
-                    <TableTh className="!w-[31%] max-[768px]:!w-[25%] !text-white/40 uppercase tracking-wider text-2xs !pl-4 max-[768px]:!pl-2 !pr-1">Coin</TableTh>
-                    <TableTh className="!w-[22%] max-[768px]:!w-[27%] !text-white/40 uppercase tracking-wider text-2xs !px-1 max-[768px]:!text-right">Price</TableTh>
+                    <TableTh className="!w-[31%] max-[768px]:!w-[25%] !text-white/40 uppercase tracking-wider text-2xs !pl-4 max-[768px]:!pl-2 !pr-1">{t("coin")}</TableTh>
+                    <TableTh className="!w-[22%] max-[768px]:!w-[27%] !text-white/40 uppercase tracking-wider text-2xs !px-1 max-[768px]:!text-right">{t("price")}</TableTh>
                     <TableTh className="!w-[23%] max-[768px]:!w-[28%] !text-white/40 uppercase tracking-wider text-2xs !px-1 max-[768px]:!text-right">
-                      <span>{item === "Holding" ? "Balance" : "24h Volume"}</span>
+                      <span>{item.value === "Holding" ? t("balance") : t("volume24h")}</span>
                     </TableTh>
-                    <TableTh className="!w-[12%] !text-white/40 uppercase tracking-wider text-2xs max-[768px]:hidden">24h Change</TableTh>
-                    <TableTh className="!w-[12%] max-[768px]:!w-[20%] !text-white/40 uppercase tracking-wider text-2xs !text-right !pr-3 max-[768px]:!pr-2">Action</TableTh>
+                    <TableTh className="!w-[12%] !text-white/40 uppercase tracking-wider text-2xs max-[768px]:hidden">{t("change24h")}</TableTh>
+                    <TableTh className="!w-[12%] max-[768px]:!w-[20%] !text-white/40 uppercase tracking-wider text-2xs !text-right !pr-3 max-[768px]:!pr-2">{t("action")}</TableTh>
                   </TableTr>
                 </thead>
                 <tbody>
@@ -474,7 +476,7 @@ function DashboardInner() {
                     <TableTr>
                       <TableTd colSpan={5}>
                         <div className="py-8 flex flex-col items-center justify-center gap-2">
-                          <span className="text-sm font-medium text-white/30">No tokens match this filter</span>
+                          <span className="text-sm font-medium text-white/30">{t("noTokens")}</span>
                         </div>
                       </TableTd>
                     </TableTr>
@@ -512,11 +514,11 @@ function DashboardInner() {
                         </span>
                       </TableTd>
                       <TableTd className="!px-1 !py-3 max-[768px]:!text-right">
-                        <span className="block truncate whitespace-nowrap text-caption max-[768px]:text-xs font-medium text-white/90 tabular-nums" title={item === "Holding" && token.balance != null
+                        <span className="block truncate whitespace-nowrap text-caption max-[768px]:text-xs font-medium text-white/90 tabular-nums" title={item.value === "Holding" && token.balance != null
                           ? `${Number(token.balance).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${token.symbol}`
                           : `$${formatVolume(token.volume24h * token.price)}`
                         }>
-                          {item === "Holding" && token.balance != null
+                          {item.value === "Holding" && token.balance != null
                             ? `${Number(token.balance).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${token.symbol}`
                             : `$${formatVolume(token.volume24h * token.price)}`}
                         </span>

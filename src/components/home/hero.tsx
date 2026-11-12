@@ -8,10 +8,12 @@ import { QrCode } from "@/src/components/shared/qr-code";
 import { PlayStore } from "@/src/components/icons/play-store";
 import { TerminalPreview } from "./terminal-preview";
 import { mono, sans } from "./fonts";
+import { getTranslations } from "next-intl/server";
 
 const MARKETS = ["Spot", "Futures", "Margin", "P2P"];
 
-export function Hero() {
+export async function Hero() {
+  const t = await getTranslations("Landing");
   return (
     <section id="top" className="relative overflow-hidden">
       <div aria-hidden className="absolute inset-0 -z-0 bg-[radial-gradient(60%_50%_at_15%_0%,rgba(77,119,240,0.10),transparent)]" />
@@ -23,10 +25,10 @@ export function Hero() {
           <Image src={Wordmark} alt="Limiance Exchange" priority width={240} height={60} className="h-auto w-[200px] sm:w-[240px]" />
           <div className="flex flex-col gap-5">
             <h1 className={`${sans.className} text-4xl font-semibold leading-[1.04] tracking-[-0.03em] text-white sm:text-display`}>
-              Trade crypto with precision.
+              {t("heroHeadline")}
             </h1>
             <p className="max-w-[46ch] text-lg leading-relaxed text-[#A7AEBD]">
-              Spot, futures, margin and P2P markets with live charts and order books. Deposit and withdraw naira by bank transfer.
+              {t("heroDescription")}
             </p>
           </div>
 
@@ -35,7 +37,7 @@ export function Hero() {
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
               <GoogleSign />
               <div className="flex items-center gap-2">
-                <span className="text-sm text-[#8A91A0]">Get the app</span>
+                <span className="text-sm text-[#8A91A0]">{t("getTheApp")}</span>
                 <HeroIconContainer><QrCode /></HeroIconContainer>
                 <HeroIconContainer><PlayStore /></HeroIconContainer>
               </div>

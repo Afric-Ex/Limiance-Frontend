@@ -23,24 +23,38 @@ import { NotificationsDropdown, NotificationDetailModal, useNotificationCount } 
 import { ProfileDropdown } from "./profile-dropdown";
 import { MobileSideDrawer } from "./mobile-side-drawer";
 import { useDisclosure } from "@mantine/hooks";
+import { useTranslations } from "next-intl";
+import { stripLocalePrefix } from "@/src/lib/locale-path";
 
-const navList = [
+type HeaderNavItem = {
+  key: string;
+  labelKey: string;
+  link?: string;
+  children?: React.ReactNode;
+  hover?: boolean;
+};
+
+const navList: HeaderNavItem[] = [
   {
-    name: "Buy crypto",
+    key: "buyCrypto",
+    labelKey: "buyCrypto",
     children: <BuyCryptoDropdown />,
     hover: true,
   },
   {
-    name: "Markets",
+    key: "markets",
+    labelKey: "markets",
     link: "/markets",
   },
   {
-    name: "Trades",
+    key: "trades",
+    labelKey: "trades",
     children: <MarketDropdown />,
     hover: true,
   },
   {
-    name: "Earn",
+    key: "earn",
+    labelKey: "earn",
     children: <EarnDropdown />,
     hover: true,
   },
@@ -80,7 +94,10 @@ const noShadowHeaderInnerPages = [
 const noMarginBottomInnerPages = ["trades"];
 
 export default function Header() {
-  const pathname = usePathname();
+  const t = useTranslations("Header");
+  const navT = useTranslations("Navigation");
+  const rawPathname = usePathname();
+  const pathname = stripLocalePrefix(rawPathname || "/");
   const user = useUserStore((state) => state.user);
   const userLoading = useUserStore((state) => state.loading);
   const userHydrated = useUserStore((state) => state.hydrated);
@@ -123,7 +140,7 @@ export default function Header() {
         {authHydrated && user ? (
           <ul className="flex max-[1150px]:hidden items-center gap-4">
             {navList.map((item) => (
-              <li key={item.name}>
+              <li key={item.key}>
                 {item.children ? (
                   <PopoverWrapper
                     openOnHover={(item as any).hover}
@@ -132,7 +149,7 @@ export default function Header() {
                         onClick={(item as any).hover ? undefined : toggle}
                         className="flex cursor-pointer items-center gap-6px"
                       >
-                        <span>{item.name}</span>
+                        <span>{navT(item.labelKey)}</span>
                         <IoIosArrowDown size={14} color="white" />
                       </span>
                     )}
@@ -141,10 +158,10 @@ export default function Header() {
                   </PopoverWrapper>
                 ) : (item as any).link ? (
                   <Link href={(item as any).link} className="cursor-pointer">
-                    <span>{item.name}</span>
+                    <span>{navT(item.labelKey)}</span>
                   </Link>
                 ) : (
-                  <span>{item.name}</span>
+                  <span>{navT(item.labelKey)}</span>
                 )}
               </li>
             ))}
@@ -167,7 +184,7 @@ export default function Header() {
                 </Link>
               </div>
             ) : !userHydrated || userLoading ? (
-              <div className="flex items-center gap-2" aria-label="Loading account">
+              <div className="flex items-center gap-2" aria-label={t("loadingAccount")}>
                 <Skeleton height={28} width={28} circle />
                 <Skeleton height={10} width={70} />
               </div>
@@ -185,7 +202,7 @@ export default function Header() {
                 <CiSearch className="text-white/60" size={16} />
                 <input
                   type="text"
-                  placeholder="Search"
+                  placeholder={t("searchPlaceholder")}
                   className="bg-transparent text-sm text-white/80 placeholder:text-white/40 outline-none w-[200px]"
                 />
               </div>
@@ -197,7 +214,7 @@ export default function Header() {
               >
                 <span className="flex items-center gap-2">
                   <FiDownload size={16} />
-                  <span className="font-medium">Deposit</span>
+                  <span className="font-medium">{t("deposit")}</span>
                 </span>
               </button>
               <div className="flex items-center gap-4">
@@ -240,7 +257,7 @@ export default function Header() {
             <button
               onClick={handleOpenDepositModal}
               className="flex h-8 items-center gap-1 rounded-md bg-primary px-2.5 text-xs font-semibold text-white"
-              aria-label="Deposit"
+              aria-label={t("deposit")}
             >
               <FiDownload size={14} />
               Deposit

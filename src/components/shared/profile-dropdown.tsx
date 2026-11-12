@@ -10,41 +10,44 @@ import { useUserStore } from "@/src/stores/user-store";
 import { truncateEmail } from "@/src/lib/truncate-email";
 import clsx from "clsx";
 import { UserAvatar } from "./user-avatar";
+import { useTranslations } from "next-intl";
 
 const list = [
   {
-    name: "Dashboard",
+    nameKey: "dashboard",
     link: "/dashboard",
     icon: MdSpaceDashboard,
   },
   {
-    name: "Assets",
+    nameKey: "assets",
     link: "/assets/overview",
     icon: IoWalletOutline,
   },
   {
-    name: "Orders",
+    nameKey: "orders",
     link: "/orders/spot",
     icon: IoDocumentTextOutline,
   },
   {
-    name: "Rewards Hub",
+    nameKey: "rewardsHub",
     link: "/assets/earn",
     icon: IoGiftOutline,
   },
   {
-    name: "Account",
+    nameKey: "account",
     link: "/account/profile",
     icon: LuUserRound,
   },
   {
-    name: "Settings",
+    nameKey: "settings",
     link: "/settings",
     icon: IoSettingsOutline,
   },
 ];
 
 export const ProfileDropdown = ({ isMobile }: { isMobile?: boolean }) => {
+  const t = useTranslations("Navigation");
+  const td = useTranslations("Dropdowns");
   const user = useUserStore((state) => state.user);
 
   return (
@@ -67,7 +70,7 @@ export const ProfileDropdown = ({ isMobile }: { isMobile?: boolean }) => {
             <div className="flex gap-2">
               {user?.isVerified && (
                 <span className="py-0.5 px-2 bg-[#0ECB81]/10 text-xs text-[#0ECB81] rounded-full">
-                  Verified
+                  {td("verified")}
                 </span>
               )}
               <span className="py-0.5 px-2 bg-white/[0.04] text-xs text-white/70 rounded-full">
@@ -76,19 +79,19 @@ export const ProfileDropdown = ({ isMobile }: { isMobile?: boolean }) => {
             </div>
           </div>
           <Button className="!h-9 !rounded-lg !bg-white/[0.02] !border !border-white/[0.06] !text-white/80">
-            <span className="text-sm">Switch account</span>
+            <span className="text-sm">{td("switchAccount")}</span>
           </Button>
         </div>
         {!isMobile && (
           <div className="flex flex-col mt-2">
             {list.map((item) => (
               <Link
-                key={item.name}
+                key={item.nameKey}
                 href={item.link}
                 className="flex text-white/70 hover:text-white hover:bg-white/[0.02] px-4 py-2.5 gap-3 items-center transition-colors"
               >
                 <item.icon size={18} />
-                <span className="text-sm">{item.name}</span>
+                <span className="text-sm">{t(item.nameKey as "dashboard")}</span>
               </Link>
             ))}
           </div>
@@ -100,7 +103,7 @@ export const ProfileDropdown = ({ isMobile }: { isMobile?: boolean }) => {
           className="py-3 px-4 flex cursor-pointer hover:bg-white/[0.02] items-center gap-3 border-t border-white/[0.06] text-white/70 hover:text-white transition-colors"
         >
           <RiLogoutBoxRLine size={18} />
-          <span className="text-sm">Log out</span>
+          <span className="text-sm">{t("logout")}</span>
         </div>
       )}
     </div>
