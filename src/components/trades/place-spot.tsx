@@ -1,6 +1,9 @@
+"use client";
+
 import { Slider, Loader, Popover } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 import { MarginBorrowRepayModal } from "./margin-borrow-repay-modal";
 import { MarginTransferModal } from "./margin-transfer-modal";
 import { openTradeOrderConfirmation, type TradeConfirmationRow } from "./trade-order-confirmation-modal";
@@ -106,6 +109,7 @@ function FieldRow({
   onMax?: () => void;
   floating?: boolean;
 }) {
+  const t = useTranslations("Trading");
   const focusBorder = color === "buy" ? "focus-within:border-success-6" : color === "sell" ? "focus-within:border-error-1" : "";
   if (floating) {
     // Bybit-style field: small label on top, value below, unit on the right.
@@ -147,13 +151,13 @@ function FieldRow({
         className={clsx("flex-1 min-w-0 outline-none bg-transparent h-full p-0 text-sm font-semibold font-mono tabular-nums text-white border-none text-right focus:ring-0 placeholder-white/20")}
         placeholder="0.00"
       />
-      {showMax && (
+        {showMax && (
         <button
           type="button"
           onClick={onMax}
           className="text-2xs font-bold text-primary hover:text-primary/80 transition-colors ml-1 shrink-0"
         >
-          Max
+          {t("max")}
         </button>
       )}
       <span className="text-xs font-semibold text-white/40 ml-1.5 shrink-0">{unit}</span>
@@ -162,6 +166,7 @@ function FieldRow({
 }
 
 export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLeverageChange, marketPrice, clickedPrice, compactSide, sideToggle = false, onLeverageChangeEnd, onTpslChange, onFill }: Props) => {
+  const t = useTranslations("Trading");
   const [activeTab, setActiveTab] = useState("market");
   const [advancedTab, setAdvancedTab] = useState<AdvancedTab | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -203,23 +208,23 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
   const effectiveTab = advancedTab ?? activeTab;
 
   const orderTypeOptions: AdvancedOption[] = [
-    { value: "limit" as AdvancedTab, label: "Limit" },
-    { value: "market" as AdvancedTab, label: "Market" },
-    { value: "tpsl", label: "TP/SL" },
-    { value: "conditional", label: "Conditional", disabled: true },
-    { value: "stop" as AdvancedTab, label: "Stop Limit" },
-    ...(mode !== "spot" ? [{ value: "oco" as AdvancedTab, label: "OCO" }] : []),
+    { value: "limit" as AdvancedTab, label: t("limit") },
+    { value: "market" as AdvancedTab, label: t("market") },
+    { value: "tpsl", label: t("tpSl") },
+    { value: "conditional", label: t("conditional"), disabled: true },
+    { value: "stop" as AdvancedTab, label: t("stopLimit") },
+    ...(mode !== "spot" ? [{ value: "oco" as AdvancedTab, label: t("oco") }] : []),
   ];
 
   const selectedOrderType = effectiveTab;
   const selectedOrderTypeLabel =
     selectedOrderType === "stop"
-      ? "Stop Limit"
+      ? t("stopLimit")
       : selectedOrderType === "tpsl"
-        ? "TP/SL"
+        ? t("tpSl")
         : selectedOrderType === "oco"
-          ? "OCO"
-          : selectedOrderType.charAt(0).toUpperCase() + selectedOrderType.slice(1);
+          ? t("oco")
+          : t(selectedOrderType as "limit" | "market" | "conditional" | "trailing");
 
   const queryClient = useQueryClient();
   const { isEnabled: isConfirmationEnabled } = useTradeConfirmations();
@@ -369,19 +374,19 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
   const validateOrder = (payload: ReturnType<typeof buildPayload>) => {
     if (!Number.isFinite(Number(payload.quantity)) || Number(payload.quantity) <= 0) {
-      errorMessageHandler(new Error("Quantity must be greater than zero"));
+      errorMessageHandler(new Error(t("quantityMustBeGreaterThanZero")));
       return false;
     }
     if (
       activeTab !== "market" &&
       (!Number.isFinite(Number(payload.price)) || Number(payload.price) <= 0)
     ) {
-      errorMessageHandler(new Error("Price must be greater than zero"));
+      errorMessageHandler(new Error(t("priceMustBeGreaterThanZero")));
       return false;
     }
     if (activeTab === "stop") {
       if (!Number.isFinite(Number(payload.stopPrice)) || Number(payload.stopPrice) <= 0) {
-        errorMessageHandler(new Error("Stop trigger price must be greater than zero"));
+        errorMessageHandler(new Error(t("stopTriggerPriceMustBeGreaterThanZero")));
         return false;
       }
     }
@@ -487,7 +492,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           stopLoss: parseNum(buySl) || undefined,
         });
       }
-      successNotification("Buy order placed");
+      successNotification(t("buyOrderPlaced"));
       refreshTradingBalances();
       setBuyPrice(""); setBuyAmount(""); setBuyTp(""); setBuySl(""); setBuyPct(0);
       setBuyOcoPrice(""); setBuyOcoStop(""); setBuyOcoLimit(""); setBuyStopPrice("");
@@ -522,7 +527,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           stopLoss: parseNum(sellSl) || undefined,
         });
       }
-      successNotification("Sell order placed");
+      successNotification(t("sellOrderPlaced"));
       refreshTradingBalances();
       setSellPrice(""); setSellAmount(""); setSellTp(""); setSellSl(""); setSellPct(0);
       setSellOcoPrice(""); setSellOcoStop(""); setSellOcoLimit(""); setSellStopPrice("");
@@ -547,48 +552,48 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         : "—";
 
     const rows: TradeConfirmationRow[] = [
-      { label: "Pair", value: `${base}/${quote}` },
-      { label: "Side", value: isBuy ? "Buy" : "Sell", tone: side },
-      { label: "Order type", value: selectedOrderTypeLabel },
+      { label: t("pair"), value: `${base}/${quote}` },
+      { label: t("side"), value: isBuy ? t("buy") : t("sell"), tone: side },
+      { label: t("orderType"), value: selectedOrderTypeLabel },
     ];
 
     if (activeTab === "oco") {
       rows.push(
-        { label: "Entry price", value: fmtPrice(parseNum(isBuy ? buyOcoPrice : sellOcoPrice)) },
-        { label: "Stop trigger", value: fmtPrice(parseNum(isBuy ? buyOcoStop : sellOcoStop)) },
-        { label: "Stop limit", value: fmtPrice(parseNum(isBuy ? buyOcoLimit : sellOcoLimit)) }
+        { label: t("entryPrice"), value: fmtPrice(parseNum(isBuy ? buyOcoPrice : sellOcoPrice)) },
+        { label: t("stopTrigger"), value: fmtPrice(parseNum(isBuy ? buyOcoStop : sellOcoStop)) },
+        { label: t("stopLimit"), value: fmtPrice(parseNum(isBuy ? buyOcoLimit : sellOcoLimit)) }
       );
     } else if (activeTab === "stop") {
       rows.push(
-        { label: "Trigger price", value: fmtPrice(parseNum(payload.stopPrice)) },
-        { label: "Limit price", value: fmtPrice(parseNum(payload.price)) }
+        { label: t("triggerPrice"), value: fmtPrice(parseNum(payload.stopPrice)) },
+        { label: t("limitPrice"), value: fmtPrice(parseNum(payload.price)) }
       );
     } else if (activeTab === "market") {
-      rows.push({ label: "Price", value: fmtPrice(parseNum(marketPrice)) });
+      rows.push({ label: t("price"), value: fmtPrice(parseNum(marketPrice)) });
     } else {
-      rows.push({ label: "Limit price", value: fmtPrice(parseNum(payload.price)) });
+      rows.push({ label: t("limitPrice"), value: fmtPrice(parseNum(payload.price)) });
     }
 
     rows.push(
-      { label: "Quantity", value: `${formatAmount(quantity)} ${base}` },
-      { label: "Order value", value: fmtPrice(total) }
+      { label: t("quantity"), value: `${formatAmount(quantity)} ${base}` },
+      { label: t("orderValue"), value: fmtPrice(total) }
     );
 
     if (mode !== "spot") {
-      rows.push({ label: "Leverage", value: `${leverage}x` });
-      rows.push({ label: "Margin mode", value: mode === "cross" ? "Cross" : "Isolated" });
+      rows.push({ label: t("leverage"), value: `${leverage}x` });
+      rows.push({ label: t("marginMode"), value: mode === "cross" ? t("cross") : t("isolated") });
     }
 
     if (tpslEnabled) {
       const takeProfit = parseNum(isBuy ? buyTp : sellTp);
       const stopLoss = parseNum(isBuy ? buySl : sellSl);
-      if (takeProfit > 0) rows.push({ label: "Take profit", value: fmtPrice(takeProfit) });
-      if (stopLoss > 0) rows.push({ label: "Stop loss", value: fmtPrice(stopLoss) });
+      if (takeProfit > 0) rows.push({ label: t("takeProfit"), value: fmtPrice(takeProfit) });
+      if (stopLoss > 0) rows.push({ label: t("stopLoss"), value: fmtPrice(stopLoss) });
     }
 
     if (activeTab === "limit") {
-      rows.push({ label: "Time in force", value: timeInForce });
-      if (postOnly) rows.push({ label: "Post only", value: "Yes" });
+      rows.push({ label: t("timeInForce"), value: timeInForce });
+      if (postOnly) rows.push({ label: t("postOnly"), value: t("yes") });
     }
 
     return rows;
@@ -605,14 +610,14 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     }
 
     openTradeOrderConfirmation({
-      title: `Confirm ${selectedOrderTypeLabel.toLowerCase()} order`,
-      description: "Review the details below before submitting your order.",
+      title: t("confirmOrderOfType", { type: selectedOrderTypeLabel }),
+      description: t("reviewOrderDetailsBeforeSubmitting"),
       rows: confirmationRows(side),
       warning:
         mode !== "spot"
-          ? "Margin orders use borrowed funds. Your position can be liquidated if the market moves against you."
+          ? t("marginOrdersUseBorrowedFunds")
           : undefined,
-      confirmLabel: side === "buy" ? `Buy ${base}` : `Sell ${base}`,
+      confirmLabel: side === "buy" ? t("buyAsset", { base }) : t("sellAsset", { base }),
       side,
       onConfirm: submit,
     });
@@ -622,7 +627,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     modals.open({
       ...DEFAULT_MODAL_SETTINGS,
       size: "lg",
-      title: <span className="text-white font-bold text-base">Borrow / Repay Margin</span>,
+      title: <span className="text-white font-bold text-base">{t("borrowRepayMargin")}</span>,
       styles: {
         content: {
           backgroundColor: "#13151c",
@@ -645,7 +650,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     modals.open({
       ...DEFAULT_MODAL_SETTINGS,
       size: "lg",
-      title: <span className="text-white font-bold text-base">Transfer Assets</span>,
+      title: <span className="text-white font-bold text-base">{t("transferAssets")}</span>,
       styles: {
         content: {
           backgroundColor: "#13151c",
@@ -684,14 +689,14 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     return (
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-white/50">Available Balance</span>
+          <span className="text-xs text-white/50">{t("availableBalance")}</span>
           <span className="flex items-center gap-1.5 text-xs font-semibold text-white/90">
             {isBuy ? availQuote : availBase} {isBuy ? quote : base}
             <button
               type="button"
               onClick={refreshBalances}
-              aria-label="Refresh available balance"
-              title="Refresh balance"
+              aria-label={t("refreshAvailableBalance")}
+              title={t("refreshBalance")}
               className="text-white/40 transition-colors hover:text-white"
             >
               <MdRefresh size={14} className={isRefreshing ? "animate-spin" : ""} />
@@ -701,19 +706,19 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
         {effectiveTab === "oco" ? (
           <>
-            <FieldRow floating label="Price" value={isBuy ? buyOcoPrice : sellOcoPrice} onChange={(v) => {
+            <FieldRow floating label={t("price")} value={isBuy ? buyOcoPrice : sellOcoPrice} onChange={(v) => {
               if (isBuy) { setBuyOcoPrice(v); setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount))); }
               else { setSellOcoPrice(v); setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount))); }
             }} unit={quote} color={tone} />
-            <FieldRow floating label="Stop" value={isBuy ? buyOcoStop : sellOcoStop} onChange={isBuy ? setBuyOcoStop : setSellOcoStop} unit={quote} color={tone} />
-            <FieldRow floating label="Limit" value={isBuy ? buyOcoLimit : sellOcoLimit} onChange={isBuy ? setBuyOcoLimit : setSellOcoLimit} unit={quote} color={tone} />
+            <FieldRow floating label={t("stop")} value={isBuy ? buyOcoStop : sellOcoStop} onChange={isBuy ? setBuyOcoStop : setSellOcoStop} unit={quote} color={tone} />
+            <FieldRow floating label={t("limit")} value={isBuy ? buyOcoLimit : sellOcoLimit} onChange={isBuy ? setBuyOcoLimit : setSellOcoLimit} unit={quote} color={tone} />
           </>
         ) : effectiveTab === "stop" ? (
           <>
-            <FieldRow floating label="Stop Price" value={isBuy ? buyStopPrice : sellStopPrice} onChange={isBuy ? setBuyStopPrice : setSellStopPrice} unit={quote} color={tone} />
+            <FieldRow floating label={t("stopPrice")} value={isBuy ? buyStopPrice : sellStopPrice} onChange={isBuy ? setBuyStopPrice : setSellStopPrice} unit={quote} color={tone} />
             <FieldRow
               floating
-              label="Limit Price"
+              label={t("limitPrice")}
               value={price}
               onChange={(v) => {
                 if (isBuy) { setBuyPriceEdited(true); setBuyPrice(v); setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount))); }
@@ -726,7 +731,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         ) : effectiveTab !== "market" ? (
           <FieldRow
             floating
-            label="Price"
+            label={t("price")}
             value={price}
             onChange={(v) => {
               if (isBuy) { setBuyPriceEdited(true); setBuyPrice(v); setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount))); }
@@ -737,7 +742,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           />
         ) : null}
 
-        <FieldRow floating label="Quantity" value={amount} onChange={(v) => {
+        <FieldRow floating label={t("quantity")} value={amount} onChange={(v) => {
           if (isBuy) {
             setBuyAmount(v);
             setBuyPct(calcPct("buy", effectivePriceFor("buy"), parseNum(v)));
@@ -775,10 +780,10 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           />
         </div>
 
-        <FieldRow floating label="Order Value" value={total || ""} unit={quote} readOnly />
+        <FieldRow floating label={t("orderValue")} value={total || ""} unit={quote} readOnly />
 
         <div className="flex items-center justify-between text-xs">
-          <span className="text-white/50">{isBuy ? "Max. buying amount" : "Max. selling amount"}</span>
+          <span className="text-white/50">{isBuy ? t("maxBuyingAmount") : t("maxSellingAmount")}</span>
           <span className="font-semibold text-white/90">{formatAmount(maxAmount)} {base}</span>
         </div>
 
@@ -793,8 +798,8 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         </label>
         {tpslEnabled && (
           <>
-            <FieldRow floating label="Take Profit" value={isBuy ? buyTp : sellTp} onChange={isBuy ? setBuyTp : setSellTp} unit={quote} color={tone} />
-            <FieldRow floating label="Stop Loss" value={isBuy ? buySl : sellSl} onChange={isBuy ? setBuySl : setSellSl} unit={quote} color={tone} />
+            <FieldRow floating label={t("takeProfit")} value={isBuy ? buyTp : sellTp} onChange={isBuy ? setBuyTp : setSellTp} unit={quote} color={tone} />
+            <FieldRow floating label={t("stopLoss")} value={isBuy ? buySl : sellSl} onChange={isBuy ? setBuySl : setSellSl} unit={quote} color={tone} />
           </>
         )}
 
@@ -807,7 +812,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 onChange={(e) => setPostOnly(e.target.checked)}
                 className="w-3.5 h-3.5 rounded bg-white/5 border border-white/20 accent-primary cursor-pointer"
               />
-              Post-Only
+              {t("postOnlyLabel")}
             </label>
             <div className="flex items-center gap-1">
               <span className="text-2xs text-white/40">TIF:</span>
@@ -845,7 +850,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           )}
         >
           {loading && <Loader size={13} color="white" />}
-          {isBuy ? "Buy" : "Sell"} {base}
+          {isBuy ? t("buy") : t("sell")} {base}
         </button>
       </div>
     );
@@ -869,9 +874,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     const sliderStyle = STACKED_SLIDER[tone];
 
     const showTpslToast = () => {
-      toast(
-        "TP/SL orders coming soon. Use the TP/SL checkbox on a Limit or Market order for now."
-      );
+      toast(t("tpslOrdersComingSoon"));
     };
 
     return (
@@ -891,14 +894,14 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                     : "text-white/50 hover:text-white/80"
                 )}
               >
-                {side}
+                {side === "buy" ? t("buy") : t("sell")}
               </button>
             ))}
           </div>
         )}
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-white/50">Trigger Type</span>
+          <span className="text-xs text-white/50">{t("triggerType")}</span>
           <div className="flex items-center gap-1 rounded-lg bg-white/[0.04] p-0.5">
             {(["last", "mark", "index"] as const).map((type) => (
               <button
@@ -906,13 +909,13 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 type="button"
                 onClick={() => setTpslTriggerType(type)}
                 className={clsx(
-                  "rounded-md px-2 py-1 text-2xs font-bold capitalize transition-colors",
+                  "rounded-md px-2 py-1 text-2xs font-bold transition-colors",
                   tpslTriggerType === type
                     ? "bg-white/[0.08] text-white"
                     : "text-white/40 hover:text-white/70"
                 )}
               >
-                {type}
+                {type === "last" ? t("lastPrice") : type === "mark" ? t("markPrice") : t("indexPrice")}
               </button>
             ))}
           </div>
@@ -920,7 +923,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
         <FieldRow
           floating
-          label="Trigger Price"
+          label={t("triggerPrice")}
           value={trigger}
           onChange={setTrigger}
           unit={quote}
@@ -928,7 +931,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         />
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-white/50">Order Type</span>
+          <span className="text-xs text-white/50">{t("orderType")}</span>
           <div className="flex items-center gap-1 rounded-lg bg-white/[0.04] p-0.5">
             {(["limit", "market"] as const).map((type) => (
               <button
@@ -936,13 +939,13 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 type="button"
                 onClick={() => setTpslExecType(type)}
                 className={clsx(
-                  "rounded-md px-2 py-1 text-2xs font-bold capitalize transition-colors",
+                  "rounded-md px-2 py-1 text-2xs font-bold transition-colors",
                   tpslExecType === type
                     ? "bg-white/[0.08] text-white"
                     : "text-white/40 hover:text-white/70"
                 )}
               >
-                {type}
+                {type === "limit" ? t("limit") : t("market")}
               </button>
             ))}
           </div>
@@ -951,7 +954,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         {tpslExecType === "limit" && (
           <FieldRow
             floating
-            label="Order Price"
+            label={t("orderPrice")}
             value={price}
             onChange={(v) => {
               setPrice(v);
@@ -969,7 +972,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
         <FieldRow
           floating
-          label="Quantity"
+          label={t("quantity")}
           value={amount}
           onChange={(v) => {
             setAmount(v);
@@ -1013,7 +1016,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
         <FieldRow
           floating
-          label="Order Value"
+          label={t("orderValue")}
           value={total ? fmtQty(total) : ""}
           unit={quote}
           readOnly
@@ -1027,7 +1030,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             isBuy ? "bg-buy hover:bg-buy/90" : "bg-sell hover:bg-sell/90"
           )}
         >
-          {isBuy ? "Buy" : "Sell"} {base}
+          {isBuy ? t("buy") : t("sell")} {base}
         </button>
       </div>
     );
@@ -1051,16 +1054,16 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                   : "text-white/50 hover:text-white/80"
               )}
             >
-              {side}
-            </button>
-          ))}
-        </div>
-      )}
+              {side === "buy" ? t("buy") : t("sell")}
+              </button>
+            ))}
+          </div>
+        )}
 
       {/* Unified order type selector: shared by desktop and mobile */}
       <div className="flex items-center justify-between gap-2 pb-1">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="shrink-0 text-xs font-medium text-white/50"><span className="sm:hidden">Type</span><span className="hidden sm:inline">Order type</span></span>
+          <span className="shrink-0 text-xs font-medium text-white/50"><span className="sm:hidden">{t("type")}</span><span className="hidden sm:inline">{t("orderType")}</span></span>
           <Popover
             opened={moreOpen}
             onChange={setMoreOpen}
@@ -1072,7 +1075,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               <button
                 type="button"
                 onClick={() => setMoreOpen((open) => !open)}
-                aria-label={`Order type: ${selectedOrderTypeLabel}`}
+                aria-label={t("orderTypeOf", { type: selectedOrderTypeLabel })}
                 aria-expanded={moreOpen}
                 className="flex h-9 min-w-[110px] max-w-[150px] sm:max-w-[190px] items-center justify-between gap-2 rounded-lg border border-white/[0.10] bg-white/[0.05] px-3 text-left text-xs font-semibold text-white transition-colors hover:bg-white/[0.08]"
               >
@@ -1114,7 +1117,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                     <span>{option.label}</span>
                     {option.disabled && (
                       <span className="shrink-0 rounded bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/40">
-                        Soon
+                        {t("soon")}
                       </span>
                     )}
                   </button>
@@ -1129,14 +1132,14 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               onClick={openBorrowModal}
               className="pr-3 text-xs text-[#f3ba2f] font-bold border-r border-r-white/[0.06] hover:text-[#f3ba2f]/80 cursor-pointer py-1 transition-colors"
             >
-              Borrow
+              {t("borrow")}
             </span>
           )}
-          <span 
+          <span
             onClick={openTransferModal}
             className="pr-3 text-xs text-primary border-r border-r-white/[0.06] hover:bg-white/5 cursor-pointer py-1 transition-colors"
           >
-            Transfer
+            {t("transfer")}
           </span>
           <Image src={icons.infoCircle} alt="" className="opacity-40 w-4 h-4" />
         </div>
@@ -1146,7 +1149,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
       {mode !== "spot" && (
         <div className="flex flex-col gap-2 pb-1 border-b border-white/[0.04]">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-white/40">Leverage</span>
+            <span className="text-xs text-white/40">{t("leverage")}</span>
             <span className="text-xs font-bold text-primary">{leverage}x</span>
           </div>
           <Slider
@@ -1194,14 +1197,14 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         {(!compactSide || compactSide === "buy") && (
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-white/40 text-xs">Avail</span>
+            <span className="text-white/40 text-xs">{t("avail")}</span>
             <span className="flex items-center gap-1.5 text-micro text-white/90 font-semibold">
               {availQuote} {quote}
               <button
                 type="button"
                 onClick={refreshBalances}
-                aria-label="Refresh available quote balance"
-                title="Refresh balance"
+                aria-label={t("refreshAvailableQuoteBalance")}
+                title={t("refreshBalance")}
                 className="text-white/40 hover:text-white transition-colors"
               >
                 <MdRefresh size={14} className={isRefreshing ? "animate-spin" : ""} />
@@ -1211,29 +1214,29 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           {effectiveTab === "oco" ? (
             <>
-              <FieldRow label="Price" value={buyOcoPrice} onChange={(v) => {
+              <FieldRow label={t("price")} value={buyOcoPrice} onChange={(v) => {
                 setBuyOcoPrice(v);
                 setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount)));
               }} unit={quote} color="buy" />
-              <FieldRow label="Stop" value={buyOcoStop} onChange={setBuyOcoStop} unit={quote} color="buy" />
-              <FieldRow label="Limit" value={buyOcoLimit} onChange={setBuyOcoLimit} unit={quote} color="buy" />
+              <FieldRow label={t("stop")} value={buyOcoStop} onChange={setBuyOcoStop} unit={quote} color="buy" />
+              <FieldRow label={t("limit")} value={buyOcoLimit} onChange={setBuyOcoLimit} unit={quote} color="buy" />
             </>
           ) : effectiveTab === "stop" ? (
             <>
-              <FieldRow label="Stop" value={buyStopPrice} onChange={setBuyStopPrice} unit={quote} color="buy" />
-              <FieldRow label="Limit" value={buyPrice} onChange={(v) => {
+              <FieldRow label={t("stop")} value={buyStopPrice} onChange={setBuyStopPrice} unit={quote} color="buy" />
+              <FieldRow label={t("limit")} value={buyPrice} onChange={(v) => {
                 setBuyPriceEdited(true); setBuyPrice(v);
                 setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount)));
               }} unit={quote} color="buy" />
             </>
           ) : effectiveTab !== "market" ? (
-            <FieldRow label="Price" value={buyPrice} onChange={(v) => {
+            <FieldRow label={t("price")} value={buyPrice} onChange={(v) => {
               setBuyPriceEdited(true); setBuyPrice(v);
               setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount)));
             }} unit={quote} color="buy" />
           ) : null}
 
-          <FieldRow label="Qty" value={buyAmount} onChange={(v) => {
+          <FieldRow label={t("qty")} value={buyAmount} onChange={(v) => {
             setBuyAmount(v);
             setBuyPct(calcPct("buy", effectivePriceFor("buy"), parseNum(v)));
           }} unit={base} color="buy" showMax onMax={handleBuyMax} />
@@ -1258,13 +1261,13 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             />
           </div>
 
-          <FieldRow label="Total" value={buyTotal || ""} unit={quote} readOnly />
+          <FieldRow label={t("total")} value={buyTotal || ""} unit={quote} readOnly />
 
           {/* TP/SL section */}
           {tpslEnabled && (
             <>
-              <FieldRow label="TP" value={buyTp} onChange={setBuyTp} unit={quote} color="buy" />
-              <FieldRow label="SL" value={buySl} onChange={setBuySl} unit={quote} color="buy" />
+              <FieldRow label={t("tp")} value={buyTp} onChange={setBuyTp} unit={quote} color="buy" />
+              <FieldRow label={t("sl")} value={buySl} onChange={setBuySl} unit={quote} color="buy" />
             </>
           )}
 
@@ -1280,7 +1283,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             className="mt-0.5 bg-buy hover:bg-buy/90 disabled:opacity-50 transition-all text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(37,171,66,0.3)] active:scale-95"
           >
             {buyLoading && <Loader size={13} color="white" />}
-            Buy {base}
+            {t("buy")} {base}
           </button>
         </div>
         )}
@@ -1289,14 +1292,14 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         {(!compactSide || compactSide === "sell") && (
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-white/40 text-xs">Avail</span>
+            <span className="text-white/40 text-xs">{t("avail")}</span>
             <span className="flex items-center gap-1.5 text-micro text-white/90 font-semibold">
               {availBase} {base}
               <button
                 type="button"
                 onClick={refreshBalances}
-                aria-label="Refresh available base balance"
-                title="Refresh balance"
+                aria-label={t("refreshAvailableBaseBalance")}
+                title={t("refreshBalance")}
                 className="text-white/40 hover:text-white transition-colors"
               >
                 <MdRefresh size={14} className={isRefreshing ? "animate-spin" : ""} />
@@ -1306,29 +1309,29 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           {effectiveTab === "oco" ? (
             <>
-              <FieldRow label="Price" value={sellOcoPrice} onChange={(v) => {
+              <FieldRow label={t("price")} value={sellOcoPrice} onChange={(v) => {
                 setSellOcoPrice(v);
                 setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount)));
               }} unit={quote} color="sell" />
-              <FieldRow label="Stop" value={sellOcoStop} onChange={setSellOcoStop} unit={quote} color="sell" />
-              <FieldRow label="Limit" value={sellOcoLimit} onChange={setSellOcoLimit} unit={quote} color="sell" />
+              <FieldRow label={t("stop")} value={sellOcoStop} onChange={setSellOcoStop} unit={quote} color="sell" />
+              <FieldRow label={t("limit")} value={sellOcoLimit} onChange={setSellOcoLimit} unit={quote} color="sell" />
             </>
           ) : effectiveTab === "stop" ? (
             <>
-              <FieldRow label="Stop" value={sellStopPrice} onChange={setSellStopPrice} unit={quote} color="sell" />
-              <FieldRow label="Limit" value={sellPrice} onChange={(v) => {
+              <FieldRow label={t("stop")} value={sellStopPrice} onChange={setSellStopPrice} unit={quote} color="sell" />
+              <FieldRow label={t("limit")} value={sellPrice} onChange={(v) => {
                 setSellPriceEdited(true); setSellPrice(v);
                 setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount)));
               }} unit={quote} color="sell" />
             </>
           ) : effectiveTab !== "market" ? (
-            <FieldRow label="Price" value={sellPrice} onChange={(v) => {
+            <FieldRow label={t("price")} value={sellPrice} onChange={(v) => {
               setSellPriceEdited(true); setSellPrice(v);
               setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount)));
             }} unit={quote} color="sell" />
           ) : null}
 
-          <FieldRow label="Qty" value={sellAmount} onChange={(v) => {
+          <FieldRow label={t("qty")} value={sellAmount} onChange={(v) => {
             setSellAmount(v);
             setSellPct(calcPct("sell", 0, parseNum(v)));
           }} unit={base} color="sell" showMax onMax={handleSellMax} />
@@ -1352,12 +1355,12 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             />
           </div>
 
-          <FieldRow label="Total" value={sellTotal || ""} unit={quote} readOnly />
+          <FieldRow label={t("total")} value={sellTotal || ""} unit={quote} readOnly />
 
           {tpslEnabled && (
             <>
-              <FieldRow label="TP" value={sellTp} onChange={setSellTp} unit={quote} color="sell" />
-              <FieldRow label="SL" value={sellSl} onChange={setSellSl} unit={quote} color="sell" />
+              <FieldRow label={t("tp")} value={sellTp} onChange={setSellTp} unit={quote} color="sell" />
+              <FieldRow label={t("sl")} value={sellSl} onChange={setSellSl} unit={quote} color="sell" />
             </>
           )}
 
@@ -1372,7 +1375,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
             className="mt-0.5 bg-sell hover:bg-sell/90 disabled:opacity-50 transition-all text-white font-bold text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(246,70,93,0.3)] active:scale-95"
           >
             {sellLoading && <Loader size={13} color="white" />}
-            Sell {base}
+            {t("sell")} {base}
           </button>
         </div>
         )}

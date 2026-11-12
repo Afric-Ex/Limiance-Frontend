@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { localeNames } from "@/i18n/routing";
 import Logo from "./logo";
 import { GoogleWhite } from "../icons/google-white";
 import { TikTok } from "../icons/tik-tok";
@@ -17,8 +19,9 @@ import { FaGlobe } from "react-icons/fa";
 import { Dollar } from "../icons/dollar";
 import Image from "next/image";
 import QrScan from "@/public/qr-scan.png";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/src/hooks/use-pathname";
 import { FooterLinks } from "./footer-links";
+import { stripLocalePrefix } from "@/src/lib/locale-path";
 
 const noFooterPages = ["/dashboard", "/settings"];
 const noFooterInnerPages = [
@@ -32,17 +35,22 @@ const noFooterInnerPages = [
 
 export const Footer = () => {
   const pathname = usePathname();
+  const tf = useTranslations("Footer");
+  const locale = useLocale();
+  // Paths are locale-prefixed (e.g. /fr/dashboard), so strip the prefix
+  // before matching the routes that opt out of the footer.
+  const routePath = stripLocalePrefix(pathname);
 
-  return pathname.includes("auth") ||
-    noFooterPages.includes(pathname) ||
-    noFooterInnerPages.some((each) => pathname.includes(each)) ? null : (
+  return routePath.includes("auth") ||
+    noFooterPages.includes(routePath) ||
+    noFooterInnerPages.some((each) => routePath.includes(each)) ? null : (
     <div className="flex flex-col gap-30px">
       <div className="min-[1130px]:flex grid grid-cols-2 max-w-1206px mx-auto px-4 w-full gap-4 justify-between">
         <div className="flex-1 flex gap-6">
           <div className="flex w-fit flex-col gap-10">
             <Logo />
             <div className="flex flex-col gap-30px">
-              <h3 className="font-bold text-subtitle">Community</h3>
+              <h3 className="font-bold text-subtitle">{tf("community")}</h3>
               <div className="grid grid-cols-4 gap-4 [&>svg]:cursor-pointer [&>svg]:transition-all hover:[&>svg]:scale-110 hover:[&>svg]:opacity-80">
                 <GoogleWhite />
                 <TikTok />
@@ -58,7 +66,7 @@ export const Footer = () => {
               <div className="flex flex-col gap-3">
                 <button className="p-4 bg-white text-black rounded-lg gap-6 flex items-center">
                   <FaGlobe size={20} />
-                  <span className="text-body">English</span>
+                  <span className="text-body">{localeNames[locale]}</span>
                   <IoIosArrowDown size={20} />
                 </button>
                 <div className="flex items-center gap-2">
@@ -73,7 +81,7 @@ export const Footer = () => {
           </div>
         </div>
         <div className="flex max-[1130px]:justify-self-center flex-col gap-18px">
-          <h3 className="text-subtitle font-bold">Start Trading Now</h3>
+          <h3 className="text-subtitle font-bold">{tf("startTradingNow")}</h3>
           <div className="flex flex-col gap-6px">
             <div className="flex flex-col">
               <div className="pt-5 px-5 pb-6px w-fit rounded-t-15px border-t border-t-primary border-x border-x-primary">

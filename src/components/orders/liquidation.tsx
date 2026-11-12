@@ -4,6 +4,7 @@ import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextI
 import React, { useState } from "react";
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import {
   fmtDate,
@@ -18,9 +19,8 @@ import {
   ResponsiveFilters,
 } from "./orders-shared";
 
-const filters = ["Liquidation Orders", "Liquidation History"];
-
 export const Liquidation = () => {
+  const t = useTranslations("Orders");
   const [filter, setFilter] = useState("Liquidation Orders");
 
   const { data: records, isLoading } = useQuery({
@@ -35,10 +35,10 @@ export const Liquidation = () => {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
-          <ChipToggle value={filter} options={filters} onChange={setFilter} />
+          <ChipToggle value={filter} options={["Liquidation Orders", "Liquidation History"]} onChange={setFilter} labels={{ "Liquidation Orders": t("liquidationOrders"), "Liquidation History": t("liquidationHistory") }} />
           <Select
-            label="Trading Pair"
-            data={["All"]}
+            label={t("tradingPair")}
+            data={[{ value: "All", label: t("all") }]}
             classNames={selectStyles}
             className="w-[140px]"
           />
@@ -46,30 +46,30 @@ export const Liquidation = () => {
         <div className="flex items-center gap-4">
           <TextInput
             classNames={searchInputClass}
-            placeholder="Search pair..."
+            placeholder={t("searchPair")}
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
           />
           <button
             className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
             onClick={() => setFilter("Liquidation Orders")}
           >
-            Reset
+            {t("reset")}
           </button>
         </div>
       </div>
 
-      <TableCard loading={isLoading} hasData={allRecords.length > 0} emptyTitle="No liquidation records found.">
+      <TableCard loading={isLoading} hasData={allRecords.length > 0} emptyTitle={t("emptyLiquidationRecords")}>
         <Table classNames={tableClassNames}>
           <TableThead>
             <TableTr>
-              <TableTh className="pl-5">Coin</TableTh>
-              <TableTh>Trading Pair</TableTh>
-              <TableTh>Type</TableTh>
-              <TableTh>Date</TableTh>
-              <TableTh>Price</TableTh>
-              <TableTh>Executed</TableTh>
-              <TableTh>Amount</TableTh>
-              <TableTh>Total</TableTh>
+              <TableTh className="pl-5">{t("coin")}</TableTh>
+              <TableTh>{t("tradingPair")}</TableTh>
+              <TableTh>{t("type")}</TableTh>
+              <TableTh>{t("date")}</TableTh>
+              <TableTh>{t("price")}</TableTh>
+              <TableTh>{t("executed")}</TableTh>
+              <TableTh>{t("amount")}</TableTh>
+              <TableTh>{t("total")}</TableTh>
             </TableTr>
           </TableThead>
           <TableTbody>
@@ -80,7 +80,7 @@ export const Liquidation = () => {
                 <TableTr key={r.id ?? idx}>
                   <TableTd className="pl-5 !text-white !font-bold">{r.coin ?? r.asset ?? getPair(r)}</TableTd>
                   <TableTd>{getPair(r)}</TableTd>
-                  <TableTd className={sideTone(r.side)}>{String(r.side ?? "LIQUIDATED").toUpperCase()}</TableTd>
+                  <TableTd className={sideTone(r.side)}>{r.side ? String(r.side).toUpperCase() : t("liquidated")}</TableTd>
                   <TableTd className="text-white/50">{fmtDate(r.createdAt ?? r.time)}</TableTd>
                   <TableTd className="tabular-nums">{fmtNum(price)}</TableTd>
                   <TableTd className="tabular-nums">{fmtNum(qty)}</TableTd>

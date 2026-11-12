@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ModalClose } from "../icons/modal-close";
 import { Button, PinInput } from "@mantine/core";
 import { modals } from "@mantine/modals";
@@ -8,6 +9,7 @@ import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { EmailVerificationModal } from "./email-verification-modal";
 
 function TotpCountdown() {
+  const t = useTranslations("Transactions");
   const [remaining, setRemaining] = useState(() => 30 - (Math.floor(Date.now() / 1000) % 30));
 
   useEffect(() => {
@@ -37,7 +39,7 @@ function TotpCountdown() {
         />
         <text x="14" y="18" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">{remaining}</text>
       </svg>
-      <span className="text-sm">Code refreshes in {remaining}s</span>
+      <span className="text-sm">{t("codeRefreshesIn", { seconds: remaining })}</span>
     </div>
   );
 }
@@ -51,6 +53,7 @@ export const AuthenticatorVerificationModal = ({
   intitiateWithdrawal: (otpCode: string, totpCode?: string) => void;
   onFallback?: () => void;
 }) => {
+  const t = useTranslations("Transactions");
   const [code, setCode] = useState("");
 
   const handleVerify = () => {
@@ -70,17 +73,17 @@ export const AuthenticatorVerificationModal = ({
   return (
     <div className="bg-elevated border border-white/[0.08] w-full max-w-md rounded-3xl p-6 sm:p-8 flex flex-col gap-8 shadow-2xl relative overflow-hidden mx-auto">
       <div className="flex items-center justify-between">
-        <h4 className="text-lg font-bold text-white/90 tracking-tight">Security Verification</h4>
+        <h4 className="text-lg font-bold text-white/90 tracking-tight">{t("securityVerification")}</h4>
         <ModalClose className="cursor-pointer hover:bg-white/5 p-1 rounded-full transition-colors" onClick={modals.closeAll} />
       </div>
       <div className="flex flex-col w-full self-center gap-8">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3 text-center">
             <h2 className="text-3xl font-extrabold tracking-tight">
-              <span className="text-primary">Authenticator</span> Code
+              <span className="text-primary">{t("authenticator")}</span> {t("code")}
             </h2>
             <p className="text-sm font-medium text-white/60 leading-relaxed">
-              Open your authenticator app and enter the<br />6-digit code to confirm this withdrawal
+              {t("authenticatorInstruction1")}<br />{t("authenticatorInstruction2")}
             </p>
           </div>
 
@@ -89,7 +92,7 @@ export const AuthenticatorVerificationModal = ({
           </div>
 
           <div className="flex flex-col gap-4 items-center w-full mt-2">
-            <span className="font-bold text-xs text-white/50 uppercase tracking-wider">Enter 6-digit Code</span>
+            <span className="font-bold text-xs text-white/50 uppercase tracking-wider">{t("enterSixDigitCode")}</span>
             <div className="w-full max-w-[320px]">
               <PinInput
                 length={6}
@@ -129,12 +132,12 @@ export const AuthenticatorVerificationModal = ({
             onClick={handleVerify}
             disabled={code.length !== 6}
           >
-            <span className="font-bold">Verify</span>
+            <span className="font-bold">{t("verify")}</span>
           </Button>
           <div className="flex flex-col items-center gap-1">
-            <span className="text-sm text-white/40">Having issues using this method?</span>
+            <span className="text-sm text-white/40">{t("havingIssues")}</span>
             <span className="text-sm text-white/60">
-              Try{" "}
+              {t("try")}{" "}
               <span
                 onClick={() => {
                   if (onFallback) {
@@ -153,7 +156,7 @@ export const AuthenticatorVerificationModal = ({
                 }}
                 className="font-bold cursor-pointer text-primary hover:text-primary transition-colors"
               >
-                Email Verification
+                {t("emailVerification")}
               </span>
             </span>
           </div>

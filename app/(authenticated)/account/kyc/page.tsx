@@ -19,8 +19,10 @@ import { getKycAccessToken, isKycApproved } from "@/src/lib/normalize-kyc-status
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountKycSkeleton } from "@/src/components/skeletons/account";
 import { AccountPageHeader } from "@/src/components/settings/account-page-header";
+import { useTranslations } from "next-intl";
 
 function KycPageInner() {
+  const t = useTranslations("Kyc");
   const queryClient = useQueryClient();
   const [polling, setPolling] = useState(false);
   const [pollCount, setPollCount] = useState(0);
@@ -43,10 +45,10 @@ function KycPageInner() {
     onSuccess: async (res) => {
       const token = getKycAccessToken(res as any);
       if (!token || typeof token !== "string") {
-        errorMessageHandler(new Error("Unable to start verification. Please try again."));
+        errorMessageHandler(new Error(t("unableToStart")));
         return;
       }
-      
+
       setActiveToken(token);
     },
     onError: (e) => {
@@ -59,7 +61,7 @@ function KycPageInner() {
     onSuccess: async (res) => {
       const token = getKycAccessToken(res as any);
       if (!token || typeof token !== "string") {
-        errorMessageHandler(new Error("Unable to start Tier 2 verification. Please try again."));
+        errorMessageHandler(new Error(t("unableToStartTier2")));
         return;
       }
       
@@ -96,7 +98,7 @@ function KycPageInner() {
           const newStatus = res.data?.status;
           if (isKycApproved(newStatus)) {
             setPolling(false);
-            successNotification("Identity verification approved!");
+            successNotification(t("verificationApproved"));
             queryClient.invalidateQueries({ queryKey: userKeys.userDetails });
             fetchUser();
           }
@@ -107,7 +109,7 @@ function KycPageInner() {
       setPolling(false);
     }
     return () => clearInterval(interval);
-  }, [polling, pollCount, refetch, queryClient, fetchUser]);
+  }, [polling, pollCount, refetch, queryClient, fetchUser, t]);
 
   useEffect(() => {
     if (user && isApproved && !user.isIDverified) {
@@ -119,10 +121,10 @@ function KycPageInner() {
     return (
       <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 pb-8 page-enter max-[1150px]:pb-[100px]">
         <AccountPageHeader
-          title="Identity verification"
-          description="Complete verification to unlock more of Limiance and keep your account protected."
+          title={t("pageTitle")}
+          description={t("pageDescriptionLoading")}
           icon={<MdShield size={23} />}
-          eyebrow="Verification"
+          eyebrow={t("eyebrow")}
         />
         <div className="account-card flex min-h-56 items-center justify-center">
           <Loader color="blue" />
@@ -135,14 +137,14 @@ function KycPageInner() {
     try {
       const freshToken = getKycAccessToken((await userService.upgradeKyc()) as any);
       if (!freshToken || typeof freshToken !== "string") {
-        throw new Error("Unable to refresh verification session");
+        throw new Error(t("unableToRefresh"));
       }
       setActiveToken(freshToken);
       return freshToken;
     } catch {
       setActiveToken(null);
       errorMessageHandler(
-        new Error("Verification session expired. Please restart verification.")
+        new Error(t("sessionExpired"))
       );
       return "";
     }
@@ -158,12 +160,12 @@ function KycPageInner() {
     }
     if (type === "idCheck.onCancel") {
       setActiveToken(null);
-      errorMessageHandler(new Error("Verification cancelled"));
+      errorMessageHandler(new Error(t("verificationCancelled")));
     }
   };
 
   const sumsubError = (error: any) => {
-    errorMessageHandler(new Error(error?.message || "An unknown error occurred"));
+    errorMessageHandler(new Error(error?.message || t("unknownError")));
   };
 
   if (!mounted) return <AccountKycSkeleton />;
@@ -171,15 +173,15 @@ function KycPageInner() {
   return (
     <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 pb-8 page-enter max-[1150px]:pb-[100px]">
       <AccountPageHeader
-        title="Identity verification"
-        description="Verify your identity to unlock higher limits, more trading features, and a safer account."
+        title={t("pageTitle")}
+        description={t("pageDescription")}
         icon={<MdShield size={23} />}
-        eyebrow="Verification"
+        eyebrow={t("eyebrow")}
       />
 
       {showBanner && (
         <div className="p-3 bg-success-6/10 border border-success-6/30 rounded-lg text-success-6 text-sm text-center font-medium animate-fade-in">
-          Documents submitted successfully. We&apos;re processing your verification now.
+          {t("documentsSubmitted")}
         </div>
       )}
 
@@ -205,42 +207,42 @@ function KycPageInner() {
           </div>
           
           <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-bold">Verify Your Identity</h1>
+            <h1 className="text-2xl font-bold">{t("verifyYourIdentity")}</h1>
             <p className="text-sm text-white/60 max-w-md">
-              Complete identity verification to unlock full trading features, higher withdrawal limits, and P2P trading access.
+              {t("verifyYourIdentityDesc")}
             </p>
           </div>
 
           <div className="grid w-full max-w-3xl grid-cols-1 gap-5 text-left sm:grid-cols-2">
             <div className="flex flex-col gap-3">
-              <span className="text-sm font-semibold text-white/90 uppercase tracking-wider">Benefits</span>
+              <span className="text-sm font-semibold text-white/90 uppercase tracking-wider">{t("benefits")}</span>
               <div className="flex items-center gap-3 text-sm text-white/70">
-                <MdCheckCircle className="text-success-6" size={18} /> Increased withdrawal limits
+                <MdCheckCircle className="text-success-6" size={18} /> {t("benefitHigherLimits")}
               </div>
               <div className="flex items-center gap-3 text-sm text-white/70">
-                <MdCheckCircle className="text-success-6" size={18} /> Access to P2P trading
+                <MdCheckCircle className="text-success-6" size={18} /> {t("benefitP2p")}
               </div>
               <div className="flex items-center gap-3 text-sm text-white/70">
-                <MdCheckCircle className="text-success-6" size={18} /> Full account features
+                <MdCheckCircle className="text-success-6" size={18} /> {t("benefitFullFeatures")}
               </div>
             </div>
 
             <div className="flex flex-col gap-3">
-              <span className="text-sm font-semibold text-white/90 uppercase tracking-wider">What you&apos;ll need</span>
+              <span className="text-sm font-semibold text-white/90 uppercase tracking-wider">{t("whatYouNeed")}</span>
               <div className="flex items-start gap-3 text-sm text-white/70">
                 <MdPermIdentity className="text-primary mt-0.5" size={18} />
-                <span>A valid government-issued ID (passport, national ID, or driver&apos;s licence)</span>
+                <span>{t("needGovernmentId")}</span>
               </div>
               <div className="flex items-start gap-3 text-sm text-white/70">
                 <MdVideocam className="text-primary mt-0.5" size={18} />
-                <span>A selfie or short video for liveness verification</span>
+                <span>{t("needSelfie")}</span>
               </div>
             </div>
           </div>
 
           {isRejected && (
             <div className="p-3 w-full max-w-sm bg-error-1/10 border border-error-1/30 rounded-lg text-error-1 text-sm text-left">
-              <span className="font-semibold">Verification Failed:</span> {statusData?.reason || "Your documents could not be verified. Please try again."}
+              <span className="font-semibold">{t("verificationFailedLabel")}</span> {statusData?.reason || t("documentsNotVerified")}
             </div>
           )}
 
@@ -251,9 +253,9 @@ function KycPageInner() {
               loading={startingKyc}
               onClick={() => startKyc()}
             >
-              Start Verification
+              {t("startVerification")}
             </Button>
-            <span className="text-xs text-white/40">Usually takes 2–5 minutes</span>
+            <span className="text-xs text-white/40">{t("usuallyTakesMinutes")}</span>
           </div>
         </div>
       )}
@@ -265,12 +267,12 @@ function KycPageInner() {
           </div>
           
           <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-bold">Verification In Progress</h1>
+            <h1 className="text-2xl font-bold">{t("verificationInProgress")}</h1>
             <p className="text-sm text-white/60 max-w-md">
-              Your documents are being reviewed. This usually takes a few minutes, but may take up to 24 hours in some cases.
+              {t("verificationInProgressDesc")}
             </p>
             <p className="text-xs text-white/40 mt-2">
-              You&apos;ll be notified once verification is complete. You can safely leave this page.
+              {t("verificationInProgressNotice")}
             </p>
           </div>
 
@@ -280,7 +282,7 @@ function KycPageInner() {
             loading={isRefetching || polling}
             onClick={() => refetch()}
           >
-            Check Status
+            {t("checkStatus")}
           </Button>
         </div>
       )}
@@ -293,9 +295,9 @@ function KycPageInner() {
                 <MdCheckCircle size={32} className="text-success-6" />
               </div>
               <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold">Tier {currentTier}: Identity Verified</h1>
+                <h1 className="text-2xl font-bold">{t("tierVerifiedTitle", { tier: currentTier })}</h1>
                 <p className="text-sm text-white/60 max-w-md">
-                  Your identity has been successfully verified.
+                  {t("identityVerified")}
                 </p>
               </div>
             </div>
@@ -304,54 +306,54 @@ function KycPageInner() {
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             {/* Tier 1 Limits */}
             <div className="p-6 bg-white/5 border border-white/10 rounded-2xl flex flex-col gap-4">
-              <h3 className="text-lg font-semibold text-white/90 border-b border-white/10 pb-3">Tier 1 Limits</h3>
+              <h3 className="text-lg font-semibold text-white/90 border-b border-white/10 pb-3">{t("tier1Limits")}</h3>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-white/50">Daily Withdrawal Limit</span>
+                <span className="text-white/50">{t("dailyWithdrawalLimit")}</span>
                 <span className="font-mono text-white/90">$50,000 USD</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-white/50">Fiat Deposits</span>
-                <span className="font-mono text-white/90">Enabled</span>
+                <span className="text-white/50">{t("fiatDeposits")}</span>
+                <span className="font-mono text-white/90">{t("enabledLabel")}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-white/50">P2P Trading</span>
-                <span className="font-mono text-white/90">Enabled</span>
+                <span className="text-white/50">{t("p2pTrading")}</span>
+                <span className="font-mono text-white/90">{t("enabledLabel")}</span>
               </div>
               {currentTier >= 2 && (
                 <div className="mt-4 p-3 bg-success-6/15 text-success-6 text-sm text-center font-medium rounded-lg border border-success-6/30">
-                  You have upgraded past Tier 1.
+                  {t("upgradedPastTier1")}
                 </div>
               )}
             </div>
 
             {/* Tier 2 Upgrade */}
             <div className={`p-6 border rounded-2xl flex flex-col gap-4 ${currentTier >= 2 ? 'bg-success-6/5 border-success-6/20' : 'bg-primary/5 border-primary/20'}`}>
-              <h3 className="text-lg font-semibold text-white/90 border-b border-white/10 pb-3">Tier 2 Limits (Pro)</h3>
+              <h3 className="text-lg font-semibold text-white/90 border-b border-white/10 pb-3">{t("tier2Limits")}</h3>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-white/50">Daily Withdrawal Limit</span>
+                <span className="text-white/50">{t("dailyWithdrawalLimit")}</span>
                 <span className="font-mono text-white/90">$1,000,000 USD</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-white/50">Margin Trading</span>
-                <span className="font-mono text-white/90">Enabled</span>
+                <span className="text-white/50">{t("marginTrading")}</span>
+                <span className="font-mono text-white/90">{t("enabledLabel")}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-white/50">OTC Desk Access</span>
-                <span className="font-mono text-white/90">Enabled</span>
+                <span className="text-white/50">{t("otcDeskAccess")}</span>
+                <span className="font-mono text-white/90">{t("enabledLabel")}</span>
               </div>
-              
+
               {currentTier === 1 && (
                 <Button
                   className="w-full !mt-2 !bg-primary hover:!bg-primary/90"
                   loading={startingTier2}
                   onClick={() => startTier2Kyc()}
                 >
-                  Apply for Tier 2 (Proof of Address)
+                  {t("applyForTier2")}
                 </Button>
               )}
               {currentTier >= 2 && (
                 <div className="mt-4 p-3 bg-success-6/15 text-success-6 text-sm text-center font-medium rounded-lg border border-success-6/30">
-                  <MdCheckCircle className="inline-block mr-2" /> Tier 2 Active
+                  <MdCheckCircle className="inline-block mr-2" /> {t("tier2Active")}
                 </div>
               )}
             </div>

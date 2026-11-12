@@ -6,14 +6,16 @@ import { MdKeyboardArrowRight, MdKeyboardArrowDown } from "react-icons/md";
 import { Secure } from "../icons/secure";
 import classes from "../../styles/verify-identity.module.css";
 import { useCountryOptions } from "@/src/hooks/use-countries";
+import { useTranslations } from "next-intl";
 
 const iDTypes = [
-  { name: "Driver's License", isOptional: true },
-  { name: "National ID Card" },
-  { name: "International Passport" },
+  { labelKey: "driversLicence", isOptional: true },
+  { labelKey: "nationalIdCard" },
+  { labelKey: "internationalPassport" },
 ];
 
 export const IdType = ({ nextStep }: { nextStep: () => void }) => {
+  const t = useTranslations("Kyc");
   const { options: countries, isLoading, isError } = useCountryOptions();
   const [selectedCountry, setSelectedCountry] = useState<string>("");
 
@@ -29,10 +31,10 @@ export const IdType = ({ nextStep }: { nextStep: () => void }) => {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-white/65">
-              Your Country/region
+              {t("yourCountryRegion")}
             </span>
             <span className="flex text-primary items-center">
-              <span className="text-xs font-semibold">Edit</span>
+              <span className="text-xs font-semibold">{t("edit")}</span>
               <MdKeyboardArrowRight />
             </span>
           </div>
@@ -40,7 +42,7 @@ export const IdType = ({ nextStep }: { nextStep: () => void }) => {
             <Skeleton height={55} width="100%" />
           ) : isError ? (
             <div className="h-55px flex items-center gap-2 rounded-xl border border-gray-9 py-10px px-5 text-white/50">
-              Failed to load countries
+              {t("countriesLoadError")}
             </div>
           ) : (
             <Select
@@ -48,7 +50,7 @@ export const IdType = ({ nextStep }: { nextStep: () => void }) => {
               onChange={handleCountryChange}
               data={countries}
               searchable
-              placeholder="Select country"
+              placeholder={t("selectCountry")}
               classNames={{
                 input: "h-55px flex items-center gap-2 rounded-xl border border-gray-9 py-10px px-5 bg-transparent",
                 dropdown: "bg-surface border-white/10 text-white backdrop-blur-xl shadow-2xl rounded-xl",
@@ -61,14 +63,14 @@ export const IdType = ({ nextStep }: { nextStep: () => void }) => {
           )}
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-medium text-white/65">ID type</span>
+          <span className="text-xs font-medium text-white/65">{t("idType")}</span>
           <Popover
             classNames={{ dropdown: classes.popover_dropdown }}
             width="target"
           >
             <PopoverTarget>
               <div className="h-55px cursor-pointer flex items-center justify-between rounded-xl border border-gray-9 py-10px px-5">
-                <span className="text-sm">National Passport</span>
+                <span className="text-sm">{t("nationalPassport")}</span>
                 <MdKeyboardArrowDown />
               </div>
             </PopoverTarget>
@@ -77,14 +79,14 @@ export const IdType = ({ nextStep }: { nextStep: () => void }) => {
                 <div className="flex flex-col pb-4 border-b border-b-white/[16%]">
                   {iDTypes.map((item) => (
                     <div
-                      key={item.name}
+                      key={item.labelKey}
                       className="p-4 hover:bg-gray-11 cursor-pointer flex items-center justify-between gap-2 text-base font-bold"
                     >
                       <span className="flex items-center gap-10px">
-                        {item.name}
+                        {t(item.labelKey)}
                         {item.isOptional && (
                           <span className="px-17px text-primary text-xs font-bold py-5px bg-blue-1/[8%] rounded-lg">
-                            optional
+                            {t("optional")}
                           </span>
                         )}
                       </span>
@@ -95,7 +97,7 @@ export const IdType = ({ nextStep }: { nextStep: () => void }) => {
                   <span className="flex items-center gap-2 self-center">
                     <Secure opacity={1} color="var(--primary)" />
                     <span className="text-xs">
-                      Your information is only used for identity verification.
+                      {t("infoUsedForVerificationOnly")}
                     </span>
                   </span>
                 </div>
@@ -108,7 +110,7 @@ export const IdType = ({ nextStep }: { nextStep: () => void }) => {
         onClick={nextStep}
         className="w-full rounded-full py-23px bg-primary text-base font-semibold"
       >
-        Proceed
+        {t("proceed")}
       </button>
     </div>
   );

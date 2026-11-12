@@ -3,6 +3,7 @@
 import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } from "@mantine/core";
 import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { Search } from "../icons/search";
 import {
@@ -22,6 +23,7 @@ import {
 } from "./orders-shared";
 
 export const OrderHistory = () => {
+  const t = useTranslations("Orders");
   const [query, setQuery] = useState("");
   const [side, setSide] = useState("All");
   const [status, setStatus] = useState("All");
@@ -58,27 +60,27 @@ export const OrderHistory = () => {
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold text-white">Order history</h2>
-          <p className="mt-1 text-xs text-white/40">A record of your completed, cancelled and expired orders.</p>
+          <h2 className="text-base font-semibold text-white">{t("orderHistory")}</h2>
+          <p className="mt-1 text-xs text-white/40">{t("orderHistoryDescription")}</p>
         </div>
         <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium tabular-nums text-white/55">
-          {isLoading ? "Loading orders" : `${filtered.length} ${filtered.length === 1 ? "order" : "orders"}`}
+          {isLoading ? t("loadingOrders") : t("ordersCount", { count: filtered.length })}
         </span>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
           <Select
-            aria-label="Filter order history by side"
-            data={["All", "Buy", "Sell"]}
+            aria-label={t("filterBySide")}
+            data={[{ value: "All", label: t("all") }, { value: "Buy", label: t("buy") }, { value: "Sell", label: t("sell") }]}
             value={side}
             onChange={(value) => setSide(value ?? "All")}
             classNames={selectStyles}
             className="w-[116px] shrink-0"
           />
           <Select
-            aria-label="Filter order history by status"
-            data={["All", "Filled", "Cancelled", "Expired", "Rejected"]}
+            aria-label={t("filterByStatus")}
+            data={[{ value: "All", label: t("all") }, { value: "Filled", label: t("filled") }, { value: "Cancelled", label: t("cancelled") }, { value: "Expired", label: t("expired") }, { value: "Rejected", label: t("rejected") }]}
             value={status}
             onChange={(value) => setStatus(value ?? "All")}
             classNames={selectStyles}
@@ -86,9 +88,9 @@ export const OrderHistory = () => {
           />
         </ResponsiveFilters>
         <TextInput
-          aria-label="Search order history by pair"
+          aria-label={t("searchByPair")}
           classNames={searchInputClass}
-          placeholder="Search pair"
+          placeholder={t("searchPair")}
           value={query}
           leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
           onChange={(event) => setQuery(event.currentTarget.value)}
@@ -100,7 +102,7 @@ export const OrderHistory = () => {
             onClick={resetFilters}
             className="h-9 shrink-0 rounded-lg px-2 text-xs font-semibold text-white/45 transition-colors hover:text-white"
           >
-            Clear filters
+            {t("clearFilters")}
           </button>
         )}
       </div>
@@ -110,15 +112,15 @@ export const OrderHistory = () => {
           <Table classNames={tableClassNames}>
             <TableThead>
               <TableTr>
-                <TableTh className="pl-5">Time</TableTh>
-                <TableTh>Pair</TableTh>
-                <TableTh>Side</TableTh>
-                <TableTh>Type</TableTh>
-                <TableTh>Price</TableTh>
-                <TableTh>Amount</TableTh>
-                <TableTh>Filled</TableTh>
-                <TableTh>Total</TableTh>
-                <TableTh>Status</TableTh>
+                <TableTh className="pl-5">{t("time")}</TableTh>
+                <TableTh>{t("pair")}</TableTh>
+                <TableTh>{t("side")}</TableTh>
+                <TableTh>{t("type")}</TableTh>
+                <TableTh>{t("price")}</TableTh>
+                <TableTh>{t("amount")}</TableTh>
+                <TableTh>{t("filledAmount")}</TableTh>
+                <TableTh>{t("total")}</TableTh>
+                <TableTh>{t("status")}</TableTh>
               </TableTr>
             </TableThead>
             <TableTbody>
@@ -140,13 +142,13 @@ export const OrderHistory = () => {
         </TableCard>
       ) : (
         <OrdersEmptyState
-          title={orders.length === 0 ? "No spot orders yet" : "No orders match these filters"}
+          title={orders.length === 0 ? t("emptySpotOrders") : t("noOrdersMatchFilters")}
           description={
             orders.length === 0
-              ? "Your completed and cancelled spot orders will be recorded here."
-              : "Adjust your search or filters to find the order you're looking for."
+              ? t("emptySpotOrdersDescription")
+              : t("noOrdersMatchFiltersDescription")
           }
-          actionLabel={orders.length === 0 ? "Place a spot trade" : "Clear filters"}
+          actionLabel={orders.length === 0 ? t("placeSpotTrade") : t("clearFilters")}
           actionHref={orders.length === 0 ? "/trades/spot" : undefined}
           onAction={orders.length > 0 ? resetFilters : undefined}
         />

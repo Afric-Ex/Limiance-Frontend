@@ -1,14 +1,18 @@
+"use client";
+
 import { Checkbox, Loader } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/src/hooks/use-pathname";
 import { tradingService } from "@/src/services/trading";
 import { errorMessageHandler, type ErrorType } from "@/src/lib/error-handler";
 import { successNotification } from "@/src/lib/notification-handler";
 import { portfolioStore } from "@/src/lib/portfolio-store";
+import { useTranslations } from "next-intl";
 
 export const MarginTermsInfo = () => {
+  const t = useTranslations("Assets");
   const [checked, setChecked] = useState(false);
   const pathname = usePathname();
   const initialPathname = useRef(pathname);
@@ -23,7 +27,7 @@ export const MarginTermsInfo = () => {
   const createMarginAccount = useMutation({
     mutationFn: tradingService.createMarginAccount,
     onSuccess: async () => {
-      successNotification("Margin account created successfully");
+      successNotification(t("marginAccountCreated"));
       await queryClient.invalidateQueries({ queryKey: ["margin-account"] });
       portfolioStore.refresh();
       modals.closeAll();
@@ -35,13 +39,12 @@ export const MarginTermsInfo = () => {
     <div className="flex w-full flex-col gap-5 rounded-xl bg-[#181a20]">
       <div className="flex flex-col gap-5">
         <h3 className="font-bold text-xl text-white sm:text-2xl">
-          Terms of Use
+          {t("termsOfUse")}
         </h3>
-        
+
         <div className="max-h-[50vh] overflow-y-auto rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-sm leading-relaxed text-white/70 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent sm:p-5 sm:text-base">
           <p className="mb-4">
-            Margin trading involves significant risk. By using margin services,
-            you acknowledge the following:
+            {t("marginTermsIntro")}
           </p>
           <ul className="flex flex-col gap-3">
             <li className="flex gap-3">
@@ -51,8 +54,8 @@ export const MarginTermsInfo = () => {
                 </svg>
               </span>
               <span>
-                <strong className="text-white">Market Volatility:</strong> Prices can change quickly, leading to
-                unexpected gains or losses.
+                <strong className="text-white">{t("termVolatilityTitle")}</strong>{" "}
+                {t("termVolatilityBody")}
               </span>
             </li>
             <li className="flex gap-3">
@@ -62,8 +65,8 @@ export const MarginTermsInfo = () => {
                 </svg>
               </span>
               <span>
-                <strong className="text-white">Leverage:</strong> Using leverage can amplify both profits and losses,
-                meaning you could lose more than your initial investment.
+                <strong className="text-white">{t("termLeverageTitle")}</strong>{" "}
+                {t("termLeverageBody")}
               </span>
             </li>
             <li className="flex gap-3">
@@ -73,9 +76,8 @@ export const MarginTermsInfo = () => {
                 </svg>
               </span>
               <span>
-                <strong className="text-white">Forked Coins:</strong> You won&apos;t receive any forked coins from
-                blockchain assets in your margin account, even if you&apos;re not
-                actively borrowing.
+                <strong className="text-white">{t("termForkedCoinsTitle")}</strong>{" "}
+                {t("termForkedCoinsBody")}
               </span>
             </li>
             <li className="flex gap-3">
@@ -85,9 +87,8 @@ export const MarginTermsInfo = () => {
                 </svg>
               </span>
               <span>
-                <strong className="text-white">Loan Risks:</strong> If the value of your assets drops below a certain
-                level, you&apos;re responsible for covering the losses, which may
-                result in forced liquidation.
+                <strong className="text-white">{t("termLoanRisksTitle")}</strong>{" "}
+                {t("termLoanRisksBody")}
               </span>
             </li>
           </ul>
@@ -100,7 +101,7 @@ export const MarginTermsInfo = () => {
             input: "!bg-white/5 !border-white/20 checked:!bg-primary checked:!border-primary",
             label: "!text-white/60 !text-sm !font-medium"
           }}
-          label="I have read and agreed to the terms"
+          label={t("agreeTerms")}
           checked={checked}
           disabled={createMarginAccount.isPending}
           onChange={(e) => setChecked(e.target.checked)}
@@ -111,7 +112,7 @@ export const MarginTermsInfo = () => {
           className="w-full rounded-lg bg-primary px-8 py-2.5 text-sm font-bold text-white transition-all hover:brightness-110 active:scale-95 disabled:opacity-40 disabled:hover:brightness-100 disabled:active:scale-100 sm:w-auto flex items-center justify-center gap-2"
         >
           {createMarginAccount.isPending && <Loader size={14} color="white" />}
-          {createMarginAccount.isPending ? "Creating..." : "Confirm"}
+          {createMarginAccount.isPending ? t("creating") : t("confirm")}
         </button>
       </div>
     </div>

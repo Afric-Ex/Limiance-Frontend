@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/src/hooks/use-pathname";
 import clsx from "clsx";
 import { GlobalP2PNotification } from "./global-p2p-notification";
 import { SidebarMenuButton } from "@/src/components/shared/sidebar-menu";

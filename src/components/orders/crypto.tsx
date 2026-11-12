@@ -4,6 +4,7 @@ import { Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextInput } f
 import React, { useState } from "react";
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { asset, assetKeys } from "@/src/services/asset";
 import {
   fmtDateTime,
@@ -39,6 +40,7 @@ const displayAddress = (value: unknown) => {
 };
 
 export const Crypto = () => {
+  const t = useTranslations("Orders");
   const [type, setType] = useState<"Deposit" | "Withdrawal">("Deposit");
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
 
@@ -58,19 +60,19 @@ export const Crypto = () => {
       />
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
-          <ChipToggle value={type} options={["Deposit", "Withdrawal"]} onChange={(v) => setType(v as "Deposit" | "Withdrawal")} />
+          <ChipToggle value={type} options={["Deposit", "Withdrawal"]} onChange={(v) => setType(v as "Deposit" | "Withdrawal")} labels={{ Deposit: t("deposit"), Withdrawal: t("withdrawal") }} />
         </ResponsiveFilters>
         <div className="flex items-center gap-4">
           <TextInput
             classNames={searchInputClass}
-            placeholder="Search..."
+            placeholder={t("search")}
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
           />
           <button
             className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
             onClick={() => setType("Deposit")}
           >
-            Reset
+            {t("reset")}
           </button>
         </div>
       </div>
@@ -78,18 +80,18 @@ export const Crypto = () => {
       <TableCard
         loading={isLoading}
         hasData={allHistory.length > 0}
-        emptyTitle="No transaction records found."
+        emptyTitle={t("emptyTransactionRecords")}
       >
         <Table classNames={tableClassNames}>
           <TableThead>
             <TableTr>
-              <TableTh className="pl-5">Time</TableTh>
-              <TableTh>Type</TableTh>
-              <TableTh>Wallet</TableTh>
-              <TableTh>Coin</TableTh>
-              <TableTh>Amount</TableTh>
-              <TableTh>Destination</TableTh>
-              <TableTh>Status</TableTh>
+              <TableTh className="pl-5">{t("time")}</TableTh>
+              <TableTh>{t("type")}</TableTh>
+              <TableTh>{t("wallet")}</TableTh>
+              <TableTh>{t("coin")}</TableTh>
+              <TableTh>{t("amount")}</TableTh>
+              <TableTh>{t("destination")}</TableTh>
+              <TableTh>{t("status")}</TableTh>
             </TableTr>
           </TableThead>
           <TableTbody>
@@ -126,7 +128,7 @@ export const Crypto = () => {
                 className="cursor-pointer hover:!bg-white/[0.03]"
               >
                 <TableTd className="pl-5 text-white/50">{fmtDateTime(tx.createdAt)}</TableTd>
-                <TableTd className="capitalize">{tx.type ?? type}</TableTd>
+                <TableTd className="capitalize">{tx.type ?? (type === "Deposit" ? t("deposit") : t("withdrawal"))}</TableTd>
                 <TableTd>
                   {(() => {
                     if (!wallet || isZeroAddress(wallet)) return "—";

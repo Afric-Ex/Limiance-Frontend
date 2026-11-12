@@ -17,6 +17,7 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountCreateApiKeySkeleton } from "@/src/components/skeletons/account";
 import { useApiKeyPermissions } from "@/src/hooks/use-api-key-permissions";
 import { ApiKeyPermissionPicker } from "@/src/components/settings/api-key-permission-picker";
+import { useTranslations } from "next-intl";
 
 const inputStyles = {
   input: "!h-50px !bg-transparent !rounded",
@@ -35,6 +36,7 @@ const findInvalidIp = (value: string): string[] =>
   parseIpAllowlist(value).filter((entry) => !ipSchema.safeParse(entry).success);
 
 function CreateApiKeyInner() {
+  const t = useTranslations("Security");
   const queryClient = useQueryClient();
   const router = useRouter();
   const [revealedKey, setRevealedKey] = useState<{ key: string; secret: string } | null>(null);
@@ -54,10 +56,10 @@ function CreateApiKeyInner() {
       ipAllowlist: "",
     },
     validate: {
-      label: (value) => (value.trim() ? null : "API name is required"),
+      label: (value) => (value.trim() ? null : t("apiNameRequired")),
       ipAllowlist: (value) => {
         const invalid = findInvalidIp(value);
-        return invalid.length > 0 ? `Invalid IP address: ${invalid.join(", ")}` : null;
+        return invalid.length > 0 ? t("invalidIpAddress", { addresses: invalid.join(", ") }) : null;
       },
     },
   });
@@ -79,7 +81,7 @@ function CreateApiKeyInner() {
         setRevealedKey({ key, secret: secret ?? "" });
         openReveal();
       } else {
-        successNotification("API key created");
+        successNotification(t("apiKeyCreated"));
         router.push("/account/api-keys");
       }
     },
@@ -104,21 +106,21 @@ function CreateApiKeyInner() {
       <Modal
         opened={revealOpen}
         onClose={() => { closeReveal(); router.push("/account/api-keys"); }}
-        title="API Key Created"
+        title={t("apiKeyCreated")}
         classNames={{ content: "!bg-gray-7", header: "!bg-gray-7" }}
       >
         <div className="flex flex-col gap-4 p-4">
           <p className="text-sm text-yellow-400">
-            Copy your key and secret now — the secret will never be shown again.
+            {t("copySecretNow")}
           </p>
           <div className="flex flex-col gap-2">
-            <span className="text-xs text-white/50 font-medium">API Key</span>
+            <span className="text-xs text-white/50 font-medium">{t("apiKey")}</span>
             <div className="bg-gray-1 rounded p-3 break-all text-sm font-mono text-primary">
               {revealedKey?.key}
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-xs text-white/50 font-medium">Secret Key</span>
+            <span className="text-xs text-white/50 font-medium">{t("secretKey")}</span>
             <div className="bg-gray-1 rounded p-3 break-all text-sm font-mono text-primary">
               {revealedKey?.secret || "—"}
             </div>
@@ -127,17 +129,17 @@ function CreateApiKeyInner() {
             onClick={() => {
               const text = [revealedKey?.key, revealedKey?.secret].filter(Boolean).join("\n");
               navigator.clipboard.writeText(text);
-              successNotification("Key copied to clipboard");
+              successNotification(t("keyCopied"));
             }}
             className="w-full py-3 bg-primary rounded-lg text-sm font-semibold"
           >
-            Copy Key &amp; Secret
+            {t("copyKeyAndSecret")}
           </button>
           <button
             onClick={() => { closeReveal(); router.push("/account/api-keys"); }}
             className="w-full py-3 bg-transparent border border-white/30 rounded-lg text-sm"
           >
-            Done
+            {t("done")}
           </button>
         </div>
       </Modal>
@@ -145,10 +147,9 @@ function CreateApiKeyInner() {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-4">
-            <h2 className="text-2xl font-bold">API Keys</h2>
+            <h2 className="text-2xl font-bold">{t("apiKeys")}</h2>
             <p className="text-xs text-gray-9">
-              Create APIs to suit your trading needs. For your security,
-              don&apos;t share your APIs with anyone.
+              {t("apiKeysIntro")}
             </p>
           </div>
           <button
@@ -157,30 +158,26 @@ function CreateApiKeyInner() {
             className="flex font-medium py-4 px-18px rounded-3xl bg-primary items-center justify-center gap-6px disabled:opacity-50"
           >
             {isPending ? <Loader size="xs" color="white" /> : <Add />}
-            Create APIs
+            {t("createApis")}
           </button>
         </div>
         <div className="account-card !p-5 flex flex-col gap-4">
           <div className="flex items-center gap-6px">
             <InfoWhite />
-            <span className="font-semibold">Note</span>
+            <span className="font-semibold">{t("note")}</span>
           </div>
           <ol className="text-xs text-gray-9 list-decimal pl-4">
             <li>
-              Limiance offers a robust API that allows you to access market data,
-              execute trades, transfer assets, and process withdrawals.
+              {t("noteItem1")}
             </li>
             <li>
-              When you generate a new API, you need to set a passphrase to
-              access the API and obtain the secret key. Keep your passphrase
-              secure, as losing it will necessitate creating a new API key.
+              {t("noteItem2")}
             </li>
             <li>
-              To enhance your account security, it is advisable to limit access
-              to trusted IPs only.
+              {t("noteItem3")}
             </li>
             <li>
-              You will not be able to create an API Key if KYC is not completed.
+              {t("noteItem4")}
             </li>
           </ol>
         </div>
@@ -190,27 +187,27 @@ function CreateApiKeyInner() {
           <div className="flex flex-col gap-7">
             <div className="flex flex-col gap-30px">
               <div className="flex items-center justify-between">
-                <span className="text-sm">API drafts</span>
+                <span className="text-sm">{t("apiDrafts")}</span>
                 <span className="flex rounded-xl items-center bg-orange-1/5 px-2 py-2px gap-6px">
                   <InfoOrange />
-                  <span className="text-xs text-orange-1">Incomplete</span>
+                  <span className="text-xs text-orange-1">{t("incomplete")}</span>
                 </span>
               </div>
               <div className="py-4 px-2 border border-white/[0.06] rounded-lg flex flex-col gap-2">
-                <span className="text-sm font-medium">{form.values.label || "New API"}</span>
+                <span className="text-sm font-medium">{form.values.label || t("newApi")}</span>
                 <div className="flex items-center gap-2">
                   <span className="bg-gray-9/25 py-2px px-5px text-gray-9 text-xs">
-                    Main account
+                    {t("mainAccount")}
                   </span>
                   <span className="flex rounded-xl items-center bg-orange-1/5 px-2 py-2px gap-6px">
                     <InfoOrange />
-                    <span className="text-xs text-orange-1">Incomplete</span>
+                    <span className="text-xs text-orange-1">{t("incomplete")}</span>
                   </span>
                 </div>
               </div>
             </div>
             <div className="py-3 text-center px-2 border border-white/[0.06] rounded-lg cursor-pointer">
-              Add another
+              {t("addAnother")}
             </div>
             <button
               onClick={handleCreate}
@@ -218,37 +215,37 @@ function CreateApiKeyInner() {
               className="bg-primary rounded-xl py-18px text-base font-medium disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isPending && <Loader size="xs" color="white" />}
-              Submit
+              {t("submit")}
             </button>
           </div>
         </div>
         <div className="account-card !py-30px !px-5 flex flex-col gap-6">
           <TextInput
             classNames={inputStyles}
-            label="API name"
-            placeholder="Enter API name"
+            label={t("apiName")}
+            placeholder={t("enterApiName")}
             {...form.getInputProps("label")}
           />
           <TextInput
             classNames={inputStyles}
-            label="Account"
-            placeholder="Enter"
-            value="Main account"
+            label={t("account")}
+            placeholder={t("enter")}
+            value={t("mainAccount")}
             readOnly
           />
           <RadioGroup
-            label="Purpose"
+            label={t("purpose")}
             {...form.getInputProps("purpose")}
           >
             <div className="flex items-center gap-6 mt-1">
-              <Radio value="purpose" label="Purpose" />
-              <Radio value="linking" label="Linking third-party app" />
+              <Radio value="purpose" label={t("purpose")} />
+              <Radio value="linking" label={t("linkingThirdPartyApp")} />
             </div>
           </RadioGroup>
           <Textarea
             classNames={inputStyles}
-            label="IP address allowlist (optional)"
-            placeholder="Enter IP address"
+            label={t("ipAllowlist")}
+            placeholder={t("enterIpAddress")}
             autosize
             minRows={5}
             maxRows={5}
@@ -256,9 +253,9 @@ function CreateApiKeyInner() {
           />
           <div className="flex flex-col gap-3">
             <div>
-              <span className="text-sm font-semibold">Permissions</span>
-              <p className="mt-1 text-xs text-white/45">Select at least one capability for this API key.</p>
-              <p className="mt-1 text-xs text-white/50">{permissions.length} selected</p>
+              <span className="text-sm font-semibold">{t("permissions")}</span>
+              <p className="mt-1 text-xs text-white/45">{t("permissionsSelectHint")}</p>
+              <p className="mt-1 text-xs text-white/50">{t("selectedCount", { count: permissions.length })}</p>
             </div>
             <ApiKeyPermissionPicker
               groups={permissionData?.groups ?? []}

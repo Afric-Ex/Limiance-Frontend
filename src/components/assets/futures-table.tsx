@@ -10,8 +10,10 @@ import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { useTokenIconMap } from "@/src/hooks/use-token-icons";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export const FuturesTable = () => {
+  const t = useTranslations("Wallet");
   const [hideSmallBalances, setHideSmallBalances] = useState(false);
   const router = useRouter();
 
@@ -27,7 +29,7 @@ export const FuturesTable = () => {
     <div className="flex flex-col gap-4 animate-fade-up">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold text-white/80">Futures</h3>
+        <h3 className="text-base font-semibold text-white/80">{t("futures")}</h3>
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <div
             onClick={() => setHideSmallBalances(!hideSmallBalances)}
@@ -37,7 +39,7 @@ export const FuturesTable = () => {
               className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${hideSmallBalances ? "translate-x-4" : "translate-x-0.5"}`}
             />
           </div>
-          <span className="text-xs font-medium text-white/50">Hide Asset {"<$1"}</span>
+          <span className="text-xs font-medium text-white/50">{t("hideSmallAssets")}</span>
         </label>
       </div>
 
@@ -59,10 +61,10 @@ export const FuturesTable = () => {
             >
               <thead>
                 <TableTr>
-                  <TableTh className="!pl-6">Coin</TableTh>
-                  <TableTh>Amount</TableTh>
-                  <TableTh>Price</TableTh>
-                  <TableTh className="!pr-6 !text-right">Action</TableTh>
+                  <TableTh className="!pl-6">{t("coin")}</TableTh>
+                  <TableTh>{t("amount")}</TableTh>
+                  <TableTh>{t("price")}</TableTh>
+                  <TableTh className="!pr-6 !text-right">{t("action")}</TableTh>
                 </TableTr>
               </thead>
               <tbody>
@@ -70,7 +72,7 @@ export const FuturesTable = () => {
                   <TableTr>
                     <TableTd colSpan={4}>
                       <div className="flex flex-col items-center justify-center py-12 gap-2 text-white/25">
-                        <span className="text-sm font-medium">No futures assets</span>
+                        <span className="text-sm font-medium">{t("noFuturesAssets")}</span>
                       </div>
                     </TableTd>
                   </TableTr>
@@ -132,7 +134,7 @@ export const FuturesTable = () => {
                               onClick={() => router.push(`/trades/futures/${item.symbol}USDT`)}
                               className="text-sm font-semibold text-primary hover:text-primary/80 cursor-pointer transition-colors"
                             >
-                              Trade
+                              {t("trade")}
                             </span>
                             <span
                               onClick={() =>
@@ -143,7 +145,7 @@ export const FuturesTable = () => {
                               }
                               className="text-sm font-semibold text-blue-500 hover:text-blue-400 cursor-pointer transition-colors"
                             >
-                              Convert
+                              {t("convert")}
                             </span>
                           </div>
                         </TableTd>

@@ -10,35 +10,37 @@ import { useMutation } from "@tanstack/react-query";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
+import { useTranslations } from "next-intl";
 
 export const UploadId = ({
   setUploaded,
 }: {
   setUploaded: Dispatch<SetStateAction<boolean>>;
 }) => {
+  const t = useTranslations("Kyc");
   const [frontUploaded, setFrontUploaded] = useState(false);
   const [backUploaded, setBackUploaded] = useState(false);
 
   const { mutate: uploadFront, isPending: frontLoading } = useMutation({
     mutationFn: async (_file: File): Promise<any> => {
-      errorNotification("Direct document upload is no longer supported here. Please use the Persona verification flow.");
+      errorNotification(t("uploadNotSupported"));
       throw new Error("Legacy KYC upload flow is disabled");
     },
     onSuccess: () => {
       setFrontUploaded(true);
-      successNotification("Front ID uploaded");
+      successNotification(t("frontIdUploaded"));
     },
     onError: (e: any) => errorMessageHandler(e),
   });
 
   const { mutate: uploadBack, isPending: backLoading } = useMutation({
     mutationFn: async (_file: File): Promise<any> => {
-      errorNotification("Direct document upload is no longer supported here. Please use the Persona verification flow.");
+      errorNotification(t("uploadNotSupported"));
       throw new Error("Legacy KYC upload flow is disabled");
     },
     onSuccess: () => {
       setBackUploaded(true);
-      successNotification("Back ID uploaded");
+      successNotification(t("backIdUploaded"));
     },
     onError: (e: any) => errorMessageHandler(e),
   });
@@ -63,15 +65,14 @@ export const UploadId = ({
             <div className="flex flex-col gap-3">
               <div className="flex items-center flex-col gap-2">
                 <h2 className="font-bold">
-                  Scan QR code to continue ID verification on mobile
+                  {t("scanQrToContinue")}
                 </h2>
                 <p className="text-sm text-center max-w-446px mx-auto">
-                  Ensure that your phone and computer are on the same network or
-                  complete the entire process on your mobile browser or app.
+                  {t("scanQrDescription")}
                 </p>
               </div>
               <Divider
-                label="Or"
+                label={t("or")}
                 classNames={{
                   label:
                     "before:!border-t-white/20 after:!border-t-white/20 !text-white",
@@ -80,8 +81,8 @@ export const UploadId = ({
               />
             </div>
             <p className="text-xs text-white/55 text-center">
-              <span className="text-primary underline">Copy the link</span> and
-              open in your browser
+              <span className="text-primary underline">{t("copyTheLink")}</span>{" "}
+              {t("copyTheLinkDescription")}
             </p>
           </div>
         </div>
@@ -108,11 +109,11 @@ export const UploadId = ({
                 </svg>
               )}
               <h3 className="text-base font-semibold">
-                {frontUploaded ? "Front ID Uploaded" : "Upload Front ID Card"}
+                {frontUploaded ? t("frontIdUploadedLabel") : t("uploadFrontId")}
               </h3>
               {!frontUploaded && (
                 <p className="text-sm text-center text-white/55">
-                  Drag a file here or browse for a file to upload
+                  {t("dragOrBrowse")}
                 </p>
               )}
             </div>
@@ -139,11 +140,11 @@ export const UploadId = ({
                 </svg>
               )}
               <h3 className="text-base font-semibold">
-                {backUploaded ? "Back ID Uploaded" : "Upload Back ID Card"}
+                {backUploaded ? t("backIdUploadedLabel") : t("uploadBackId")}
               </h3>
               {!backUploaded && (
                 <p className="text-sm text-center text-white/55">
-                  Drag a file here or browse for a file to upload
+                  {t("dragOrBrowse")}
                 </p>
               )}
             </div>
@@ -155,7 +156,7 @@ export const UploadId = ({
         disabled={!canProceed}
         className="w-full max-w-514px self-center rounded-full py-23px bg-primary text-base font-semibold disabled:opacity-50"
       >
-        Proceed
+        {t("proceed")}
       </button>
     </div>
   );

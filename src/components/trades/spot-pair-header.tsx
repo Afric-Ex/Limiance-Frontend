@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Popover, PopoverDropdown, PopoverTarget, TextInput } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { Search } from "@/src/components/icons/search";
 import { Skeleton } from "@/src/components/shared/skeleton";
@@ -67,6 +68,7 @@ export function SpotPairHeader({
   className,
   currentPrice,
 }: SpotPairHeaderProps) {
+  const t = useTranslations("Trading");
   const icons = useTokenIconMap();
   const names = useTokenNameMap();
 
@@ -123,7 +125,7 @@ export function SpotPairHeader({
         >
           <PopoverTarget>
             <button
-              aria-label="Change trading pair"
+              aria-label={t("changeTradingPair")}
               onClick={() => onMenuOpenChange(!menuOpen)}
               className="-ml-2 flex items-center gap-2.5 rounded px-2 py-1 transition-colors hover:bg-white/5"
             >
@@ -151,7 +153,7 @@ export function SpotPairHeader({
                     input:
                       "!h-8 !bg-white/5 placeholder:!text-white/30 !border-0 focus:!border focus:!border-primary !rounded text-xs",
                   }}
-                  placeholder="Search pairs (BTC, ETH…)"
+                  placeholder={t("searchPairsPlaceholder")}
                   leftSection={<Search className="h-4 w-4" />}
                   value={pairSearch}
                   onChange={(e) => onPairSearchChange(e.target.value)}
@@ -162,7 +164,7 @@ export function SpotPairHeader({
                 {feed.marketsLoading ? (
                   <Skeleton variant="table-row" count={5} columns={2} className="px-2" />
                 ) : markets.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-white/30">No pairs found</div>
+                  <div className="py-8 text-center text-xs text-white/30">{t("noPairsFound")}</div>
                 ) : (
                   markets.slice(0, 30).map((m) => (
                     <button
@@ -220,16 +222,16 @@ export function SpotPairHeader({
 
         {/* 24H stats */}
         <div className="flex items-center gap-6">
-          <Stat label="24H Change">
+          <Stat label={t("change24h")}>
             <span className={tone}>
               {pct === null ? "—" : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`}
             </span>
           </Stat>
-          <Stat label="24H High">{fmt(high)}</Stat>
-          <Stat label="24H Low">{fmt(low)}</Stat>
+          <Stat label={t("high24h")}>{fmt(high)}</Stat>
+          <Stat label={t("low24h")}>{fmt(low)}</Stat>
 
-          <Stat label={`24H Volume(${base})`}>{fmt(volBase)}</Stat>
-          <Stat label={`24H Turnover(${quote})`}>{fmt(volQuote)}</Stat>
+          <Stat label={t("volume24hOf", { base })}>{fmt(volBase)}</Stat>
+          <Stat label={t("turnover24hOf", { quote })}>{fmt(volQuote)}</Stat>
         </div>
       </div>
 
@@ -245,7 +247,7 @@ export function SpotPairHeader({
             feed.isConnected ? "animate-pulse-glow bg-success-6" : "bg-white/20"
           )}
         />
-        {feed.isConnected ? "Live" : "Connecting"}
+        {feed.isConnected ? t("live") : t("connecting")}
       </span>
     </div>
   );

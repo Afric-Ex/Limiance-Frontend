@@ -18,6 +18,7 @@ import { earnKeys, earnService, EarnProduct, EarnPosition } from "@/src/services
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { MdClose, MdOutlineInfo, MdOutlineLock, MdOutlineSavings } from "react-icons/md";
+import { useTranslations } from "next-intl";
 
 const productTabs = [
   "Simple Earn",
@@ -29,13 +30,27 @@ const productTabs = [
   "Smart Trend",
 ];
 
+const PRODUCT_TAB_KEYS: Record<string, string> = {
+  "Simple Earn": "productSimpleEarn",
+  "Staking": "productStaking",
+  "Launchpad": "productLaunchpad",
+  "Pool Savings": "productPoolSavings",
+  "Dual Investment": "productDualInvestment",
+  "Auto Invest": "productAutoInvest",
+  "Smart Trend": "productSmartTrend",
+};
+
 const mainTabs = ["Products", "My Positions"];
-const upcomingProducts: Record<string, string> = {
-  Launchpad: "Get early access to carefully selected token launches and manage your allocations in one place.",
-  "Pool Savings": "Join a shared savings pool and track your contribution and rewards as the program becomes available.",
-  "Dual Investment": "Explore target-price products with transparent settlement terms and potential enhanced yield.",
-  "Auto Invest": "Build a recurring investment plan around a schedule that works for you.",
-  "Smart Trend": "Follow automated strategies driven by market trends and funding signals.",
+const MAIN_TAB_KEYS: Record<string, string> = {
+  "Products": "products",
+  "My Positions": "myPositions",
+};
+const UPCOMING_PRODUCT_KEYS: Record<string, string> = {
+  "Launchpad": "upcomingLaunchpad",
+  "Pool Savings": "upcomingPoolSavings",
+  "Dual Investment": "upcomingDualInvestment",
+  "Auto Invest": "upcomingAutoInvest",
+  "Smart Trend": "upcomingSmartTrend",
 };
 
 function formatApyPercent(raw: unknown): number {
@@ -98,6 +113,7 @@ function StakeModal({
   product: NormalizedProduct;
   onClose: () => void;
 }) {
+  const t = useTranslations("Earn");
   const [amount, setAmount] = useState("");
   const queryClient = useQueryClient();
 
@@ -105,7 +121,9 @@ function StakeModal({
     mutationFn: () => earnService.subscribe({ productId: product.id, amount }),
     onSuccess: () => {
       successNotification(
-        `Successfully ${product.lockDays > 0 ? "staked" : "subscribed"} ${amount} ${product.asset}`
+        product.lockDays > 0
+          ? t("stakedSuccess", { amount, asset: product.asset })
+          : t("subscribedSuccess", { amount, asset: product.asset })
       );
       queryClient.invalidateQueries({ queryKey: earnKeys.myPositions });
       queryClient.invalidateQueries({ queryKey: earnKeys.myRewards });
@@ -133,14 +151,14 @@ function StakeModal({
               Limiance Earn
             </p>
             <h2 className="mt-1 truncate text-lg font-semibold">
-              {isStaking ? "Stake" : "Subscribe"} {product.asset}
+              {isStaking ? t("stake") : t("subscribe")} {product.asset}
             </h2>
           </div>
         </div>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close subscription dialog"
+          aria-label={t("closeSubscriptionDialog")}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-white/55 transition-colors hover:bg-white/[0.08] hover:text-white"
         >
           <MdClose size={19} />
@@ -154,12 +172,14 @@ function StakeModal({
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-white">{product.name}</p>
               <p className="mt-1 text-xs text-white/45">
-                {isStaking ? `${product.lockDays}-day fixed term` : "Flexible redemption"}
+                {isStaking
+                  ? t("fixedTermDays", { days: product.lockDays })
+                  : t("flexibleRedemption")}
               </p>
             </div>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Est. APY</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{t("estApy")}</p>
             <p className="mt-1 text-lg font-bold tabular-nums text-emerald-400">{product.apy}%</p>
           </div>
         </div>
@@ -167,16 +187,20 @@ function StakeModal({
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3">
             <label htmlFor="earn-subscription-amount" className="text-sm font-medium text-white/80">
-              Amount to {isStaking ? "stake" : "subscribe"}
+              {isStaking ? t("amountToStake") : t("amountToSubscribe")}
             </label>
             <span className="text-xs text-white/45">
-              Minimum <span className="font-semibold text-white/75">{product.minAmount} {product.asset}</span>
+              {t("minimum")} <span className="font-semibold text-white/75">{product.minAmount} {product.asset}</span>
             </span>
           </div>
           <div className="flex items-center rounded-xl border border-white/[0.09] bg-elevated px-4 transition-colors focus-within:border-primary/60">
             <NumberInput
               id="earn-subscription-amount"
-              aria-label={`Amount to ${isStaking ? "stake" : "subscribe"} in ${product.asset}`}
+              aria-label={
+                isStaking
+                  ? t("amountToStakeIn", { asset: product.asset })
+                  : t("amountToSubscribeIn", { asset: product.asset })
+              }
               placeholder="0.00"
               value={amount}
               onChange={(value) => setAmount(String(value ?? ""))}
@@ -193,7 +217,9 @@ function StakeModal({
           </div>
           {belowMin && (
             <p className="text-xs text-red-400">
-              Minimum {isStaking ? "stake" : "subscription"} is {product.minAmount} {product.asset}.
+              {isStaking
+                ? t("minimumStakeError", { amount: product.minAmount, asset: product.asset })
+                : t("minimumSubscriptionError", { amount: product.minAmount, asset: product.asset })}
             </p>
           )}
         </div>
@@ -202,9 +228,9 @@ function StakeModal({
           <MdOutlineInfo className="mt-0.5 shrink-0 text-primary" size={17} />
           <p className="text-xs leading-5 text-white/55">
             {isStaking
-              ? `Your assets are locked for ${product.lockDays} days. Review the term before confirming.`
-              : "This product is flexible. Review the product terms before confirming your subscription."}
-            {" "}Estimated returns may vary.
+              ? t("lockedDaysNotice", { days: product.lockDays })
+              : t("flexibleNotice")}
+            {" "}{t("estimatedReturnsNote")}
           </p>
         </div>
       </div>
@@ -215,7 +241,7 @@ function StakeModal({
           onClick={onClose}
           className="min-h-11 rounded-xl border border-white/[0.09] bg-white/[0.025] text-sm font-semibold text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white"
         >
-          Cancel
+          {t("cancel")}
         </button>
         <button
           type="button"
@@ -224,7 +250,7 @@ function StakeModal({
           className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(77,119,240,0.2)] transition-all hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending && <Loader size="xs" color="white" />}
-          Confirm {isStaking ? "stake" : "subscription"}
+          {isStaking ? t("confirmStake") : t("confirmSubscription")}
         </button>
       </div>
     </div>
@@ -238,6 +264,7 @@ export const EarnTab = ({
   activeProductTab?: string;
   onProductTabChange?: (tab: string) => void;
 } = {}) => {
+  const t = useTranslations("Earn");
   const [mainTab, setMainTab] = useState("Products");
   const [internalProductTab, setInternalProductTab] = useState(productTabs[0]);
   const productTab =
@@ -280,7 +307,7 @@ export const EarnTab = ({
     mutationFn: (subscriptionId: string) =>
       earnService.unstake({ subscriptionId }),
     onSuccess: () => {
-      successNotification("Unstaked successfully");
+      successNotification(t("unstakeSuccess"));
       queryClient.invalidateQueries({ queryKey: earnKeys.myPositions });
       queryClient.invalidateQueries({ queryKey: earnKeys.myRewards });
       queryClient.invalidateQueries({ queryKey: earnKeys.products });
@@ -350,19 +377,19 @@ export const EarnTab = ({
       <section id="earn-products" className="flex flex-col gap-5 rounded-2xl border border-white/[0.07] bg-[#181a20] p-4 sm:gap-6 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Limiance Earn</p>
-            <h2 className="mt-1 text-lg font-semibold tracking-tight text-white">Explore earn products</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">{t("brandTitle")}</p>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight text-white">{t("exploreEarnProducts")}</h2>
             <p className="mt-1 text-sm leading-5 text-white/45">
-              Compare flexible savings and fixed-term opportunities, or review your positions.
+              {t("exploreEarnProductsSubtitle")}
             </p>
           </div>
           <span className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.07] px-3 py-1.5 text-xs font-medium text-emerald-300">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            Earn products
+            {t("earnProductsBadge")}
           </span>
         </div>
 
-        <div className="flex gap-1 self-start rounded-xl border border-white/[0.07] bg-black/20 p-1" role="group" aria-label="Earn sections">
+        <div className="flex gap-1 self-start rounded-xl border border-white/[0.07] bg-black/20 p-1" role="group" aria-label={t("earnSections")}>
           {mainTabs.map((tab) => (
             <button
               key={tab}
@@ -375,7 +402,7 @@ export const EarnTab = ({
                   : "text-white/50 hover:bg-white/[0.05] hover:text-white/80"
               }`}
             >
-              {tab}
+              {t(MAIN_TAB_KEYS[tab])}
             </button>
           ))}
         </div>
@@ -386,10 +413,10 @@ export const EarnTab = ({
             value={productTab}
             onChange={handleProductTabChange}
           >
-            <TabsList aria-label="Earn product categories">
+            <TabsList aria-label={t("earnProductCategories")}>
               {productTabs.map((item) => (
                 <TabsTab value={item} key={item}>
-                  {item}
+                  {t(PRODUCT_TAB_KEYS[item])}
                 </TabsTab>
               ))}
             </TabsList>
@@ -400,17 +427,17 @@ export const EarnTab = ({
                   <div className="flex flex-col gap-1 border-b border-white/[0.06] px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5">
                     <div>
                       <h3 className="text-sm font-semibold text-white">
-                        {productTab === "Staking" ? "Fixed-term staking" : "Flexible savings"}
+                        {productTab === "Staking" ? t("fixedTermStaking") : t("flexibleSavings")}
                       </h3>
                       <p className="mt-1 text-xs text-white/45">
                         {productTab === "Staking"
-                          ? "Choose a lock term and review the estimated return before staking."
-                          : "Subscribe to eligible assets and redeem according to each product’s terms."}
+                          ? t("fixedTermStakingDesc")
+                          : t("flexibleSavingsDesc")}
                       </p>
                     </div>
                     {!productsLoading && !productsError && (
                       <span className="text-xs text-white/40">
-                        {tabProducts.length} {tabProducts.length === 1 ? "product" : "products"}
+                        {t("productCount", { count: tabProducts.length })}
                       </span>
                     )}
                   </div>
@@ -421,13 +448,13 @@ export const EarnTab = ({
                     </div>
                   ) : productsError ? (
                     <div className="flex min-h-56 flex-col items-center justify-center gap-3 px-5 text-center">
-                      <p className="text-sm text-white/55">We couldn’t load earn products.</p>
+                      <p className="text-sm text-white/55">{t("loadProductsError")}</p>
                       <button
                         type="button"
                         onClick={() => void refetchProducts()}
                         className="rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-white/75 transition-colors hover:bg-white/[0.05]"
                       >
-                        Try again
+                        {t("tryAgain")}
                       </button>
                     </div>
                   ) : tabProducts.length ? (
@@ -448,9 +475,9 @@ export const EarnTab = ({
                               </div>
                               <p className="mt-1.5 flex items-center gap-1.5 text-xs text-white/45">
                                 {product.lockDays > 0 ? (
-                                  <><MdOutlineLock size={13} /> {product.lockDays}-day lock</>
+                                  <><MdOutlineLock size={13} /> {t("dayLock", { days: product.lockDays })}</>
                                 ) : (
-                                  <><MdOutlineSavings size={14} /> Flexible redemption</>
+                                  <><MdOutlineSavings size={14} /> {t("flexibleRedemption")}</>
                                 )}
                               </p>
                             </div>
@@ -458,11 +485,11 @@ export const EarnTab = ({
 
                           <div className="grid grid-cols-2 items-center gap-3 border-t border-white/[0.06] pt-3 sm:flex sm:gap-6 sm:border-0 sm:pt-0">
                             <div className="sm:min-w-[95px] sm:text-right">
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Est. APY</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/35">{t("estApy")}</p>
                               <p className="mt-1 text-base font-bold tabular-nums text-emerald-400">{product.apy}%</p>
                             </div>
                             <div className="sm:min-w-[110px] sm:text-right">
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/35">Minimum</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/35">{t("minimum")}</p>
                               <p className="mt-1 text-xs font-medium text-white/75">{product.minAmount} {product.asset}</p>
                             </div>
                             <button
@@ -473,7 +500,7 @@ export const EarnTab = ({
                               }}
                               className="col-span-2 min-h-10 rounded-lg bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 sm:col-span-1"
                             >
-                              {product.lockDays > 0 ? "Stake" : "Subscribe"}
+                              {product.lockDays > 0 ? t("stake") : t("subscribe")}
                             </button>
                           </div>
                         </article>
@@ -486,10 +513,10 @@ export const EarnTab = ({
                       </span>
                       <div>
                         <h4 className="text-sm font-semibold text-white/80">
-                          No {productTab === "Staking" ? "staking" : "flexible earn"} products available
+                          {productTab === "Staking" ? t("noStakingProducts") : t("noFlexibleEarnProducts")}
                         </h4>
                         <p className="mt-1 max-w-sm text-xs leading-5 text-white/40">
-                          New opportunities will appear here when they are available.
+                          {t("newOpportunities")}
                         </p>
                       </div>
                     </div>
@@ -510,11 +537,11 @@ export const EarnTab = ({
                     </span>
                     <h3 className="text-lg font-semibold text-white">{item}</h3>
                     <p className="mt-2 max-w-xl text-sm leading-6 text-white/50">
-                      {upcomingProducts[item]}
+                      {t(UPCOMING_PRODUCT_KEYS[item])}
                     </p>
                   </div>
                   <div className="flex flex-col justify-center gap-3 border-t border-white/[0.06] bg-white/[0.015] p-5 lg:border-l lg:border-t-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/35">On this page</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/35">{t("onThisPage")}</p>
                     <p className="text-xs leading-5 text-white/50">
                       Product availability and terms will be shown here before you can participate.
                     </p>
@@ -535,11 +562,11 @@ export const EarnTab = ({
           {rewardsData && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-white/[0.02] border border-white/10 rounded-xl">
               <div>
-                <span className="text-xs text-white/50">Total Staked</span>
+                <span className="text-xs text-white/50">{t("totalStaked")}</span>
                 <p className="text-sm font-semibold text-white font-mono">${rewardsData.totalStakedUsd.toFixed(2)}</p>
               </div>
               <div>
-                <span className="text-xs text-white/50">Total Earned</span>
+                <span className="text-xs text-white/50">{t("totalEarned")}</span>
                 <p className="text-sm font-semibold text-emerald-400 font-mono">${rewardsData.totalEarnedUsd.toFixed(2)}</p>
               </div>
               <div>
@@ -601,7 +628,7 @@ export const EarnTab = ({
             <div className="h-full flex items-center justify-center py-10">
               <div className="flex flex-col items-center gap-4">
                 <EmptyTable />
-                <span className="text-xs font-medium text-gray-9">No Active Positions</span>
+                <span className="text-xs font-medium text-gray-9">{t("noActivePositions")}</span>
               </div>
             </div>
           )}

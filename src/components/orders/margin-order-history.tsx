@@ -4,6 +4,7 @@ import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextI
 import React, { useState } from "react";
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 import {
@@ -20,9 +21,8 @@ import {
   ResponsiveFilters,
 } from "./orders-shared";
 
-const filters = ["Cross", "Isolated"];
-
 export const MarginOrderHistory = () => {
+  const t = useTranslations("Orders");
   const [filter, setFilter] = useState("Cross");
   const [pair, setPair] = useState("");
   const [orderType, setOrderType] = useState("All");
@@ -56,9 +56,9 @@ export const MarginOrderHistory = () => {
 
   const filterControls = (
     <>
-      <Select label="Order" data={["All", "Limit", "Market"]} value={orderType} onChange={(value) => setOrderType(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[150px]" />
-      <Select label="Trade Side" data={["All", "Buy", "Sell"]} value={tradeSide} onChange={(value) => setTradeSide(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[140px]" />
-      <ChipToggle value={filter} options={filters} onChange={setFilter} />
+      <Select label={t("orderType")} data={[{ value: "All", label: t("all") }, { value: "Limit", label: t("limit") }, { value: "Market", label: t("market") }]} value={orderType} onChange={(value) => setOrderType(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[150px]" />
+      <Select label={t("tradeSide")} data={[{ value: "All", label: t("all") }, { value: "Buy", label: t("buy") }, { value: "Sell", label: t("sell") }]} value={tradeSide} onChange={(value) => setTradeSide(value ?? "All")} classNames={selectStyles} className="w-full sm:w-[140px]" />
+      <ChipToggle value={filter} options={["Cross", "Isolated"]} onChange={setFilter} labels={{ Cross: t("cross"), Isolated: t("isolated") }} />
     </>
   );
 
@@ -73,7 +73,7 @@ export const MarginOrderHistory = () => {
         <div className="flex min-w-0 flex-1 items-end gap-3">
           <TextInput
             classNames={searchInputClass}
-            placeholder="Search pair..."
+            placeholder={t("searchPair")}
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
             value={pair}
             onChange={(e) => setPair(e.currentTarget.value)}
@@ -83,23 +83,23 @@ export const MarginOrderHistory = () => {
             className="h-10 shrink-0 px-2 text-sm font-semibold text-white/40 hover:text-white transition-colors"
             onClick={resetFilters}
           >
-            Reset
+            {t("reset")}
           </button>
         </div>
       </div>
 
-      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No margin order history found.">
+      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle={t("emptyMarginOrderHistory")}>
         <Table classNames={tableClassNames}>
           <TableThead>
             <TableTr>
-              <TableTh className="pl-5">Order Time</TableTh>
-              <TableTh>Trading Pair</TableTh>
-              <TableTh>Type</TableTh>
-              <TableTh>Side</TableTh>
-              <TableTh>Price</TableTh>
-              <TableTh>Executed</TableTh>
-              <TableTh>Amount</TableTh>
-              <TableTh>Status</TableTh>
+              <TableTh className="pl-5">{t("orderTime")}</TableTh>
+              <TableTh>{t("tradingPair")}</TableTh>
+              <TableTh>{t("type")}</TableTh>
+              <TableTh>{t("side")}</TableTh>
+              <TableTh>{t("price")}</TableTh>
+              <TableTh>{t("executed")}</TableTh>
+              <TableTh>{t("amount")}</TableTh>
+              <TableTh>{t("status")}</TableTh>
             </TableTr>
           </TableThead>
           <TableTbody>

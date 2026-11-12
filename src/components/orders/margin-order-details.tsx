@@ -4,6 +4,7 @@ import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextI
 import React, { useState } from "react";
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import {
   fmtDate,
@@ -21,9 +22,8 @@ import {
 } from "./orders-shared";
 import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
 
-const filters = ["Cross", "Isolated"];
-
 export const MarginOrderDetails = () => {
+  const t = useTranslations("Orders");
   const [filter, setFilter] = useState("Cross");
   const [pair, setPair] = useState("");
   const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
@@ -62,17 +62,17 @@ export const MarginOrderDetails = () => {
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
           <Select
-            label="Order"
-            data={["Limit / Market"]}
+            label={t("orderType")}
+            data={[{ value: "Limit / Market", label: t("limitMarket") }]}
             classNames={selectStyles}
             className="w-[150px]"
           />
-          <ChipToggle value={filter} options={filters} onChange={setFilter} />
+          <ChipToggle value={filter} options={["Cross", "Isolated"]} onChange={setFilter} labels={{ Cross: t("cross"), Isolated: t("isolated") }} />
         </ResponsiveFilters>
         <div className="flex items-center gap-4">
           <TextInput
             classNames={searchInputClass}
-            placeholder="Search pair..."
+            placeholder={t("searchPair")}
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
             onChange={(e) => setPair(e.currentTarget.value)}
           />
@@ -80,23 +80,23 @@ export const MarginOrderDetails = () => {
             className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2"
             onClick={() => setPair("")}
           >
-            Reset
+            {t("reset")}
           </button>
         </div>
       </div>
 
-      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle="No margin trade records found.">
+      <TableCard loading={isLoading} hasData={filtered.length > 0} emptyTitle={t("emptyMarginTradeRecords")}>
         <Table classNames={{ ...tableClassNames, table: "!min-w-[1120px] !table-fixed" }}>
           <TableThead>
             <TableTr>
-              <TableTh className="w-[18%] pl-5">Date</TableTh>
-              <TableTh className="w-[14%]">Trading Pair</TableTh>
-              <TableTh className="w-[9%]">Side</TableTh>
-              <TableTh className="w-[13%] text-right">Price</TableTh>
-              <TableTh className="w-[12%] text-right">Filled</TableTh>
-              <TableTh className="w-[12%] text-right">Fee</TableTh>
-              <TableTh className="w-[13%] text-right">Total</TableTh>
-              <TableTh className="w-[9%]">Status</TableTh>
+              <TableTh className="w-[18%] pl-5">{t("date")}</TableTh>
+              <TableTh className="w-[14%]">{t("tradingPair")}</TableTh>
+              <TableTh className="w-[9%]">{t("side")}</TableTh>
+              <TableTh className="w-[13%] text-right">{t("price")}</TableTh>
+              <TableTh className="w-[12%] text-right">{t("filledAmount")}</TableTh>
+              <TableTh className="w-[12%] text-right">{t("fee")}</TableTh>
+              <TableTh className="w-[13%] text-right">{t("total")}</TableTh>
+              <TableTh className="w-[9%]">{t("status")}</TableTh>
             </TableTr>
           </TableThead>
           <TableTbody>

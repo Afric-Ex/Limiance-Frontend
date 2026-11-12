@@ -2,10 +2,16 @@
 
 import React, { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
+
+const ChartLoading = () => {
+  const t = useTranslations("Assets");
+  return <InlineLoading message={t("loadingChart")} />;
+};
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), {
   ssr: false,
-  loading: () => <InlineLoading message="Loading chart..." />,
+  loading: () => <ChartLoading />,
 });
 import { useQuery } from "@tanstack/react-query";
 import { InlineLoading } from "../shared/inline-loading";
@@ -32,6 +38,7 @@ function extractBase(pair: string): string {
 }
 
 export const AssetTrendChart = () => {
+  const t = useTranslations("Assets");
   const [period, setPeriod] = useState<Period>("7D");
 
   const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs({ coins: true });
@@ -211,7 +218,7 @@ export const AssetTrendChart = () => {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-white/80">Asset Trend</span>
+          <span className="text-sm font-semibold text-white/80">{t("trendTitle")}</span>
           {!isLoading && chartData.values.length > 1 && (
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isUp ? "text-[#25AB42] bg-[#25AB42]/10" : "text-[#F6465D] bg-[#F6465D]/10"}`}>
               {isUp ? "▲" : "▼"} {maxVal > 0 ? Math.abs(((chartData.values[chartData.values.length - 1] - chartData.values[0]) / chartData.values[0]) * 100).toFixed(2) : "0.00"}%
@@ -220,7 +227,7 @@ export const AssetTrendChart = () => {
         </div>
         <div className="relative flex items-center">
           <select
-            aria-label="Asset trend period"
+            aria-label={t("trendPeriod")}
             value={period}
             onChange={(event) => setPeriod(event.currentTarget.value as Period)}
             className="h-8 appearance-none rounded-lg border border-white/[0.08] bg-[#181a20] pl-3 pr-8 text-xs font-semibold text-white outline-none transition-colors hover:border-white/20 focus:border-primary/50"
@@ -252,7 +259,7 @@ export const AssetTrendChart = () => {
       </div>
 
       <div className="text-2xs text-white/25 text-right">
-        Last Updated: {dayjs().format("M/D/YYYY")}
+        {t("lastUpdated", { date: dayjs().format("M/D/YYYY") })}
       </div>
     </div>
   );

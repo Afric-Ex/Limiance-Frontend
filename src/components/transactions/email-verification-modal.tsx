@@ -1,4 +1,7 @@
+"use client";
+
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ModalClose } from "../icons/modal-close";
 import { Button } from "@mantine/core";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
@@ -17,6 +20,7 @@ export const EmailVerificationModal = ({
   intitiateWithdrawal: (otpCode: string, totpCode?: string) => void;
   totpCode?: string;
 }) => {
+  const t = useTranslations("Transactions");
   const [otp, setOtp] = useState("");
 
   const { mutate: verifyOtp, isPending: verifyLoading } = useMutation({
@@ -29,7 +33,7 @@ export const EmailVerificationModal = ({
   return (
     <div className="bg-elevated border border-white/[0.08] w-full max-w-md rounded-3xl p-6 sm:p-8 flex flex-col gap-8 shadow-2xl relative overflow-hidden mx-auto">
       <div className="flex items-center justify-between relative z-10">
-        <h4 className="text-lg font-bold text-white/90 tracking-tight">Security Verification</h4>
+        <h4 className="text-lg font-bold text-white/90 tracking-tight">{t("securityVerification")}</h4>
         <ModalClose className="cursor-pointer hover:bg-white/5 p-1 rounded-full transition-colors" onClick={modals.closeAll} />
       </div>
 
@@ -37,14 +41,14 @@ export const EmailVerificationModal = ({
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3 text-center">
             <h2 className="text-3xl font-extrabold tracking-tight">
-              <span className="text-primary">Email</span> Verification
+              <span className="text-primary">{t("email")}</span> {t("verification")}
             </h2>
             <p className="text-sm font-medium text-white/60 leading-relaxed">
-              A 6-digit verification code has just been sent to<br />your email address <span className="text-white font-semibold">{email}</span>
+              {t("emailInstruction1")}<br />{t("emailInstruction2")} <span className="text-white font-semibold">{email}</span>
             </p>
           </div>
           <div className="flex flex-col gap-4 items-center w-full mt-4">
-            <span className="font-bold text-xs text-white/50 uppercase tracking-wider">Enter Verification Code</span>
+            <span className="font-bold text-xs text-white/50 uppercase tracking-wider">{t("enterVerificationCode")}</span>
             <div className="w-full flex justify-center">
               <OtpInput
                 digits={6}
@@ -66,12 +70,12 @@ export const EmailVerificationModal = ({
             onClick={() => verifyOtp()}
             disabled={otp.length !== 6}
           >
-            <span className="font-bold">Verify</span>
+            <span className="font-bold">{t("verify")}</span>
           </Button>
           <div className="flex flex-col items-center gap-1">
-            <span className="text-sm text-white/40">Having issues using this method?</span>
+            <span className="text-sm text-white/40">{t("havingIssues")}</span>
             <span className="text-sm text-white/60">
-              Try{" "}
+              {t("try")}{" "}
               <span
                 onClick={() =>
                   modals.open({

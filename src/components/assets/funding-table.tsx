@@ -10,6 +10,7 @@ import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { ConvertAsset } from "../transactions/convert-asset";
 import { useTokenIconMap } from "@/src/hooks/use-token-icons";
+import { useTranslations } from "next-intl";
 
 /** Safely parse a value to a finite number, defaulting to 0. */
 const safeNum = (v: unknown): number => {
@@ -18,6 +19,7 @@ const safeNum = (v: unknown): number => {
 };
 
 export const FundingTable = () => {
+  const t = useTranslations("Wallet");
   const [hideZero, setHideZero] = useState(false);
   const [search, setSearch] = useState("");
   const { handleOpenDepositModal, handleOpenInternalTransferModal } = useAssets();
@@ -43,10 +45,10 @@ export const FundingTable = () => {
     <div className="flex flex-col gap-4 animate-fade-up">
       {/* Header row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-bold text-white">Funding Assets</h3>
+        <h3 className="text-lg font-bold text-white">{t("fundingAssets")}</h3>
         <div className="flex flex-wrap items-center gap-3">
           <TextInput
-            placeholder="Search coin…"
+            placeholder={t("searchCoin")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             leftSection={<IoSearchOutline size={15} className="text-white/40" />}
@@ -62,7 +64,7 @@ export const FundingTable = () => {
             >
               <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${hideZero ? "translate-x-4" : "translate-x-0.5"}`} />
             </div>
-            <span className="text-xs font-medium text-white/50">Hide zero balance</span>
+            <span className="text-xs font-medium text-white/50">{t("hideZeroBalances")}</span>
           </label>
         </div>
       </div>
@@ -77,13 +79,13 @@ export const FundingTable = () => {
             tr: "hover:!bg-white/[0.02] !transition-colors",
           }}>
             <thead>
-              <TableTr>
-                <TableTh className="!pl-6">Coin</TableTh>
-                <TableTh>Balance</TableTh>
-                <TableTh>USD Value</TableTh>
-                <TableTh>Price</TableTh>
-                <TableTh className="!pr-6 !text-right">Actions</TableTh>
-              </TableTr>
+                <TableTr>
+                  <TableTh className="!pl-6">{t("coin")}</TableTh>
+                  <TableTh>{t("balance")}</TableTh>
+                  <TableTh>{t("usdValue")}</TableTh>
+                  <TableTh>{t("price")}</TableTh>
+                  <TableTh className="!pr-6 !text-right">{t("actions")}</TableTh>
+                </TableTr>
             </thead>
             <tbody>
               {isLoading ? (
@@ -101,7 +103,7 @@ export const FundingTable = () => {
                   <TableTd colSpan={5}>
                     <div className="flex flex-col items-center justify-center py-12 gap-2 text-white/25">
                       <IoSearchOutline size={28} />
-                      <span className="text-sm font-medium">No assets found</span>
+                      <span className="text-sm font-medium">{t("noAssets")}</span>
                     </div>
                   </TableTd>
                 </TableTr>
@@ -143,13 +145,13 @@ export const FundingTable = () => {
                             onClick={() => handleOpenDepositModal(item.symbol)}
                             className="text-sm font-semibold text-primary hover:text-primary/80 cursor-pointer transition-colors"
                           >
-                            Deposit
+                            {t("deposit")}
                           </span>
                           <span
                             onClick={() => handleOpenInternalTransferModal("spot", "funding")}
                             className="text-sm font-semibold text-blue-500 hover:text-blue-400 cursor-pointer transition-colors"
                           >
-                            Transfer
+                            {t("transfer")}
                           </span>
                           <span
                             onClick={() =>
@@ -160,7 +162,7 @@ export const FundingTable = () => {
                             }
                             className="text-sm font-semibold text-yellow-400 hover:text-yellow-300 cursor-pointer transition-colors"
                           >
-                            Convert
+                            {t("convert")}
                           </span>
                         </div>
                       </TableTd>

@@ -4,6 +4,7 @@ import { Select, Table, TableTh, TableTr, TableTd, TableTbody, Skeleton } from "
 import { useState } from "react";
 import { DateInput } from "@mantine/dates";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { OrdersEmptyState, parseDate, ResponsiveFilters } from "./orders-shared";
 import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
@@ -23,6 +24,7 @@ const dateStyles = {
 };
 
 export const SpotRecords = () => {
+  const t = useTranslations("Orders");
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const { data: records, isLoading } = useQuery({
     queryKey: tradingKeys.orderHistory(),
@@ -38,22 +40,22 @@ export const SpotRecords = () => {
       />
       <div className="flex flex-wrap items-center gap-3 border-y border-white/[0.08] px-5 py-3">
         <ResponsiveFilters>
-          <DateInput label="Date" classNames={dateStyles} className="w-[160px]" />
+          <DateInput label={t("date")} classNames={dateStyles} className="w-[160px]" />
           <Select
-            label="Time"
-            data={["Last 7 Days", "Last 30 Days"]}
+            label={t("time")}
+            data={[{ value: "Last 7 Days", label: t("last7Days") }, { value: "Last 30 Days", label: t("last30Days") }]}
             classNames={selectStyles}
             className="w-[140px]"
           />
           <Select
-            label="Coin"
-            data={["All", "BTC", "ETH"]}
+            label={t("coin")}
+            data={[{ value: "All", label: t("all") }, { value: "BTC", label: "BTC" }, { value: "ETH", label: "ETH" }]}
             classNames={selectStyles}
             className="w-[120px]"
           />
           <Select
-            label="Side"
-            data={["All", "Buy", "Sell"]}
+            label={t("side")}
+            data={[{ value: "All", label: t("all") }, { value: "Buy", label: t("buy") }, { value: "Sell", label: t("sell") }]}
             classNames={selectStyles}
             className="w-[140px]"
           />
@@ -66,12 +68,12 @@ export const SpotRecords = () => {
             th: "!text-white/40 !uppercase !tracking-wider !text-xs !font-bold !border-b !border-white/[0.06] !py-4 !bg-surface",
           }}>
             <TableTr>
-              <TableTh className="pl-6">Pair</TableTh>
-              <TableTh>Side</TableTh>
-              <TableTh>Time</TableTh>
-              <TableTh>Price</TableTh>
-              <TableTh>Quantity</TableTh>
-              <TableTh>Status</TableTh>
+              <TableTh className="pl-6">{t("pair")}</TableTh>
+              <TableTh>{t("side")}</TableTh>
+              <TableTh>{t("time")}</TableTh>
+              <TableTh>{t("price")}</TableTh>
+              <TableTh>{t("quantity")}</TableTh>
+              <TableTh>{t("status")}</TableTh>
             </TableTr>
           </Table>
           <div className="flex-1 overflow-auto custom-scrollbar">
@@ -99,7 +101,7 @@ export const SpotRecords = () => {
                         <TableTd>{parseDate(rec.createdAt)?.toLocaleString() ?? '—'}</TableTd>
                         <TableTd className="font-mono">{Number(rec.price || 0).toLocaleString()}</TableTd>
                         <TableTd className="font-mono">{Number(rec.quantity || rec.amount || 0).toLocaleString()}</TableTd>
-                        <TableTd className="capitalize">{rec.status || 'Closed'}</TableTd>
+                        <TableTd className="capitalize">{rec.status || t("closed")}</TableTd>
                       </TableTr>
                     );
                   })
@@ -108,8 +110,8 @@ export const SpotRecords = () => {
             </Table>
             {!isLoading && (!records || records.length === 0) && (
               <OrdersEmptyState
-                title="No spot records yet"
-                description="Completed spot orders will appear here when activity is available."
+                title={t("emptySpotRecords")}
+                description={t("emptySpotRecordsDescription")}
               />
             )}
           </div>

@@ -1,6 +1,9 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader, NumberInput } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { asset } from "@/src/services/asset";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -10,11 +13,11 @@ import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 export type WalletType = "funding" | "spot" | "margin" | "futures";
 
-const WALLET_OPTIONS: { value: WalletType; label: string }[] = [
-  { value: "funding", label: "Funding Wallet" },
-  { value: "spot", label: "Spot Wallet" },
-  { value: "margin", label: "Margin Wallet" },
-  { value: "futures", label: "Futures Wallet" },
+const WALLET_OPTIONS: { value: WalletType; labelKey: string }[] = [
+  { value: "funding", labelKey: "fundingWallet" },
+  { value: "spot", labelKey: "spotWallet" },
+  { value: "margin", labelKey: "marginWallet" },
+  { value: "futures", labelKey: "futuresWallet" },
 ];
 
 export const MarginTransferModal = ({
@@ -26,6 +29,7 @@ export const MarginTransferModal = ({
   initialMode?: "spot" | "cross" | "isolated";
   onClose: () => void;
 }) => {
+  const t = useTranslations("Trading");
   const delimiter = pair.includes("/") ? "/" : "_";
   const [pairBase, pairQuote] = pair.split(delimiter);
 
@@ -106,7 +110,7 @@ export const MarginTransferModal = ({
         amount: String(amount),
       }),
     onSuccess: () => {
-      successNotification(`Successfully transferred ${amount} ${selectedAsset}`);
+      successNotification(t("transferredSuccessfully", { amount, asset: selectedAsset }));
       refreshBalances();
       onClose();
     },
@@ -118,7 +122,7 @@ export const MarginTransferModal = ({
       {/* Direction Selectors with Swap Button */}
       <div className="flex flex-col items-center gap-2 relative">
         <div className="w-full flex items-center justify-between bg-white/[0.03] border border-white/[0.06] rounded-lg p-3">
-          <span className="text-xs text-white/50 w-12 shrink-0">From</span>
+          <span className="text-xs text-white/50 w-12 shrink-0">{t("from")}</span>
           <select
             value={fromWallet}
             onChange={(e) => {
@@ -131,7 +135,7 @@ export const MarginTransferModal = ({
           >
             {WALLET_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value} className="bg-[#181a20] text-white">
-                {opt.label}
+                {t(opt.labelKey)}
               </option>
             ))}
           </select>
@@ -146,7 +150,7 @@ export const MarginTransferModal = ({
         </button>
 
         <div className="w-full flex items-center justify-between bg-white/[0.03] border border-white/[0.06] rounded-lg p-3">
-          <span className="text-xs text-white/50 w-12 shrink-0">To</span>
+          <span className="text-xs text-white/50 w-12 shrink-0">{t("to")}</span>
           <select
             value={toWallet}
             onChange={(e) => {
@@ -159,7 +163,7 @@ export const MarginTransferModal = ({
           >
             {WALLET_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value} className="bg-[#181a20] text-white">
-                {opt.label}
+                {t(opt.labelKey)}
               </option>
             ))}
           </select>
@@ -168,10 +172,10 @@ export const MarginTransferModal = ({
 
       {/* Asset Selection */}
       <div className="flex flex-col gap-1.5 mt-2">
-        <label className="text-xs text-white/50">Asset</label>
+        <label className="text-xs text-white/50">{t("asset")}</label>
         {availableAssets.length === 0 ? (
           <div className="py-6 flex items-center justify-center rounded-lg bg-white/[0.02] border border-white/[0.06]">
-            <span className="text-xs text-white/30">No assets with a balance to transfer</span>
+            <span className="text-xs text-white/30">{t("noAssetsToTransfer")}</span>
           </div>
         ) : (
           <div className="flex flex-wrap gap-1.5">
@@ -205,9 +209,9 @@ export const MarginTransferModal = ({
       {/* Amount Input */}
       <div className="flex flex-col gap-1.5 mt-2">
         <div className="flex items-center justify-between">
-          <label className="text-xs text-white/50">Amount</label>
+          <label className="text-xs text-white/50">{t("amount")}</label>
           <span className="text-xs text-white/50">
-            Available: {availableBalance.toLocaleString("en-US", { maximumFractionDigits: 6 })} {selectedAsset}
+            {t("availableLabel", { balance: availableBalance.toLocaleString("en-US", { maximumFractionDigits: 6 }), asset: selectedAsset })}
           </span>
         </div>
         <div className="relative">
@@ -237,7 +241,7 @@ export const MarginTransferModal = ({
         className="mt-4 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-all text-[#181a20] font-bold text-sm py-3 rounded-lg flex items-center justify-center gap-2"
       >
         {transferLoading && <Loader size={14} color="#181a20" />}
-        Confirm Transfer
+        {t("confirmTransfer")}
       </button>
     </div>
   );

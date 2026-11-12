@@ -13,8 +13,10 @@ import { useEffect, useState } from "react";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { successNotification } from "@/src/lib/notification-handler";
 import { convertFileToBase64 } from "@/src/lib/convert-file-to-base64";
+import { useTranslations } from "next-intl";
 
 export const EditProfile = () => {
+  const t = useTranslations("Profile");
   const setUser = useUserStore((state) => state.setUser);
   const user = useUserStore((state) => state.user);
 
@@ -27,7 +29,7 @@ export const EditProfile = () => {
           username: form.values.username || user.username,
           photo: form.values.photo || user.photo,
         });
-      successNotification("Profile updated successfully");
+      successNotification(t("updated"));
       modals.closeAll();
     },
     onError(err) {
@@ -68,7 +70,7 @@ export const EditProfile = () => {
           <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center text-primary">
             <MdOutlinePerson size={20} />
           </div>
-          <h4 className="text-xl font-bold text-white">Edit Profile</h4>
+          <h4 className="text-xl font-bold text-white">{t("editProfileTitle")}</h4>
         </div>
         <button
           onClick={() => modals.closeAll()}
@@ -84,7 +86,7 @@ export const EditProfile = () => {
           <label className="relative cursor-pointer group shrink-0">
             <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/[0.1] group-hover:border-primary/50 transition-colors">
               {form.values.photo ? (
-                <img src={form.values.photo} alt="user picture" className="w-full h-full object-cover" />
+                <img src={form.values.photo} alt={t("userPicture")} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-primary/15 flex items-center justify-center">
                   <LimianceAvatarLg />
@@ -107,17 +109,17 @@ export const EditProfile = () => {
             />
           </label>
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-bold text-white">Profile Photo</span>
+            <span className="text-sm font-bold text-white">{t("profilePhoto")}</span>
             <span className="text-xs font-medium text-white/40 leading-relaxed">
-              Click the avatar to upload a new photo.
-              <br />Avatar can only be changed after 30 days.
+              {t("clickAvatarToUpload")}
+              <br />{t("avatarChangeLimit")}
             </span>
           </div>
         </div>
 
         {/* Nickname Section */}
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-white/60">Nickname</label>
+          <label className="text-sm font-semibold text-white/60">{t("nickname")}</label>
           <TextInput
             classNames={{
               input:
@@ -125,7 +127,7 @@ export const EditProfile = () => {
               section: "!w-fit !right-4",
               error: "!mt-1.5 !text-xs !text-error-1",
             }}
-            placeholder="Enter your nickname"
+            placeholder={t("enterNickname")}
             maxLength={40}
             rightSection={
               <span className="text-xs font-bold text-white/30">
@@ -134,13 +136,13 @@ export const EditProfile = () => {
             }
             error={
               form.values.username.length > 0 && form.values.username.length < 4
-                ? "Username must be at least 4 characters"
+                ? t("usernameMinLength")
                 : null
             }
             {...form.getInputProps("username")}
           />
           <span className="text-xs font-medium text-white/30">
-            Nickname can only be changed after 30 days.
+            {t("nicknameChangeLimit")}
           </span>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 
 type Trade = Record<string, unknown>;
 
@@ -28,12 +29,13 @@ function FlowCard({
   base: string;
   quote: string;
 }) {
+  const t = useTranslations("Trading");
   const color = tone === "buy" ? "text-[#25AB42]" : "text-[#F6465D]";
   const rows = [
-    ["Trades", fmt(bucket.count, 0)],
-    [`Volume (${base})`, fmt(bucket.qty, 6)],
-    [`Turnover (${quote})`, fmt(bucket.value)],
-    [`Largest (${quote})`, fmt(bucket.largest)],
+    [t("tradesCount"), fmt(bucket.count, 0)],
+    [t("volumeOf", { base }), fmt(bucket.qty, 6)],
+    [t("turnoverOf", { quote }), fmt(bucket.value)],
+    [t("largestOf", { quote }), fmt(bucket.largest)],
   ];
   return (
     <div className="rounded-lg border border-white/[0.06] p-3">
@@ -61,6 +63,7 @@ export function TradeFlowPanel({
   base: string;
   quote: string;
 }) {
+  const t = useTranslations("Trading");
   const { buy, sell, counted } = useMemo(() => {
     const buy = emptyBucket();
     const sell = emptyBucket();
@@ -86,7 +89,7 @@ export function TradeFlowPanel({
   if (counted === 0 || total <= 0) {
     return (
       <div className="flex flex-1 items-center justify-center text-xs text-white/40">
-        No recent trades to analyse yet.
+        {t("noTradesToAnalyse")}
       </div>
     );
   }
@@ -97,8 +100,8 @@ export function TradeFlowPanel({
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-4">
-      <h3 className="text-base font-bold text-white">Trade flow</h3>
-      <p className="mb-4 mt-1 text-xs text-white/40">Based on the latest {counted} trades</p>
+      <h3 className="text-base font-bold text-white">{t("tradeFlow")}</h3>
+      <p className="mb-4 mt-1 text-xs text-white/40">{t("basedOnLatestTrades", { counted })}</p>
 
       <div className="flex flex-col items-center gap-6 min-[1300px]:flex-row min-[1300px]:items-start">
         <div className="relative h-[180px] w-[180px] shrink-0">
@@ -116,13 +119,13 @@ export function TradeFlowPanel({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-lg font-bold tabular-nums text-white">{(buyShare * 100).toFixed(1)}%</span>
-            <span className="text-2xs text-white/40">buy share</span>
+            <span className="text-2xs text-white/40">{t("buyShare")}</span>
           </div>
         </div>
 
         <div className="grid w-full min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
-          <FlowCard title="Inflow (buys)" tone="buy" bucket={buy} base={base} quote={quote} />
-          <FlowCard title="Outflow (sells)" tone="sell" bucket={sell} base={base} quote={quote} />
+          <FlowCard title={t("inflowBuys")} tone="buy" bucket={buy} base={base} quote={quote} />
+          <FlowCard title={t("outflowSells")} tone="sell" bucket={sell} base={base} quote={quote} />
         </div>
       </div>
     </div>

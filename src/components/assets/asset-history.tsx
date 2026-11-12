@@ -34,16 +34,17 @@ import {
 import { isZeroAddress, truncateCryptoAddress } from "@/src/utils/truncate-address";
 import { formatTransactionAsset } from "@/src/utils/transaction";
 import { rowTypeLabel, withdrawalMethodKind } from "@/src/utils/asset-history";
+import { useTranslations } from "next-intl";
 
 const LIMIT = 30;
 
 const TABS = [
-  { id: "transactions", label: "Transactions" },
-  { id: "deposit", label: "Deposit" },
-  { id: "withdraw", label: "Withdraw" },
-  { id: "transfers", label: "Transfers" },
-  { id: "p2p", label: "P2P" },
-  { id: "fiat-deposit", label: "Fiat Deposit" },
+  { id: "transactions", labelKey: "tabTransactions" },
+  { id: "deposit", labelKey: "tabDeposit" },
+  { id: "withdraw", labelKey: "tabWithdraw" },
+  { id: "transfers", labelKey: "tabTransfers" },
+  { id: "p2p", labelKey: "tabP2p" },
+  { id: "fiat-deposit", labelKey: "tabFiatDeposit" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -64,21 +65,21 @@ const TAB_TRANSACTION_TYPE: Partial<Record<WalletFlowTab, HistoryTransactionType
   p2p: "p2p",
 };
 
-const EMPTY_TITLES: Record<TabId, string> = {
-  transactions: "No transactions yet",
-  deposit: "No deposit transactions yet",
-  withdraw: "No withdrawal transactions yet",
-  transfers: "No transfer transactions yet",
-  p2p: "No P2P transactions yet",
-  "fiat-deposit": "No fiat deposits yet",
+const EMPTY_TITLE_KEYS: Record<TabId, string> = {
+  transactions: "emptyTransactions",
+  deposit: "emptyDeposit",
+  withdraw: "emptyWithdraw",
+  transfers: "emptyTransfers",
+  p2p: "emptyP2p",
+  "fiat-deposit": "emptyFiatDeposit",
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  p2p: "P2P",
-  deposit: "Deposit",
-  withdrawal: "Withdrawal",
-  internal: "Internal transfer",
-  conversion: "Conversion",
+const TYPE_LABEL_KEYS: Record<string, string> = {
+  p2p: "typeP2p",
+  deposit: "typeDeposit",
+  withdrawal: "typeWithdrawal",
+  internal: "typeInternalTransfer",
+  conversion: "typeConversion",
 };
 
 /** Truncated addresses keep their original case; tickers are upper-cased. */
@@ -103,29 +104,33 @@ const rowSymbolLabel = (row: Record<string, any>): string =>
     )
   );
 
-const rowTypeDisplay = (row: Record<string, any>): string => {
+const rowTypeDisplay = (row: Record<string, any>, t: (key: string, values?: any) => string): string => {
   const label = rowTypeLabel(row);
   if (!label) return "—";
   const key = label.toLowerCase();
-  const base = TYPE_LABELS[key] ?? label;
+  const labelKey = TYPE_LABEL_KEYS[key];
+  const base = labelKey ? t(labelKey) : label;
   const meta = String(row.metadata ?? "").trim().toLowerCase();
   if (key === "p2p" && (meta === "buy" || meta === "sell")) {
-    return `${base} · ${meta === "buy" ? "Buy" : "Sell"}`;
+    return t("p2pSide", {
+      type: base,
+      side: meta === "buy" ? t("buy") : t("sell"),
+    });
   }
   return base;
 };
 
-const BALANCE_LABELS: Record<string, string> = {
-  spot_balance: "Spot",
-  funding_balance: "Funding",
-  locked_balance: "Locked",
+const BALANCE_LABEL_KEYS: Record<string, string> = {
+  spot_balance: "balanceSpot",
+  funding_balance: "balanceFunding",
+  locked_balance: "balanceLocked",
 };
 
-const partyLabel = (value: unknown): string => {
+const partyLabel = (value: unknown, t: (key: string, values?: any) => string): string => {
   const raw = String(value ?? "").trim();
   if (!raw || isZeroAddress(raw)) return "";
-  const bucket = BALANCE_LABELS[raw.toLowerCase()];
-  if (bucket) return bucket;
+  const bucket = BALANCE_LABEL_KEYS[raw.toLowerCase()];
+  if (bucket) return t(bucket);
   return raw.length > 20 ? truncateCryptoAddress(raw) : raw;
 };
 
@@ -134,10 +139,11 @@ const partyLabel = (value: unknown): string => {
  * "Locked → Funding". On-chain legs carry an address in the balance fields,
  * which truncates to the usual short form.
  */
-const rowRouteLabel = (row: Record<string, any>): string => {
-  const from = partyLabel(row.fromBalance ?? row.from ?? row.fromUserId);
+const rowRouteLabel = (row: Record<string, any>, t: (key: string, values?: any) => string): string => {
+  const from = partyLabel(row.fromBalance ?? row.from ?? row.fromUserId, t);
   const to = partyLabel(
-    row.toBalance ?? row.to ?? row.toUserId ?? row.destinationAddress
+    row.toBalance ?? row.to ?? row.toUserId ?? row.destinationAddress,
+    t
   );
   if (!from && !to) return "—";
   if (!from || !to) return from || to;
@@ -145,6 +151,7 @@ const rowRouteLabel = (row: Record<string, any>): string => {
 };
 
 const HistoryTable = ({ tab }: { tab: WalletFlowTab }) => {
+  const t = useTranslations("Assets");
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const [tokenFilter, setTokenFilter] = useState<string | null>(null);
   const [methodFilter, setMethodFilter] = useState<"all" | "onchain" | "internal">("all");
@@ -206,8 +213,8 @@ const HistoryTable = ({ tab }: { tab: WalletFlowTab }) => {
           <ResponsiveFilters>
           <div className="flex flex-wrap items-end gap-4">
             <Select
-              label="Token"
-              placeholder="All tokens"
+              label={t("filterToken")}
+              placeholder={t("filterAllTokens")}
               classNames={selectStyles}
               className="w-[170px]"
               data={tokenOptions}
@@ -218,13 +225,13 @@ const HistoryTable = ({ tab }: { tab: WalletFlowTab }) => {
               disabled={tokenOptions.length === 0}
             />
             <Select
-              label="Withdrawal type"
+              label={t("filterWithdrawalType")}
               classNames={selectStyles}
               className="w-[190px]"
               data={[
-                { value: "all", label: "All" },
-                { value: "onchain", label: "On-chain" },
-                { value: "internal", label: "Internal" },
+                { value: "all", label: t("filterAll") },
+                { value: "onchain", label: t("filterOnchain") },
+                { value: "internal", label: t("filterInternal") },
               ]}
               value={methodFilter}
               onChange={(value) =>
@@ -239,7 +246,7 @@ const HistoryTable = ({ tab }: { tab: WalletFlowTab }) => {
                   setMethodFilter("all");
                 }}
               >
-                Reset
+                {t("filterReset")}
               </button>
             )}
           </div>
@@ -250,17 +257,17 @@ const HistoryTable = ({ tab }: { tab: WalletFlowTab }) => {
       <TableCard
         loading={isPending}
         hasData={rows.length > 0 || hasNextPage}
-        emptyTitle={EMPTY_TITLES[tab]}
+        emptyTitle={t(EMPTY_TITLE_KEYS[tab])}
       >
         <Table classNames={tableClassNames}>
           <TableThead>
             <TableTr>
-              <TableTh>Time</TableTh>
-              <TableTh>Type</TableTh>
-              <TableTh>Coin</TableTh>
-              <TableTh>Amount</TableTh>
-              <TableTh>From / To</TableTh>
-              <TableTh>Status</TableTh>
+                <TableTh>{t("colTime")}</TableTh>
+                <TableTh>{t("colType")}</TableTh>
+                <TableTh>{t("colCoin")}</TableTh>
+                <TableTh>{t("colAmount")}</TableTh>
+                <TableTh>{t("colFromTo")}</TableTh>
+                <TableTh>{t("colStatus")}</TableTh>
             </TableTr>
           </TableThead>
           <TableTbody>
@@ -273,14 +280,14 @@ const HistoryTable = ({ tab }: { tab: WalletFlowTab }) => {
                 <TableTd className="text-white/50">
                   {fmtDateTime(row.createdAt ?? row.completedAt)}
                 </TableTd>
-                <TableTd>{rowTypeDisplay(row)}</TableTd>
+                <TableTd>{rowTypeDisplay(row, t)}</TableTd>
                 <TableTd className="!text-white !font-bold">
                   {rowCoinLabel(row)}
                 </TableTd>
                 <TableTd className="tabular-nums text-white">
                   {fmtNum(row.amount ?? row.quantity)}
                 </TableTd>
-                <TableTd className="text-white/60">{rowRouteLabel(row)}</TableTd>
+                <TableTd className="text-white/60">{rowRouteLabel(row, t)}</TableTd>
                 <TableTd>
                   <StatusPill status={row.status} />
                 </TableTd>
@@ -303,6 +310,7 @@ const HistoryTable = ({ tab }: { tab: WalletFlowTab }) => {
 };
 
 const FiatDepositTable = () => {
+  const t = useTranslations("Assets");
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
 
   const {
@@ -338,16 +346,16 @@ const FiatDepositTable = () => {
       <TableCard
         loading={isPending}
         hasData={rows.length > 0 || hasNextPage}
-        emptyTitle="No fiat deposits yet"
+        emptyTitle={t("emptyFiatDeposit")}
       >
         <Table classNames={tableClassNames}>
           <TableThead>
             <TableTr>
-              <TableTh>Time</TableTh>
-              <TableTh>Type</TableTh>
-              <TableTh>Fiat Amount</TableTh>
-              <TableTh>Received</TableTh>
-              <TableTh>Status</TableTh>
+              <TableTh>{t("colTime")}</TableTh>
+              <TableTh>{t("colType")}</TableTh>
+              <TableTh>{t("colFiatAmount")}</TableTh>
+              <TableTh>{t("colReceived")}</TableTh>
+              <TableTh>{t("colStatus")}</TableTh>
             </TableTr>
           </TableThead>
           <TableTbody>
@@ -397,6 +405,7 @@ const FiatDepositTable = () => {
 };
 
 export const AssetHistory = () => {
+  const t = useTranslations("Assets");
   const [activeTab, setActiveTab] = useState<TabId>("transactions");
 
   return (
@@ -408,11 +417,10 @@ export const AssetHistory = () => {
         </div>
         <div>
           <h1 className="text-xl font-bold text-[var(--color-text-primary)] leading-tight">
-            Asset History
+            {t("title")}
           </h1>
           <p className="text-xs text-[var(--color-text-secondary)]">
-            Deposits, withdrawals, transfers, P2P trades and fiat deposits in
-            one place
+            {t("subtitle")}
           </p>
         </div>
       </div>
@@ -426,7 +434,7 @@ export const AssetHistory = () => {
         <TabsList>
           {TABS.map((tab) => (
             <TabsTab key={tab.id} value={tab.id}>
-              {tab.label}
+              {t(tab.labelKey)}
             </TabsTab>
           ))}
         </TabsList>

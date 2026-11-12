@@ -19,16 +19,18 @@ import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountProfileSkeleton } from "@/src/components/skeletons/account";
 import { AccountPageHeader } from "@/src/components/settings/account-page-header";
 import { MdPersonOutline } from "react-icons/md";
+import { useTranslations } from "next-intl";
 
-const kycBadge: Record<string, { label: string; color: string }> = {
-  pending:       { label: "Pending",    color: "bg-yellow-500/20 text-yellow-400" },
-  approved:      { label: "Verified",   color: "bg-green-500/20 text-green-400 border border-green-500/30" },
-  rejected:      { label: "Rejected",   color: "bg-red-500/20 text-red-400" },
-  failed:        { label: "Failed",     color: "bg-red-500/20 text-red-400" },
-  not_submitted: { label: "Unverified", color: "bg-gray-500/20 text-gray-400" },
+const kycBadge: Record<string, { color: string }> = {
+  pending:       { color: "bg-yellow-500/20 text-yellow-400" },
+  approved:      { color: "bg-green-500/20 text-green-400 border border-green-500/30" },
+  rejected:      { color: "bg-red-500/20 text-red-400" },
+  failed:        { color: "bg-red-500/20 text-red-400" },
+  not_submitted: { color: "bg-gray-500/20 text-gray-400" },
 };
 
 function ProfilePageInner() {
+  const t = useTranslations("Profile");
   const user = useUserStore((state) => state.user);
   const userLoading = useUserStore((state) => state.loading);
   const setUser = useUserStore((state) => state.setUser);
@@ -42,47 +44,54 @@ function ProfilePageInner() {
   });
 
   const [imgError, setImgError] = useState(false);
+  const kycLabel = (status?: string): string | undefined => {
+    if (status === "pending") return t("kycPending");
+    if (status === "approved") return t("kycVerified");
+    if (status === "rejected") return t("kycRejected");
+    if (status === "failed") return t("kycFailed");
+    return undefined;
+  };
   const fullName =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
     user?.username ||
-    "User";
+    t("user");
   const accountDetails = [
-    { label: "Full Name", value: fullName },
-    { label: "Username", value: user?.username || "Not set" },
-    { label: "Email", value: user?.email || "Not available" },
-    { label: "Phone", value: user?.phone || "Not available" },
-    { label: "Country", value: user?.country || "Not available" },
-    { label: "User ID", value: user?.id || "Not available" },
+    { label: t("fullName"), value: fullName },
+    { label: t("username"), value: user?.username || t("notSet") },
+    { label: t("email"), value: user?.email || t("notAvailable") },
+    { label: t("phone"), value: user?.phone || t("notAvailable") },
+    { label: t("country"), value: user?.country || t("notAvailable") },
+    { label: t("userId"), value: user?.id || t("notAvailable") },
   ];
   const accountStatus = [
     {
-      label: "Email Verification",
-      value: user?.isVerified ? "Verified" : "Pending",
+      label: t("emailVerification"),
+      value: user?.isVerified ? t("verified") : t("pending"),
       tone: user?.isVerified ? "text-green-400" : "text-yellow-400",
     },
     {
-      label: "Identity Check",
-      value: user?.isIDverified ? "Verified" : "Not verified",
+      label: t("identityCheck"),
+      value: user?.isIDverified ? t("verified") : t("notVerified"),
       tone: user?.isIDverified ? "text-green-400" : "text-yellow-400",
     },
     {
-      label: "Two-Factor Auth",
-      value: user?.twoFaEnabled ? "Enabled" : "Disabled",
+      label: t("twoFactorAuth"),
+      value: user?.twoFaEnabled ? t("enabled") : t("disabled"),
       tone: user?.twoFaEnabled ? "text-green-400" : "text-red-400",
     },
     {
-      label: "Futures Access",
-      value: user?.isFuturesAccepted ? "Enabled" : "Disabled",
+      label: t("futuresAccess"),
+      value: user?.isFuturesAccepted ? t("enabled") : t("disabled"),
       tone: user?.isFuturesAccepted ? "text-green-400" : "text-white",
     },
     {
-      label: "Account Status",
-      value: user?.isActive ? "Active" : "Inactive",
+      label: t("accountStatus"),
+      value: user?.isActive ? t("active") : t("inactive"),
       tone: user?.isActive ? "text-green-400" : "text-red-400",
     },
     {
-      label: "KYC Status",
-      value: kycBadge[kycStatus?.status]?.label ?? "Unverified",
+      label: t("kycStatus"),
+      value: kycLabel(kycStatus?.status) ?? t("unverified"),
       tone:
         kycStatus?.status === "approved"
           ? "text-green-400"
@@ -101,10 +110,10 @@ function ProfilePageInner() {
       username: "",
     },
     validate: {
-      firstName: (value) => (value.length < 2 ? "First name must be at least 2 characters" : null),
-      lastName: (value) => (value.length < 2 ? "Last name must be at least 2 characters" : null),
-      phone: (value) => (/^\+?[1-9]\d{7,14}$/.test(value) ? null : "Invalid international phone format"),
-      username: (value) => (value.length > 0 && value.length < 4 ? "Username must be at least 4 characters" : null),
+      firstName: (value) => (value.length < 2 ? t("firstNameMinLength") : null),
+      lastName: (value) => (value.length < 2 ? t("lastNameMinLength") : null),
+      phone: (value) => (/^\+?[1-9]\d{7,14}$/.test(value) ? null : t("invalidPhone")),
+      username: (value) => (value.length > 0 && value.length < 4 ? t("usernameMinLength") : null),
     },
   });
   const { setValues } = form;
@@ -139,7 +148,7 @@ function ProfilePageInner() {
         country: user?.country || "",
       }),
     onSuccess: (_, variables) => {
-      successNotification("Profile updated");
+      successNotification(t("updateSuccess"));
       if (user) {
         setUser({
           ...user,
@@ -173,7 +182,7 @@ function ProfilePageInner() {
       setPhotoDraft(photo);
       setImgError(false);
       if (user) setUser({ ...user, photo });
-      successNotification("Profile picture updated");
+      successNotification(t("photoUpdated"));
     },
     onError: (err) => errorMessageHandler(err),
   });
@@ -185,7 +194,7 @@ function ProfilePageInner() {
   const handleAvatarSelect = async (file: File | null) => {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      errorMessageHandler({ message: "Image must be smaller than 5MB" } as any);
+      errorMessageHandler({ message: t("imageTooLarge") } as any);
       return;
     }
     setAvatarFile(file);
@@ -200,8 +209,8 @@ function ProfilePageInner() {
   return (
     <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 pb-8 page-enter max-[1150px]:pb-[100px]">
       <AccountPageHeader
-        title="Personal profile"
-        description="Your identity and personal details, all in one place."
+        title={t("pageTitle")}
+        description={t("pageDescription")}
         icon={<MdPersonOutline size={23} />}
       />
 
@@ -212,7 +221,7 @@ function ProfilePageInner() {
             {photoDraft || (user?.photo && !imgError) ? (
               <img
                 src={photoDraft || user.photo}
-                alt="Avatar"
+                alt={t("avatar")}
                 className="w-full h-full object-cover"
                 onError={() => setImgError(true)}
               />
@@ -242,7 +251,7 @@ function ProfilePageInner() {
 
         <div className="flex min-w-0 flex-1 flex-col items-center gap-3 sm:items-start">
           <div className="flex flex-col gap-1 items-center sm:items-start">
-            <h2 className="max-w-full truncate text-xl font-semibold">{user?.username || user?.firstName || "User"}</h2>
+            <h2 className="max-w-full truncate text-xl font-semibold">{user?.username || user?.firstName || t("user")}</h2>
             <div className="flex items-center gap-2 text-sm text-white/50">
               <span>UID: {user?.id?.split("-")?.at(-1)}</span>
               <CopyButton text={user?.id as string} />
@@ -253,11 +262,11 @@ function ProfilePageInner() {
             {kycStatus?.status ? (
               <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 w-fit ${kycBadge[kycStatus.status]?.color ?? "bg-gray-9/20 text-gray-9"}`}>
                 {kycStatus.status === "approved" && <CheckMark />}
-                {kycBadge[kycStatus.status]?.label ?? kycStatus.status}
+                {kycLabel(kycStatus.status) ?? kycStatus.status}
               </span>
             ) : (
               <span className="px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 w-fit bg-gray-500/20 text-gray-400">
-                Unverified
+                {t("unverified")}
               </span>
             )}
           </div>
@@ -268,9 +277,9 @@ function ProfilePageInner() {
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.8fr)]">
         <div className="account-card flex flex-col gap-6">
           <div>
-            <h3 className="text-lg font-semibold">Profile Details</h3>
+            <h3 className="text-lg font-semibold">{t("profileDetails")}</h3>
             <p className="text-sm text-white/45 mt-1">
-              This screen shows the account details currently attached to your profile.
+              {t("profileDetailsDesc")}
             </p>
           </div>
 
@@ -285,7 +294,7 @@ function ProfilePageInner() {
                 </div>
                 <div
                   className={`${
-                    item.label === "User ID"
+                    item.label === t("userId")
                       ? "font-mono text-sm break-all"
                       : "text-base"
                   } text-white font-medium`}
@@ -299,9 +308,9 @@ function ProfilePageInner() {
 
         <div className="account-card flex flex-col gap-6">
           <div>
-            <h3 className="text-lg font-semibold">Account Status</h3>
+            <h3 className="text-lg font-semibold">{t("accountStatus")}</h3>
             <p className="text-sm text-white/45 mt-1">
-              Security and verification flags currently active on your account.
+              {t("accountStatusDesc")}
             </p>
           </div>
 
@@ -323,14 +332,14 @@ function ProfilePageInner() {
 
       <div className="account-card flex flex-col gap-6">
         <div>
-          <h3 className="text-lg font-semibold">Edit profile</h3>
-          <p className="mt-1 text-sm text-white/45">Keep your contact information up to date.</p>
+          <h3 className="text-lg font-semibold">{t("editProfile")}</h3>
+          <p className="mt-1 text-sm text-white/45">{t("editProfileDesc")}</p>
         </div>
         <form onSubmit={form.onSubmit((values) => updateProfile(values))} className="flex flex-col gap-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <TextInput
-              label="First Name"
-              placeholder="Enter first name"
+              label={t("firstName")}
+              placeholder={t("enterFirstName")}
               classNames={{
                 input: "!bg-gray-1 !border-gray-9/40 !text-white focus:!border-primary",
                 label: "!text-white/70 !mb-1.5 !text-sm",
@@ -339,8 +348,8 @@ function ProfilePageInner() {
               {...form.getInputProps("firstName")}
             />
             <TextInput
-              label="Last Name"
-              placeholder="Enter last name"
+              label={t("lastName")}
+              placeholder={t("enterLastName")}
               classNames={{
                 input: "!bg-gray-1 !border-gray-9/40 !text-white focus:!border-primary",
                 label: "!text-white/70 !mb-1.5 !text-sm",
@@ -351,9 +360,9 @@ function ProfilePageInner() {
           </div>
           
           <TextInput
-            label="Username"
-            placeholder="Enter username"
-            description="Username can only be changed after 30 days"
+            label={t("username")}
+            placeholder={t("enterUsername")}
+            description={t("usernameChangeLimit")}
             maxLength={40}
             classNames={{
               input: "!bg-gray-1 !border-gray-9/40 !text-white focus:!border-primary",
@@ -365,9 +374,9 @@ function ProfilePageInner() {
           />
 
           <TextInput
-            label="Phone Number"
+            label={t("phoneNumber")}
             placeholder="+1234567890"
-            description="Include country code (e.g., +1 for US)"
+            description={t("phoneCountryCodeHint")}
             classNames={{
               input: "!bg-gray-1 !border-gray-9/40 !text-white focus:!border-primary",
               label: "!text-white/70 !mb-1.5 !text-sm",
@@ -378,7 +387,7 @@ function ProfilePageInner() {
           />
 
           <TextInput
-            label="Email Address"
+            label={t("emailAddress")}
             disabled
             classNames={{
               input: "!bg-gray-1/50 !border-gray-9/20 !text-white/50 cursor-not-allowed",
@@ -394,7 +403,7 @@ function ProfilePageInner() {
               className={`!h-[44px] !px-8 !rounded-xl !font-semibold !transition-all ${isSuccess ? '!bg-success-6 hover:!bg-success-6' : '!bg-primary hover:!bg-primary/90'}`}
               leftSection={isSuccess ? <CheckMark /> : undefined}
             >
-              {isSuccess ? "Profile updated" : "Save Changes"}
+              {isSuccess ? t("updateSuccess") : t("saveChanges")}
             </Button>
           </div>
         </form>

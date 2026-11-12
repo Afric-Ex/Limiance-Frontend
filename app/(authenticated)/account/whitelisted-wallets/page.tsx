@@ -27,6 +27,9 @@ import {
 } from "@/src/lib/whitelist";
 import { AccountPageHeader } from "@/src/components/settings/account-page-header";
 import { MdOutlineAccountBalanceWallet } from "react-icons/md";
+import { useTranslations } from "next-intl";
+
+type TranslateFn = (key: string, values?: Record<string, string | number | Date>) => string;
 
 function toChainList(value: unknown): any[] {
   if (Array.isArray(value)) return value;
@@ -37,14 +40,14 @@ function toChainList(value: unknown): any[] {
   return [];
 }
 
-function getResponseError(response: unknown): string | null {
+function getResponseError(response: unknown, t: TranslateFn): string | null {
   if (!response || typeof response !== "object") return null;
   const result = response as { error?: unknown; success?: unknown; message?: unknown };
   if (result.error) return String(result.error);
   if (result.success === false) {
     return typeof result.message === "string"
       ? result.message
-      : "The request could not be completed.";
+      : t("requestNotCompleted");
   }
   return null;
 }
@@ -60,6 +63,7 @@ function formatDate(value?: string): string {
 }
 
 export default function WhitelistedWalletsPage() {
+  const t = useTranslations("Security");
   const [selectedChain, setSelectedChain] = useState<string | null>(null);
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const queryClient = useQueryClient();
@@ -68,7 +72,7 @@ export default function WhitelistedWalletsPage() {
     queryKey: assetKeys.supportedChainsKey("whitelisted-wallets-page"),
     queryFn: async () => {
       const response: any = await asset.fetchSupportedChains({ limit: 100 });
-      const error = getResponseError(response);
+      const error = getResponseError(response, t);
       if (error) throw new Error(error);
       return toChainList(response);
     },
@@ -98,7 +102,7 @@ export default function WhitelistedWalletsPage() {
     queryKey: assetKeys.whitelistedWithdrawalAddresses(selectedChain ?? ""),
     queryFn: async () => {
       const response = await asset.whitelistedWithdrawalAddresses(selectedChain!);
-      const error = getResponseError(response);
+      const error = getResponseError(response, t);
       if (error) throw new Error(error);
       return parseWhitelistAddresses(response);
     },
@@ -111,12 +115,12 @@ export default function WhitelistedWalletsPage() {
         chain,
         address: entry.address,
       });
-      const error = getResponseError(response);
+      const error = getResponseError(response, t);
       if (error) throw new Error(error);
       return response;
     },
     onSuccess: async (_response, { chain }) => {
-      successNotification("Whitelisted wallet removed");
+      successNotification(t("walletRemoved"));
       await queryClient.invalidateQueries({
         queryKey: assetKeys.whitelistedWithdrawalAddresses(chain),
       });
@@ -130,17 +134,17 @@ export default function WhitelistedWalletsPage() {
   return (
     <main className="mx-auto flex w-full max-w-[1180px] flex-col gap-5 pb-8 page-enter max-[1150px]:pb-[100px]">
       <AccountPageHeader
-        title="Withdrawal addresses"
-        description="Manage approved crypto addresses and networks for secure withdrawals."
+        title={t("withdrawalAddressesTitle")}
+        description={t("withdrawalAddressesDescription")}
         icon={<MdOutlineAccountBalanceWallet size={23} />}
-        eyebrow="Withdrawal security"
+        eyebrow={t("withdrawalSecurity")}
         action={
           <Button
             onClick={openModal}
             disabled={!selectedChain}
             className="!rounded-xl !bg-primary !px-5 !py-3 !text-sm !font-semibold hover:!bg-primary/90"
           >
-            Add wallet address
+            {t("addWalletAddress")}
           </Button>
         }
       />
@@ -148,17 +152,20 @@ export default function WhitelistedWalletsPage() {
       <section className="account-card !p-4 sm:!p-6">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-white/[0.07] pb-5">
           <div>
-            <h2 className="text-base font-semibold text-white">Approved addresses</h2>
+            <h2 className="text-base font-semibold text-white">{t("approvedAddresses")}</h2>
             <p className="mt-1 text-xs text-white/45">
               {whitelistQuery.isLoading
-                ? "Loading addresses..."
-                : `${addresses.length} ${addresses.length === 1 ? "address" : "addresses"} on ${activeNetwork?.label ?? "selected network"}`}
+                ? t("loadingAddresses")
+                : t("addressCountOnNetwork", {
+                    count: addresses.length,
+                    network: activeNetwork?.label ?? t("selectedNetwork"),
+                  })}
             </p>
           </div>
           <div className="flex items-end gap-2">
             <Select
-              label="Network"
-              placeholder={chainsQuery.isLoading ? "Loading networks..." : "Select network"}
+              label={t("network")}
+              placeholder={chainsQuery.isLoading ? t("loadingNetworks") : t("selectNetwork")}
               data={networks.map(({ chain, label }) => ({ value: chain, label }))}
               value={selectedChain}
               onChange={setSelectedChain}
@@ -174,7 +181,7 @@ export default function WhitelistedWalletsPage() {
             />
             <ActionIcon
               variant="subtle"
-              aria-label="Refresh whitelisted wallets"
+              aria-label={t("refreshWhitelistedWallets")}
               onClick={() => void whitelistQuery.refetch()}
               disabled={!selectedChain || whitelistQuery.isFetching}
               className="!text-white/55 hover:!text-white"
@@ -186,14 +193,14 @@ export default function WhitelistedWalletsPage() {
 
         {chainsQuery.isError ? (
           <div className="py-10 text-center text-sm text-red-400">
-            Unable to load supported networks.
+            {t("networksLoadError")}
             <Button
               variant="subtle"
               size="xs"
               onClick={() => void chainsQuery.refetch()}
               className="ml-2"
             >
-              Retry
+              {t("retry")}
             </Button>
           </div>
         ) : chainsQuery.isLoading ? (
@@ -202,18 +209,18 @@ export default function WhitelistedWalletsPage() {
           </div>
         ) : networks.length === 0 ? (
           <div className="py-10 text-center text-sm text-white/45">
-            No supported networks are available.
+            {t("noSupportedNetworks")}
           </div>
         ) : whitelistQuery.isError ? (
           <div className="py-10 text-center text-sm text-red-400">
-            Unable to load whitelisted wallets.
+            {t("walletsLoadError")}
             <Button
               variant="subtle"
               size="xs"
-              onClick={() => void whitelistQuery.refetch()}
+              onClick={() => void chainsQuery.refetch()}
               className="ml-2"
             >
-              Retry
+              {t("retry")}
             </Button>
           </div>
         ) : whitelistQuery.isLoading ? (
@@ -229,12 +236,12 @@ export default function WhitelistedWalletsPage() {
             }}>
               <TableThead>
                 <TableTr>
-                  <TableTh>Name</TableTh>
-                  <TableTh>Address</TableTh>
-                  <TableTh>Status</TableTh>
-                  <TableTh>Created At</TableTh>
-                  <TableTh>Updated At</TableTh>
-                  <TableTh className="!text-right">Action</TableTh>
+                  <TableTh>{t("name")}</TableTh>
+                  <TableTh>{t("address")}</TableTh>
+                  <TableTh>{t("status")}</TableTh>
+                  <TableTh>{t("createdAt")}</TableTh>
+                  <TableTh>{t("updatedAt")}</TableTh>
+                  <TableTh className="!text-right">{t("action")}</TableTh>
                 </TableTr>
               </TableThead>
               <TableTbody>
@@ -248,13 +255,13 @@ export default function WhitelistedWalletsPage() {
                     </TableTd>
                     <TableTd>
                       {entry.isActive ? (
-                        <span className="font-semibold text-green-400">Active</span>
+                        <span className="font-semibold text-green-400">{t("active")}</span>
                       ) : entry.activatesAt ? (
                         <span className="text-amber-300">
-                          Pending until {formatDate(entry.activatesAt)}
+                          {t("pendingUntil", { date: formatDate(entry.activatesAt) })}
                         </span>
                       ) : (
-                        <span className="text-white/40">Inactive</span>
+                        <span className="text-white/40">{t("inactive")}</span>
                       )}
                     </TableTd>
                     <TableTd>{formatDate(entry.createdAt)}</TableTd>
@@ -271,12 +278,12 @@ export default function WhitelistedWalletsPage() {
                         }
                         disabled={removeAddress.isPending}
                         onClick={() => {
-                          if (window.confirm(`Remove ${entry.address} from whitelisted wallets?`)) {
+                          if (window.confirm(t("removeWalletConfirm", { address: entry.address }))) {
                             if (selectedChain) removeAddress.mutate({ chain: selectedChain, entry });
                           }
                         }}
                       >
-                        Remove
+                        {t("remove")}
                       </Button>
                     </TableTd>
                   </TableTr>
@@ -284,7 +291,7 @@ export default function WhitelistedWalletsPage() {
                   <TableTr>
                     <TableTd colSpan={6}>
                       <div className="py-10 text-center text-sm text-white/40">
-                        No whitelisted wallets for {activeNetwork?.label ?? "this network"}.
+                        {t("noWhitelistedWallets", { network: activeNetwork?.label ?? t("thisNetwork") })}
                       </div>
                     </TableTd>
                   </TableTr>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Copy } from "@/src/components/shared/copy";
 import {
   Accordion,
@@ -40,20 +41,20 @@ import { DepositSkeleton } from "@/src/components/skeletons/orders";
 
 const faqs = [
   {
-    question: "What should I do to ensure a successful deposit?",
-    answer: "Always double-check the deposit address and network type before sending funds. Ensure you are depositing the correct asset (e.g., USDT) to the specified address and using the supported network.",
+    question: "faqQ1",
+    answer: "faqA1",
   },
   {
-    question: "What happens if I send funds to the wrong address?",
-    answer: "Transactions on the blockchain are irreversible. If you send to the wrong address or network, Limiance cannot recover your funds. Always verify the address before confirming.",
+    question: "faqQ2",
+    answer: "faqA2",
   },
   {
-    question: "Can I deposit using a smart contract?",
-    answer: "Some assets do not support deposits via smart contracts. If a smart contract is used, the deposited funds will not be credited and will not be refunded. Check asset-specific notes for details.",
+    question: "faqQ3",
+    answer: "faqA3",
   },
   {
-    question: "How long does it take for my deposit to be credited?",
-    answer: "Most deposits are credited after receiving the required number of blockchain confirmations, typically within a few minutes. High network congestion may cause minor delays.",
+    question: "faqQ4",
+    answer: "faqA4",
   },
 ];
 
@@ -81,6 +82,8 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 function DepositInner() {
+  const t = useTranslations("Deposit");
+  const tt = useTranslations("Transactions");
   const {
     selectedCoin,
     selectedNetwork,
@@ -155,9 +158,9 @@ function DepositInner() {
 
       {/* Page header */}
       <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-bold text-white tracking-tight">Deposit Crypto</h1>
+        <h1 className="text-xl font-bold text-white tracking-tight">{t("pageTitle")}</h1>
         <span className="text-xs font-medium text-white/40">
-          Send supported assets to your personal deposit address — they will be credited automatically.
+          {t("pageSubtitle")}
         </span>
       </div>
 
@@ -181,7 +184,7 @@ function DepositInner() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-white/30">via</span>
+                  <span className="text-xs text-white/30">{tt("via")}</span>
                   {selectedNetwork.image && (
                     <img src={selectedNetwork.image} alt={selectedNetwork.symbol} width={20} height={20} className="rounded-full shrink-0" />
                   )}
@@ -195,7 +198,7 @@ function DepositInner() {
                 onClick={openModal}
                 className="h-[56px] px-5 rounded-xl border border-white/[0.08] hover:border-primary/40 hover:bg-primary/[0.04] text-white/40 hover:text-primary text-sm font-semibold transition-all flex items-center justify-center gap-2 min-w-0"
               >
-                Select Coin & Network
+                {t("selectCoinAndNetwork")}
                 <MdKeyboardArrowRight size={18} />
               </button>
             )}
@@ -203,7 +206,7 @@ function DepositInner() {
               onClick={openModal}
               className="text-xs font-semibold text-primary hover:text-primary/70 transition-colors shrink-0"
             >
-              Change
+              {t("change")}
             </button>
           </div>
 
@@ -212,20 +215,20 @@ function DepositInner() {
           {/* Address + QR */}
           <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
             <div className="flex flex-col gap-2 flex-1 min-w-0">
-              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Deposit Address</label>
+              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">{t("address")}</label>
               <div className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 h-14 w-full min-w-0">
                 {walletLoading ? (
                   <InlineLoading />
                 ) : walletError ? (
                   <>
                     <span className="flex-1 text-sm text-error-1 font-medium">
-                      Failed to generate address
+                      {t("addressGenerationFailed")}
                     </span>
                     <button
                       onClick={() => retryGenerateWallet()}
                       className="shrink-0 px-3 py-1 text-xs font-bold text-primary border border-primary/40 rounded-lg hover:bg-primary/10 transition-colors"
                     >
-                      Retry
+                      {t("retry")}
                     </button>
                   </>
                 ) : walletAddress ? (
@@ -237,7 +240,7 @@ function DepositInner() {
                   </>
                 ) : (
                   <span className="text-sm text-white/25 font-medium">
-                    Select a coin and network to generate your address
+                    {t("selectCoinNetworkHint")}
                   </span>
                 )}
               </div>
@@ -249,7 +252,7 @@ function DepositInner() {
                 <div className="p-3 bg-white rounded-xl shadow-[0_0_24px_rgba(77,119,240,0.15)]">
                   <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(walletAddress)}`}
-                    alt="Deposit QR Code"
+                    alt={t("qrCodeAlt")}
                     width={120}
                     height={120}
                     className="block rounded-lg"
@@ -264,8 +267,8 @@ function DepositInner() {
             {selectedCoin?.symbol && (
               <div className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Min Deposit</span>
-                  <InfoTooltip label="Deposits below the minimum amount will neither be credited nor refunded." />
+                  <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">{t("minimumDeposit")}</span>
+                  <InfoTooltip label={t("minDepositTooltip")} />
                 </div>
                 <span className="text-sm font-bold text-primary">
                   {minimumDeposit ?? "—"}{" "}
@@ -277,8 +280,8 @@ function DepositInner() {
             {depositNetworkFee !== null && (
               <div className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Network Fee</span>
-                  <InfoTooltip label="This fee is charged by the blockchain network, not Limiance." />
+                  <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">{t("networkFee")}</span>
+                  <InfoTooltip label={t("networkFeeTooltip")} />
                 </div>
                 <span className="text-sm font-bold text-white/70">
                   {depositNetworkFee}{" "}
@@ -289,8 +292,8 @@ function DepositInner() {
 
             <div className="sm:col-span-2 flex items-center justify-between gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Deposit Channel</span>
-                <InfoTooltip label="All pending and future deposits will be directed to the selected wallet." />
+                <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">{t("depositChannel")}</span>
+                <InfoTooltip label={t("depositChannelTooltip")} />
               </div>
               <WalletDropdown selectedWallet={walletType} setSelectedWallet={setWalletType} />
             </div>
@@ -298,8 +301,8 @@ function DepositInner() {
             {selectedCoin?.contractAddress && (
               <div className="sm:col-span-2 flex items-center justify-between gap-2 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Contract Address</span>
-                  <InfoTooltip label="Contract addresses differ from deposit addresses. Sending funds to a contract address may result in permanent loss of assets." />
+                  <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">{t("contractAddress")}</span>
+                  <InfoTooltip label={t("contractAddressTooltip")} />
                 </div>
                 <Popover classNames={{ dropdown: "!bg-[#181a20] !border-white/[0.08] !px-1 !pt-3 !pb-2" }}>
                   <PopoverTarget>
@@ -310,7 +313,7 @@ function DepositInner() {
                   </PopoverTarget>
                   <PopoverDropdown>
                     <div className="flex flex-col gap-2 w-72">
-                      <span className="text-xs font-semibold text-white/40 px-2">Contract Address</span>
+                      <span className="text-xs font-semibold text-white/40 px-2">{t("contractAddress")}</span>
                       <div className="flex justify-between gap-3 bg-white/[0.04] p-3 rounded-xl items-center border border-white/[0.06]">
                         <span className="text-xs flex-1 text-white/70 font-mono break-all">
                           {selectedCoin?.contractAddress}
@@ -325,7 +328,7 @@ function DepositInner() {
           </div>
 
           <span className="text-xs text-white/30">
-            Deposit credit routing is determined by the generated wallet and backend deposit rules.
+            {t("routingNote")}
           </span>
 
           {/* Warning Box */}
@@ -334,12 +337,15 @@ function DepositInner() {
               <IoMdInformationCircleOutline size={18} className="text-warning-1 shrink-0 mt-0.5" />
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-semibold text-white/80">
-                  Deposit {selectedCoin?.symbol} only via {selectedNetwork?.name ?? "selected network"}
+                  {t("depositOnlyVia", {
+                    asset: selectedCoin?.symbol,
+                    network: selectedNetwork?.name ?? tt("selectNetwork"),
+                  })}
                 </span>
                 <ul className="text-xs font-medium text-warning-1/80 list-disc pl-4 flex flex-col gap-1">
-                  <li>Only send {selectedCoin?.symbol} ({selectedCoin?.name}) to this address.</li>
-                  <li>Deposits from smart contracts will not be credited.</li>
-                  <li>Incorrect network or asset selection may result in permanent loss.</li>
+                  <li>{t("onlySendAsset", { symbol: selectedCoin?.symbol, name: selectedCoin?.name })}</li>
+                  <li>{t("smartContractNotCredited")}</li>
+                  <li>{t("incorrectNetworkWarning")}</li>
                 </ul>
               </div>
             </div>
@@ -352,7 +358,7 @@ function DepositInner() {
             <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center text-white/50">
               <MdOutlineHelp size={18} />
             </div>
-            <h3 className="text-lg font-bold text-white">Deposit FAQ</h3>
+            <h3 className="text-lg font-bold text-white">{t("faqTitle")}</h3>
           </div>
           <Accordion
             classNames={{
@@ -373,9 +379,9 @@ function DepositInner() {
                     </span>
                   }
                 >
-                  {item.question}
+                  {t(item.question)}
                 </AccordionControl>
-                <AccordionPanel>{item.answer}</AccordionPanel>
+                <AccordionPanel>{t(item.answer)}</AccordionPanel>
               </AccordionItem>
             ))}
           </Accordion>
@@ -385,7 +391,7 @@ function DepositInner() {
       {/* Deposit History */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3 px-1">
-          <h3 className="text-lg font-bold text-white">Deposit History</h3>
+          <h3 className="text-lg font-bold text-white">{t("historyTitle")}</h3>
           <div className="h-px flex-1 bg-white/[0.06]" />
         </div>
 
@@ -399,13 +405,13 @@ function DepositInner() {
             }}>
               <TableThead>
                 <TableTr>
-                  <TableTh className="pl-6">Date & Time</TableTh>
-                  <TableTh>Coin</TableTh>
-                  <TableTh>Amount</TableTh>
-                  <TableTh>Address</TableTh>
-                  <TableTh>Network</TableTh>
-                  <TableTh>Transaction ID</TableTh>
-                  <TableTh className="pr-6">Status</TableTh>
+                  <TableTh className="pl-6">{tt("tableDateTime")}</TableTh>
+                  <TableTh>{tt("tableCoin")}</TableTh>
+                  <TableTh>{tt("tableAmount")}</TableTh>
+                  <TableTh>{tt("tableAddress")}</TableTh>
+                  <TableTh>{tt("tableNetwork")}</TableTh>
+                  <TableTh>{tt("tableTransactionId")}</TableTh>
+                  <TableTh className="pr-6">{tt("tableStatus")}</TableTh>
                 </TableTr>
               </TableThead>
               <TableTbody>
@@ -480,7 +486,7 @@ function DepositInner() {
                     <TableTd className="pr-6">
                       {item.status === "pending" ? (
                         <Tooltip multiline withArrow arrowSize={8} w={220}
-                          label="Assets will be credited once the required confirmations are reached."
+                          label={t("creditTooltip")}
                           color="#181a20" classNames={{ tooltip: "!text-xs !border !border-white/[0.08]" }}>
                           <span className="cursor-help">
                             <StatusBadge status="pending" />
@@ -499,7 +505,7 @@ function DepositInner() {
           {!history?.length && !historyLoading && (
             <div className="h-40 flex items-center justify-center flex-col gap-3 opacity-60">
               <MdOutlineQrCode size={32} className="text-white/20" />
-              <span className="text-sm font-semibold text-white/30">No deposit transactions yet</span>
+              <span className="text-sm font-semibold text-white/30">{t("emptyHistory")}</span>
             </div>
           )}
         </div>

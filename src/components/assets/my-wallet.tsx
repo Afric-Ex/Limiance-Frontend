@@ -18,8 +18,10 @@ import { Eye } from "../icons/eye";
 import { BsEyeSlashFill } from "react-icons/bs";
 import toast from "react-hot-toast";
 import { MdAccountBalanceWallet, MdCandlestickChart } from "react-icons/md";
+import { useTranslations } from "next-intl";
 
 export const MyWallet = () => {
+  const t = useTranslations("Wallet");
   const { push } = useRouter();
   const { handleOpenDepositModal, handleOpenInternalTransferModal } = useAssets();
   const { funding, trading, isLoading, isConnected } = useWalletBalances();
@@ -29,12 +31,12 @@ export const MyWallet = () => {
 
   useEffect(() => {
     if (!isConnected && prevConnectedRef.current && !isLoading) {
-      toast.loading("Reconnecting", { id: "wallet-ws" });
+      toast.loading(t("reconnecting"), { id: "wallet-ws" });
     } else if (isConnected) {
       toast.dismiss("wallet-ws");
     }
     prevConnectedRef.current = isConnected;
-  }, [isConnected, isLoading]);
+  }, [isConnected, isLoading, t]);
 
   const fundingUsd = funding?.inUsd ?? "0.00";
   const fundingBtc = funding?.inBtc ?? "0.00000000";
@@ -50,18 +52,19 @@ export const MyWallet = () => {
       ? "bg-yellow-500 animate-pulse"
       : "bg-red-500";
   const statusLabel = isConnected
-    ? "Real-time balances connected"
+    ? t("realtimeConnected")
     : isLoading
-      ? "Connecting..."
-      : "Disconnected - balances may be stale";
+      ? t("connecting")
+      : t("disconnectedStale");
 
   const actions = [
-    { icon: BusinessCard, text: "Deposit", onClick: handleOpenDepositModal },
-    { icon: Withdraw, text: "Withdraw", onClick: () => push("/transactions/withdrawal") },
-    { icon: Transfer, text: "Transfer", onClick: () => handleOpenInternalTransferModal() },
+    { id: "deposit", icon: BusinessCard, text: t("deposit"), onClick: handleOpenDepositModal },
+    { id: "withdraw", icon: Withdraw, text: t("withdraw"), onClick: () => push("/transactions/withdrawal") },
+    { id: "transfer", icon: Transfer, text: t("transfer"), onClick: () => handleOpenInternalTransferModal() },
     {
+      id: "convert",
       icon: Convert,
-      text: "Convert",
+      text: t("convert"),
       onClick: () =>
         modals.open({
           children: <ConvertAsset />,
@@ -73,7 +76,7 @@ export const MyWallet = () => {
   return (
     <div className="flex min-w-0 w-full flex-col gap-4 animate-fade-up stagger-1 max-[1150px]:gap-3">
       <div className="flex items-center justify-between mb-2 max-[1150px]:mb-0">
-        <h3 className="text-xl font-bold max-[1150px]:text-lg">My Assets</h3>
+        <h3 className="text-xl font-bold max-[1150px]:text-lg">{t("myAssets")}</h3>
         <div className="flex items-center gap-3">
           <span
             data-testid="ws-status"
@@ -82,8 +85,8 @@ export const MyWallet = () => {
             className={`w-2 h-2 rounded-full ${statusColor}`}
           />
           <button
-            aria-label={enabled ? "Show balances" : "Hide balances"}
-            title={enabled ? "Show balances" : "Hide balances"}
+            aria-label={enabled ? t("showBalances") : t("hideBalances")}
+            title={enabled ? t("showBalances") : t("hideBalances")}
             onClick={toggleCloak}
             data-testid="cloak-toggle"
             className="p-1.5 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors"
@@ -101,8 +104,8 @@ export const MyWallet = () => {
               <MdAccountBalanceWallet size={17} className="text-primary" />
             </div>
             <div className="flex min-w-0 flex-col">
-              <span className="text-base font-semibold max-[1150px]:text-sm">Funding</span>
-              <span className="text-xs text-white/50 max-[1150px]:text-2xs">Deposits / Withdrawals / P2P</span>
+              <span className="text-base font-semibold max-[1150px]:text-sm">{t("funding")}</span>
+              <span className="text-xs text-white/50 max-[1150px]:text-2xs">{t("depositsWithdrawalsP2p")}</span>
             </div>
           </div>
 
@@ -130,7 +133,7 @@ export const MyWallet = () => {
           <div className="flex max-w-full flex-wrap items-center gap-2 sm:justify-end mt-2 sm:mt-0 max-[1150px]:grid max-[1150px]:w-full max-[1150px]:grid-cols-4 max-[1150px]:mt-2">
             {actions.map((action) => (
               <button
-                key={action.text}
+                key={action.id}
                 onClick={action.onClick}
                 title={action.text}
                 aria-label={action.text}
@@ -149,9 +152,9 @@ export const MyWallet = () => {
               <MdCandlestickChart size={17} className="text-[#F0B90B]" />
             </div>
             <div className="flex min-w-0 flex-col">
-              <span className="whitespace-nowrap text-base font-semibold max-[1150px]:text-sm">Unified Trading</span>
+              <span className="whitespace-nowrap text-base font-semibold max-[1150px]:text-sm">{t("unifiedTrading")}</span>
               <span className="text-xs text-white/50 w-full max-w-[200px] leading-tight max-[1150px]:text-2xs">
-                Spot, Futures, Margin
+                {t("spotFuturesMargin")}
               </span>
             </div>
           </div>
@@ -180,14 +183,14 @@ export const MyWallet = () => {
           <div className="flex max-w-full flex-wrap items-center gap-2 sm:justify-end mt-2 sm:mt-0 max-[1150px]:grid max-[1150px]:w-full max-[1150px]:grid-cols-4 max-[1150px]:mt-2">
             <button
               onClick={() => push("/markets")}
-              aria-label="Trade"
+              aria-label={t("trade")}
               className="whitespace-nowrap text-xs font-semibold px-4 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors max-[1150px]:rounded-lg max-[1150px]:h-full max-[1150px]:col-span-1"
             >
-              Trade
+              {t("trade")}
             </button>
             {actions.slice(2).map((action) => (
               <button
-                key={action.text}
+                key={action.id}
                 onClick={action.onClick}
                 title={action.text}
                 aria-label={action.text}

@@ -1,4 +1,7 @@
+"use client";
+
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { MarginOpenOrders } from "@/src/components/orders/margin-open-orders";
 import { MarginOrderHistory } from "@/src/components/orders/margin-order-history";
 import { MarginOrderDetails } from "@/src/components/orders/margin-order-details";
@@ -10,22 +13,23 @@ import { MarginOrdersSkeleton } from "@/src/components/skeletons/orders";
 import { OrdersEmptyState, OrdersPageFrame, ordersTabsClassNames } from "@/src/components/orders/orders-shared";
 
 function MarginOrdersInner() {
+  const t = useTranslations("Orders");
   return (
     <OrdersPageFrame
-      title="Margin orders"
-      description="Manage margin orders, positions and account activity."
-      actionLabel="Trade margin"
+      title={t("marginOrders")}
+      description={t("marginOrdersDescription")}
+      actionLabel={t("tradeMargin")}
       actionHref="/trades/margin"
     >
       <Tabs classNames={ordersTabsClassNames} defaultValue="open">
         <TabsList>
-          <TabsTab value="open">Open Orders</TabsTab>
-          <TabsTab value="history">Order History</TabsTab>
-          <TabsTab value="details">Order Details</TabsTab>
-          <TabsTab value="capital">Capital Flow</TabsTab>
-          <TabsTab value="debt">Debt History</TabsTab>
-          <TabsTab value="liquidation">Liquidation</TabsTab>
-          <TabsTab value="others">Others</TabsTab>
+          <TabsTab value="open">{t("openOrders")}</TabsTab>
+          <TabsTab value="history">{t("orderHistory")}</TabsTab>
+          <TabsTab value="details">{t("details")}</TabsTab>
+          <TabsTab value="capital">{t("capitalFlow")}</TabsTab>
+          <TabsTab value="debt">{t("debtHistory")}</TabsTab>
+          <TabsTab value="liquidation">{t("liquidation")}</TabsTab>
+          <TabsTab value="others">{t("others")}</TabsTab>
         </TabsList>
 
         <TabsPanel value="open">
@@ -48,8 +52,8 @@ function MarginOrdersInner() {
         </TabsPanel>
         <TabsPanel value="others">
           <OrdersEmptyState
-            title="No other margin activity"
-            description="Additional margin account activity will appear here when available."
+            title={t("emptyOtherMarginActivity")}
+            description={t("emptyOtherMarginActivityDescription")}
           />
         </TabsPanel>
       </Tabs>

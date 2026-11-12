@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { usePathname } from "@/src/hooks/use-pathname";
 import clsx from "clsx";
 import { Dashboard } from "../icons/dashboard";
 import { Assets } from "../icons/assets";

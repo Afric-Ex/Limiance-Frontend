@@ -1,3 +1,5 @@
+"use client";
+
 import { TextInput, Select, Table, TableTr, TableTh, TableTd, Skeleton } from "@mantine/core";
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -7,8 +9,10 @@ import { Search } from "../icons/search";
 import { botService, botKeys } from "@/src/services/bot";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import classes from "@/src/styles/assets-overview.module.css";
+import { useTranslations } from "next-intl";
 
 export const TradingBotFutures = () => {
+  const t = useTranslations("Assets");
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
 
@@ -38,22 +42,24 @@ export const TradingBotFutures = () => {
       <div className="flex flex-col h-full gap-5">
         <div className="flex items-center justify-between gap-6">
           <div className="flex flex-col gap-4">
-            <span className="text-sm font-medium">Futures bot account assets</span>
+            <span className="text-sm font-medium">{t("futuresBotAssets")}</span>
             <div className="flex flex-col gap-2">
               {botsLoading ? (
                 <Skeleton height={24} width={120} />
               ) : (
                 <>
                   <span className="text-xl font-semibold">
-                    {bots.length} Active Bot{bots.length !== 1 ? "s" : ""}
+                    {t("activeBotCount", { count: bots.length })}
                   </span>
                   <span className="flex items-center gap-1">
                     <Approximate color="white" />
                     <span className="text-xs font-medium">
-                      ${totalValue.toLocaleString("en-US", { maximumFractionDigits: 2 })} invested
+                      {t("investedLabel", {
+                        amount: `$${totalValue.toLocaleString("en-US", { maximumFractionDigits: 2 })}`,
+                      })}
                       {totalPnl !== 0 && (
                         <span className={totalPnl >= 0 ? "text-green-400 ml-1" : "text-red-400 ml-1"}>
-                          ({totalPnl >= 0 ? "+" : ""}{totalPnl.toFixed(2)} PnL)
+                          ({t("pnlLabel", { pnl: `${totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}` })})
                         </span>
                       )}
                     </span>
@@ -66,37 +72,37 @@ export const TradingBotFutures = () => {
             <TextInput
               classNames={{ input: "!h-10 !bg-gray-13 !border-0 !rounded-full" }}
               rightSection={<Search />}
-              placeholder="Search pair"
+              placeholder={t("searchPair")}
               value={search}
               onChange={(e) => setSearch(e.currentTarget.value)}
             />
             <Select
               classNames={{ input: "!w-108px !h-35px !bg-transparent !border-white/55 !rounded-lg" }}
-              data={["1-7 Days"]}
-              defaultValue="1-7 Days"
+              data={[t("range1to7Days")]}
+              defaultValue={t("range1to7Days")}
             />
             <Select
               classNames={{ input: "!w-108px !h-35px !bg-transparent !border-white/55 !rounded-lg" }}
-              data={["ROI"]}
-              defaultValue="ROI"
+              data={[t("roi")]}
+              defaultValue={t("roi")}
             />
             <Select
               classNames={{ input: "!w-115px !h-35px !bg-transparent !border-white/55 !rounded-lg" }}
-              data={["Total PNL"]}
-              defaultValue="Total PNL"
+              data={[t("totalPnlOption")]}
+              defaultValue={t("totalPnlOption")}
             />
           </div>
         </div>
         <div className="w-full overflow-auto">
           <Table classNames={{ th: "!text-gray-9 !text-sm", tr: classes.table_tr }}>
             <TableTr>
-              <TableTh>Pair</TableTh>
-              <TableTh>Strategy</TableTh>
-              <TableTh>Account Assets</TableTh>
-              <TableTh>Available</TableTh>
-              <TableTh>ROI</TableTh>
-              <TableTh>Trading Bonus</TableTh>
-              <TableTh>Action</TableTh>
+              <TableTh>{t("colPair")}</TableTh>
+              <TableTh>{t("colStrategy")}</TableTh>
+              <TableTh>{t("colAccountAssets")}</TableTh>
+              <TableTh>{t("colAvailable")}</TableTh>
+              <TableTh>{t("roi")}</TableTh>
+              <TableTh>{t("colTradingBonus")}</TableTh>
+              <TableTh>{t("colAction")}</TableTh>
             </TableTr>
             {botsLoading ? (
               Array.from({ length: 3 }).map((_, i) => (
@@ -122,7 +128,7 @@ export const TradingBotFutures = () => {
                       onClick={() => stopBot(bot.id)}
                       className="text-xs text-red-400 hover:text-red-300 transition-colors"
                     >
-                      Stop
+                      {t("stop")}
                     </button>
                   </TableTd>
                 </TableTr>
@@ -134,7 +140,7 @@ export const TradingBotFutures = () => {
           <div className="flex-1 flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
               <EmptyTable />
-              <span className="text-xs font-medium text-gray-9">No active bots</span>
+              <span className="text-xs font-medium text-gray-9">{t("noActiveBotsShort")}</span>
             </div>
           </div>
         )}

@@ -256,8 +256,8 @@ function SettingsPageInner() {
   return (
     <main className="page-enter mx-auto flex w-full max-w-[1180px] flex-col gap-5 pb-8 max-[1150px]:pb-[100px]">
       <AccountPageHeader
-        title="Account settings"
-        description="Personalize how Limiance looks, keeps you informed, and displays your trading activity."
+        title={t("accountSettings")}
+        description={t("settingsDescription")}
         icon={<MdOutlineSettings size={23} />}
         eyebrow={t("preferencesEyebrow")}
         action={
@@ -281,10 +281,10 @@ function SettingsPageInner() {
                 <MdCheck size={17} />
               )}
               {saveStatus === "saving"
-                ? "Saving changes"
+                ? t("savingChanges")
                 : saveStatus === "error"
-                  ? "Save failed"
-                  : "Changes saved"}
+                  ? t("saveFailed")
+                  : t("changesSaved")}
             </span>
           ) : undefined
         }
@@ -295,13 +295,13 @@ function SettingsPageInner() {
           role="alert"
           className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-100/80"
         >
-          <span>We couldn’t load your saved preferences.</span>
+          <span>{t("loadError")}</span>
           <button
             type="button"
             onClick={() => void refetchSettings()}
             className="font-semibold text-amber-200 underline underline-offset-4"
           >
-            Try again
+            {t("tryAgain")}
           </button>
         </div>
       )}
@@ -320,7 +320,7 @@ function SettingsPageInner() {
               <div>
                 <h2 className="text-base font-semibold text-white">{t("displayRegion")}</h2>
                 <p className="mt-1 text-xs leading-5 text-white/45">
-                  Set the appearance and regional formats used across your account.
+                  {t("displayRegionDesc")}
                 </p>
               </div>
             </div>
@@ -330,8 +330,8 @@ function SettingsPageInner() {
               {/*
               <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-white/85">Theme</p>
-                  <p className="mt-1 text-xs text-white/40">Choose your preferred colour scheme.</p>
+                  <p className="text-sm font-semibold text-white/85">{t("theme")}</p>
+                  <p className="mt-1 text-xs text-white/40">{t("themeDescription")}</p>
                 </div>
                 <div className="flex w-full rounded-xl border border-white/[0.07] bg-black/20 p-1 sm:w-auto">
                   {(["dark", "light"] as const).map((option) => (
@@ -356,7 +356,7 @@ function SettingsPageInner() {
 
               <label className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <span>
-                  <span className="block text-sm font-semibold text-white/85">Display currency</span>
+                  <span className="block text-sm font-semibold text-white/85">{t("currency")}</span>
                   <span className="mt-1 block text-xs text-white/40">{t("displayCurrencyDesc")}</span>
                 </span>
                 <select
@@ -372,7 +372,7 @@ function SettingsPageInner() {
 
               <label className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <span>
-                  <span className="block text-sm font-semibold text-white/85">Language</span>
+                  <span className="block text-sm font-semibold text-white/85">{t("language")}</span>
                   <span className="mt-1 block text-xs text-white/40">{t("languageInterface")}</span>
                 </span>
                 <select
@@ -388,7 +388,7 @@ function SettingsPageInner() {
 
               <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-white/85">Timezone</p>
+                  <p className="text-sm font-semibold text-white/85">{t("timezone")}</p>
                   <p className="mt-1 text-xs text-white/40">{t("timezoneDesc")}</p>
                 </div>
                 <div className="relative w-full sm:w-64" ref={tzDropRef}>
@@ -411,8 +411,8 @@ function SettingsPageInner() {
                           type="search"
                           value={tzSearch}
                           onChange={(event) => setTzSearch(event.target.value)}
-                          placeholder="Search timezone"
-                          aria-label="Search timezones"
+                          placeholder={t("searchTimezone")}
+                          aria-label={t("searchTimezones")}
                           className="min-h-9 w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-primary/60"
                         />
                       </div>

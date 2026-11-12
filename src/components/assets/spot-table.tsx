@@ -9,8 +9,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { useTokenIconMap } from "@/src/hooks/use-token-icons";
+import { useTranslations } from "next-intl";
 
 export const SpotTable = () => {
+  const t = useTranslations("Wallet");
   const [hideSmallBalances, setHideSmallBalances] = useState(false);
   const router = useRouter();
 
@@ -27,10 +29,10 @@ export const SpotTable = () => {
       <div className="rounded-2xl border border-white/[0.06] bg-[#181a20] p-6">
         <div className="flex flex-col gap-5">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-semibold text-white/80">Spot</h3>
+            <h3 className="text-base font-semibold text-white/80">{t("spot")}</h3>
             <Checkbox
               classNames={{ input: "!bg-transparent !border-white" }}
-              label="Hide Asset <$1"
+              label={t("hideSmallAssets")}
               labelPosition="right"
               checked={hideSmallBalances}
               onChange={(e) => setHideSmallBalances(e.currentTarget.checked)}
@@ -49,10 +51,10 @@ export const SpotTable = () => {
                 }}
               >
                 <TableTr>
-                  <TableTh className="min-w-[240px]">Coin</TableTh>
-                  <TableTh className="min-w-[150px]">Amount</TableTh>
-                  <TableTh className="min-w-[140px] whitespace-nowrap">Price</TableTh>
-                  <TableTh className="min-w-[190px] whitespace-nowrap">Action</TableTh>
+                  <TableTh className="min-w-[240px]">{t("coin")}</TableTh>
+                  <TableTh className="min-w-[150px]">{t("amount")}</TableTh>
+                  <TableTh className="min-w-[140px] whitespace-nowrap">{t("price")}</TableTh>
+                  <TableTh className="min-w-[190px] whitespace-nowrap">{t("action")}</TableTh>
                 </TableTr>
                 {portfolio?.map((item: any, index: number) => {
                   const balStr = String(item.spotBalance || item.spot_balance || item.balance || item.free || "0").replace(/,/g, "");
@@ -112,7 +114,7 @@ export const SpotTable = () => {
                             onClick={() => router.push(`/trades/spot`)}
                             className="text-sm font-semibold text-primary hover:text-primary/80 cursor-pointer transition-colors"
                           >
-                            Trade
+                            {t("trade")}
                           </span>
                           <span
                             onClick={() =>
@@ -123,7 +125,7 @@ export const SpotTable = () => {
                             }
                             className="text-sm font-semibold text-blue-500 hover:text-blue-400 cursor-pointer transition-colors"
                           >
-                            Convert
+                            {t("convert")}
                           </span>
                         </div>
                       </TableTd>

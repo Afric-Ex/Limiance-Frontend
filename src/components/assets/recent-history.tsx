@@ -8,6 +8,7 @@ import { Skeleton } from "../shared/skeleton";
 import { formatTransactionAmount, formatTransactionAsset } from "@/src/utils/transaction";
 import { fmtDate, parseDate } from "../orders/orders-shared";
 import { TransactionDetailsModal } from "../transactions/transaction-details-modal";
+import { useTranslations } from "next-intl";
 
 /**
  * RecentHistory — Right column component for Assets Overview.
@@ -15,6 +16,7 @@ import { TransactionDetailsModal } from "../transactions/transaction-details-mod
  * Matches Bybit's "Recent Deposit & Withdrawal History" section.
  */
 export const RecentHistory = () => {
+  const t = useTranslations("Wallet");
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const { data: history, isLoading: historyLoading } = useQuery({
     queryKey: assetKeys.transactionHistory({
@@ -37,14 +39,14 @@ export const RecentHistory = () => {
         <div className="flex items-center gap-2">
           <span className="w-1 h-4 rounded-full bg-primary" />
           <h4 className="text-sm font-semibold">
-            Recent Deposit & Withdrawal History
+            {t("recentHistoryTitle")}
           </h4>
         </div>
         <Link
           href="/assets/history"
           className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
         >
-          All →
+          {t("allArrow")}
         </Link>
       </div>
 
@@ -126,7 +128,7 @@ export const RecentHistory = () => {
               />
             </svg>
             <span className="text-xs text-white/30">
-              No recent history found.
+              {t("noRecentHistory")}
             </span>
           </div>
         )}

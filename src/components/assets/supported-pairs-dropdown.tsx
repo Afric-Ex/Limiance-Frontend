@@ -17,6 +17,7 @@ import { SelectedCoin } from "@/src/hooks/use-deposit";
 import { assetKeys, asset } from "@/src/services/asset";
 import { useQuery } from "@tanstack/react-query";
 import { useUserStore } from "@/src/stores/user-store";
+import { useTranslations } from "next-intl";
 
 /** One token as listed once per chain: every chain it lives on, plus the
  *  contract address for each of those chains. */
@@ -36,6 +37,7 @@ export const SupportedListingsDropdown = ({
   selectedCoin: SelectedCoin;
   selectDefaultCoin?: boolean;
 }) => {
+  const t = useTranslations("Wallet");
   const [opened, { toggle, close }] = useDisclosure(false);
   const [tokenQuery, setTokenQuery] = useState("");
 
@@ -146,7 +148,7 @@ export const SupportedListingsDropdown = ({
           ) : selectedCoin?.symbol ? (
             <span className="flex items-center gap-2">
               {selectedCoin.image && (
-                <img src={selectedCoin.image} width={24} height={24} alt="selected coin" />
+                <img src={selectedCoin.image} width={24} height={24} alt={t("selectedCoinAlt")} />
               )}
               <span className="flex items-center gap-1">
                 <span className="text-xs font-bold">
@@ -159,7 +161,7 @@ export const SupportedListingsDropdown = ({
             <div />
           )}
           <span className="p-1 pl-2 border-l border-l-white/[0.08] cursor-pointer">
-            <Image src={icons.shortDownArrow} alt="arrow" />
+            <Image src={icons.shortDownArrow} alt={t("arrowAlt")} />
           </span>
         </div>
       </PopoverTarget>
@@ -176,7 +178,7 @@ export const SupportedListingsDropdown = ({
           {selectedCoinsHistory?.length ? (
             <>
                 <span className="bg-white/[0.05] text-white/50 font-semibold text-2xs py-2 px-2 rounded-lg">
-                History
+                {t("history")}
               </span>
               <div className="flex gap-2">
                 {selectedCoinsHistory.map((item, index) => (
@@ -199,7 +201,7 @@ export const SupportedListingsDropdown = ({
           ) : null}
           <div className="flex flex-col flex-1 overflow-auto gap-[2px]">
             <span className="bg-white/[0.05] text-white/50 font-semibold text-2xs py-2 px-2 rounded-lg">
-              Coin
+              {t("coin")}
             </span>
             <div className="flex flex-1 overflow-auto flex-col">
               {supportedTokensLoading ? (

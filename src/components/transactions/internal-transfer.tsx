@@ -1,5 +1,8 @@
+"use client";
+
 import React, { useState } from "react";
 import { modals } from "@mantine/modals";
+import { useTranslations } from "next-intl";
 import { MdOutlineClose, MdSwapHoriz } from "react-icons/md";
 import {
   NumberInput,
@@ -25,6 +28,7 @@ import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 
 
 export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }: { defaultFrom?: string, defaultTo?: string }) => {
+  const t = useTranslations("Transactions");
   const [selectedCoin, setSelectedCoin] = useState<SelectedCoin>({
     name: "",
     image: "",
@@ -67,8 +71,8 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
       modals.open({
         children: (
           <SuccessModal
-            title="Transfer Complete"
-            description="Your internal transfer has been completed successfully"
+            title={t("transferCompleteTitle")}
+            description={t("transferCompleteDescription")}
             onProceed={modals.closeAll}
             onClose={modals.closeAll}
           />
@@ -83,10 +87,10 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
   });
 
   const accounts = [
-    { label: "Funding", value: "funding" },
-    { label: "Spot", value: "spot" },
-    { label: "Futures", value: "futures" },
-    { label: "Margin", value: "margin" },
+    { label: t("funding"), value: "funding" },
+    { label: t("spot"), value: "spot" },
+    { label: t("futures"), value: "futures" },
+    { label: t("margin"), value: "margin" },
   ];
 
   const getLabel = (value: string) => {
@@ -173,8 +177,8 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-xl font-bold text-white">Internal Transfer</h4>
-          <p className="text-sm text-white/40 mt-1">Move funds between your accounts</p>
+          <h4 className="text-xl font-bold text-white">{t("internalTransferTitle")}</h4>
+          <p className="text-sm text-white/40 mt-1">{t("internalTransferSubtitle")}</p>
         </div>
         <button
           onClick={() => modals.closeAll()}
@@ -188,7 +192,7 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
       <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
         <div className="flex items-end gap-3">
           <AccountSelector
-            label="From"
+            label={t("from")}
             value={form.values.sourceWallet}
             isOpen={opened}
             onToggle={toggle}
@@ -205,7 +209,7 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
           </button>
 
           <AccountSelector
-            label="To"
+            label={t("to")}
             value={form.values.destinationWallet}
             isOpen={destinationOpened}
             onToggle={toggleDest}
@@ -217,7 +221,7 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
 
       {/* Select Coin */}
       <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
-        <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Select Coin</label>
+        <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">{t("selectCoin")}</label>
         <SupportedListingsDropdown
           selectedCoin={selectedCoin}
           setSelectedCoin={setSelectedCoin}
@@ -227,10 +231,10 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
       {/* Amount */}
       <div className="flex flex-col gap-2.5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Amount</label>
+          <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">{t("amount")}</label>
           {selectedCoin.symbol && (
             <span className="text-xs text-white/40">
-              Available:{" "}
+              {t("available")}:{" "}
               <span className="font-bold text-primary">
                 {(+availableBalance).toLocaleString("en-US", { maximumFractionDigits: 8 })}{" "}
                 {selectedCoin.symbol}
@@ -265,7 +269,7 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
                 onClick={() => form.setFieldValue("amount", availableBalance)}
                 className="px-2 py-1 bg-primary/15 hover:bg-primary/30 rounded-md text-xs text-primary font-bold transition-colors"
               >
-                MAX
+                {t("max")}
               </button>
             </span>
           }
@@ -280,9 +284,7 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
       <button
         onClick={() => {
           if (form.values.sourceWallet === form.values.destinationWallet) {
-            return errorNotification(
-              "You cannot transfer between the same wallet"
-            );
+            return errorNotification(t("sameWalletError"));
           }
           if (user?.twoFaEnabled) {
             modals.open({
@@ -301,7 +303,7 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
         disabled={isPending}
         className="h-[56px] rounded-xl bg-primary hover:bg-primary/90 hover:shadow-[0_0_16px_rgba(77,119,240,0.3)] text-white font-bold transition-all active:scale-[0.98] disabled:bg-white/[0.04] disabled:text-white/30 disabled:shadow-none flex items-center justify-center gap-2"
       >
-        {isPending ? <InlineLoading /> : "Confirm Transfer"}
+        {isPending ? <InlineLoading /> : t("confirmTransfer")}
       </button>
     </div>
   );

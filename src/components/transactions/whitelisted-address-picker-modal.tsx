@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Modal } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { MdCheck, MdKeyboardArrowRight, MdOutlineClose } from "react-icons/md";
 import { FaAddressBook } from "react-icons/fa6";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
@@ -37,6 +38,7 @@ export const WhitelistedAddressPickerModal = ({
   selectedAddress,
   onSelect,
 }: WhitelistedAddressPickerModalProps) => {
+  const t = useTranslations("Withdrawal");
   return (
     <Modal
       opened={opened}
@@ -49,8 +51,8 @@ export const WhitelistedAddressPickerModal = ({
       <div className="w-full max-w-[480px] max-[600px]:max-w-[calc(100vw-2rem)] bg-[#181a20] rounded-2xl border border-white/[0.06] flex flex-col overflow-hidden">
         <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-5 border-b border-white/[0.06]">
           <div className="flex flex-col gap-0.5">
-            <h4 className="text-lg font-bold text-white tracking-tight">Whitelisted Addresses</h4>
-            <p className="text-xs text-white/40">Pick a saved address for this network</p>
+            <h4 className="text-lg font-bold text-white tracking-tight">{t("whitelistedAddresses")}</h4>
+            <p className="text-xs text-white/40">{t("pickSavedAddress")}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Link
@@ -58,7 +60,7 @@ export const WhitelistedAddressPickerModal = ({
               onClick={onClose}
               className="flex items-center gap-0.5 px-3 h-8 rounded-lg bg-primary/10 border border-primary/25 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors whitespace-nowrap"
             >
-              Manage whitelisted accounts
+              {t("manageWhitelisted")}
               <MdKeyboardArrowRight size={14} />
             </Link>
             <button
@@ -78,14 +80,14 @@ export const WhitelistedAddressPickerModal = ({
             </div>
           ) : isError ? (
             <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-              <span className="text-xs text-white/50">Whitelisted accounts could not be loaded.</span>
+              <span className="text-xs text-white/50">{t("whitelistLoadError")}</span>
               {onRetry ? (
                 <button
                   type="button"
                   onClick={onRetry}
                   className="text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
                 >
-                  Retry
+                  {t("retry")}
                 </button>
               ) : null}
             </div>
@@ -93,10 +95,10 @@ export const WhitelistedAddressPickerModal = ({
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <FaAddressBook size={28} className="text-white/20" />
               <span className="text-sm font-semibold text-white/40">
-                No whitelisted addresses for this network
+                {t("noWhitelistedAddresses")}
               </span>
               <span className="text-xs text-white/30">
-                Add one from Whitelisted Wallets, then it will show up here.
+                {t("addWhitelistedHint")}
               </span>
             </div>
           ) : (
@@ -120,7 +122,7 @@ export const WhitelistedAddressPickerModal = ({
                 >
                   <span className="flex flex-col gap-0.5 min-w-0">
                     <span className="text-xs font-semibold text-white/90 truncate">
-                      {entry.name || "Whitelisted address"}
+                      {entry.name || t("whitelistedAddress")}
                     </span>
                     <span className="w-full break-all font-mono text-xs leading-5 text-white/60">
                       {truncateWhitelistAddress(entry.address)}
@@ -137,7 +139,7 @@ export const WhitelistedAddressPickerModal = ({
                           : "text-2xs font-semibold px-2 py-0.5 rounded-full bg-success-6/10 text-success-6 border border-success-6/20"
                       }
                     >
-                      {entry.pending ? entry.pendingLabel || "Pending" : "Active"}
+                      {entry.pending ? entry.pendingLabel || t("pending") : t("active")}
                     </span>
                   </span>
                 </button>

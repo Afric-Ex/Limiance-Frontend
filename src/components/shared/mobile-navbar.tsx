@@ -1,7 +1,7 @@
 import { Accordion, Drawer } from "@mantine/core";
 import clsx from "clsx";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/src/hooks/use-pathname";
 import React from "react";
 import { BuyCryptoDropdown } from "./buy-crypto-dropdown";
 import { EarnDropdown } from "./earn-dropdown";

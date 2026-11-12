@@ -1,6 +1,7 @@
 "use client";
 
 import { Modal, TextInput } from "@mantine/core";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { useDebouncedValue } from "@mantine/hooks";
 import { useMemo, useState } from "react";
@@ -30,6 +31,7 @@ const inputClass =
   "!bg-white/[0.04] !border !border-white/[0.08] !text-white !text-sm !rounded-xl !h-11 focus:!border-primary/60 placeholder:!text-white/20";
 
 export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
+  const t = useTranslations("Transactions");
   const [view, setView] = useState<"coin" | "network">("coin");
   const [coinSearch, setCoinSearch] = useState("");
   const [networkSearch, setNetworkSearch] = useState("");
@@ -223,14 +225,14 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
       }}
       title={
         view === "coin" ? (
-          "Select Coin"
+          t("selectCoin")
         ) : (
           <button
             onClick={() => setView("coin")}
             className="flex items-center gap-2 text-white font-bold text-base hover:text-primary transition-colors"
           >
             <MdArrowBack size={18} />
-            Select Network
+            {t("selectNetwork")}
             {pendingCoin && (
               <span className="flex items-center gap-1.5 ml-1">
                 {pendingCoin.image && (
@@ -247,7 +249,7 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
         {/* Search */}
         <div className="px-6 py-4 border-b border-white/[0.04]">
           <TextInput
-            placeholder={view === "coin" ? "Search coin name or symbol…" : "Search network…"}
+            placeholder={view === "coin" ? t("searchCoinPlaceholder") : t("searchNetworkPlaceholder")}
             value={view === "coin" ? coinSearch : networkSearch}
             onChange={(e) =>
               view === "coin"
@@ -268,7 +270,7 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
             ) : !filteredTokens?.length ? (
               <div className="flex flex-col items-center justify-center py-16 gap-2 text-white/30">
                 <IoSearchOutline size={32} />
-                <span className="text-sm">No coins found</span>
+                <span className="text-sm">{t("noCoinsFound")}</span>
               </div>
             ) : (
                 filteredTokens.map((token: TokenEntry) => (
@@ -297,7 +299,7 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
             ) : !filteredChains?.length ? (
               <div className="flex flex-col items-center justify-center py-16 gap-2 text-white/30">
                 <IoSearchOutline size={32} />
-                <span className="text-sm">No networks found</span>
+                <span className="text-sm">{t("noNetworksFound")}</span>
               </div>
             ) : (
                 filteredChains.map((chain: any, index: number) => (

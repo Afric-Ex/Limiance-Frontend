@@ -10,6 +10,7 @@ import {
   validateWhitelistAddress,
   type WhitelistedAddress,
 } from "@/src/lib/whitelist";
+import { useTranslations } from "next-intl";
 
 interface Props {
   opened: boolean;
@@ -31,6 +32,7 @@ export function WhitelistedAddressModal({
   onAdded,
   existingAddresses = [],
 }: Props) {
+  const t = useTranslations("Wallet");
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const queryClient = useQueryClient();
@@ -56,14 +58,14 @@ export function WhitelistedAddressModal({
     (entry) => entry.name?.trim().toLowerCase() === name.trim().toLowerCase()
   );
   const nameError = name.trim() && duplicateName
-    ? "This name is already used for a whitelisted wallet."
+    ? t("duplicateNameError")
     : null;
 
   return (
     <Modal
       opened={opened}
       onClose={onClose}
-      title="Add whitelisted account"
+      title={t("addWhitelistedAccount")}
       centered
       classNames={{
         content: "!bg-[#181a20] !border !border-white/[0.08]",
@@ -74,8 +76,8 @@ export function WhitelistedAddressModal({
     >
       <div className="flex flex-col gap-4">
         <TextInput
-          label="Name"
-          placeholder="e.g. My Ledger"
+          label={t("name")}
+          placeholder={t("namePlaceholder")}
           value={name}
           onChange={(event) => setName(event.currentTarget.value)}
           error={nameError}
@@ -84,8 +86,8 @@ export function WhitelistedAddressModal({
           required
         />
         <TextInput
-          label="Wallet address"
-          placeholder="Enter wallet address"
+          label={t("walletAddress")}
+          placeholder={t("walletAddressPlaceholder")}
           value={address}
           onChange={(event) => setAddress(event.currentTarget.value)}
           error={validationError}
@@ -102,11 +104,11 @@ export function WhitelistedAddressModal({
             name: name.trim(),
           })}
         >
-          Add whitelisted account
+          {t("addWhitelistedAccount")}
         </Button>
         <div className="flex items-center gap-3 text-xs font-semibold text-white/35">
           <span className="h-px flex-1 bg-white/[0.08]" />
-          OR
+          {t("or")}
           <span className="h-px flex-1 bg-white/[0.08]" />
         </div>
         <Button
@@ -115,7 +117,7 @@ export function WhitelistedAddressModal({
           leftSection={<MdAccountBalanceWallet size={18} />}
           className="!h-12 !border-primary/40 !bg-gradient-to-r !from-primary/20 !to-violet-500/20 !text-white !font-bold !shadow-[0_0_18px_rgba(77,119,240,0.16)] hover:!border-primary/70 hover:!from-primary/30 hover:!to-violet-500/30 hover:!shadow-[0_0_24px_rgba(77,119,240,0.28)]"
         >
-          Connect wallet
+          {t("connectWallet")}
         </Button>
       </div>
     </Modal>
