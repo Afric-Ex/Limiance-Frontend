@@ -18,6 +18,9 @@ interface OrderBookData {
   totalSellVolume: number | null;
   lastPrice: number | null;
   lastPriceTs: number | null;
+  // Futures mark price carried on futures_order_book_update (full precision).
+  markPrice: number | null;
+  markPriceTs: number | null;
   isConnected: boolean;
   lastUpdated: Date | null;
 }
@@ -72,6 +75,8 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
     totalSellVolume: null,
     lastPrice: null,
     lastPriceTs: null,
+    markPrice: null,
+    markPriceTs: null,
     isConnected: false,
     lastUpdated: null,
   });
@@ -146,6 +151,8 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
         totalSellVolume: totalSell,
         lastPrice: Number.isFinite(rawLastPrice) && rawLastPrice > 0 ? rawLastPrice : prev.lastPrice,
         lastPriceTs: Number.isFinite(rawLastPriceTs) ? rawLastPriceTs : prev.lastPriceTs,
+        markPrice: prev.markPrice,
+        markPriceTs: prev.markPriceTs,
         isConnected: prev.isConnected,
         lastUpdated: new Date(),
       }));
@@ -236,6 +243,8 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
             dataPayload?.lastPriceTs
         );
         const backendLastUpdated = Number(book.lastUpdated);
+        const rawMarkPrice = Number(book.markPrice ?? dataPayload?.markPrice);
+        const rawMarkPriceTs = Number(book.markPriceTs ?? dataPayload?.markPriceTs);
 
         return {
           buyOrders,
@@ -254,6 +263,8 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
           totalSellVolume: Number.isFinite(Number(book.totalSellVolume)) ? Number(book.totalSellVolume) : totalSellVolume,
           lastPrice: Number.isFinite(rawLastPrice) && rawLastPrice > 0 ? rawLastPrice : previous.lastPrice,
           lastPriceTs: Number.isFinite(rawLastPriceTs) ? rawLastPriceTs : previous.lastPriceTs,
+          markPrice: Number.isFinite(rawMarkPrice) && rawMarkPrice > 0 ? rawMarkPrice : previous.markPrice,
+          markPriceTs: Number.isFinite(rawMarkPriceTs) ? rawMarkPriceTs : previous.markPriceTs,
           isConnected: true,
           lastUpdated: Number.isFinite(backendLastUpdated)
             ? new Date(backendLastUpdated < 1e12 ? backendLastUpdated * 1000 : backendLastUpdated)
