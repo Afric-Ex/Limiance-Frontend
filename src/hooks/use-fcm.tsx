@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { notificationService } from "@/src/services/notification";
 import toast from "react-hot-toast";
 import { redactDiagnostic } from "@/src/lib/pii-policy";
+import { useNotificationSound } from "@/src/hooks/use-notification-sound";
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 const STORAGE_KEY = "fcm_token_registered";
@@ -20,6 +21,12 @@ const STORAGE_KEY = "fcm_token_registered";
  */
 export function useFCM() {
   const tokenSentRef = useRef(false);
+  const playSound = useNotificationSound();
+  const playSoundRef = useRef(playSound);
+
+  useEffect(() => {
+    playSoundRef.current = playSound;
+  }, [playSound]);
 
   useEffect(() => {
     const init = async () => {
@@ -83,6 +90,14 @@ export function useFCM() {
         const unsubscribe = onMessage(fcmMessaging, (payload) => {
           const title = payload.notification?.title ?? "Limiance";
           const body = payload.notification?.body ?? "";
+
+          // Play the WhatsApp-style chime if the matching sound setting is on
+          playSoundRef.current({
+            title,
+            body,
+            type: typeof payload.data?.type === "string" ? payload.data.type : undefined,
+            data: payload.data,
+          });
 
           // Add to local notification store so the bell can show it
           import("@/src/stores/notification-store").then(({ useNotificationStore }) => {
