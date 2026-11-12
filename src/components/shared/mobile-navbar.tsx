@@ -23,6 +23,7 @@ import { Account } from "../icons/account";
 import { BusinessCard } from "../icons/business-card";
 import { Send } from "../icons/send";
 import classes from "@/src/styles/dashboard.module.css";
+import { useTranslations } from "next-intl";
 
 export const MobileNavbar = ({
   opened,
@@ -31,48 +32,49 @@ export const MobileNavbar = ({
   opened: boolean;
   close: () => void;
 }) => {
+  const t = useTranslations("Navigation");
   const list = [
     {
-      name: "Buy crypto",
+      nameKey: "buyCrypto",
       children: <BuyCryptoDropdown />,
     },
     {
-      name: "Markets",
+      nameKey: "markets",
       link: "/markets",
     },
     {
-      name: "Trades",
+      nameKey: "trades",
       children: <MarketDropdown />,
     },
     {
-      name: "Earn",
+      nameKey: "earn",
       children: <EarnDropdown />,
     },
     {
-      name: "More",
+      nameKey: "more",
       children: <MoreDropdown />,
     },
     {
-      name: "Profile",
+      nameKey: "profile",
       children: <ProfileDropdown isMobile />,
     },
     {
-      name: "Notifications",
+      nameKey: "notifications",
       children: <NotificationsDropdown />,
     },
     {
-      name: "Wallet",
+      nameKey: "wallet",
       children: <WalletDropdown />,
     },
     {
-      name: "Language",
+      nameKey: "language",
       children: <LanguageDropdown isMobile />,
     },
   ];
 
     const navLinks = [
       {
-        name: "Rewards Hub",
+        nameKey: "rewardsHub",
         link: "/assets/earn",
         icon: IoIosGift,
       },
@@ -82,19 +84,19 @@ export const MobileNavbar = ({
       //   icon: BsPersonFillAdd,
       // },
       {
-        name: "Account",
+        nameKey: "account",
         routeIdentifier: "account",
         children: [
           {
-            name: "Profile",
+            nameKey: "profile",
             link: "/account/profile",
           },
           {
-            name: "Security",
+            nameKey: "security",
             link: "/account/security",
           },
           {
-            name: "API Keys",
+            nameKey: "apiKeys",
             link: "/account/api-keys",
           },
         ],
@@ -106,7 +108,7 @@ export const MobileNavbar = ({
       //   icon: SubAccount,
       // },
       {
-        name: "Settings",
+        nameKey: "settings",
         link: "/settings",
         icon: IoSettingsSharp,
       },
@@ -114,13 +116,13 @@ export const MobileNavbar = ({
 
   const transacionLinks = [
     {
-      name: "Deposit",
+      nameKey: "deposit",
       link: "/transactions/deposit",
       icon: BusinessCard,
       children: undefined,
     },
     {
-      name: "Withdrawal",
+      nameKey: "withdrawal",
       link: "/transactions/withdrawal",
       icon: Send,
     },
@@ -167,12 +169,12 @@ export const MobileNavbar = ({
               >
                 <span className="flex items-center gap-10px">
                   <FiDownload size={18} />
-                  <span className="font-medium">Deposit</span>
+                  <span className="font-medium">{t("deposit")}</span>
                 </span>
               </button>
               <div className="flex-1 overflow-auto flex flex-col gap-5">
                 <div className="flex flex-col border-b pb-4 border-b-white/30 gap-2">
-                  <h3 className="text-white text-sm font-bold px-4">MENU</h3>
+                  <h3 className="text-white text-sm font-bold px-4">{t("menu")}</h3>
                   <div className="flex flex-col gap-3">
                     {(pathname.includes("transactions")
                       ? transacionLinks
@@ -180,7 +182,7 @@ export const MobileNavbar = ({
                     ).map((item, idx) =>
                       !item.children ? (
                         <Link
-                          key={item.name}
+                          key={item.nameKey}
                           href={item.link}
                           onClick={close}
                           style={{ animationDelay: `${idx * 50}ms`, animationFillMode: 'both' }}
@@ -193,12 +195,12 @@ export const MobileNavbar = ({
                         >
                           <item.icon size={20} />
                           <span className="text-base font-medium">
-                            {item.name}
+                            {t(item.nameKey as "markets")}
                           </span>
                         </Link>
                       ) : (
                         <Accordion
-                          key={item.name}
+                          key={item.nameKey}
                           style={{ animationDelay: `${idx * 50}ms`, animationFillMode: 'both' }}
                           className="animate-fade-in"
                           // value={
@@ -231,7 +233,7 @@ export const MobileNavbar = ({
                           classNames={classes}
                         >
                           <Accordion.Item
-                            key={item.name}
+                            key={item.nameKey}
                             value={item.routeIdentifier ?? ""}
                           >
                             <Accordion.Control
@@ -254,12 +256,12 @@ export const MobileNavbar = ({
                                 />
                               }
                             >
-                              {item.name}
+                              {t(item.nameKey as "markets")}
                             </Accordion.Control>
                             <Accordion.Panel>
                               {item.children?.map((el) => (
                                 <Link
-                                  key={el.name}
+                                  key={el.nameKey}
                                   href={el.link}
                                   onClick={close}
                                   className={clsx(
@@ -270,7 +272,7 @@ export const MobileNavbar = ({
                                   )}
                                 >
                                   <span className="text-base font-medium">
-                                    {el.name}
+                                    {t(el.nameKey as "profile")}
                                   </span>
                                 </Link>
                               ))}
@@ -282,28 +284,28 @@ export const MobileNavbar = ({
                   </div>
                 </div>
                 <div className="flex flex-col pb-4 gap-2">
-                  <h3 className="text-white text-sm font-bold px-4">OTHERS</h3>
+                  <h3 className="text-white text-sm font-bold px-4">{t("others")}</h3>
                   <div className="flex flex-col gap-3">
-                    {list.map(({ name, children, link }) =>
+                    {list.map(({ nameKey, children, link }) =>
                       children ? (
                         <Accordion
-                          key={name}
+                          key={nameKey}
                           styles={{ root: { width: "100%" } }}
                           classNames={classes}
                         >
-                          <Accordion.Item value={name}>
-                            <Accordion.Control>{name}</Accordion.Control>
+                          <Accordion.Item value={nameKey}>
+                            <Accordion.Control>{t(nameKey as "markets")}</Accordion.Control>
                             <Accordion.Panel>{children}</Accordion.Panel>
                           </Accordion.Item>
                         </Accordion>
                       ) : (
                         <Link
-                          key={name}
+                          key={nameKey}
                           href={link ?? ""}
                           onClick={close}
                           className="bg-transparent hover:bg-primary-lighter text-white/55 flex p-4 gap-3 items-center rounded-r-2xl"
                         >
-                          <span className="text-base font-medium">{name}</span>
+                          <span className="text-base font-medium">{t(nameKey as "markets")}</span>
                         </Link>
                       )
                     )}
@@ -319,7 +321,7 @@ export const MobileNavbar = ({
               className="py-5 px-6 flex cursor-pointer hover:bg-gray-9/20 items-center gap-3 border-t border-t-gray-9/40"
             >
               <Logout />
-              <span className="text-xs text-white/65">Log Out</span>
+              <span className="text-xs text-white/65">{t("logout")}</span>
             </div>
           </>
         ) : (

@@ -7,12 +7,13 @@ import { IoIosArrowForward } from "react-icons/io";
 import { RiLineChartLine, RiExchangeDollarLine, RiRobot2Line } from "react-icons/ri";
 import { LuRepeat2 } from "react-icons/lu";
 import { Loader } from "@mantine/core";
+import { useTranslations } from "next-intl";
 
 const marketItems = [
   {
     key: "spot",
-    title: "Spot",
-    desc: "Buy and sell crypto with advanced tools",
+    titleKey: "spot",
+    descKey: "spotDesc",
     link: "/trades/spot",
     category: "spot",
     icon: RiLineChartLine,
@@ -20,8 +21,8 @@ const marketItems = [
   },
   {
     key: "futures",
-    title: "Futures",
-    desc: "Trade perpetual and futures contracts",
+    titleKey: "futures",
+    descKey: "futuresDesc",
     link: "/trades/futures",
     category: "futures",
     icon: RiExchangeDollarLine,
@@ -29,8 +30,8 @@ const marketItems = [
   },
   {
     key: "margin",
-    title: "Margin",
-    desc: "Trade with leverage to maximize potential",
+    titleKey: "margin",
+    descKey: "marginDesc",
     link: "/trades/margin",
     category: "margin",
     icon: RiExchangeDollarLine,
@@ -38,16 +39,16 @@ const marketItems = [
   },
   {
     key: "convert",
-    title: "Convert",
-    desc: "Quick conversion with zero fees",
+    titleKey: "convert",
+    descKey: "convertDesc",
     link: "/trades/spot",
     icon: LuRepeat2,
     showPairs: false,
   },
   {
     key: "bots",
-    title: "Trading Bots",
-    desc: "Automate your trading strategies 24/7",
+    titleKey: "botsTitle",
+    descKey: "botsDesc",
     link: "/assets/trading-bots",
     icon: RiRobot2Line,
     showPairs: false,
@@ -127,6 +128,8 @@ const PairRow = ({ market }: { market: any }) => {
 };
 
 export const MarketDropdown = () => {
+  const t = useTranslations("Dropdowns");
+  const tn = useTranslations("Navigation");
   const [selected, setSelected] = useState("spot");
   const { push } = useRouter();
   const { markets, marketsLoading } = useMarketFeed("BTC-USDT");
@@ -137,7 +140,7 @@ export const MarketDropdown = () => {
   return (
     <div className="bg-[#181a20] border border-white/[0.06] rounded-xl overflow-hidden flex shadow-2xl">
       <div className="w-[260px] border-r border-white/[0.06]">
-        <div className="px-4 pt-3 pb-2 text-xs text-white/40">Trade</div>
+        <div className="px-4 pt-3 pb-2 text-xs text-white/40">{t("trade")}</div>
         <ul className="flex flex-col px-2 pb-2">
           {marketItems.map((item) => {
             const Icon = (item as any).icon;
@@ -154,8 +157,8 @@ export const MarketDropdown = () => {
                 <div className="flex items-center gap-2">
                   {Icon && <Icon className="text-white/70" size={16} />}
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-sm text-white/90">{item.title}</span>
-                    <span className="text-xs text-white/40">{item.desc}</span>
+                    <span className="text-sm text-white/90">{tn(item.titleKey as "spot")}</span>
+                    <span className="text-xs text-white/40">{t(item.descKey as "spotDesc")}</span>
                   </div>
                 </div>
                 {(item as any).showPairs && <IoIosArrowForward className="text-white/30" size={14} />}
@@ -167,8 +170,8 @@ export const MarketDropdown = () => {
       {(selectedItem as any).showPairs ? (
         <div className="w-[300px]">
           <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-            <span className="text-xs text-white/40">Trading Pairs</span>
-            {selectedItem.link && <button onClick={() => push(selectedItem.link)} className="text-xs text-white/40 hover:text-white/70">More</button>}
+            <span className="text-xs text-white/40">{t("tradingPairs")}</span>
+            {selectedItem.link && <button onClick={() => push(selectedItem.link)} className="text-xs text-white/40 hover:text-white/70">{t("more")}</button>}
           </div>
           <div className="px-2 pb-3 flex flex-col min-h-[200px]">
             {marketsLoading && pairs.length === 0 ? (
@@ -176,7 +179,7 @@ export const MarketDropdown = () => {
                 <Loader size="xs" color="gray" />
               </div>
             ) : pairs.length === 0 ? (
-              <div className="px-2 py-2 text-xs text-white/40">No trading pairs available</div>
+              <div className="px-2 py-2 text-xs text-white/40">{t("noTradingPairs")}</div>
             ) : (
               pairs.map((market: any, idx: number) => <PairRow key={(market.symbol || market.poid || market.id || idx)} market={market} />)
             )}
