@@ -121,7 +121,11 @@ export const MarginBorrowRepayModal = ({ pair, tradeMode = "isolated", onClose, 
 
   const { mutate: handleRepay, isPending: repayLoading } = useMutation({
     mutationFn: async () => {
-      const res = await tradingService.repayMargin({ asset: selectedAsset, amount: enteredAmount });
+      const res = await tradingService.repayMargin({
+        asset: selectedAsset,
+        amount: enteredAmount,
+        symbol: `${base}/${quote}`.toUpperCase(),
+      });
       if (res?.status === false || res?.success === false) {
         const errorMsg = res?.error || res?.message || res?.data?.message || res?.data?.error || "Repay failed";
         throw new Error(errorMsg);

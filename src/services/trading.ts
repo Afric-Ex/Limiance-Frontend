@@ -288,8 +288,12 @@ export const tradingService = {
     return response.data;
   },
 
-  repayMargin: async (data: { asset: string; amount: number }) => {
-    const response = await api.post("trading/margin/repay", data);
+  repayMargin: async (data: { asset: string; amount: number; symbol: string }) => {
+    const response = await api.post("trading/margin/repay", {
+      asset: data.asset,
+      amount: data.amount,
+      symbol: data.symbol,
+    });
     return response.data;
   },
 
