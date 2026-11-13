@@ -42,7 +42,9 @@ export default async function RootLayout({
     <html lang={locale}>
       <body className="antialiased overflow-x-hidden">
         <LocaleProvider locale={locale} messages={messages}>
-          <Toaster />
+          <div data-snapshot-hide>
+            <Toaster />
+          </div>
           <MantineProvider theme={theme} forceColorScheme="dark">
             <WebSocketProvider>
               <Providers>

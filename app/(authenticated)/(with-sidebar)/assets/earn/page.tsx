@@ -8,6 +8,7 @@ import { LimBalanceCard } from "@/src/components/earn/lim-balance-card";
 import { MyRewards } from "@/src/components/earn/my-rewards";
 import { EarnTab } from "@/src/components/assets/earn-tab";
 import { Launchpad } from "@/src/components/earn/launchpad";
+import { ScreenShare } from "@/src/components/snapshot/screen-share";
 
 /**
  * Limiance Earn dashboard.
@@ -28,6 +29,7 @@ import { Launchpad } from "@/src/components/earn/launchpad";
 function EarnInner() {
   return (
     <main className="earn-dashboard page-enter mx-auto flex w-full max-w-[1600px] flex-col gap-5 pb-8">
+      <ScreenShare titleKey="earn" filenameParts={["earn"]} contentClassName="flex flex-col gap-5">
       <EarnHeader />
 
       <RewardNotificationBanner />
@@ -76,6 +78,7 @@ function EarnInner() {
       <EarnTab />
 
       <Launchpad />
+      </ScreenShare>
     </main>
   );
 }

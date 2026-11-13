@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { TransactionDetailsModal } from "@/src/components/transactions/transaction-details-modal";
+import { MarginOrdersShare } from "@/src/components/snapshot/margin-orders-share";
 import {
   fmtDate,
   fmtNum,
@@ -85,6 +86,7 @@ export const MarginOrderHistory = () => {
           >
             {t("reset")}
           </button>
+          <MarginOrdersShare rows={filtered} />
         </div>
       </div>
 

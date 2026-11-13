@@ -74,7 +74,7 @@ export const MyWallet = () => {
   ];
 
   return (
-    <div className="flex min-w-0 w-full flex-col gap-4 animate-fade-up stagger-1 max-[1150px]:gap-3">
+    <div className="flex min-w-0 w-full flex-col gap-4 animate-fade-up stagger-1 max-[1150px]:gap-3" data-snapshot-hide>
       <div className="flex items-center justify-between mb-2 max-[1150px]:mb-0">
         <h3 className="text-xl font-bold max-[1150px]:text-lg">{t("myAssets")}</h3>
         <div className="flex items-center gap-3">

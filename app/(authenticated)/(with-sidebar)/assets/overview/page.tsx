@@ -6,10 +6,16 @@ import { RecentHistory } from "@/src/components/assets/recent-history";
 import { AssetTrendChart } from "@/src/components/assets/asset-trend-chart";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AssetsOverviewSkeleton } from "@/src/components/skeletons/assets";
+import { ScreenShare } from "@/src/components/snapshot/screen-share";
 
 function OverviewInner() {
   return (
     <main className="flex flex-col gap-6 w-full animate-fade-in max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-4">
+      <ScreenShare
+        titleKey="assetsOverview"
+        filenameParts={["assets-overview"]}
+        contentClassName="flex flex-col gap-6 max-[1150px]:gap-4"
+      >
       <WalletCard title="Total Assets" variant="dashboard" />
 
       {/* 2-Column Layout */}
@@ -25,6 +31,7 @@ function OverviewInner() {
           <RecentHistory />
         </div>
       </div>
+      </ScreenShare>
     </main>
   );
 }

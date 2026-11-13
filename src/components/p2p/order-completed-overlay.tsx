@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { Button, Modal, Textarea } from "@mantine/core";
 import { FaThumbsUp, FaThumbsDown } from "react-icons/fa";
 import { MdCheckCircle } from "react-icons/md";
+import type { P2PShareData } from "@/src/lib/p2p/share-data";
+import { P2POrderShare } from "@/src/components/snapshot/p2p-order-share";
 
 interface OrderCompletedOverlayProps {
   isBuyer: boolean;
@@ -21,6 +23,8 @@ interface OrderCompletedOverlayProps {
   /** False when the counterparty is the signed-in user or cannot be resolved. */
   canReview?: boolean;
   isSelfReview?: boolean;
+  /** Narrow, allow-listed snapshot data. Never pass the raw order. */
+  shareData?: P2PShareData;
 }
 
 export const OrderCompletedOverlay = ({
@@ -38,6 +42,7 @@ export const OrderCompletedOverlay = ({
   initialSubmitted = false,
   canReview = true,
   isSelfReview = false,
+  shareData,
 }: OrderCompletedOverlayProps) => {
   const [rating, setRating] = useState<"POSITIVE" | "NEGATIVE" | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -127,6 +132,13 @@ export const OrderCompletedOverlay = ({
             )}
           </div>
         </div>
+
+        {shareData ? (
+          <div className="flex items-center justify-end gap-2">
+            <span className="text-2xs uppercase tracking-wider text-white/40">Share trade</span>
+            <P2POrderShare data={shareData} />
+          </div>
+        ) : null}
 
         <div className="w-full h-px bg-white/[0.06]" />
 

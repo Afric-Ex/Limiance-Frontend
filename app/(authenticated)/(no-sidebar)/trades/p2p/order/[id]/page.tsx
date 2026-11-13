@@ -36,6 +36,8 @@ import { ReleaseCryptoModal } from "@/src/components/p2p/release-crypto-modal";
 import { DisputePanel } from "@/src/components/p2p/dispute-panel";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2POrderDetailSkeleton } from "@/src/components/skeletons/p2p";
+import { P2POrderShare } from "@/src/components/snapshot/p2p-order-share";
+import { toP2PShareData } from "@/src/lib/p2p/share-data";
 
 function OrderRoomPageInner() {
   const params = useParams();
@@ -512,6 +514,16 @@ function OrderRoomPageInner() {
   );
   const canReview = Boolean(counterpartyId) && !isSelfReview;
 
+  const p2pShareData = toP2PShareData(order, {
+    counterparty: counterpartyName,
+    orderNumber: String(order?.orderId ?? orderId),
+    unitPrice: price,
+    total: fiatAmount,
+    fiat,
+    status,
+    time: effectiveCreatedAt ?? undefined,
+  });
+
   return (
     <P2PLayout>
       <div className="w-full max-w-7xl mx-auto py-6 px-4 sm:px-5 max-[1150px]:pb-[90px] page-enter">
@@ -532,6 +544,7 @@ function OrderRoomPageInner() {
             initialSubmitted={existingFeedbackSubmitted}
             canReview={canReview}
             isSelfReview={isSelfReview}
+            shareData={{ ...p2pShareData, status: normalizedStatus }}
           />
         )}
 
@@ -574,6 +587,7 @@ function OrderRoomPageInner() {
               >
                 {statusInfo.label}
               </span>
+              <P2POrderShare data={p2pShareData} />
             </div>
           </div>
         </div>

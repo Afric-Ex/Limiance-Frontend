@@ -11,6 +11,7 @@ import { Liquidation } from "@/src/components/orders/liquidation";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { MarginOrdersSkeleton } from "@/src/components/skeletons/orders";
 import { OrdersEmptyState, OrdersPageFrame, ordersTabsClassNames } from "@/src/components/orders/orders-shared";
+import { ScreenShare } from "@/src/components/snapshot/screen-share";
 
 function MarginOrdersInner() {
   const t = useTranslations("Orders");
@@ -42,13 +43,19 @@ function MarginOrdersInner() {
           <MarginOrderDetails />
         </TabsPanel>
         <TabsPanel value="capital">
-          <CapitalFlow />
+          <ScreenShare titleKey="capitalFlow" filenameParts={["capital-flow"]}>
+            <CapitalFlow />
+          </ScreenShare>
         </TabsPanel>
         <TabsPanel value="debt">
-          <DebtHistory />
+          <ScreenShare titleKey="debtHistory" filenameParts={["debt-history"]}>
+            <DebtHistory />
+          </ScreenShare>
         </TabsPanel>
         <TabsPanel value="liquidation">
-          <Liquidation />
+          <ScreenShare titleKey="liquidation" filenameParts={["liquidation"]}>
+            <Liquidation />
+          </ScreenShare>
         </TabsPanel>
         <TabsPanel value="others">
           <OrdersEmptyState

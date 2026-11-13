@@ -179,7 +179,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
     });
 
   return (
-    <div className="flex flex-col gap-5 animate-fade-in-up">
+    <div className="flex flex-col gap-5 animate-fade-in-up" data-snapshot-hide>
 
       {/* ── Top Bar: Mode Tabs + Actions ─────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
