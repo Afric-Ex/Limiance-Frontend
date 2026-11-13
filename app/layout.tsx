@@ -13,8 +13,8 @@ import { Toaster } from "react-hot-toast";
 import Providers from "@/src/components/providers";
 import { NotificationsProvider } from "@/src/components/shared/notifications-provider";
 import { WebSocketProvider } from "@/src/components/providers/websocket-provider";
-import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { LocaleProvider } from "@/src/components/providers/locale-provider";
 
 export const metadata: Metadata = {
   title: "Limiance Exchange — Trade Crypto with Confidence",
@@ -41,7 +41,7 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body className="antialiased overflow-x-hidden">
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <LocaleProvider locale={locale} messages={messages}>
           <Toaster />
           <MantineProvider theme={theme} forceColorScheme="dark">
             <WebSocketProvider>
@@ -58,7 +58,7 @@ export default async function RootLayout({
               </Providers>
             </WebSocketProvider>
           </MantineProvider>
-        </NextIntlClientProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

@@ -432,7 +432,8 @@
     "reveal": "Mostrar",
     "selectPaymentType": "Seleccione un tipo de método de pago para añadir.",
     "theme": "Tema",
-    "themeDescription": "Elige tu combinaci?n de colores preferida."
+    "themeDescription": "Elige tu combinaci?n de colores preferida.",
+    "languageChanged": "El idioma de la interfaz se cambi? a {language}."
   },
   "Dashboard": {
     "title": "Panel",

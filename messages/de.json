@@ -432,7 +432,8 @@
     "reveal": "Anzeigen",
     "selectPaymentType": "Wählen Sie einen Zahlungsmethodentyp zum Hinzufügen aus.",
     "theme": "Design",
-    "themeDescription": "W?hlen Sie Ihr bevorzugtes Farbschema."
+    "themeDescription": "W?hlen Sie Ihr bevorzugtes Farbschema.",
+    "languageChanged": "Die Sprache der Oberfl?che wurde auf {language} ge?ndert."
   },
   "Dashboard": {
     "title": "Dashboard",

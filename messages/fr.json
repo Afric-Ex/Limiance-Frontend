@@ -432,7 +432,8 @@
     "reveal": "Afficher",
     "selectPaymentType": "Sélectionnez un type de moyen de paiement à ajouter.",
     "theme": "Th?me",
-    "themeDescription": "Choisissez votre th?me de couleurs pr?f?r?."
+    "themeDescription": "Choisissez votre th?me de couleurs pr?f?r?.",
+    "languageChanged": "Langue de l?interface chang?e en {language}."
   },
   "Dashboard": {
     "title": "Tableau de bord",
