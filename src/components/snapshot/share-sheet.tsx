@@ -163,28 +163,6 @@ export function ShareSheet({
             styles={{ label: { color: "rgba(255,255,255,0.7)", fontSize: 12 } }}
           />
         </div>
-        <div ref={previewRef} className="w-full">
-          <div
-            style={{
-              width: SNAPSHOT_WIDTH * scale,
-              height: cardHeight * scale,
-              overflow: "hidden",
-              borderRadius: 32 * scale,
-              margin: "0 auto",
-            }}
-          >
-            <div
-              style={{
-                width: SNAPSHOT_WIDTH,
-                transform: `scale(${scale})`,
-                transformOrigin: "top left",
-              }}
-            >
-              <div ref={nodeRef}>{children}</div>
-            </div>
-          </div>
-        </div>
-
         {error ? (
           <div
             role="alert"
@@ -235,6 +213,28 @@ export function ShareSheet({
           ) : null}
           {isBusy ? <span className="sr-only" role="status">{t("working")}</span> : null}
           </div>
+
+        <div ref={previewRef} className="w-full">
+          <div
+            style={{
+              width: SNAPSHOT_WIDTH * scale,
+              height: cardHeight * scale,
+              overflow: "hidden",
+              borderRadius: 32 * scale,
+              margin: "0 auto",
+            }}
+          >
+            <div
+              style={{
+                width: SNAPSHOT_WIDTH,
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+              }}
+            >
+              <div ref={nodeRef}>{children}</div>
+            </div>
+          </div>
+        </div>
         </div>
     </SnapshotOptionsContext.Provider>
   );
