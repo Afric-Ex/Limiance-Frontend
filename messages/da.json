@@ -432,7 +432,8 @@
     "reveal": "Vis",
     "selectPaymentType": "Vælg en betalingsmetodetype, der skal tilføjes.",
     "theme": "Tema",
-    "themeDescription": "V?lg dit foretrukne farvetema."
+    "themeDescription": "V?lg dit foretrukne farvetema.",
+    "languageChanged": "Sproget i gr?nsefladen er ?ndret til {language}."
   },
   "Dashboard": {
     "title": "Dashboard",

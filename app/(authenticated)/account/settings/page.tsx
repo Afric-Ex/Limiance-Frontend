@@ -114,6 +114,7 @@ function SettingsPageInner() {
   // Local form state
   const [currency, setCurrency] = useState("USD");
   const [language, setLanguage] = useState(locale);
+  const languageCorrectedRef = useRef(false);
   const [timezone, setTimezone] = useState("UTC");
   const [tzSearch, setTzSearch] = useState("");
   const [tzDropOpen, setTzDropOpen] = useState(false);
@@ -157,13 +158,19 @@ function SettingsPageInner() {
   // Seed from API
   useEffect(() => {
     if (!settings) return;
-    if (isLocale(settings.language)) setLanguage(settings.language);
+    if (isLocale(settings.language)) {
+      setLanguage(settings.language);
+      if (!languageCorrectedRef.current && settings.language !== locale) {
+        languageCorrectedRef.current = true;
+        switchLocale(settings.language);
+      }
+    }
     if (settings.timezone) setTimezone(settings.timezone);
     prevValuesRef.current = {
       language: settings.language ?? "en",
       timezone: settings.timezone ?? "UTC",
     };
-  }, [settings]);
+  }, [settings, locale, switchLocale]);
 
   // Close tz dropdown on outside click
   useEffect(() => {

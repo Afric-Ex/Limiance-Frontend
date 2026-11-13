@@ -432,7 +432,8 @@
     "reveal": "Reveal",
     "selectPaymentType": "Select a payment method type to add.",
     "theme": "Theme",
-    "themeDescription": "Choose your preferred colour scheme."
+    "themeDescription": "Choose your preferred colour scheme.",
+    "languageChanged": "Interface language changed to {language}."
   },
   "Dashboard": {
     "title": "Dashboard",
