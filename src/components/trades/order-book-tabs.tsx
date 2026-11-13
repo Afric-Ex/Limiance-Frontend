@@ -20,6 +20,9 @@ interface OrderBookTabsProps {
   currentPrice: number | null;
   // Last traded price carried by the order-book feed itself (order_book_update).
   bookLastPrice?: number | null;
+  // When set (futures mark price) it is always the centre price: no spread/stale
+  // check, shown at 2 decimals, arrow/colour driven by 6-decimal moves.
+  centerPrice?: number | null;
   // 24h % change; only used to pick the arrow before any live price move is seen.
   dayChangePercent?: number | null;
   buyPercentage?: number | null;
@@ -197,6 +200,7 @@ export function OrderBookTabs({
   quote,
   currentPrice,
   bookLastPrice = null,
+  centerPrice = null,
   dayChangePercent = null,
   buyPercentage,
   sellPercentage,
@@ -289,7 +293,17 @@ export function OrderBookTabs({
       ? bookLastPrice
       : null;
 
+  const validCenterPrice =
+    centerPrice != null && Number.isFinite(centerPrice) && centerPrice > 0 ? centerPrice : null;
+  const hasCenterPrice = validCenterPrice !== null;
+  // Centre price display: fixed 2 decimals when driven by the mark price.
+  const formatCenter = (value: number) =>
+    hasCenterPrice
+      ? value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : formatPrice(value);
+
   const lastTradedPrice =
+    validCenterPrice ??
     (validBookLastPrice !== null && isWithinSpread(validBookLastPrice) ? validBookLastPrice : null) ??
     (latestTradePrice !== null && isWithinSpread(latestTradePrice) ? latestTradePrice : null) ??
     (validCurrentPrice !== null && isWithinSpread(validCurrentPrice) ? validCurrentPrice : null) ??
@@ -302,14 +316,14 @@ export function OrderBookTabs({
   useEffect(() => {
     if (lastTradedPrice === null) return;
     const previous = previousPriceRef.current;
-    // lastTradedPrice carries 8 decimals, so compare at the full 8-decimal
-    // precision (not a coarse rounding) before flipping the arrow/colour.
-    const toFixed8 = (n: number) => Math.round(n * 100_000_000);
-    if (previous !== null && toFixed8(lastTradedPrice) !== toFixed8(previous)) {
+    // Mark price: compare at 6 decimals. Otherwise keep the full 8-decimal precision.
+    const scale = hasCenterPrice ? 1_000_000 : 100_000_000;
+    const toFixed = (n: number) => Math.round(n * scale);
+    if (previous !== null && toFixed(lastTradedPrice) !== toFixed(previous)) {
       setPriceDir(lastTradedPrice > previous ? "up" : "down");
     }
     previousPriceRef.current = lastTradedPrice;
-  }, [lastTradedPrice]);
+  }, [lastTradedPrice, hasCenterPrice]);
 
   const tradeDir = useMemo(() => directionFromTrades(recentTrades), [recentTrades]);
   const shownDir =
@@ -324,7 +338,7 @@ export function OrderBookTabs({
     shownDir === "up" ? "text-success-6" : shownDir === "down" ? "text-error-1" : "text-white";
   const sideNote =
     lastTradedPrice !== null && quote && USD_PEGGED.has(String(quote).toUpperCase())
-      ? `≈${formatPrice(lastTradedPrice)} USD`
+      ? `≈${formatCenter(lastTradedPrice)} USD`
       : spread === null
         ? t("lastPrice")
         : t("spreadValue", { spread: formatPrice(spread) });
@@ -429,7 +443,7 @@ export function OrderBookTabs({
                 <span className={clsx("flex items-center gap-1 font-mono text-lg font-bold tabular-nums", priceTone)}>
                   {shownDir === "up" && <IoArrowUp size={16} />}
                   {shownDir === "down" && <IoArrowDown size={16} />}
-                  {lastTradedPrice === null ? "—" : formatPrice(lastTradedPrice)}
+                  {lastTradedPrice === null ? "—" : formatCenter(lastTradedPrice)}
                 </span>
                 <span className="text-micro tabular-nums text-white/40">{sideNote}</span>
               </div>

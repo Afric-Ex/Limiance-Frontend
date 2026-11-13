@@ -141,7 +141,15 @@ function FuturesTradesInner() {
     feed.price > 0 &&
     (bestBid == null || bestAsk == null || (feed.price >= bestBid * 0.98 && feed.price <= bestAsk * 1.02));
 
+  // Futures: header + order-book centre price come from the mark price.
+  // orderBook.markPrice (futures_order_book_update) first, then feed.price,
+  // which is the markPrice from the futures_markets stream.
+  const markPrice =
+    (orderBook.markPrice != null && orderBook.markPrice > 0 ? orderBook.markPrice : null) ??
+    (feed.price != null && feed.price > 0 ? Number(feed.price) : null);
+
   const effectiveMarketPrice =
+    markPrice ??
     (orderBook.lastPrice != null && orderBook.lastPrice > 0 ? orderBook.lastPrice : null) ??
     (latestTradePrice != null && latestTradePrice > 0 ? latestTradePrice : null) ??
     (chartLastPrice != null && chartLastPrice > 0 ? chartLastPrice : null) ??
@@ -950,6 +958,7 @@ function FuturesTradesInner() {
           markets={filteredMarkets}
           onSelectPair={handleSelectPair}
           currentPrice={effectiveMarketPrice}
+          showPriceArrow
         />
 
         {/* MOBILE: Floating Order Book Button */}
@@ -993,7 +1002,7 @@ function FuturesTradesInner() {
           base={baseAsset}
           quote={quoteAsset}
           currentPrice={effectiveMarketPrice}
-          bookLastPrice={orderBook.lastPrice}
+          bookLastPrice={orderBook.lastPrice} centerPrice={markPrice}
           dayChangePercent={feed.changePercent24h}
           buyPercentage={orderBook.buyPercentage}
           sellPercentage={orderBook.sellPercentage}
@@ -1182,7 +1191,7 @@ function FuturesTradesInner() {
               base={baseAsset}
               quote={quoteAsset}
               currentPrice={effectiveMarketPrice}
-              bookLastPrice={orderBook.lastPrice}
+              bookLastPrice={orderBook.lastPrice} centerPrice={markPrice}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -1216,7 +1225,7 @@ function FuturesTradesInner() {
               base={baseAsset}
               quote={quoteAsset}
               currentPrice={effectiveMarketPrice}
-              bookLastPrice={orderBook.lastPrice}
+              bookLastPrice={orderBook.lastPrice} centerPrice={markPrice}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
