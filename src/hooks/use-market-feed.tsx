@@ -83,11 +83,17 @@ function extractMarketItems(raw: unknown, depth = 0): any[] {
   return [];
 }
 
-/** Selected-pair ticker from a ticker list, separator-insensitive. */
+/**
+ * Selected-pair ticker from a ticker list, separator-insensitive. Futures
+ * tickers carry `pair: "BTC/USDT"` but `symbol: "BTC-PERP"`, so both keys must
+ * be tried — checking `symbol` first would never match.
+ */
 function findMarket(items: any[], pair: string): any | undefined {
   const target = normalizePairKey(pair);
   return items.find(
-    (item) => normalizePairKey(item?.symbol ?? item?.pair) === target
+    (item) =>
+      normalizePairKey(item?.pair) === target ||
+      normalizePairKey(item?.symbol) === target
   );
 }
 
@@ -230,13 +236,17 @@ export const useMarketFeed = (
 
           setData((prev) => ({
             ...prev,
-            price: (() => {
-              const n = Number(match?.markPrice ?? match?.last_price ?? match?.lastPrice ?? match?.price);
-              return Number.isFinite(n) && n > 0 ? n : prev.price;
-            })(),
+            price:
+              match?.markPrice ??
+              match?.mark_price ??
+              match?.last_price ??
+              match?.lastPrice ??
+              match?.price ??
+              prev.price,
             change24h:
               match?.priceChange ??
               match?.price_change ??
+              match?.price_change_24h ??
               match?.change24h ??
               (match?.priceChangePercent != null && match?.lastPrice != null
                 ? (Number(match.lastPrice) * Number(match.priceChangePercent)) / 100
@@ -244,11 +254,12 @@ export const useMarketFeed = (
             changePercent24h:
               match?.priceChangePercent ??
               match?.percent_change ??
+              match?.change_percent_24h ??
               match?.changePercent24h ??
               prev.changePercent24h,
             high24h: match?.highPrice ?? match?.high_24h ?? match?.high24h ?? prev.high24h,
             low24h: match?.lowPrice ?? match?.low_24h ?? match?.low24h ?? prev.low24h,
-            volume24h: match?.volume24h ?? match?.volume ?? prev.volume24h,
+            volume24h: match?.volume24h ?? match?.volume_24h ?? match?.volume ?? prev.volume24h,
             fundingRate: match?.fundingRate ?? match?.funding_rate ?? prev.fundingRate,
             nextFundingTime:
               match?.nextFundingTime ?? match?.next_funding_time ?? prev.nextFundingTime,
