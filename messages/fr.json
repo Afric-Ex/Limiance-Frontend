@@ -2463,5 +2463,60 @@
     "tabP2pTrading": "Trading P2P",
     "tabCryptoDeposit": "D?p?t de crypto",
     "tabConvert": "Convertir"
+  },
+  "Snapshot": {
+    "title": "Partager la capture",
+    "titles": {
+      "position": "Partager la position",
+      "openOrders": "Partager les ordres ouverts",
+      "orderHistory": "Partager l'historique des ordres",
+      "marginOrders": "Partager les ordres sur marge",
+      "convertHistory": "Partager l'historique des conversions",
+      "p2pOrder": "Partager l'ordre P2P",
+      "generic": "Partager l'écran",
+      "capitalFlow": "Partager les flux de capital",
+      "debtHistory": "Partager l'historique de dette",
+      "liquidation": "Partager l'historique des liquidations",
+      "convertOpenOrders": "Partager les ordres de conversion",
+      "walletFunding": "Partager le compte de financement",
+      "walletSpot": "Partager le compte spot",
+      "walletMargin": "Partager le compte sur marge",
+      "walletFutures": "Partager le compte futures",
+      "assetsOverview": "Partager l'aperçu des actifs",
+      "earn": "Partager Earn"
+    },
+    "save": "Enregistrer",
+    "copy": "Copier",
+    "share": "Partager",
+    "retry": "Réessayer",
+    "hideValues": "Masquer les valeurs",
+    "hideValuesAria": "Masquer les valeurs dans la capture",
+    "snapshotTakenAt": "Capture prise à {time}",
+    "working": "Préparation de la capture",
+    "saveAria": "Enregistrer l'image de capture",
+    "copyAria": "Copier l'image de capture",
+    "shareAria": "Partager l'image de capture",
+    "shareTriggerAria": "Partager la capture",
+    "imageSaved": "Image enregistrée",
+    "imageCopied": "Image copiée dans le presse-papiers",
+    "notReady": {
+      "position": "Position non prête",
+      "openOrders": "Aucun ordre ouvert",
+      "orderHistory": "Aucun historique d'ordres",
+      "marginOrders": "Aucun ordre sur marge",
+      "convertHistory": "Aucune conversion",
+      "p2pOrder": "Les détails de l'ordre ne sont pas prêts",
+      "generic": "Rien à partager pour l'instant"
+    },
+    "errors": {
+      "node-missing": "La capture n'est pas prête.",
+      "capture-failed": "Impossible de créer la capture.",
+      "empty-blob": "La capture a produit une image vide.",
+      "image-load-failed": "Impossible de charger une image de la capture.",
+      "clipboard-unsupported": "La copie d'images n'est pas prise en charge dans ce navigateur.",
+      "share-unsupported": "Le partage n'est pas pris en charge dans ce navigateur. Utilisez Enregistrer.",
+      "share-failed": "Impossible de partager l'image.",
+      "unknown": "Une erreur s'est produite."
+    }
   }
 }

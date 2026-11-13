@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { readList } from "@/src/lib/api-response";
 import { OrdersEmptyState, ResponsiveFilters, TableCard, tableClassNames } from "./orders-shared";
+import { ConvertHistoryShare } from "@/src/components/snapshot/convert-history-share";
 
 export const ConvertTable = () => {
   const t = useTranslations("Orders");
@@ -54,6 +55,7 @@ export const ConvertTable = () => {
             leftSection={<Search width={16} height={16} fill="white" className="opacity-40" />}
           />
           <button className="text-sm font-semibold text-white/40 hover:text-white transition-colors cursor-pointer px-2">{t("reset")}</button>
+          <ConvertHistoryShare rows={allHistory} />
         </div>
       </div>
 

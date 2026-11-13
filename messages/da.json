@@ -2463,5 +2463,60 @@
     "tabP2pTrading": "P2P-handel",
     "tabCryptoDeposit": "Kryptoinds?ttelse",
     "tabConvert": "Konverter"
+  },
+  "Snapshot": {
+    "title": "Del snapshot",
+    "titles": {
+      "position": "Del position",
+      "openOrders": "Del åbne ordrer",
+      "orderHistory": "Del ordrehistorik",
+      "marginOrders": "Del marginordrer",
+      "convertHistory": "Del konverteringshistorik",
+      "p2pOrder": "Del P2P-ordre",
+      "generic": "Del skærm",
+      "capitalFlow": "Del kapitalbevægelser",
+      "debtHistory": "Del gældshistorik",
+      "liquidation": "Del likvidationshistorik",
+      "convertOpenOrders": "Del konverteringsordrer",
+      "walletFunding": "Del fundingkonto",
+      "walletSpot": "Del spotkonto",
+      "walletMargin": "Del marginkonto",
+      "walletFutures": "Del futureskonto",
+      "assetsOverview": "Del aktivoversigt",
+      "earn": "Del Earn"
+    },
+    "save": "Gem",
+    "copy": "Kopiér",
+    "share": "Del",
+    "retry": "Prøv igen",
+    "hideValues": "Skjul beløb",
+    "hideValuesAria": "Skjul beløb i snapshot",
+    "snapshotTakenAt": "Snapshot taget kl. {time}",
+    "working": "Arbejder på snapshot",
+    "saveAria": "Gem snapshotbillede",
+    "copyAria": "Kopiér snapshotbillede",
+    "shareAria": "Del snapshotbillede",
+    "shareTriggerAria": "Del snapshot",
+    "imageSaved": "Billede gemt",
+    "imageCopied": "Billede kopieret til udklipsholderen",
+    "notReady": {
+      "position": "Position ikke klar",
+      "openOrders": "Ingen åbne ordrer",
+      "orderHistory": "Ingen ordrehistorik",
+      "marginOrders": "Ingen marginordrer",
+      "convertHistory": "Ingen konverteringer",
+      "p2pOrder": "Ordreoplysninger er ikke klar",
+      "generic": "Intet at dele endnu"
+    },
+    "errors": {
+      "node-missing": "Snapshottet er ikke klar.",
+      "capture-failed": "Kunne ikke oprette snapshottet.",
+      "empty-blob": "Snapshottet gav et tomt billede.",
+      "image-load-failed": "Et billede i snapshottet kunne ikke indlæses.",
+      "clipboard-unsupported": "Kopiering af billeder understøttes ikke i denne browser.",
+      "share-unsupported": "Deling understøttes ikke i denne browser. Brug Gem i stedet.",
+      "share-failed": "Kunne ikke dele billedet.",
+      "unknown": "Der gik noget galt."
+    }
   }
 }

@@ -12,6 +12,7 @@ import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { MarginAccountPanel } from "@/src/components/trades/margin-account-panel";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AssetsMarginSkeleton } from "@/src/components/skeletons/assets";
+import { ScreenShare } from "@/src/components/snapshot/screen-share";
 import { MdOutlineAccountBalanceWallet } from "react-icons/md";
 
 function MarginInner() {
@@ -86,10 +87,12 @@ function MarginInner() {
         </div>
       </div>
 
-      <MarginAccountPanel
-        tradeMode={tradeMode}
-        onTradeModeChange={handleSetMarginMode}
-      />
+      <ScreenShare titleKey="walletMargin" filenameParts={["margin-account"]}>
+        <MarginAccountPanel
+          tradeMode={tradeMode}
+          onTradeModeChange={handleSetMarginMode}
+        />
+      </ScreenShare>
     </main>
   );
 }

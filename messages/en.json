@@ -2463,5 +2463,60 @@
     "tabP2pTrading": "P2P trading",
     "tabCryptoDeposit": "Crypto deposit",
     "tabConvert": "Convert"
+  },
+  "Snapshot": {
+    "title": "Share snapshot",
+    "titles": {
+      "position": "Share position",
+      "openOrders": "Share open orders",
+      "orderHistory": "Share order history",
+      "marginOrders": "Share margin orders",
+      "convertHistory": "Share convert history",
+      "p2pOrder": "Share P2P order",
+      "generic": "Share screen",
+      "capitalFlow": "Share capital flow",
+      "debtHistory": "Share debt history",
+      "liquidation": "Share liquidation history",
+      "convertOpenOrders": "Share convert orders",
+      "walletFunding": "Share funding account",
+      "walletSpot": "Share spot account",
+      "walletMargin": "Share margin account",
+      "walletFutures": "Share futures account",
+      "assetsOverview": "Share assets overview",
+      "earn": "Share earn"
+    },
+    "save": "Save",
+    "copy": "Copy",
+    "share": "Share",
+    "retry": "Retry",
+    "hideValues": "Hide values",
+    "hideValuesAria": "Hide values in snapshot",
+    "snapshotTakenAt": "Snapshot taken at {time}",
+    "working": "Working on the snapshot",
+    "saveAria": "Save snapshot image",
+    "copyAria": "Copy snapshot image",
+    "shareAria": "Share snapshot image",
+    "shareTriggerAria": "Share snapshot",
+    "imageSaved": "Image saved",
+    "imageCopied": "Image copied to clipboard",
+    "notReady": {
+      "position": "Position not ready",
+      "openOrders": "No open orders",
+      "orderHistory": "No order history",
+      "marginOrders": "No margin orders",
+      "convertHistory": "No conversions",
+      "p2pOrder": "Order details are not ready",
+      "generic": "Nothing to share yet"
+    },
+    "errors": {
+      "node-missing": "The snapshot is not ready.",
+      "capture-failed": "Unable to create the snapshot.",
+      "empty-blob": "The snapshot produced an empty image.",
+      "image-load-failed": "An image in the snapshot failed to load.",
+      "clipboard-unsupported": "Copying images is not supported in this browser.",
+      "share-unsupported": "Sharing is not supported in this browser. Use Save instead.",
+      "share-failed": "Unable to share the image.",
+      "unknown": "Something went wrong."
+    }
   }
 }

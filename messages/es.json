@@ -2463,5 +2463,60 @@
     "tabP2pTrading": "Trading P2P",
     "tabCryptoDeposit": "Dep?sito de cripto",
     "tabConvert": "Convertir"
+  },
+  "Snapshot": {
+    "title": "Compartir captura",
+    "titles": {
+      "position": "Compartir posición",
+      "openOrders": "Compartir órdenes abiertas",
+      "orderHistory": "Compartir historial de órdenes",
+      "marginOrders": "Compartir órdenes de margen",
+      "convertHistory": "Compartir historial de conversiones",
+      "p2pOrder": "Compartir orden P2P",
+      "generic": "Compartir pantalla",
+      "capitalFlow": "Compartir flujo de capital",
+      "debtHistory": "Compartir historial de deuda",
+      "liquidation": "Compartir historial de liquidaciones",
+      "convertOpenOrders": "Compartir órdenes de conversión",
+      "walletFunding": "Compartir cuenta de fondeo",
+      "walletSpot": "Compartir cuenta spot",
+      "walletMargin": "Compartir cuenta de margen",
+      "walletFutures": "Compartir cuenta de futuros",
+      "assetsOverview": "Compartir resumen de activos",
+      "earn": "Compartir Earn"
+    },
+    "save": "Guardar",
+    "copy": "Copiar",
+    "share": "Compartir",
+    "retry": "Reintentar",
+    "hideValues": "Ocultar valores",
+    "hideValuesAria": "Ocultar valores en la captura",
+    "snapshotTakenAt": "Captura tomada a las {time}",
+    "working": "Preparando la captura",
+    "saveAria": "Guardar imagen de captura",
+    "copyAria": "Copiar imagen de captura",
+    "shareAria": "Compartir imagen de captura",
+    "shareTriggerAria": "Compartir captura",
+    "imageSaved": "Imagen guardada",
+    "imageCopied": "Imagen copiada al portapapeles",
+    "notReady": {
+      "position": "Posición no lista",
+      "openOrders": "No hay órdenes abiertas",
+      "orderHistory": "No hay historial de órdenes",
+      "marginOrders": "No hay órdenes de margen",
+      "convertHistory": "No hay conversiones",
+      "p2pOrder": "Los detalles de la orden no están listos",
+      "generic": "Aún no hay nada para compartir"
+    },
+    "errors": {
+      "node-missing": "La captura no está lista.",
+      "capture-failed": "No se pudo crear la captura.",
+      "empty-blob": "La captura generó una imagen vacía.",
+      "image-load-failed": "No se pudo cargar una imagen de la captura.",
+      "clipboard-unsupported": "Copiar imágenes no es compatible con este navegador.",
+      "share-unsupported": "Compartir no es compatible con este navegador. Usa Guardar.",
+      "share-failed": "No se pudo compartir la imagen.",
+      "unknown": "Algo salió mal."
+    }
   }
 }

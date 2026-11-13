@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { useTranslations } from "next-intl";
 import { MdEdit } from "react-icons/md";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
+import { PositionShare } from "@/src/components/snapshot/position-share";
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * Positions tab for the trading panel.
@@ -128,12 +129,12 @@ export function buildPositionRows(futures: unknown, margin: unknown): PositionRo
   );
 }
 
-const fmt = (value: number | null, maxDigits = 8, minDigits = 0) =>
+export const fmt = (value: number | null, maxDigits = 8, minDigits = 0) =>
   value === null
     ? "—"
     : value.toLocaleString(undefined, { minimumFractionDigits: minDigits, maximumFractionDigits: maxDigits });
-const fmtPrice = (value: number | null) => fmt(value, 8, 2);
-const fmtMoney = (value: number | null) => fmt(value, 2, 2);
+export const fmtPrice = (value: number | null) => fmt(value, 8, 2);
+export const fmtMoney = (value: number | null) => fmt(value, 2, 2);
 
 // Same look the futures page uses for its position modals.
 const MODAL_STYLES = {
@@ -314,12 +315,15 @@ export function PositionsTable({
                     <span className="ml-1 text-2xs text-white/40">{row.leverage}x</span>
                   </div>
                 </div>
-                {row.pnl !== null && (
-                  <div className={clsx("text-right font-semibold text-sm", pnlTone)}>
-                    <div>{sign}{fmtMoney(row.pnl)} {row.quote}</div>
-                    <div className="text-2xs">{row.roe === null ? "" : `${sign}${row.roe.toFixed(2)}%`}</div>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  {row.pnl !== null && (
+                    <div className={clsx("text-right font-semibold text-sm", pnlTone)}>
+                      <div>{sign}{fmtMoney(row.pnl)} {row.quote}</div>
+                      <div className="text-2xs">{row.roe === null ? "" : `${sign}${row.roe.toFixed(2)}%`}</div>
+                    </div>
+                  )}
+                  <PositionShare row={row} />
+                </div>
               </div>
               {/* Data grid */}
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
@@ -442,30 +446,33 @@ export function PositionsTable({
                   </div>
                 </td>
                 <td className="px-3 py-2.5">
-                  {canManage ? (
-                    <div className="flex justify-end gap-1.5">
-                      <button
-                        type="button"
-                        disabled={closing}
-                        onClick={() => confirmClose(row)}
-                        className="rounded bg-white/[0.06] px-2.5 py-1 text-micro font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
-                      >
-                        {closing ? t("closing") : t("market")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={closing}
-                        onClick={() => openPartialClose(row)}
-                        className="rounded bg-white/[0.06] px-2.5 py-1 text-micro font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
-                      >
-                        {t("partial")}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-right text-white/30" title={t("marginPositionsCannotCloseHere")}>
-                      —
-                    </div>
-                  )}
+                  <div className="flex items-center justify-end gap-1.5">
+                    <PositionShare row={row} />
+                    {canManage ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={closing}
+                          onClick={() => confirmClose(row)}
+                          className="rounded bg-white/[0.06] px-2.5 py-1 text-micro font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+                        >
+                          {closing ? t("closing") : t("market")}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={closing}
+                          onClick={() => openPartialClose(row)}
+                          className="rounded bg-white/[0.06] px-2.5 py-1 text-micro font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+                        >
+                          {t("partial")}
+                        </button>
+                      </>
+                    ) : (
+                      <div className="text-right text-white/30" title={t("marginPositionsCannotCloseHere")}>
+                        —
+                      </div>
+                    )}
+                  </div>
                 </td>
               </tr>
             );

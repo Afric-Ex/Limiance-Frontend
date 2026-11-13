@@ -2463,5 +2463,60 @@
     "tabP2pTrading": "P2P-Handel",
     "tabCryptoDeposit": "Krypto-Einzahlung",
     "tabConvert": "Umtauschen"
+  },
+  "Snapshot": {
+    "title": "Snapshot teilen",
+    "titles": {
+      "position": "Position teilen",
+      "openOrders": "Offene Orders teilen",
+      "orderHistory": "Orderhistorie teilen",
+      "marginOrders": "Margin-Orders teilen",
+      "convertHistory": "Konvertierungsverlauf teilen",
+      "p2pOrder": "P2P-Order teilen",
+      "generic": "Bildschirm teilen",
+      "capitalFlow": "Kapitalfluss teilen",
+      "debtHistory": "Schuldenhistorie teilen",
+      "liquidation": "Liquidationshistorie teilen",
+      "convertOpenOrders": "Konvertierungsorders teilen",
+      "walletFunding": "Funding-Konto teilen",
+      "walletSpot": "Spot-Konto teilen",
+      "walletMargin": "Margin-Konto teilen",
+      "walletFutures": "Futures-Konto teilen",
+      "assetsOverview": "Vermögensübersicht teilen",
+      "earn": "Earn teilen"
+    },
+    "save": "Speichern",
+    "copy": "Kopieren",
+    "share": "Teilen",
+    "retry": "Erneut versuchen",
+    "hideValues": "Werte ausblenden",
+    "hideValuesAria": "Werte im Snapshot ausblenden",
+    "snapshotTakenAt": "Snapshot aufgenommen um {time}",
+    "working": "Snapshot wird erstellt",
+    "saveAria": "Snapshot-Bild speichern",
+    "copyAria": "Snapshot-Bild kopieren",
+    "shareAria": "Snapshot-Bild teilen",
+    "shareTriggerAria": "Snapshot teilen",
+    "imageSaved": "Bild gespeichert",
+    "imageCopied": "Bild in Zwischenablage kopiert",
+    "notReady": {
+      "position": "Position nicht bereit",
+      "openOrders": "Keine offenen Orders",
+      "orderHistory": "Keine Orderhistorie",
+      "marginOrders": "Keine Margin-Orders",
+      "convertHistory": "Keine Konvertierungen",
+      "p2pOrder": "Orderdetails sind nicht bereit",
+      "generic": "Noch nichts zum Teilen"
+    },
+    "errors": {
+      "node-missing": "Der Snapshot ist nicht bereit.",
+      "capture-failed": "Snapshot konnte nicht erstellt werden.",
+      "empty-blob": "Der Snapshot ergab ein leeres Bild.",
+      "image-load-failed": "Ein Bild im Snapshot konnte nicht geladen werden.",
+      "clipboard-unsupported": "Das Kopieren von Bildern wird in diesem Browser nicht unterstützt.",
+      "share-unsupported": "Teilen wird in diesem Browser nicht unterstützt. Verwende stattdessen Speichern.",
+      "share-failed": "Bild konnte nicht geteilt werden.",
+      "unknown": "Etwas ist schiefgelaufen."
+    }
   }
 }

@@ -71,7 +71,7 @@ export function BuyLimCard() {
   ];
 
   return (
-    <section className="flex flex-col gap-5 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:rounded-xl max-[1150px]:p-4">
+    <section data-snapshot-hide className="flex flex-col gap-5 rounded-2xl border border-white/[0.06] bg-[#181a20] p-6 max-[1150px]:rounded-xl max-[1150px]:p-4">
       <div className="flex flex-col gap-1">
         <h2 className="text-[var(--text-subtitle)] font-semibold text-[var(--color-text-primary)]">
           Buy {LIM_SYMBOL}

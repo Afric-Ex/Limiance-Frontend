@@ -21,6 +21,27 @@ import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { PositionsTable, buildPositionRows } from "@/src/components/trades/positions-table";
+import { OpenOrdersShare } from "@/src/components/snapshot/open-orders-share";
+import { OrderHistoryShare } from "@/src/components/snapshot/order-history-share";
+import {
+  formatOrderDate,
+  formatOrderNumber,
+  formatStatus,
+  getAvgPrice,
+  getFee,
+  getFilledQuantity,
+  getFilledValue,
+  getOrderMarket,
+  getOrderPair,
+  getOrderPrice,
+  getOrderQuantity,
+  getOrderStatus,
+  getOrderTotal,
+  getOrderType,
+  getOrderTypeLabel,
+  hasConditional,
+  isBuySide,
+} from "@/src/lib/trades/order-rows";
 import {
   OrderHistoryTable,
   buildOrderHistoryRows,
@@ -285,8 +306,6 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
     onError: (e) => errorMessageHandler(e),
   });
 
-  const getOrderPair = (order: any) =>
-    order?.pair || (order?.base && order?.quote ? `${order.base}/${order.quote}` : order?.symbol || "—");
 
   const filteredOrders = useMemo(() => {
     if (!openOrders) return [];
@@ -477,23 +496,28 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
               {t("spreadTrading")}
             </SubTab>
           </div>
-          {activeMainTab === "order_history" && (
-            <div className="ml-3 shrink-0">
-              <select
-                aria-label={t("orderHistoryDateRange")}
-                value={historyDays}
-                onChange={(event) => {
-                  setHistoryDays(Number(event.currentTarget.value));
-                  setHistoryPage(1);
-                }}
-                className="h-8 max-w-[126px] rounded border border-white/10 bg-white/[0.05] px-2 text-xs font-semibold text-white/80 outline-none"
-              >
-                {DATE_RANGES.map((range) => (
-                  <option key={range.days} value={range.days}>{t(range.labelKey)}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="ml-3 flex shrink-0 items-center gap-2">
+            {activeMainTab === "order_history" ? (
+              <>
+                <select
+                  aria-label={t("orderHistoryDateRange")}
+                  value={historyDays}
+                  onChange={(event) => {
+                    setHistoryDays(Number(event.currentTarget.value));
+                    setHistoryPage(1);
+                  }}
+                  className="h-8 max-w-[126px] rounded border border-white/10 bg-white/[0.05] px-2 text-xs font-semibold text-white/80 outline-none"
+                >
+                  {DATE_RANGES.map((range) => (
+                    <option key={range.days} value={range.days}>{t(range.labelKey)}</option>
+                  ))}
+                </select>
+                <OrderHistoryShare rows={filteredHistory} />
+              </>
+            ) : (
+              <OpenOrdersShare orders={filteredOrders} />
+            )}
+          </div>
         </div>
       )}
 
@@ -716,121 +740,10 @@ function MobileRow({ label, value, valueClass }: { label: string; value: React.R
   );
 }
 
-// The API overloads `type` with the market ("spot"/"futures"), not the order
-// type, so ignore those values and keep only a real order type when present.
-const MARKET_TYPES = new Set(["spot", "futures", "margin", "cross", "isolated"]);
-const getOrderType = (order: any) => {
-  const raw = String(order?.orderType ?? order?.order_type ?? "").toLowerCase();
-  if (raw && !MARKET_TYPES.has(raw)) return raw;
-  const t = String(order?.type ?? "").toLowerCase();
-  return MARKET_TYPES.has(t) ? "" : t;
-};
-const hasConditional = (order: any) =>
-  Number(order?.takeProfit) > 0 ||
-  Number(order?.stopLoss) > 0 ||
-  Number(order?.tp_trigger_price) > 0 ||
-  Number(order?.sl_trigger_price) > 0;
 
 // Table Components
 function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mobile }: any) {
   const tp = useTranslations("Trading");
-  const formatOrderNumber = (value: unknown) => {
-    const numberValue = Number(value);
-    return Number.isFinite(numberValue) ? numberValue.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "—";
-  };
-
-  const formatOrderDate = (value: unknown) => {
-    const date = parseDate(value);
-    return date ? date.toLocaleString() : "—";
-  };
-
-  const getOrderPair = (order: any) =>
-    order?.pair ||
-    (order?.base && order?.quote ? `${order.base}/${order.quote}` : order?.symbol || "—");
-  const getOrderTypeLabel = (order: any) => {
-    const type = getOrderType(order);
-    if (type) return type.replace(/^(buy|sell|long|short)_/, "");
-    if (hasConditional(order)) return "TP/SL";
-    return Number(order?.price) > 0 ? "Limit" : "Market";
-  };
-  const getOrderMarket = (order: any) => {
-    const market = String(order?.market_type ?? order?.marketType ?? order?.market ?? order?.type ?? "").toLowerCase();
-    return MARKET_TYPES.has(market) ? market : "spot";
-  };
-
-  const getOrderPrice = (order: any) =>
-    order?.price ?? order?.orderPrice ?? order?.order_price ?? order?.avgPrice ?? order?.fillPrice;
-
-  const isOrderFilled = (order: any) => {
-    const s = String(order?.orderStatus ?? order?.status ?? order?.state ?? "").toUpperCase();
-    return s === "FILLED" || s === "CLOSED";
-  };
-
-  const getAvgPrice = (order: any) => {
-    const val = order?.avgPrice ?? order?.avg_price ?? order?.averagePrice ?? order?.fillPrice;
-    if (val === "0" || val === 0 || !val) {
-      if (isOrderFilled(order)) {
-        return getOrderPrice(order);
-      }
-      return null;
-    }
-    return val;
-  };
-
-  const getFilledValue = (order: any) => {
-    const val = order?.cumExecValue ?? order?.filledValue ?? order?.executedValue;
-    if (val === "0" || val === 0 || !val) {
-      if (isOrderFilled(order)) {
-        const p = Number(getAvgPrice(order));
-        const q = Number(getFilledQuantity(order));
-        if (p > 0 && q > 0) return p * q;
-      }
-      return null;
-    }
-    return val;
-  };
-
-  const getFee = (order: any) => {
-    const val = order?.cumExecFee ?? order?.fee;
-    if (val === "0" || val === 0 || !val) return null;
-    return val;
-  };
-
-  const getOrderStatus = (order: any) => order?.orderStatus ?? order?.status ?? order?.state;
-
-  const formatStatus = (value: unknown) => {
-    const status = String(value ?? "").replace(/[_-]+/g, " ").trim().toLowerCase();
-    return status ? status.replace(/\b\w/g, (char) => char.toUpperCase()) : "—";
-  };
-
-  const getOrderQuantity = (order: any) => {
-    const direct = order?.quantity ?? order?.amount ?? order?.size ?? order?.origQty;
-    if (direct !== undefined && direct !== null && direct !== "") return direct;
-    const executed = Number(order?.cumExecQty);
-    const leaves = Number(order?.leavesQty);
-    return Number.isFinite(executed) && Number.isFinite(leaves) ? executed + leaves : undefined;
-  };
-
-  const getFilledQuantity = (order: any) => {
-    const val = order?.filledQuantity ?? order?.filled ?? order?.cumExecQty ?? order?.executedQty;
-    if (val === "0" || val === 0 || !val) {
-      if (isOrderFilled(order)) {
-        return getOrderQuantity(order) ?? 0;
-      }
-      return 0;
-    }
-    return val;
-  };
-
-  const getOrderTotal = (order: any) => {
-    const total = Number(order?.total);
-    if (Number.isFinite(total) && total >= 0) return total;
-    const price = Number(getOrderPrice(order));
-    const qty = Number(getOrderQuantity(order));
-    return Number.isFinite(price) && Number.isFinite(qty) ? price * qty : null;
-  };
-
-  const isBuySide = (side: unknown) => ["BUY", "LONG"].includes(String(side ?? "").toUpperCase());
 
   // Filter by order type tab
   const filteredOrders = useMemo(() => {

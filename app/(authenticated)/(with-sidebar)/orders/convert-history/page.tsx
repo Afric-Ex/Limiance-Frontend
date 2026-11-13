@@ -7,6 +7,7 @@ import { ConvertOpenOrders } from "@/src/components/orders/convert-open-orders";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { ConvertHistorySkeleton } from "@/src/components/skeletons/orders";
 import { OrdersPageFrame, ordersTabsClassNames } from "@/src/components/orders/orders-shared";
+import { ScreenShare } from "@/src/components/snapshot/screen-share";
 
 function ConvertHistoryInner() {
   const t = useTranslations("Orders");
@@ -22,7 +23,9 @@ function ConvertHistoryInner() {
           <ConvertTable />
         </TabsPanel>
         <TabsPanel value="orders">
-          <ConvertOpenOrders />
+          <ScreenShare titleKey="convertOpenOrders" filenameParts={["convert-orders"]}>
+            <ConvertOpenOrders />
+          </ScreenShare>
         </TabsPanel>
       </Tabs>
     </OrdersPageFrame>
