@@ -10,7 +10,7 @@ import {
   type RefObject,
 } from "react";
 import { Drawer, Loader, Modal, Switch } from "@mantine/core";
-import { useElementSize, useMediaQuery } from "@mantine/hooks";
+import { useElementSize, useMediaQuery, useMergedRef } from "@mantine/hooks";
 import { useTranslations } from "next-intl";
 import { Button } from "@/src/components/ui/button";
 import { SNAPSHOT_COLORS, SNAPSHOT_WIDTH } from "@/src/lib/snapshot/brand";
@@ -79,7 +79,7 @@ export function ShareSheet({
   const t = useTranslations("Snapshot");
   const isMobile = useMediaQuery("(max-width: 640px)");
   const { ref: previewRef, width: previewWidth } = useElementSize();
-  const [cardHeight, setCardHeight] = useState(0);
+  const { ref: cardMeasureRef, height: cardHeight } = useElementSize();
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const lastActionRef = useRef<(() => Promise<void>) | null>(null);
   const [hideValues, setHideValues] = useState(defaultHideValues);
@@ -132,17 +132,7 @@ export function ShareSheet({
     };
   }, [opened]);
 
-  useEffect(() => {
-    if (!opened) return;
-    const node = nodeRef.current;
-    if (!node) return;
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry) setCardHeight(entry.contentRect.height);
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [nodeRef, opened]);
+  const setCardNode = useMergedRef(nodeRef, cardMeasureRef);
 
   const scale =
     previewWidth > 0 ? Math.min(1, previewWidth / SNAPSHOT_WIDTH) : 1;
@@ -231,7 +221,7 @@ export function ShareSheet({
                 transformOrigin: "top left",
               }}
             >
-              <div ref={nodeRef}>{children}</div>
+              <div ref={setCardNode}>{children}</div>
             </div>
           </div>
         </div>
