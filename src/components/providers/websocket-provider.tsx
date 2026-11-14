@@ -12,7 +12,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Enable keepalive mode on mount
     wsClient.setMaintainConnection(true);
-    console.log("[WebSocketProvider] Enabled keepalive mode");
 
     return () => {
       // Disable on unmount (if this provider unmounts)

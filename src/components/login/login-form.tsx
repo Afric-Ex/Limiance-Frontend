@@ -34,7 +34,7 @@ export const LoginForm = () => {
       // bearer credential - never log or persist it.
     },
     onError: () => {
-      console.log("Login Failed");
+      // Login failed; no action taken.
     },
   });
 

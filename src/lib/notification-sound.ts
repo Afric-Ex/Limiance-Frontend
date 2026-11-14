@@ -3,8 +3,8 @@ let masterBus: { input: GainNode } | null = null;
 
 // ---------------------------------------------------------------------------
 // Tracking log
-// Every notification-sound decision is written to the console AND kept in
-// localStorage (last 200 entries) so it survives reloads. From devtools:
+// Every notification-sound decision is kept in localStorage (last 200 entries)
+// so it survives reloads. From devtools:
 //   notificationSoundLog()        -> table of the history
 //   notificationSoundLog.clear()  -> wipe it
 // ---------------------------------------------------------------------------
@@ -33,17 +33,13 @@ export interface NotificationSoundLogEntry {
 export function logNotificationSound(entry: Omit<NotificationSoundLogEntry, "at">) {
   if (typeof window === "undefined") return;
   const full: NotificationSoundLogEntry = { at: new Date().toISOString(), ...entry };
-  console.log(
-    `[notif-sound] ${full.event}${full.reason ? ` (${full.reason})` : ""}`,
-    full
-  );
   try {
     const raw = window.localStorage.getItem(LOG_KEY);
     const list: NotificationSoundLogEntry[] = raw ? JSON.parse(raw) : [];
     list.push(full);
     window.localStorage.setItem(LOG_KEY, JSON.stringify(list.slice(-LOG_MAX)));
   } catch {
-    // storage full/blocked: console log above is still there
+    // storage full/blocked: entry is dropped
   }
 }
 
