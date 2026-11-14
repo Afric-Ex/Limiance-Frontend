@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -10,7 +11,7 @@ import {
   type RefObject,
 } from "react";
 import { Drawer, Loader, Modal, Switch } from "@mantine/core";
-import { useElementSize, useMediaQuery, useMergedRef } from "@mantine/hooks";
+import { useMediaQuery, useMergedRef } from "@mantine/hooks";
 import { useTranslations } from "next-intl";
 import { Button } from "@/src/components/ui/button";
 import { SNAPSHOT_COLORS, SNAPSHOT_WIDTH } from "@/src/lib/snapshot/brand";
@@ -60,6 +61,36 @@ const sheetStyles = {
   },
 } as const;
 
+/**
+ * Measures an element via a callback ref. Mantine's `useElementSize` registers
+ * its observer with a `[ref.current]` dependency, which never updates when the
+ * observed node mounts after the first render (e.g. when a modal opens). That
+ * left the preview at height 0 until an unrelated re-render. Keying the
+ * observer effect on the node itself fixes that.
+ */
+function useMeasuredSize() {
+  const [node, setNode] = useState<HTMLElement | null>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const ref = useCallback((element: HTMLElement | null) => setNode(element), []);
+
+  useEffect(() => {
+    if (!node) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const box = entry.borderBoxSize?.[0] ?? entry.contentBoxSize?.[0];
+      setSize({
+        width: box ? box.inlineSize : entry.contentRect.width,
+        height: box ? box.blockSize : entry.contentRect.height,
+      });
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [node]);
+
+  return { ref, width: size.width, height: size.height };
+}
+
 export function ShareSheet({
   opened,
   onClose,
@@ -78,8 +109,8 @@ export function ShareSheet({
 }: ShareSheetProps) {
   const t = useTranslations("Snapshot");
   const isMobile = useMediaQuery("(max-width: 640px)");
-  const { ref: previewRef, width: previewWidth } = useElementSize();
-  const { ref: cardMeasureRef, height: cardHeight } = useElementSize();
+  const { ref: previewRef, width: previewWidth } = useMeasuredSize();
+  const { ref: cardMeasureRef, height: cardHeight } = useMeasuredSize();
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const lastActionRef = useRef<(() => Promise<void>) | null>(null);
   const [hideValues, setHideValues] = useState(defaultHideValues);
