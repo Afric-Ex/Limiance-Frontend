@@ -6,7 +6,7 @@ import { ScreenShare } from "@/src/components/snapshot/screen-share";
 
 function SpotInner() {
   return (
-    <main className="flex flex-col gap-8 px-5 max-[1150px]:px-4 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-4">
+    <main className="flex w-full flex-col gap-8 max-[1150px]:pb-[90px] page-enter max-[1150px]:gap-4">
       <ScreenShare
         titleKey="walletFunding"
         filenameParts={["funding"]}
