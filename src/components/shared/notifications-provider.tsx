@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useNotifications } from "@/src/hooks/use-notifications";
 import { useNotificationSound } from "@/src/hooks/use-notification-sound";
-import { unlockNotificationAudio } from "@/src/lib/notification-sound";
+import { logNotificationSound, unlockNotificationAudio } from "@/src/lib/notification-sound";
 
 /**
  * NotificationsProvider – zero-UI client component that fetches the user's
@@ -34,17 +34,34 @@ export function NotificationsProvider() {
     // Don't chime for the initial batch of existing notifications.
     if (seenIdsRef.current === null) {
       seenIdsRef.current = currentIds;
+      logNotificationSound({
+        event: "skipped",
+        source: "history",
+        reason: `initial load baseline (${currentIds.size} existing notifications, no chime)`,
+      });
       return;
     }
 
     for (const notification of notifications) {
-      if (!seenIdsRef.current.has(notification.id) && !notification.read) {
-        playSound({
-          title: notification.title,
-          body: notification.body,
-          type: notification.type,
-        });
+      if (seenIdsRef.current.has(notification.id)) continue;
+      const meta = {
+        source: "history",
+        id: notification.id,
+        title: notification.title,
+        type: notification.type,
+      };
+      logNotificationSound({ event: "detected", ...meta, reason: notification.read ? "already read" : "unread" });
+      if (notification.read) {
+        logNotificationSound({ event: "skipped", ...meta, reason: "new but already marked read" });
+        continue;
       }
+      playSound({
+        id: notification.id,
+        source: "history",
+        title: notification.title,
+        body: notification.body,
+        type: notification.type,
+      });
     }
 
     seenIdsRef.current = currentIds;
