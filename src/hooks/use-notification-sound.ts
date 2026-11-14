@@ -4,9 +4,11 @@ import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
 import { useUserStore } from "@/src/stores/user-store";
-import { playNotificationSound } from "@/src/lib/notification-sound";
+import { logNotificationSound, playNotificationSound } from "@/src/lib/notification-sound";
 
 export interface NotificationSoundPayload {
+  id?: string;
+  source?: string;
   title?: string;
   body?: string;
   type?: string;
@@ -52,19 +54,35 @@ export function useNotificationSound() {
 
   const play = useCallback(
     (payload: NotificationSoundPayload = {}) => {
+      const meta = { source: payload.source, id: payload.id, title: payload.title, type: payload.type };
       const prefs = settings?.transactionNotifications;
-      if (!prefs) return;
-
-      const spotEnabled = Boolean(prefs.spotNotificationSound);
-      const futuresEnabled = Boolean(prefs.futuresNotificationSound);
-      if (!spotEnabled && !futuresEnabled) return;
-
       const scope = detectScope(payload);
-      if (scope === "spot" && !spotEnabled) return;
-      if (scope === "futures" && !futuresEnabled) return;
 
-      const signature = [payload.title ?? "", payload.body ?? "", payload.type ?? ""].join("|");
-      playNotificationSound(signature);
+      // Settings not loaded yet (or never saved): default to playing so a new
+      // notification is never silently dropped. Explicit mutes are respected.
+      if (prefs) {
+        const spotEnabled = Boolean(prefs.spotNotificationSound);
+        const futuresEnabled = Boolean(prefs.futuresNotificationSound);
+        if (!spotEnabled && !futuresEnabled) {
+          logNotificationSound({ event: "skipped", reason: "spot & futures sounds both off in settings", ...meta });
+          return;
+        }
+        if (scope === "spot" && !spotEnabled) {
+          logNotificationSound({ event: "skipped", reason: "spot sound off in settings", ...meta });
+          return;
+        }
+        if (scope === "futures" && !futuresEnabled) {
+          logNotificationSound({ event: "skipped", reason: "futures sound off in settings", ...meta });
+          return;
+        }
+      } else {
+        logNotificationSound({ event: "detected", reason: "settings not loaded - playing by default", ...meta });
+      }
+
+      // Include the id so two different notifications with identical text
+      // still each get their own chime; FCM pushes (no id) keep text dedupe.
+      const signature = [payload.id ?? "", payload.title ?? "", payload.body ?? "", payload.type ?? ""].join("|");
+      playNotificationSound(signature, meta);
     },
     [settings]
   );

@@ -55,7 +55,25 @@ const CandlestickChart = dynamic(
 );
 
 const LEVERAGE_PRESETS = [1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100];
-const PERCENT_MARKS = [{ value: 25 }, { value: 50 }, { value: 75 }];
+// Stacked (Bybit-style) quantity slider, same look as the spot/margin panels:
+// dots every 25%, labels only at the two ends.
+const PERCENT_MARKS = [
+  { value: 0, label: '0' },
+  { value: 25 },
+  { value: 50 },
+  { value: 75 },
+  { value: 100, label: '100%' },
+];
+
+// Futures shows Buy/Long and Sell/Short together (no active side), so the slider
+// uses the neutral brand colour. Full class strings so Tailwind can see them.
+const FUTURES_SLIDER_CLASSES = {
+  track: '!h-1 before:!h-1 before:!bg-white/10',
+  bar: '!bg-primary',
+  thumb: '!border-2 !border-primary !bg-[#181a20] !w-3 !h-3',
+  mark: '!w-2 !h-2 !rounded-full !border-2 !border-primary/40 !bg-[#181a20] !-mt-[3px]',
+  markLabel: '!text-2xs !text-white/40 !mt-2',
+} as const;
 
 type OrderType = 'limit' | 'market' | 'stop';
 type TradeSide = 'buy' | 'sell';
@@ -733,8 +751,10 @@ function FuturesTradesInner() {
               const effectivePrice = effectiveLimitPrice || feed.price || 0;
               const effectiveMax = effectivePrice > 0 ? (availableQuote * leverage) / effectivePrice : 0;
               if (effectiveMax > 0) {
-                const pct = Math.min(100, Math.round((Number(v) / effectiveMax) * 100));
+                const pct = Math.max(0, Math.min(100, Math.round((Number(v) / effectiveMax) * 100)));
                 setSliderValue(pct);
+              } else {
+                setSliderValue(0);
               }
             }}
             classNames={{
@@ -746,19 +766,15 @@ function FuturesTradesInner() {
           <span className="text-xs text-white/40 ml-2">{baseAsset}</span>
         </div>
 
-        <div className="px-2 pt-2 pb-4">
+        <div className="px-1.5 pb-5 pt-1">
           <Slider
             min={0}
             max={100}
-            step={25}
+            step={1}
+            label={(v) => `${v}%`}
             value={sliderValue}
             onChange={updateSliderValue}
-            classNames={{
-              track: '!h-1 before:!h-1 bg-white/10 before:!bg-white/10',
-              bar: '!bg-white/40',
-              thumb: '!border-2 !border-white/40 !bg-[#181a20]',
-              mark: '!hidden',
-            }}
+            classNames={FUTURES_SLIDER_CLASSES}
             marks={PERCENT_MARKS}
           />
         </div>
