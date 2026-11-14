@@ -126,15 +126,6 @@ class WebSocketClient {
     this.wsTicket = normalized;
     this.authFailed = false;
 
-    console.log("[WebSocketClient] Auth ticket set successfully", {
-      ticketSet: true,
-      changed,
-      isConnected: this.isConnected,
-      isConnecting: this.isConnecting,
-      connectedWithTicket: this.connectedWithTicket,
-      subscriptionsCount: this.subscriptions.size,
-    });
-
     const hasActiveWork = this.subscriptions.size > 0 || this.shouldMaintainConnection;
     const hasConnection = this.isConnected || this.isConnecting;
     const shouldReplaceConnection =
@@ -145,7 +136,6 @@ class WebSocketClient {
     // If the socket already connected as an unauthenticated guest viewer before
     // login / user hydration completed, reconnect immediately to upgrade it.
     if (shouldReplaceConnection) {
-      console.log("[WebSocketClient] Reconnecting to upgrade authentication");
       if (this.reconnectTimeout) {
         clearTimeout(this.reconnectTimeout);
         this.reconnectTimeout = null;
@@ -166,7 +156,6 @@ class WebSocketClient {
         }
       }
     } else if (shouldStartConnection) {
-      console.log("[WebSocketClient] Starting connection with updated authentication");
       if (this.reconnectTimeout) {
         clearTimeout(this.reconnectTimeout);
         this.reconnectTimeout = null;
@@ -177,14 +166,6 @@ class WebSocketClient {
   }
 
   private handleNetworkRestore() {
-    console.log("[WebSocketClient] Network restored event", {
-      authFailed: this.authFailed,
-      isConnected: this.isConnected,
-      isConnecting: this.isConnecting,
-      subscriptionsCount: this.subscriptions.size,
-      hasTicket: Boolean(this.wsTicket),
-      shouldMaintainConnection: this.shouldMaintainConnection,
-    });
     if (this.authFailed) return;
     const hasActiveWork = this.subscriptions.size > 0 || this.shouldMaintainConnection;
     if (!this.isConnected && !this.isConnecting && hasActiveWork) {
@@ -193,7 +174,6 @@ class WebSocketClient {
         this.reconnectTimeout = null;
       }
       this.retryCount = 0;
-      console.log("[WebSocketClient] Triggering reconnection after network restore");
       this.connect();
     }
   }
@@ -210,7 +190,6 @@ class WebSocketClient {
   private scheduleIdleClose() {
     if (this.idleCloseTimeout) return;
     if (this.shouldMaintainConnection) {
-      console.log("[WebSocketClient] Keepalive enabled, not scheduling idle close");
       return;
     }
     this.idleCloseTimeout = setTimeout(() => {
@@ -238,11 +217,6 @@ class WebSocketClient {
     if (maintain === this.shouldMaintainConnection) return;
     
     this.shouldMaintainConnection = maintain;
-    console.log("[WebSocketClient] Keepalive mode", {
-      enabled: maintain,
-      isConnected: this.isConnected,
-      isConnecting: this.isConnecting,
-    });
 
     if (maintain) {
       this.cancelIdleClose();
@@ -323,7 +297,6 @@ class WebSocketClient {
   public connect() {
     if (typeof window === "undefined") return;
     if (this.isConnected || this.isConnecting) {
-      console.log("[WebSocketClient] Already connected or connecting, skipping connect");
       return;
     }
     if (this.authFailed) {
@@ -337,20 +310,11 @@ class WebSocketClient {
 
     const hasWork = this.subscriptions.size > 0 || this.shouldMaintainConnection;
     if (!hasWork) {
-      console.log("[WebSocketClient] No active subscriptions or keepalive enabled, skipping connect");
       return;
     }
 
     this.isConnecting = true;
     this.intentionalClose = false;
-
-    console.log("[WebSocketClient] Initiating connection", {
-      url: url.replace(/\?.*/, ""), // Redact query params
-      hasTicket: Boolean(this.wsTicket),
-      subscriptionsCount: this.subscriptions.size,
-      retryCount: this.retryCount,
-      shouldMaintainConnection: this.shouldMaintainConnection,
-    });
 
     try {
       // No credential is ever appended to the URL. On same-site domains the
@@ -364,10 +328,6 @@ class WebSocketClient {
       this.ws = socket;
 
       socket.onopen = () => {
-        console.log("[WebSocketClient] Connection established", {
-          connectedWithTicket: this.connectedWithTicket,
-          retryCount: this.retryCount,
-        });
         this.isConnecting = false;
         this.retryCount = 0;
         this.authFailed = false;

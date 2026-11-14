@@ -199,7 +199,6 @@ export const useAuth = () => {
       }
       await persistLoginSession(data);
       successNotification("Login successful");
-      console.log("Login successful, redirecting to dashboard");
       // Use a small delay to ensure the cookie is set before navigating
       await new Promise(resolve => setTimeout(resolve, 100));
       push("/dashboard");
