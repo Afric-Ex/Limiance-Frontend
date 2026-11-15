@@ -98,6 +98,14 @@ const EXPECTED_BALANCE_ACCOUNT: Partial<Record<PortfolioTopic, string>> = {
 };
 
 /**
+ * The overall balance is requested with `account: ""` but the server tags the
+ * reply `account: "overall"`. Normalize both so the account guard below does
+ * not discard the very frame it is waiting for.
+ */
+const normalizeBalanceAccount = (account: string): string =>
+  account === "overall" ? "" : account;
+
+/**
  * Accept both camelCase (`inUsd`) and snake_case (`in_usd`) balance shapes.
  * Returns the input unchanged when it carries no balance fields at all, so the
  * caller's existing guards keep working.
@@ -438,7 +446,13 @@ class PortfolioStore {
             ? (raw as any).account
             : undefined;
       const expected = EXPECTED_BALANCE_ACCOUNT[topic];
-      if (expected !== undefined && frameAccount !== undefined && frameAccount !== expected) return;
+      if (
+        expected !== undefined &&
+        frameAccount !== undefined &&
+        normalizeBalanceAccount(frameAccount) !== normalizeBalanceAccount(expected)
+      ) {
+        return;
+      }
       // The event came back as an error: this is the one case (besides a dead
       // socket) where REST is allowed to fill in.
       if (isErrorFrame(container) || isErrorFrame(raw)) {
