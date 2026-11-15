@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/src/lib/axios";
 import { wsClient } from "@/src/lib/websocket-client";
+import { fallbackIfSocketStaysDown } from "@/src/lib/ws-fallback";
 
 interface MarketItem {
   symbol: string;
@@ -83,17 +84,11 @@ function extractMarketItems(raw: unknown, depth = 0): any[] {
   return [];
 }
 
-/**
- * Selected-pair ticker from a ticker list, separator-insensitive. Futures
- * tickers carry `pair: "BTC/USDT"` but `symbol: "BTC-PERP"`, so both keys must
- * be tried — checking `symbol` first would never match.
- */
+/** Selected-pair ticker from a ticker list, separator-insensitive. */
 function findMarket(items: any[], pair: string): any | undefined {
   const target = normalizePairKey(pair);
   return items.find(
-    (item) =>
-      normalizePairKey(item?.pair) === target ||
-      normalizePairKey(item?.symbol) === target
+    (item) => normalizePairKey(item?.symbol ?? item?.pair) === target
   );
 }
 
@@ -158,7 +153,9 @@ export const useMarketFeed = (
 
   // --- real mode: single shared WebSocket connection via wsClient ---
   useEffect(() => {
-    fetchHttpFallback();
+    // HTTP only if the socket stays down past the grace period (connecting != failed).
+    const cancelGraceFallback = fallbackIfSocketStaysDown(fetchHttpFallback);
+    let sawConnected = false;
 
     // The spot/margin feed streams every market on this topic, so the server
     // no longer needs the pair in the request: filtering happens client-side.
@@ -168,7 +165,13 @@ export const useMarketFeed = (
     // the socket alive on pages that show no prices.
     const unsubscribeStatus = wsClient.onStatusChange((connected) => {
       setData((prev) => ({ ...prev, isConnected: connected }));
-      if (!connected) fetchHttpFallback();
+      if (connected) {
+        sawConnected = true;
+        return;
+      }
+      // Only a real drop (was connected, now closed) goes to HTTP straight away.
+      // The initial "not connected yet" replay is handled by the grace timer.
+      if (sawConnected) fetchHttpFallback();
     });
 
     const applyMarkets = (dataPayload: any) => {
@@ -236,17 +239,13 @@ export const useMarketFeed = (
 
           setData((prev) => ({
             ...prev,
-            price:
-              match?.markPrice ??
-              match?.mark_price ??
-              match?.last_price ??
-              match?.lastPrice ??
-              match?.price ??
-              prev.price,
+            price: (() => {
+              const n = Number(match?.markPrice ?? match?.last_price ?? match?.lastPrice ?? match?.price);
+              return Number.isFinite(n) && n > 0 ? n : prev.price;
+            })(),
             change24h:
               match?.priceChange ??
               match?.price_change ??
-              match?.price_change_24h ??
               match?.change24h ??
               (match?.priceChangePercent != null && match?.lastPrice != null
                 ? (Number(match.lastPrice) * Number(match.priceChangePercent)) / 100
@@ -254,12 +253,11 @@ export const useMarketFeed = (
             changePercent24h:
               match?.priceChangePercent ??
               match?.percent_change ??
-              match?.change_percent_24h ??
               match?.changePercent24h ??
               prev.changePercent24h,
             high24h: match?.highPrice ?? match?.high_24h ?? match?.high24h ?? prev.high24h,
             low24h: match?.lowPrice ?? match?.low_24h ?? match?.low24h ?? prev.low24h,
-            volume24h: match?.volume24h ?? match?.volume_24h ?? match?.volume ?? prev.volume24h,
+            volume24h: match?.volume24h ?? match?.volume ?? prev.volume24h,
             fundingRate: match?.fundingRate ?? match?.funding_rate ?? prev.fundingRate,
             nextFundingTime:
               match?.nextFundingTime ?? match?.next_funding_time ?? prev.nextFundingTime,
@@ -299,6 +297,7 @@ export const useMarketFeed = (
     }
 
     return () => {
+      cancelGraceFallback();
       unsubscribeStatus();
       unsubscribes.forEach((unsubscribe) => unsubscribe());
     };

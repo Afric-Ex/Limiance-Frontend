@@ -20,16 +20,6 @@ import { MdRefresh } from "react-icons/md";
 import { Skeleton } from "../shared/skeleton";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import type { PortfolioBalanceAccount } from "@/src/lib/portfolio-store";
-import { useTranslations } from "next-intl";
-
-/** Maps the account title used as a prop onto its translation key. */
-const TITLE_KEYS: Record<string, string> = {
-  "Funding Account": "fundingAccount",
-  "Spot": "spot",
-  "Futures": "futures",
-  "Margin": "margin",
-  "Total Assets": "totalAssets",
-};
 
 export const WalletCard = ({
   title,
@@ -40,7 +30,6 @@ export const WalletCard = ({
   children?: React.ReactNode;
   variant?: "account" | "dashboard";
 }) => {
-  const t = useTranslations("Wallet");
   const { push } = useRouter();
   const {
     handleOpenInternalTransferModal,
@@ -53,12 +42,10 @@ export const WalletCard = ({
     "Margin": "margin",
   };
   const singleAccount = title ? accountMap[title] : undefined;
-  const titleKey = title ? TITLE_KEYS[title] : undefined;
-  const titleLabel = titleKey ? t(titleKey) : title ? title : t("totalAssets");
 
   // Account pages request their own balance alongside portfolio holdings;
   // the overview requests the overall balance.
-  const { balances, refreshBalances, isRefreshing } = usePortfolioWs(
+  const { balances, refreshBalances, isRefreshing, notice } = usePortfolioWs(
     singleAccount
       ? { coins: true, balanceAccount: singleAccount }
       : { balance: true }
@@ -66,18 +53,11 @@ export const WalletCard = ({
 
   // Pick the account-specific balance or the overall balance.
   const acctBal = singleAccount ? balances[singleAccount] : balances["total"];
-  const [balanceWaitExpired, setBalanceWaitExpired] = React.useState(false);
   const hasUsdBalance = acctBal?.inUsd != null;
 
-  React.useEffect(() => {
-    setBalanceWaitExpired(false);
-    if (hasUsdBalance) return;
-
-    const timeout = window.setTimeout(() => setBalanceWaitExpired(true), 45_000);
-    return () => window.clearTimeout(timeout);
-  }, [hasUsdBalance, singleAccount]);
-
-  const showBalanceLoader = !hasUsdBalance && !balanceWaitExpired;
+  // A balance is never invented: until a real value exists we keep the loader
+  // (never "0" or a dash). Failures are explained in the notice below instead.
+  const showBalanceLoader = !hasUsdBalance;
 
   const safeNum = (val: string | null | undefined) => {
     const n = parseFloat(val ?? "");
@@ -111,27 +91,27 @@ export const WalletCard = ({
     modals.open({
       children: (
         <MethodSheet
-          title={t("selectWithdrawalMethod")}
-          subtitle={t("chooseWithdrawalMethod")}
+          title="Select withdrawal method"
+          subtitle="Choose how you want to withdraw"
           onClose={modals.closeAll}
           options={[
             {
               icon: <Withdraw />,
-              title: t("cryptoWithdrawal"),
-              description: t("cryptoWithdrawalDescription"),
+              title: "Crypto withdrawal",
+              description: "On-chain withdrawal | Bybit UID/email/mobile number",
               onSelect: () => go("/transactions/withdrawal"),
             },
             {
               icon: <FiatOtc />,
-              title: t("sellForNgn"),
-              description: t("sellForNgnDescription"),
+              title: "Sell for NGN",
+              description: "Receive cash instantly in your bank account or e-wallet",
               ...SUCCESS_METHOD_STYLES,
               onSelect: () => go("/transactions/fiat-withdraw"),
             },
             {
               icon: <P2pTrading />,
-              title: t("p2pTrading"),
-              description: t("p2pTradingDescription"),
+              title: "P2P Trading",
+              description: "Sell directly to users | Competitive prices | Local payments",
               ...SUCCESS_METHOD_STYLES,
               onSelect: () => go("/trades/p2p"),
             },
@@ -144,9 +124,8 @@ export const WalletCard = ({
 
   const buttons = [
     {
-      id: "withdraw",
       icon: Withdraw,
-      text: t("withdraw"),
+      text: "Withdraw",
       isPrimary: false,
       action: () => {
         if (isDashboard) {
@@ -157,9 +136,8 @@ export const WalletCard = ({
       },
     },
     {
-      id: "transfer",
       icon: Transfer,
-      text: t("transfer"),
+      text: "Transfer",
       isPrimary: false,
       action: () => {
         if (title === "Futures") {
@@ -172,26 +150,23 @@ export const WalletCard = ({
     ...(isDashboard
       ? [
           {
-            id: "earn",
             icon: Pocket,
-            text: t("earn"),
+            text: "Earn",
             isPrimary: false,
             action: () => push("/assets/earn"),
           },
         ]
       : [
           {
-            id: "external-transfer",
             icon: Transfer,
-            text: t("externalTransfer"),
+            text: "Ext. Transfer",
             isPrimary: false,
             action: handleOpenExternalTransferModal,
           },
         ]),
     {
-      id: "convert",
       icon: Convert,
-      text: t("convert"),
+      text: "Convert",
       isPrimary: false,
       action: () =>
         modals.open({
@@ -213,15 +188,15 @@ export const WalletCard = ({
           <div className="flex flex-col gap-3 max-w-md">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-bold uppercase tracking-widest text-primary/70">
-                {titleLabel}
+                {title ?? "Total Assets"}
               </span>
               <div className="flex items-center gap-2">
                 <BalanceRevealControl />
                 <button
                   type="button"
                   onClick={refreshBalances}
-                  aria-label={t("refreshBalanceLabel", { account: titleLabel })}
-                  title={t("refreshBalance")}
+                  aria-label={`Refresh ${title ?? "total assets"} balance`}
+                  title="Refresh balance"
                   className="text-white/40 hover:text-white transition-colors"
                 >
                   <MdRefresh size={17} className={isRefreshing ? "animate-spin" : ""} />
@@ -247,10 +222,25 @@ export const WalletCard = ({
               </>
             )}
 
+            {/* Heads-up under the balance when it may be out of date or could not load */}
+            {notice && (
+              <div
+                role="status"
+                className="mt-1 flex items-start gap-2 rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs text-amber-200"
+              >
+                <span aria-hidden className="mt-px font-bold">i</span>
+                <span>
+                  {notice === "unavailable"
+                    ? "We're having some technical issues right now. Please check back later."
+                    : "Your balance may have changed. Tap the refresh icon to update it."}
+                </span>
+              </div>
+            )}
+
             {/* P&L line */}
             <div className="mt-1 flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-white/40">
-                {t("todaysPnl")}
+                Today&apos;s P&L
               </span>
               {showBalanceLoader ? (
                 <Skeleton variant="text" width="100px" height="14px" />
@@ -267,7 +257,7 @@ export const WalletCard = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 lg:shrink-0">
             {buttons.map((item) => (
               <button
-                key={item.id}
+                key={item.text}
                 onClick={item.action}
                 className={clsx(
                   "flex flex-col items-center justify-center gap-1 rounded-xl p-3.5 min-w-[96px] transition-all duration-200 active:scale-95",
