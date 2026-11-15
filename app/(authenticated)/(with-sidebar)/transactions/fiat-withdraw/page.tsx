@@ -26,6 +26,7 @@ import { IoMdInformationCircleOutline } from "react-icons/io";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { useFiatWithdrawal } from "@/src/hooks/use-fiat-withdrawal";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { BalanceNotice } from "@/src/components/shared/balance-notice";
 import { WithdrawalSkeleton } from "@/src/components/skeletons/orders";
 import { useInfiniteList } from "@/src/hooks/use-infinite-list";
 import { InfiniteScrollTrigger } from "@/src/components/shared/infinite-scroll-trigger";
@@ -88,7 +89,7 @@ function FiatWithdrawInner() {
     emailVerificationLoading,
   } = useFiatWithdrawal();
 
-  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs({ coins: true });
+  const { coins: portfolio, isLoading: portfolioLoading, notice: portfolioNotice } = usePortfolioWs({ coins: true });
   const limit = 30;
 
   const coinPortfolio = form.values.symbol
@@ -167,6 +168,7 @@ function FiatWithdrawInner() {
                   </span>
                 </span>
               </div>
+              <BalanceNotice notice={portfolioNotice} />
               <NumberInput
                 thousandSeparator=","
                 hideControls

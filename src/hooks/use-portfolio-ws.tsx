@@ -91,7 +91,9 @@ export const usePortfolioWs = (needs?: PortfolioNeeds): PortfolioWsData => {
     ? "unavailable"
     : topics.some((t) => state.notices[t] === "stale")
       ? "stale"
-      : null;
+      : topics.some((t) => state.notices[t] === "delayed")
+        ? "delayed"
+        : null;
 
   return {
     coins: state.coins,

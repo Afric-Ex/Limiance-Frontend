@@ -11,6 +11,7 @@ import { MarginBorrowRepayModal } from "./margin-borrow-repay-modal";
 import { MarginTransferModal } from "./margin-transfer-modal";
 import { SegmentedControl } from "@/src/components/ui/segmented-control";
 import { BalanceRevealControl } from "@/src/components/shared/balance-reveal-control";
+import { BalanceNotice } from "@/src/components/shared/balance-notice";
 import { useBalanceCloakStore } from "@/src/stores/balance-cloak-store";
 import { useUserStore } from "@/src/stores/user-store";
 import { MdRefresh, MdSearch } from "react-icons/md";
@@ -78,7 +79,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
   // ── Data (WebSocket for live balance) ────────────────────────────────────
   // Margin panel: derived margin balance (from holdings) + the margin account
   // (borrowed funds, equity, leverage). No futures/allocations stream needed.
-  const { balances, coins: portfolio, isLoading: portLoading, marginAccount, refreshBalances, isRefreshing } = usePortfolioWs({
+  const { balances, coins: portfolio, isLoading: portLoading, marginAccount, refreshBalances, isRefreshing, notice } = usePortfolioWs({
     coins: true,
     margin: true,
   });
@@ -213,6 +214,8 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
           </button>
         </div>
       </div>
+
+      <BalanceNotice notice={notice} />
 
       {/* ── Info Cards ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

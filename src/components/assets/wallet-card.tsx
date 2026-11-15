@@ -15,6 +15,7 @@ import { useAssets } from "@/src/hooks/use-assets";
 import { useRouter } from "next/navigation";
 import { ConvertAsset } from "../transactions/convert-asset";
 import { BalanceCloak } from "../shared/balance-cloak";
+import { BalanceNotice } from "../shared/balance-notice";
 import { BalanceRevealControl } from "../shared/balance-reveal-control";
 import { MdRefresh } from "react-icons/md";
 import { Skeleton } from "../shared/skeleton";
@@ -223,19 +224,7 @@ export const WalletCard = ({
             )}
 
             {/* Heads-up under the balance when it may be out of date or could not load */}
-            {notice && (
-              <div
-                role="status"
-                className="mt-1 flex items-start gap-2 rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs text-amber-200"
-              >
-                <span aria-hidden className="mt-px font-bold">i</span>
-                <span>
-                  {notice === "unavailable"
-                    ? "We're having some technical issues right now. Please check back later."
-                    : "Your balance may have changed. Tap the refresh icon to update it."}
-                </span>
-              </div>
-            )}
+            <BalanceNotice notice={notice} className="mt-1" />
 
             {/* P&L line */}
             <div className="mt-1 flex items-center gap-2">

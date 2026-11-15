@@ -202,13 +202,22 @@ const HTTP_THROTTLE_MS = 5000;
 
 /**
  * What the UI should tell the user about a topic:
+ *  - "delayed":     the socket is healthy but has not delivered a first frame yet
  *  - "stale":       we show the last known value, but it may have changed
  *  - "unavailable": we could not get data over WebSocket or HTTP
  */
-export type TopicNotice = "stale" | "unavailable" | null;
+export type TopicNotice = "delayed" | "stale" | "unavailable" | null;
 
 /** On an explicit refresh, how long to wait for a healthy socket to answer before using HTTP. */
 const REFRESH_WS_WAIT_MS = 5000;
+
+/**
+ * How long a connected socket may stay silent before we reassure the user that
+ * we are still waiting for their data. Timed from the moment the socket becomes
+ * connected (not from page load), so a slow handshake is never mistaken for a
+ * slow stream. A normal sub-second load never flashes it.
+ */
+const SILENT_WS_NOTICE_MS = 10_000;
 
 interface PortfolioStoreState {
   coins: PortfolioCoin[];
@@ -334,6 +343,7 @@ class PortfolioStore {
     margin: 0,
     futures: 0,
   };
+  private silenceTimers: Partial<Record<PortfolioTopic, ReturnType<typeof setTimeout>>> = {};
   private unsubscribeStatus: (() => void) | null = null;
 
   // ── subscription ──────────────────────────────────────────────────────────
@@ -395,6 +405,28 @@ class PortfolioStore {
     this.emit();
   }
 
+  /**
+   * Start (or restart) the "connected but silent" timer. If a healthy socket
+   * still has not delivered data when it fires, surface a reassuring notice so
+   * the card explains itself instead of spinning silently forever.
+   */
+  private armSilenceTimer(topic: PortfolioTopic) {
+    if (this.refCounts[topic] === 0 || this.hasDataFor(topic)) return;
+    if (this.silenceTimers[topic]) clearTimeout(this.silenceTimers[topic]);
+    this.silenceTimers[topic] = setTimeout(() => {
+      this.silenceTimers[topic] = undefined;
+      if (this.refCounts[topic] === 0 || this.hasDataFor(topic)) return;
+      if (!wsClient.getIsConnected()) return;
+      // Never trample a stronger state ("unavailable" / "stale").
+      if (this.state.notices[topic] === null) this.setNotice(topic, "delayed");
+    }, SILENT_WS_NOTICE_MS);
+  }
+
+  private clearSilenceTimer(topic: PortfolioTopic) {
+    if (this.silenceTimers[topic]) clearTimeout(this.silenceTimers[topic]);
+    this.silenceTimers[topic] = undefined;
+  }
+
   /** Resolve everyone waiting on this topic's socket reply (explicit refresh). */
   private settleWaiters(topic: PortfolioTopic, ok: boolean) {
     const list = this.wsWaiters[topic];
@@ -453,6 +485,10 @@ class PortfolioStore {
       ) {
         return;
       }
+      // This frame is for our topic, so the stream is alive: stop waiting and
+      // retract the "still fetching" reassurance.
+      this.clearSilenceTimer(topic);
+      if (this.state.notices[topic] === "delayed") this.setNotice(topic, null);
       // The event came back as an error: this is the one case (besides a dead
       // socket) where REST is allowed to fill in.
       if (isErrorFrame(container) || isErrorFrame(raw)) {
@@ -476,6 +512,9 @@ class PortfolioStore {
         void this.fetchOverHttp(topic);
       }
     }, WS_CONNECT_GRACE_MS);
+
+    // If the socket is already up, start the silence countdown now.
+    if (wsClient.getIsConnected()) this.armSilenceTimer(topic);
   }
 
   private stopTopic(topic: PortfolioTopic) {
@@ -483,6 +522,7 @@ class PortfolioStore {
       clearTimeout(this.fallbackTimers[topic]);
       this.fallbackTimers[topic] = undefined;
     }
+    this.clearSilenceTimer(topic);
     this.unsubs[topic]?.();
     delete this.unsubs[topic];
     this.setPending(topic, false);
@@ -495,9 +535,17 @@ class PortfolioStore {
       if (this.state.isConnected === connected) return;
       this.state.isConnected = connected;
       this.emit();
-      // Socket dropped: pull every topic that is still on screen over REST.
-      if (!connected) {
+      if (connected) {
+        // Socket is up: watch for topics that are connected but still silent.
         ALL_PORTFOLIO_TOPICS.forEach((topic) => {
+          if (this.refCounts[topic] > 0) this.armSilenceTimer(topic);
+        });
+      } else {
+        // Socket dropped: a "delayed" reassurance no longer applies, and every
+        // topic still on screen falls back to REST.
+        ALL_PORTFOLIO_TOPICS.forEach((topic) => {
+          this.clearSilenceTimer(topic);
+          if (this.state.notices[topic] === "delayed") this.setNotice(topic, null);
           if (this.refCounts[topic] > 0) void this.fetchOverHttp(topic);
         });
       }

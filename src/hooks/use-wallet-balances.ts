@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { usePortfolioWs } from "./use-portfolio-ws";
+import { usePortfolioWs, type TopicNotice } from "./use-portfolio-ws";
 import { deriveFundingBalance } from "@/src/lib/portfolio-utils";
 
 interface WalletBalance {
@@ -14,6 +14,7 @@ interface UseWalletBalancesReturn {
   trading: WalletBalance | null;
   isLoading: boolean;
   isConnected: boolean;
+  notice: TopicNotice;
 }
 
 function safeParse(val: string | null | undefined): number {
@@ -25,7 +26,10 @@ export function useWalletBalances(): UseWalletBalancesReturn {
   // Overall and individual funding/trading USD totals come from the
   // `overall_portfolio_balance` response. The per-coin stream provides a compatibility
   // fallback and the BTC conversion rate for the account cards.
-  const { balances, isLoading, isConnected } = usePortfolioWs({ coins: true, balance: true });
+  const { balances, isLoading, isConnected, notice } = usePortfolioWs({
+    coins: true,
+    balance: true,
+  });
 
   const { funding, trading } = useMemo(() => {
     const total = balances?.total;
@@ -78,5 +82,6 @@ export function useWalletBalances(): UseWalletBalancesReturn {
     trading,
     isLoading,
     isConnected,
+    notice,
   };
 }
