@@ -156,6 +156,30 @@ function MarginTrades() {
     onError: (e) => errorMessageHandler(e),
   });
 
+  // One handler for desktop and mobile: switch mode, and cap cross leverage at 10x.
+  const handleTradeModeChange = (v: string | null) => {
+    const m = (v ?? "cross") as TradeMode;
+    handleSetMarginMode(m);
+    if (m === "cross" && leverage > 10) handleSetLeverage(10);
+  };
+
+  // Compact Cross / Isolated switcher for mobile (the desktop trade form has its own tabs).
+  const mobileTradeModeSwitcher = (
+    <Tabs
+      value={tradeMode}
+      onChange={handleTradeModeChange}
+      classNames={{
+        list: "grid grid-cols-2 w-full rounded-lg border border-white/[0.06] bg-white/[0.03] p-1 before:!border-0",
+        tab: "!rounded-md !border-0 !py-2 !px-3 text-xs font-semibold text-white/45 hover:!bg-transparent data-[active]:!bg-white/[0.08] data-[active]:!text-white",
+      }}
+    >
+      <TabsList aria-label="Margin mode">
+        <TabsTab value="cross">Cross {tradeMode === "cross" ? `${leverage}x` : "3x"}</TabsTab>
+        <TabsTab value="isolated">Isolated {tradeMode === "isolated" ? `${leverage}x` : "10x"}</TabsTab>
+      </TabsList>
+    </Tabs>
+  );
+
   // Price flash effect
   const [flashClass, setFlashClass] = useState("");
   const [prevPrice, setPrevPrice] = useState<number | null>(null);
@@ -466,11 +490,7 @@ function MarginTrades() {
               panel: "!p-4",
             }}
             value={tradeMode}
-            onChange={(v) => {
-              const m = (v ?? "cross") as TradeMode;
-              handleSetMarginMode(m);
-              if (m === "cross" && leverage > 10) handleSetLeverage(10);
-            }}
+            onChange={handleTradeModeChange}
           >
             <TabsList className="w-full">
               <TabsTab value="cross">Cross {tradeMode === "cross" ? `${leverage}x` : "3x"}</TabsTab>
@@ -592,6 +612,7 @@ function MarginTrades() {
             <div className={clsx("min-h-0 min-w-0 flex-1 flex-col overflow-y-auto rounded-xl border border-white/[0.06] bg-[#181a20]", mobileTradePanel === "order" ? "flex" : "hidden", "min-[480px]:flex min-[480px]:flex-[1.5]")}>
               {/* Left Side: Trade Form */}
               <div className="w-full">
+                <div className="px-3 pt-3">{mobileTradeModeSwitcher}</div>
                 <Tabs
                   classNames={{
                     tab: "!py-3 !px-2 flex-1 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!border-primary data-[active]:!text-white !border-b-[2px] !border-transparent !rounded-none font-bold text-xs text-white/40",
@@ -643,6 +664,7 @@ function MarginTrades() {
 
       <MobileBottomSheet opened={quickOrderOpen} onClose={() => setQuickOrderOpen(false)} title="Quick Order">
         <div className="p-4 flex flex-col">
+          <div className="mb-3">{mobileTradeModeSwitcher}</div>
           <Tabs
             classNames={{
               tab: "!py-3 !px-2 flex-1 hover:!bg-transparent data-[active]:!border-b-[2px] data-[active]:!text-white !border-b-[2px] !border-transparent !rounded-none font-bold text-sm text-white/40",

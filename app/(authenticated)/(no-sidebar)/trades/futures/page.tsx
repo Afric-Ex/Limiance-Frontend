@@ -200,6 +200,82 @@ function FuturesTradesInner() {
     },
   });
 
+  // Cross 50x max, Isolated 100x max. Switching to Cross clamps leverage down to its cap.
+  const handleFuturesModeChange = (v: string | null) => {
+    const m = (v ?? 'cross') as MarginMode;
+    handleSetFuturesMode(m);
+    const cap = m === 'cross' ? 50 : 100;
+    if (leverage > cap) handleSetFuturesLeverage(cap);
+  };
+
+  // Leverage chip + popover, shared by the desktop form header and the mobile switcher.
+  const leverageControl = (
+    <Popover classNames={{ dropdown: '!bg-[#181a20] !border-white/[0.06] !p-4' }}>
+      <PopoverTarget>
+        <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 transition-colors rounded flex items-center gap-1">
+          <span className="text-xs font-bold text-white/90">{leverage}x</span>
+          <MdKeyboardArrowDown className="text-white/50" />
+        </button>
+      </PopoverTarget>
+      <PopoverDropdown>
+        <div className="w-[220px] flex flex-col gap-3">
+          <span className="text-xs font-medium text-white/40">Adjust Leverage</span>
+          <Slider
+            classNames={{
+              track: '!h-1 before:!h-1 bg-white/10',
+              bar: '!bg-primary',
+              thumb: '!border-2 !border-primary !bg-white',
+            }}
+            value={leverage}
+            onChange={setLeverage}
+            onChangeEnd={(val) => handleSetFuturesLeverage(val)}
+            min={1}
+            max={marginMode === 'cross' ? 50 : 100}
+          />
+          <div className="grid grid-cols-5 gap-1">
+            {LEVERAGE_PRESETS.filter((value) => value <= (marginMode === 'cross' ? 50 : 100)).map((value) => (
+              <button
+                type="button"
+                key={value}
+                onClick={() => {
+                  setLeverage(value);
+                  handleSetFuturesLeverage(value);
+                }}
+                className={clsx(
+                  'rounded py-1 text-2xs font-bold transition-colors',
+                  leverage === value ? 'bg-primary/20 text-primary' : 'bg-white/[0.05] text-white/55 hover:text-white/85'
+                )}
+              >
+                {value}x
+              </button>
+            ))}
+          </div>
+        </div>
+      </PopoverDropdown>
+    </Popover>
+  );
+
+  // Mobile: Cross / Isolated tabs + leverage (the desktop header has its own dropdowns).
+  const mobileMarginModeSwitcher = (
+    <div className="flex items-center gap-2">
+      <Tabs
+        value={marginMode}
+        onChange={handleFuturesModeChange}
+        classNames={{
+          root: 'flex-1',
+          list: 'grid grid-cols-2 w-full rounded-lg border border-white/[0.06] bg-white/[0.03] p-1 before:!border-0',
+          tab: '!rounded-md !border-0 !py-2 !px-3 text-xs font-semibold text-white/45 hover:!bg-transparent data-[active]:!bg-white/[0.08] data-[active]:!text-white',
+        }}
+      >
+        <TabsList aria-label="Margin mode">
+          <TabsTab value="cross">Cross</TabsTab>
+          <TabsTab value="isolated">Isolated</TabsTab>
+        </TabsList>
+      </Tabs>
+      {leverageControl}
+    </div>
+  );
+
   const user = useUserStore((state) => state.user);
   const hydrated = useUserStore((state) => state.hydrated);
   const fetchUser = useUserStore((state) => state.fetchUser);
@@ -1052,7 +1128,7 @@ function FuturesTradesInner() {
                     <div className="w-[120px] grid grid-rows-2 rounded border border-white/[0.06]">
                       <button
                         type="button"
-                        onClick={() => handleSetFuturesMode('cross')}
+                        onClick={() => handleFuturesModeChange('cross')}
                         className={clsx(
                           'h-8 flex cursor-pointer hover:bg-white/5 items-center border-b border-b-white/[0.06] px-3 text-xs font-bold',
                           marginMode === 'cross' ? 'text-white/90 bg-white/5' : 'text-white/50'
@@ -1062,7 +1138,7 @@ function FuturesTradesInner() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleSetFuturesMode('isolated')}
+                        onClick={() => handleFuturesModeChange('isolated')}
                         className={clsx(
                           'h-8 flex cursor-pointer hover:bg-white/5 items-center px-3 text-xs font-bold',
                           marginMode === 'isolated' ? 'text-white/90 bg-white/5' : 'text-white/50'
@@ -1075,49 +1151,7 @@ function FuturesTradesInner() {
                 </PopoverDropdown>
               </Popover>
 
-              <Popover classNames={{ dropdown: '!bg-[#181a20] !border-white/[0.06] !p-4' }}>
-                <PopoverTarget>
-                  <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 transition-colors rounded flex items-center gap-1">
-                    <span className="text-xs font-bold text-white/90">{leverage}x</span>
-                    <MdKeyboardArrowDown className="text-white/50" />
-                  </button>
-                </PopoverTarget>
-                <PopoverDropdown>
-                  <div className="w-[220px] flex flex-col gap-3">
-                    <span className="text-xs font-medium text-white/40">Adjust Leverage</span>
-                    <Slider
-                      classNames={{
-                        track: '!h-1 before:!h-1 bg-white/10',
-                        bar: '!bg-primary',
-                        thumb: '!border-2 !border-primary !bg-white',
-                      }}
-                      value={leverage}
-                      onChange={setLeverage}
-                      onChangeEnd={(val) => handleSetFuturesLeverage(val)}
-                      min={1}
-                      max={marginMode === 'cross' ? 50 : 100}
-                    />
-                    <div className="grid grid-cols-5 gap-1">
-                      {LEVERAGE_PRESETS.filter((value) => value <= (marginMode === 'cross' ? 50 : 100)).map((value) => (
-                        <button
-                          type="button"
-                          key={value}
-                          onClick={() => {
-                            setLeverage(value);
-                            handleSetFuturesLeverage(value);
-                          }}
-                          className={clsx(
-                            'rounded py-1 text-2xs font-bold transition-colors',
-                            leverage === value ? 'bg-primary/20 text-primary' : 'bg-white/[0.05] text-white/55 hover:text-white/85'
-                          )}
-                        >
-                          {value}x
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </PopoverDropdown>
-              </Popover>
+              {leverageControl}
             </div>
             <MdMoreVert className="text-white/50 hover:text-white cursor-pointer" />
           </div>
@@ -1228,7 +1262,10 @@ function FuturesTradesInner() {
               </div>
               <div className={clsx("min-h-0 min-w-0 flex-1 flex-col overflow-y-auto rounded-xl border border-white/[0.06] bg-[#181a20]", mobileTradePanel === "order" ? "flex" : "hidden", "min-[480px]:flex min-[480px]:flex-[1.5]")}>
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#181a20]">
-                  <div className="w-full px-3 py-4">{tradeFormPanel}</div>
+                  <div className="w-full px-3 py-4">
+                    <div className="mb-3">{mobileMarginModeSwitcher}</div>
+                    {tradeFormPanel}
+                  </div>
                 </div>
               </div>
               <div className={clsx("min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.06]", mobileTradePanel === "book" ? "flex" : "hidden", "min-[480px]:flex min-[480px]:flex-1")}>
@@ -1262,6 +1299,7 @@ function FuturesTradesInner() {
 
       <MobileBottomSheet opened={quickOrderOpen} onClose={() => setQuickOrderOpen(false)} title="Quick Order">
         <div className="p-4 flex flex-col">
+          <div className="mb-3">{mobileMarginModeSwitcher}</div>
           {tradeFormPanel}
         </div>
       </MobileBottomSheet>
