@@ -12,6 +12,7 @@ import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import toast from "react-hot-toast";
 import { MdVerified, MdOutlineArrowBack, MdInfoOutline } from "react-icons/md";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { BalanceNotice } from "@/src/components/shared/balance-notice";
 import { P2PCreateOrderSkeleton } from "@/src/components/skeletons/p2p";
 
 function PreOrderScreenContent() {
@@ -64,7 +65,7 @@ function PreOrderScreenContent() {
     ? selectedPaymentId
     : null;
 
-  const { coins: portfolio, isLoading: balanceLoading } = usePortfolioWs({ coins: true });
+  const { coins: portfolio, isLoading: balanceLoading, notice: balanceNotice } = usePortfolioWs({ coins: true });
 
   const userCoin = portfolio?.find(
     (p: any) => p.symbol.toUpperCase() === (ad?.asset ?? "").toUpperCase()
@@ -285,16 +286,19 @@ function PreOrderScreenContent() {
                 />
                 {validationError && <p className="text-[#F6465D] text-xs mt-1.5">{validationError}</p>}
                 {userAction === "Sell" && (
-                  <div className="flex justify-between items-center mt-1.5 px-0.5 text-xs">
-                    <span className="text-white/35">Available Funding Balance</span>
-                    <span className="text-white/70 font-mono">
-                      {balanceLoading
-                        ? "Loading..."
-                        : userCoin
-                        ? `${fundingBalance.toFixed(8).replace(/\.?0+$/, "")} ${ad.asset.toUpperCase()}`
-                        : "—"}
-                    </span>
-                  </div>
+                  <>
+                    <div className="flex justify-between items-center mt-1.5 px-0.5 text-xs">
+                      <span className="text-white/35">Available Funding Balance</span>
+                      <span className="text-white/70 font-mono">
+                        {balanceLoading
+                          ? "Loading..."
+                          : userCoin
+                          ? `${fundingBalance.toFixed(8).replace(/\.?0+$/, "")} ${ad.asset.toUpperCase()}`
+                          : "—"}
+                      </span>
+                    </div>
+                    <BalanceNotice notice={balanceNotice} className="mt-2" />
+                  </>
                 )}
               </div>
 

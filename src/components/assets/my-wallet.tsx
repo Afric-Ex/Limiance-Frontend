@@ -6,6 +6,7 @@ import { Transfer } from "../icons/transfer";
 import { Withdraw } from "../icons/withdraw";
 import { BusinessCard } from "../icons/business-card";
 import { BalanceCloak } from "../shared/balance-cloak";
+import { BalanceNotice } from "../shared/balance-notice";
 import { Skeleton } from "../shared/skeleton";
 import { useAssets } from "@/src/hooks/use-assets";
 import { useRouter } from "next/navigation";
@@ -24,7 +25,7 @@ export const MyWallet = () => {
   const t = useTranslations("Wallet");
   const { push } = useRouter();
   const { handleOpenDepositModal, handleOpenInternalTransferModal } = useAssets();
-  const { funding, trading, isLoading, isConnected } = useWalletBalances();
+  const { funding, trading, isLoading, isConnected, notice } = useWalletBalances();
   const { enabled, toggleCloak } = useBalanceCloak();
 
   const prevConnectedRef = useRef(isConnected);
@@ -95,6 +96,8 @@ export const MyWallet = () => {
           </button>
         </div>
       </div>
+
+      <BalanceNotice notice={notice} />
 
       <div className="rounded-xl border border-white/[0.06] bg-[#181a20] flex flex-col divide-y divide-white/[0.04]">
         {/* ROW 1: Funding */}

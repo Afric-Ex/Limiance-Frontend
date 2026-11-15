@@ -35,6 +35,7 @@ import { Transfer } from "@/src/components/icons/transfer";
 import { useWithdrawal } from "@/src/hooks/use-withdrawal";
 import { useDisclosure } from "@mantine/hooks";
 import { InlineLoading } from "@/src/components/shared/inline-loading";
+import { BalanceNotice } from "@/src/components/shared/balance-notice";
 import { WalletDropdown } from "@/src/components/assets/wallet-dropdown";
 import { assetKeys, asset } from "@/src/services/asset";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
@@ -130,7 +131,7 @@ function WithdrawalInner() {
     resolvedWalletId,
   } = useWithdrawal();
 
-  const { coins: portfolio, isLoading: portfolioLoading } = usePortfolioWs({ coins: true });
+  const { coins: portfolio, isLoading: portfolioLoading, notice: portfolioNotice } = usePortfolioWs({ coins: true });
 
   // Per-asset balance for the selected coin, in coin units
   const coinPortfolio = selectedCoin?.symbol
@@ -527,6 +528,7 @@ function WithdrawalInner() {
                         {" "}<span className="text-white/40 font-medium text-xs">{selectedCoin?.symbol || "—"}</span>
                       </span>
                     </div>
+                    <BalanceNotice notice={portfolioNotice} className="mx-4 mb-3" />
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04]">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-white/50">Withdrawal Channel</span>

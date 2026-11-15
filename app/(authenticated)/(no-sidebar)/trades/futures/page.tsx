@@ -2,6 +2,7 @@
 
 import { Search } from '@/src/components/icons/search';
 import { Skeleton } from '@/src/components/shared/skeleton';
+import { BalanceNotice } from '@/src/components/shared/balance-notice';
 import { OpenFuturesModal } from '@/src/components/trades/open-futures-modal';
 import { useMarketFeed } from '@/src/hooks/use-market-feed';
 import { useOrderBook } from '@/src/hooks/use-order-book';
@@ -133,7 +134,7 @@ function FuturesTradesInner() {
 
   // Futures screen: open positions, per-coin balances and the account total.
   // This is the only surface that opens get_futures_positions.
-  const { balances, coins: portfolio, refreshBalances, futuresPositions, isRefreshing } = usePortfolioWs({
+  const { balances, coins: portfolio, refreshBalances, futuresPositions, isRefreshing, notice } = usePortfolioWs({
     coins: true,
     balanceAccount: "futures",
     futures: true,
@@ -755,6 +756,8 @@ function FuturesTradesInner() {
           </span>
         </span>
       </div>
+
+      <BalanceNotice notice={notice} />
 
       {/* Leverage selector (same as margin) */}
       <div className="flex flex-col gap-2 pb-1 border-b border-white/[0.04]">
