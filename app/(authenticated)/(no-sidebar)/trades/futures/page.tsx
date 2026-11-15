@@ -201,6 +201,7 @@ function FuturesTradesInner() {
   });
 
   // Cross 50x max, Isolated 100x max. Switching to Cross clamps leverage down to its cap.
+  const maxLeverage = marginMode === 'cross' ? 50 : 100;
   const handleFuturesModeChange = (v: string | null) => {
     const m = (v ?? 'cross') as MarginMode;
     handleSetFuturesMode(m);
@@ -255,7 +256,7 @@ function FuturesTradesInner() {
     </Popover>
   );
 
-  // Mobile: Cross / Isolated tabs + leverage (the desktop header has its own dropdowns).
+  // Mobile: Cross / Isolated tabs (the desktop header has its own dropdown).
   const mobileMarginModeSwitcher = (
     <div className="flex items-center gap-2">
       <Tabs
@@ -272,7 +273,6 @@ function FuturesTradesInner() {
           <TabsTab value="isolated">Isolated</TabsTab>
         </TabsList>
       </Tabs>
-      {leverageControl}
     </div>
   );
 
@@ -754,6 +754,47 @@ function FuturesTradesInner() {
             {marginMode === 'cross' ? 'Cross' : 'Isolated'}
           </span>
         </span>
+      </div>
+
+      {/* Leverage selector (same as margin) */}
+      <div className="flex flex-col gap-2 pb-1 border-b border-white/[0.04]">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-white/40">Leverage</span>
+          <span className="text-xs font-bold text-primary">{leverage}x</span>
+        </div>
+        <Slider
+          min={1}
+          max={maxLeverage}
+          step={1}
+          value={leverage}
+          onChange={setLeverage}
+          onChangeEnd={(val) => handleSetFuturesLeverage(val)}
+          classNames={{
+            track: '!h-1 before:!h-1 before:!bg-white/10',
+            bar: '!bg-primary',
+            thumb: '!border-2 !border-primary !bg-[#181a20] !w-3 !h-3',
+          }}
+        />
+        <div className="flex gap-1 mt-1">
+          {LEVERAGE_PRESETS.filter((value) => value <= maxLeverage).map((value) => (
+            <button
+              type="button"
+              key={value}
+              onClick={() => {
+                setLeverage(value);
+                handleSetFuturesLeverage(value);
+              }}
+              className={clsx(
+                'flex-1 text-2xs font-bold py-1 rounded transition-all',
+                leverage === value
+                  ? 'bg-primary/20 text-primary'
+                  : 'bg-white/[0.04] text-white/40 hover:bg-white/[0.08] hover:text-white/70'
+              )}
+            >
+              {value}x
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-col gap-3">
