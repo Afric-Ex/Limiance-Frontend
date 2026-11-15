@@ -171,10 +171,36 @@ const TOPIC_HTTP: Partial<Record<PortfolioTopic, () => Promise<any>>> = {
   futures: () => api.get("trading/futures/positions"),
 };
 
-/** How long a topic waits on the socket before falling back to REST. */
-const WS_FALLBACK_DELAY_MS = 5000;
+/**
+ * How long a topic waits for the socket to CONNECT before falling back to REST.
+ * This is a connection-failure check only: a socket that is connected but slow
+ * to answer never triggers REST. REST is used when (1) the socket can't connect,
+ * (2) it drops, or (3) the topic's frame comes back as an error.
+ */
+const WS_CONNECT_GRACE_MS = 10_000;
+
+/** True when a frame is the server reporting an error for the request. */
+const isErrorFrame = (frame: any): boolean => {
+  if (!frame || typeof frame !== "object") return false;
+  const code = Number(frame.statusCode);
+  return (
+    frame.success === false ||
+    (Number.isFinite(code) && code >= 400) ||
+    (typeof frame.error === "string" && frame.error.trim() !== "")
+  );
+};
 /** Minimum gap between REST fallbacks for one topic. */
 const HTTP_THROTTLE_MS = 5000;
+
+/**
+ * What the UI should tell the user about a topic:
+ *  - "stale":       we show the last known value, but it may have changed
+ *  - "unavailable": we could not get data over WebSocket or HTTP
+ */
+export type TopicNotice = "stale" | "unavailable" | null;
+
+/** On an explicit refresh, how long to wait for a healthy socket to answer before using HTTP. */
+const REFRESH_WS_WAIT_MS = 5000;
 
 interface PortfolioStoreState {
   coins: PortfolioCoin[];
@@ -183,6 +209,8 @@ interface PortfolioStoreState {
   marginAccount: MarginAccountData | null;
   futuresPositions: any[];
   isConnected: boolean;
+  /** Per-topic notice for the UI (see TopicNotice). */
+  notices: Record<PortfolioTopic, TopicNotice>;
   /** Per-topic pending flags — a topic nobody asked for is never pending. */
   pending: Record<PortfolioTopic, boolean>;
   /**
@@ -201,6 +229,17 @@ const emptyState = (): PortfolioStoreState => ({
   marginAccount: null,
   futuresPositions: [],
   isConnected: false,
+  notices: {
+    portfolio: null,
+    balance: null,
+    fundingBalance: null,
+    spotBalance: null,
+    marginBalance: null,
+    futuresBalance: null,
+    allocations: null,
+    margin: null,
+    futures: null,
+  },
   pending: {
     portfolio: false,
     balance: false,
@@ -225,6 +264,8 @@ const emptyState = (): PortfolioStoreState => ({
   },
 });
 
+type HttpResult = "ok" | "failed" | "skipped";
+
 class PortfolioStore {
   private state: PortfolioStoreState = emptyState();
   private listeners = new Set<() => void>();
@@ -243,7 +284,8 @@ class PortfolioStore {
   };
   private unsubs: Partial<Record<PortfolioTopic, () => void>> = {};
   private fallbackTimers: Partial<Record<PortfolioTopic, ReturnType<typeof setTimeout>>> = {};
-  private httpInFlight = new Set<PortfolioTopic>();
+  private httpPromises: Partial<Record<PortfolioTopic, Promise<HttpResult>>> = {};
+  private wsWaiters: Partial<Record<PortfolioTopic, Array<(ok: boolean) => void>>> = {};
   private lastHttpAt: Record<PortfolioTopic, number> = {
     portfolio: 0,
     balance: 0,
@@ -339,6 +381,34 @@ class PortfolioStore {
     return ALL_PORTFOLIO_TOPICS.every((t) => this.refCounts[t] === 0);
   }
 
+  private setNotice(topic: PortfolioTopic, notice: TopicNotice) {
+    if (this.state.notices[topic] === notice) return;
+    this.state.notices = { ...this.state.notices, [topic]: notice };
+    this.emit();
+  }
+
+  /** Resolve everyone waiting on this topic's socket reply (explicit refresh). */
+  private settleWaiters(topic: PortfolioTopic, ok: boolean) {
+    const list = this.wsWaiters[topic];
+    if (!list || list.length === 0) return;
+    this.wsWaiters[topic] = [];
+    list.forEach((resolve) => resolve(ok));
+  }
+
+  private waitForWs(topic: PortfolioTopic, ms: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      const done = (ok: boolean) => {
+        clearTimeout(timer);
+        resolve(ok);
+      };
+      const timer = setTimeout(() => {
+        this.wsWaiters[topic] = (this.wsWaiters[topic] ?? []).filter((fn) => fn !== done);
+        resolve(false);
+      }, ms);
+      (this.wsWaiters[topic] ??= []).push(done);
+    });
+  }
+
   private startTopic(topic: PortfolioTopic) {
     if (this.unsubs[topic]) return; // already open
 
@@ -369,19 +439,29 @@ class PortfolioStore {
             : undefined;
       const expected = EXPECTED_BALANCE_ACCOUNT[topic];
       if (expected !== undefined && frameAccount !== undefined && frameAccount !== expected) return;
+      // The event came back as an error: this is the one case (besides a dead
+      // socket) where REST is allowed to fill in.
+      if (isErrorFrame(container) || isErrorFrame(raw)) {
+        console.warn(`[portfolio-ws] "${topic}" returned an error frame — using HTTP fallback`, container);
+        this.settleWaiters(topic, false);
+        void this.fetchOverHttp(topic);
+        return;
+      }
       this.lastWsAt[topic] = Date.now();
-      this.ingest(topic, normalizeBalancePayload(inner) ?? inner);
+      const ingested = this.ingest(topic, normalizeBalancePayload(inner) ?? inner);
+      this.settleWaiters(topic, ingested);
     });
 
     if (this.fallbackTimers[topic]) clearTimeout(this.fallbackTimers[topic]);
+    // Only fall back if the socket never connects. Connected-but-slow is NOT a failure.
     this.fallbackTimers[topic] = setTimeout(() => {
       this.fallbackTimers[topic] = undefined;
       if (this.refCounts[topic] === 0) return;
-      if (!this.hasDataFor(topic)) {
-        console.warn(`[portfolio-ws] no "${topic}" data over WS — using HTTP fallback`);
+      if (!wsClient.getIsConnected() && !this.hasDataFor(topic)) {
+        console.warn(`[portfolio-ws] socket not connected for "${topic}" — using HTTP fallback`);
         void this.fetchOverHttp(topic);
       }
-    }, WS_FALLBACK_DELAY_MS);
+    }, WS_CONNECT_GRACE_MS);
   }
 
   private stopTopic(topic: PortfolioTopic) {
@@ -443,12 +523,17 @@ class PortfolioStore {
 
   // ── data ingestion ────────────────────────────────────────────────────────
 
-  private ingest(topic: PortfolioTopic, raw: any) {
+  /** Returns true when `raw` was a usable payload for this topic. */
+  private ingest(topic: PortfolioTopic, raw: any): boolean {
     switch (topic) {
       case "portfolio": {
         const list = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
         const items = normalizePortfolioCoins(list);
-        if (items.length === 0) return;
+        if (items.length === 0) {
+          // A valid but empty list (new account) is still a good answer.
+          this.setNotice(topic, null);
+          return Array.isArray(list);
+        }
         this.state.coins = items;
         this.state.balances = {
           ...this.state.balances,
@@ -457,7 +542,7 @@ class PortfolioStore {
         break;
       }
       case "balance": {
-        if (!raw || raw.inUsd === undefined) return;
+        if (!raw || raw.inUsd === undefined) return false;
         this.state.balances = {
           ...this.state.balances,
           total: {
@@ -476,7 +561,7 @@ class PortfolioStore {
       case "spotBalance":
       case "marginBalance":
       case "futuresBalance": {
-        if (!raw || raw.inUsd === undefined) return;
+        if (!raw || raw.inUsd === undefined) return false;
         const account = topic.replace("Balance", "").toLowerCase();
         this.state.balances = {
           ...this.state.balances,
@@ -491,7 +576,7 @@ class PortfolioStore {
         break;
       }
       case "allocations": {
-        if (!raw || (raw.totalValue === undefined && !raw.allocations)) return;
+        if (!raw || (raw.totalValue === undefined && !raw.allocations)) return false;
         this.state.allocations = {
           totalValue: raw.totalValue ?? "0",
           allocations: Array.isArray(raw.allocations) ? raw.allocations : [],
@@ -499,69 +584,92 @@ class PortfolioStore {
         break;
       }
       case "margin": {
-        if (!raw || !raw.assets) return;
+        if (!raw || !raw.assets) return false;
         this.state.marginAccount = raw as MarginAccountData;
         break;
       }
       case "futures": {
-        if (!Array.isArray(raw)) return;
+        if (!Array.isArray(raw)) return false;
         this.state.futuresPositions = raw;
         break;
       }
     }
     this.setPending(topic, false);
     this.setRefreshing(topic, false);
+    this.state.notices = { ...this.state.notices, [topic]: null };
     this.emit();
+    return true;
   }
 
   // ── REST fallback ─────────────────────────────────────────────────────────
 
-  private async fetchOverHttp(topic: PortfolioTopic) {
-    if (this.refCounts[topic] === 0) return;
-    if (this.httpInFlight.has(topic)) return;
-    if (Date.now() - this.lastHttpAt[topic] < HTTP_THROTTLE_MS) {
+  /**
+   * HTTP request for one topic. Resolves "ok" when fresh data was applied,
+   * "failed" when HTTP could not provide it, and "skipped" when no request was
+   * needed (throttled, nobody is watching, or a newer socket snapshot won).
+   */
+  private fetchOverHttp(topic: PortfolioTopic, opts: { force?: boolean } = {}): Promise<HttpResult> {
+    if (this.refCounts[topic] === 0) return Promise.resolve("skipped");
+    const inFlight = this.httpPromises[topic];
+    if (inFlight) return inFlight;
+
+    if (!opts.force && Date.now() - this.lastHttpAt[topic] < HTTP_THROTTLE_MS) {
       // Throttled: no request is servicing this refresh, so nothing else will
-      // clear its spinner — drop it here along with the skeleton.
+      // clear its spinner - drop it here along with the skeleton.
       if (!this.hasDataFor(topic)) this.setPending(topic, false);
       this.setRefreshing(topic, false);
-      return;
+      return Promise.resolve("skipped");
     }
 
-    this.httpInFlight.add(topic);
     this.lastHttpAt[topic] = Date.now();
     const fetchStartedAt = this.lastHttpAt[topic];
-    try {
+
+    const run = async (): Promise<HttpResult> => {
       const fetcher = TOPIC_HTTP[topic];
-      if (!fetcher) return;
-      const res = await fetcher();
-      if (this.lastWsAt[topic] > fetchStartedAt) {
-        // A fresher snapshot arrived over the socket while this request was in
-        // flight — keep what the socket displayed. HTTP stays a gap-filler,
-        // never the main source.
-        return;
+      if (!fetcher) return "skipped";
+      try {
+        const res = await fetcher();
+        if (this.lastWsAt[topic] > fetchStartedAt) {
+          // A fresher snapshot arrived over the socket while this request was in
+          // flight - keep what the socket displayed. HTTP stays a gap-filler.
+          return "skipped";
+        }
+        const body = res?.data;
+        const ok = this.ingest(topic, body?.data?.data !== undefined ? body.data.data : body?.data ?? body);
+        return ok ? "ok" : "failed";
+      } catch {
+        return "failed";
       }
-      const body = res?.data;
-      this.ingest(topic, body?.data?.data !== undefined ? body.data.data : body?.data ?? body);
-    } catch {
-      // Fall through to clearing pending — the caller shows an empty state
-      // rather than an eternal spinner.
-    } finally {
-      this.httpInFlight.delete(topic);
-      // No fresh data arrived — stop any refresh spinner for this topic too.
-      this.setRefreshing(topic, false);
-      if (this.refCounts[topic] > 0 && !this.hasDataFor(topic)) {
-        this.setPending(topic, false);
-      }
-    }
+    };
+
+    const promise = run()
+      .then((result) => {
+        // We had to use HTTP and it did not work: tell the user, never show a made-up value.
+        if (result === "failed") {
+          this.setNotice(topic, this.hasDataFor(topic) ? "stale" : "unavailable");
+        }
+        return result;
+      })
+      .finally(() => {
+        delete this.httpPromises[topic];
+        this.setRefreshing(topic, false);
+        if (this.refCounts[topic] > 0 && !this.hasDataFor(topic)) {
+          this.setPending(topic, false);
+        }
+      });
+    this.httpPromises[topic] = promise;
+    return promise;
   }
 
   // ── explicit refresh ──────────────────────────────────────────────────────
 
   /**
-   * Re-request topics that currently have a consumer. Pass `only` to refresh
-   * just one screen's topics (e.g. a card's refresh button) instead of
-   * re-requesting every mounted surface's streams. An empty/omitted list keeps
-   * the legacy refresh-everything behaviour for refresh-only callers.
+   * Refresh topics that currently have a consumer (optionally just `only`).
+   *
+   * Order of attempts, per topic:
+   *   1. Socket healthy -> ask over the socket and wait for its reply.
+   *   2. Socket unhealthy, or it did not answer / returned an error -> HTTP.
+   *   3. HTTP failed too -> notice "unavailable" ("technical issues, try later").
    */
   refresh = (only?: PortfolioTopic[]): void => {
     const wanted = ALL_PORTFOLIO_TOPICS.filter(
@@ -569,30 +677,31 @@ class PortfolioStore {
     );
     if (wanted.length === 0) return;
 
-    // Flip on the refresh indicator for every requested topic; it is cleared
-    // as each topic's fresh snapshot arrives (or its REST fallback settles).
     wanted.forEach((topic) => {
       this.setRefreshing(topic, true);
-      // Safety net: a refresh must never spin forever. Cleared early by any
-      // arriving frame or HTTP settlement; otherwise dropped after 15s. The
-      // sequence guard keeps an old timer from killing a newer refresh.
+      // Safety net: a refresh must never spin forever.
       const seq = (this.refreshSeq[topic] += 1);
       if (this.refreshTimers[topic]) clearTimeout(this.refreshTimers[topic]);
       this.refreshTimers[topic] = setTimeout(() => {
         this.refreshTimers[topic] = undefined;
         if (this.refreshSeq[topic] === seq) this.setRefreshing(topic, false);
-      }, 15_000);
-    });
-
-    // Prefer the socket; fall back to REST per topic when the socket can't
-    // take the frame (e.g. still connecting). `send` reports that failure —
-    // previously it was ignored and the spinner waited on a reply that could
-    // never come.
-    wanted.forEach((topic) => {
-      const sent = wsClient.getIsConnected() ? wsClient.send(TOPIC_REQUEST[topic].payload) : false;
-      if (!sent) void this.fetchOverHttp(topic);
+      }, 20_000);
+      void this.refreshTopic(topic);
     });
   };
+
+  private async refreshTopic(topic: PortfolioTopic) {
+    if (wsClient.getIsConnected() && wsClient.send(TOPIC_REQUEST[topic].payload)) {
+      const gotFreshData = await this.waitForWs(topic, REFRESH_WS_WAIT_MS);
+      if (gotFreshData) {
+        this.setRefreshing(topic, false);
+        return;
+      }
+    }
+    const result = await this.fetchOverHttp(topic, { force: true });
+    if (result === "failed") this.setNotice(topic, "unavailable");
+    this.setRefreshing(topic, false);
+  }
 }
 
 export const portfolioStore = new PortfolioStore();

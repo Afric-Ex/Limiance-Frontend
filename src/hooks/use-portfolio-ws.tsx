@@ -4,6 +4,7 @@ import { useEffect, useMemo, useSyncExternalStore } from "react";
 import {
   portfolioStore,
   topicsForNeeds,
+  type TopicNotice,
   type PortfolioNeeds,
   type PortfolioTopic,
 } from "@/src/lib/portfolio-store";
@@ -23,7 +24,7 @@ export type {
   MarginAccountData,
 } from "@/src/lib/portfolio-utils";
 export { normalizePortfolioCoins, deriveAccountBalances } from "@/src/lib/portfolio-utils";
-export type { PortfolioNeeds } from "@/src/lib/portfolio-store";
+export type { PortfolioNeeds, TopicNotice } from "@/src/lib/portfolio-store";
 
 interface PortfolioWsData {
   coins: PortfolioCoin[];
@@ -38,6 +39,11 @@ interface PortfolioWsData {
   refreshing: Record<PortfolioTopic, boolean>;
   /** True when any of this caller's requested topics is mid-refresh. */
   isRefreshing: boolean;
+  /**
+   * Tell-the-user state for this caller's topics: "stale" (last value shown, may
+   * have changed) or "unavailable" (WebSocket and HTTP both failed).
+   */
+  notice: TopicNotice;
   refreshBalances: () => void;
 }
 
@@ -81,6 +87,11 @@ export const usePortfolioWs = (needs?: PortfolioNeeds): PortfolioWsData => {
   const isLoading =
     topics.some((t) => pending[t]) && state.coins.length === 0 && state.balances.total == null;
   const isRefreshing = topics.some((t) => state.refreshing[t]);
+  const notice: TopicNotice = topics.some((t) => state.notices[t] === "unavailable")
+    ? "unavailable"
+    : topics.some((t) => state.notices[t] === "stale")
+      ? "stale"
+      : null;
 
   return {
     coins: state.coins,
@@ -93,6 +104,7 @@ export const usePortfolioWs = (needs?: PortfolioNeeds): PortfolioWsData => {
     isAllocationsLoading: pending.allocations,
     refreshing: state.refreshing,
     isRefreshing,
+    notice,
     // Scoped to this caller's topics: a card's refresh button re-requests its
     // own streams instead of every mounted surface's.
     refreshBalances: () => portfolioStore.refresh(topics),

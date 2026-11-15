@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/src/lib/axios";
 import { wsClient } from "@/src/lib/websocket-client";
+import { fallbackIfSocketStaysDown } from "@/src/lib/ws-fallback";
 
 export interface OrderBookEntry {
   price: number;
@@ -283,9 +284,17 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
       ...aliasTopics.map((topic) => wsClient.subscribe(topic, null, handleBookMessage)),
     ];
 
+    // HTTP only if the socket stays down past the grace period (connecting != failed).
+    const cancelGraceFallback = fallbackIfSocketStaysDown(fetchHttpFallback);
+    let sawConnected = false;
     unsubscribeStatus = wsClient.onStatusChange((connected) => {
       setData((prev) => ({ ...prev, isConnected: connected }));
-      if (!connected) fetchHttpFallback();
+      if (connected) {
+        sawConnected = true;
+        return;
+      }
+      // Real drop -> HTTP now; the initial not-yet-connected replay waits for the grace timer.
+      if (sawConnected) fetchHttpFallback();
     });
 
     // The backend sends a single order-book snapshot when a stream starts and
@@ -303,6 +312,7 @@ export const useOrderBook = (pair: string, market: OrderBookMarket = "spot"): Or
     }, 3000);
 
     return () => {
+      cancelGraceFallback();
       clearInterval(healTimer);
       unsubscribeStatus?.();
       unsubscribeMessages.forEach((unsubscribe) => unsubscribe());

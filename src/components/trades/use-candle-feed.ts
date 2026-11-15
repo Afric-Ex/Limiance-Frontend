@@ -236,8 +236,9 @@ export function useCandleFeed(symbol: string, interval: string, market: ChartMar
       return;
     }
     if (!wsConnected) {
-      setRestFallback(true);
-      return;
+      // Not connected yet is not the same as failed: give the socket a moment first.
+      const graceTimer = setTimeout(() => setRestFallback(true), 4000);
+      return () => clearTimeout(graceTimer);
     }
     setRestFallback(false);
     const timer = setTimeout(() => setRestFallback(true), 5000);
