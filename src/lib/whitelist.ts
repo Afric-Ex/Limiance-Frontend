@@ -8,6 +8,25 @@ export interface WhitelistedAddress {
   activatesAt?: string;
 }
 
+const BTC_BASE58_TAIL = "[1-9A-HJ-NP-Za-km-z]{25,34}";
+const BTC_BECH32_TAIL = "[ac-hj-np-z02-9]{11,71}";
+const BTC_MAINNET_REGEX = new RegExp(`^(?:[13]${BTC_BASE58_TAIL}|bc1${BTC_BECH32_TAIL})$`);
+const BTC_TESTNET_REGEX = new RegExp(`^(?:[mn2]${BTC_BASE58_TAIL}|tb1${BTC_BECH32_TAIL})$`);
+
+export type BitcoinNetwork = "mainnet" | "testnet";
+
+/** Returns which Bitcoin network the address belongs to, or null if it is not valid for either. */
+export function detectBitcoinNetwork(address: string): BitcoinNetwork | null {
+  const value = address.trim();
+  // Bech32 is case-insensitive but must not be mixed-case; QR codes often upper-case it.
+  const normalized = /^(?:bc1|tb1)/i.test(value) && value === value.toUpperCase() ? value.toLowerCase() : value;
+  if (BTC_MAINNET_REGEX.test(normalized)) return "mainnet";
+  if (BTC_TESTNET_REGEX.test(normalized)) return "testnet";
+  return null;
+}
+
+const BTC_SYMBOL_REGEX = /^(?:BTC|TBTC|XBT|BITCOIN)(?:[\s_-]*(?:MAINNET|TESTNET|TEST|SIGNET))?$/;
+
 export function validateWhitelistAddress(address: string, networkSymbol: string): string | null {
   if (!address) return null;
   const symbol = networkSymbol.toUpperCase();
@@ -15,9 +34,9 @@ export function validateWhitelistAddress(address: string, networkSymbol: string)
     if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
       return "Invalid EVM address — must start with 0x and be 42 characters";
     }
-  } else if (symbol === "BTC" || symbol === "BITCOIN") {
-    if (!/^(1|3|bc1)[a-zA-Z0-9]{25,62}$/.test(address)) {
-      return "Invalid Bitcoin address — must start with 1, 3, or bc1";
+  } else if (BTC_SYMBOL_REGEX.test(symbol)) {
+    if (!detectBitcoinNetwork(address)) {
+      return "Invalid Bitcoin address — mainnet starts with 1, 3 or bc1; testnet starts with m, n, 2 or tb1";
     }
   } else if (symbol === "SOL" || symbol === "SOLANA") {
     if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) {
