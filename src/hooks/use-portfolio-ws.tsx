@@ -87,11 +87,14 @@ export const usePortfolioWs = (needs?: PortfolioNeeds): PortfolioWsData => {
   const isLoading =
     topics.some((t) => pending[t]) && state.coins.length === 0 && state.balances.total == null;
   const isRefreshing = topics.some((t) => state.refreshing[t]);
-  const notice: TopicNotice = topics.some((t) => state.notices[t] === "unavailable")
+  // The notice is about balances, so topics that are not balances (open positions,
+  // allocations) never contribute to it - an account with no positions is not "waiting".
+  const noticeTopics = topics.filter((t) => t !== "futures" && t !== "allocations");
+  const notice: TopicNotice = noticeTopics.some((t) => state.notices[t] === "unavailable")
     ? "unavailable"
-    : topics.some((t) => state.notices[t] === "stale")
+    : noticeTopics.some((t) => state.notices[t] === "stale")
       ? "stale"
-      : topics.some((t) => state.notices[t] === "delayed")
+      : noticeTopics.some((t) => state.notices[t] === "delayed")
         ? "delayed"
         : null;
 

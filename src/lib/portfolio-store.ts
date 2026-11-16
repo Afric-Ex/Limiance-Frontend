@@ -219,6 +219,16 @@ const REFRESH_WS_WAIT_MS = 5000;
  */
 const SILENT_WS_NOTICE_MS = 10_000;
 
+/** Topics whose silence means a balance is missing. */
+export const BALANCE_TOPICS: ReadonlySet<PortfolioTopic> = new Set<PortfolioTopic>([
+  "balance",
+  "fundingBalance",
+  "spotBalance",
+  "marginBalance",
+  "futuresBalance",
+]);
+const SILENCE_NOTICE_TOPICS: ReadonlySet<PortfolioTopic> = new Set<PortfolioTopic>([...BALANCE_TOPICS, "margin"]);
+
 interface PortfolioStoreState {
   coins: PortfolioCoin[];
   balances: Record<string, AccountBalance>;
@@ -411,6 +421,10 @@ class PortfolioStore {
    * the card explains itself instead of spinning silently forever.
    */
   private armSilenceTimer(topic: PortfolioTopic) {
+    // Only topics that carry a balance can be "still fetching your balance". Positions,
+    // allocations and the coin list can legitimately be empty (no open positions, new
+    // account), so "no data" there is normal and must never raise this notice.
+    if (!SILENCE_NOTICE_TOPICS.has(topic)) return;
     if (this.refCounts[topic] === 0 || this.hasDataFor(topic)) return;
     if (this.silenceTimers[topic]) clearTimeout(this.silenceTimers[topic]);
     this.silenceTimers[topic] = setTimeout(() => {
@@ -523,6 +537,7 @@ class PortfolioStore {
       this.fallbackTimers[topic] = undefined;
     }
     this.clearSilenceTimer(topic);
+    if (this.state.notices[topic] === "delayed") this.setNotice(topic, null);
     this.unsubs[topic]?.();
     delete this.unsubs[topic];
     this.setPending(topic, false);
@@ -659,6 +674,13 @@ class PortfolioStore {
     this.setPending(topic, false);
     this.setRefreshing(topic, false);
     this.state.notices = { ...this.state.notices, [topic]: null };
+    // Data can arrive by another route (balances derived from the coin list): retract
+    // any "delayed" reassurance for topics that now have something to show.
+    for (const t of ALL_PORTFOLIO_TOPICS) {
+      if (this.state.notices[t] === "delayed" && this.hasDataFor(t)) {
+        this.state.notices = { ...this.state.notices, [t]: null };
+      }
+    }
     this.emit();
     return true;
   }
