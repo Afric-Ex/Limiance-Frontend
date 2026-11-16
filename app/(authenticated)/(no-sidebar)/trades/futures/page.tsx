@@ -134,12 +134,11 @@ function FuturesTradesInner() {
 
   // Futures screen: open positions, per-coin balances and the account total.
   // This is the only surface that opens get_futures_positions.
-  const { balances, coins: portfolio, refreshBalances, futuresPositions, isRefreshing, notice } = usePortfolioWs({
+  const { coins: portfolio, refreshBalances, futuresPositions, isRefreshing, notice } = usePortfolioWs({
     coins: true,
     balanceAccount: "futures",
     futures: true,
   });
-  const futuresBalance = balances["futures"];
 
   const { refetch: refetchOpenOrders } = useQuery({
     queryKey: ['futures-open-orders', selectedPair],
@@ -290,20 +289,16 @@ function FuturesTradesInner() {
         ? 'stopOrder'
         : 'limitOrder';
 
-  // Wallet Balance = total USD value of everything in futures wallet (from balance API)
-  const walletBalanceUsd = useMemo(
-    () => Number.parseFloat(futuresBalance?.inUsd ?? '0') || 0,
-    [futuresBalance?.inUsd]
-  );
-
-  // Available for order sizing = quote-asset (e.g. USDT) balance specifically in futures wallet
+  // Available for order sizing = the quote asset (e.g. USDT) balance in the futures wallet,
+  // and nothing else. It must NEVER fall back to the total wallet value (every other
+  // asset valued in USD): that would let an order be sized against money that cannot
+  // be used as margin for this pair.
   const futuresQuoteAsset = selectedPair.split('/')[1] ?? 'USDT';
+  const availableLoaded = (portfolio?.length ?? 0) > 0;
   const availableQuote = useMemo(() => {
     const entry = portfolio?.find((p: any) => p.symbol === futuresQuoteAsset);
-    const quoteBalance = Number.parseFloat(entry?.futuresBalance ?? '0') || 0;
-    // If no quote asset found, fall back to total wallet value
-    return quoteBalance || walletBalanceUsd;
-  }, [portfolio, futuresQuoteAsset, walletBalanceUsd]);
+    return Number.parseFloat(entry?.futuresBalance ?? '0') || 0;
+  }, [portfolio, futuresQuoteAsset]);
 
   const hasFuturesAccount = user?.isFuturesAccepted;
 
@@ -741,7 +736,10 @@ function FuturesTradesInner() {
       <div className="flex justify-between items-center text-xs">
         <span className="text-white/40" title="Funds available to open new positions (excludes margin locked in open positions)">Available</span>
         <span className="font-semibold text-white/90 flex items-center gap-1">
-          {availableQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {futuresQuoteAsset}
+          {availableLoaded
+            ? availableQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : '—'}{' '}
+          {futuresQuoteAsset}
           <button
             type="button"
             onClick={refreshBalances}
