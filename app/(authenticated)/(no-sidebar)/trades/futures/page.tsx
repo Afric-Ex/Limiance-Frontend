@@ -736,10 +736,18 @@ function FuturesTradesInner() {
       <div className="flex justify-between items-center text-xs">
         <span className="text-white/40" title="Funds available to open new positions (excludes margin locked in open positions)">Available</span>
         <span className="font-semibold text-white/90 flex items-center gap-1">
-          {availableLoaded
-            ? availableQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-            : '—'}{' '}
-          {futuresQuoteAsset}
+          {availableLoaded ? (
+            <>
+              {availableQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+              {futuresQuoteAsset}
+            </>
+          ) : (
+            <span
+              role="status"
+              aria-label="Loading available balance"
+              className="inline-block h-4 w-24 animate-pulse rounded bg-white/10 align-middle"
+            />
+          )}
           <button
             type="button"
             onClick={refreshBalances}
