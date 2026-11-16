@@ -89,6 +89,80 @@ function ChangeCell({ value, mobile }: { value: number; mobile?: boolean }) {
   );
 }
 
+// ── Market feed normalisation ─────────────────────────────────────────────
+// Missing fields stay `undefined` (never 0) so a partial WS item can't wipe the
+// real value that the REST movers already supplied.
+const toNum = (v: any): number | undefined => {
+  if (v === null || v === undefined || v === "") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+};
+const pickNum = (m: any, keys: string[]): number | undefined => {
+  for (const key of keys) {
+    const n = toNum(m?.[key]);
+    if (n !== undefined) return n;
+  }
+  return undefined;
+};
+const normalizePair = (raw: any): string => String(raw ?? "").replace(/[-_]/g, "/").toUpperCase();
+const pairKeyOf = (pair: string): string => pair.replace(/[/_-]/g, "");
+const NEWLY_LISTED_RE = /(newly[\s-]?listed|new listed|newcoin|^new$)/;
+
+interface MarketToken {
+  pair: string;
+  symbol: string;
+  price?: number;
+  changePercent24h?: number;
+  /** 24h traded value in quote currency (USDT/USDC). Quote volume if the feed has it, else base volume x price. */
+  volumeUsd?: number;
+  tradeCount?: number;
+  category?: string;
+  listedAt?: number;
+  image?: string;
+}
+
+const normalizeMarketItem = (m: any): MarketToken => {
+  const pair = normalizePair(m.symbol ?? m.pair ?? `${m.base ?? ""}/${m.quote ?? "USDT"}`);
+  const base = String(m.base ?? pair.split("/")[0] ?? "").toUpperCase();
+  const price = pickNum(m, ["last_price", "lastPrice", "price", "latest_price"]);
+  let changePercent24h = pickNum(m, [
+    "percent_change", "priceChangePercent", "changePercent24h", "price_change_percent",
+    "change_percent", "percentChange", "change24h",
+  ]);
+  if (changePercent24h === undefined) {
+    // Derive from an absolute change when only that is supplied.
+    const absChange = pickNum(m, ["price_change", "priceChange"]);
+    if (absChange !== undefined && price !== undefined && price - absChange !== 0) {
+      changePercent24h = (absChange / (price - absChange)) * 100;
+    }
+  }
+  const quoteVolume = pickNum(m, ["quote_volume", "quoteVolume", "turnover", "volume_usd", "volumeUsd"]);
+  const baseVolume = pickNum(m, ["volume", "volume24h", "base_volume", "baseVolume"]);
+  const volumeUsd = quoteVolume ?? (baseVolume !== undefined && price !== undefined ? baseVolume * price : undefined);
+  const listedRaw = m.listed_at ?? m.listedAt ?? m.listing_date ?? m.created_at ?? m.createdAt;
+  const listedAt = listedRaw !== undefined && listedRaw !== null ? new Date(listedRaw).getTime() : NaN;
+  return {
+    pair,
+    symbol: base,
+    price,
+    changePercent24h,
+    volumeUsd,
+    tradeCount: pickNum(m, ["count", "trade_count", "trades", "tradeCount", "number_of_trades"]),
+    category: m.category !== undefined ? String(m.category) : undefined,
+    listedAt: Number.isFinite(listedAt) ? listedAt : undefined,
+    image: m.image ?? m.logo ?? m.icon,
+  };
+};
+
+/** Copy only the fields `over` actually has, so gaps never overwrite real data. */
+const mergeDefined = <T extends Record<string, any>>(base: T | undefined, over: T): T => {
+  const out: Record<string, any> = { ...(base ?? {}) };
+  for (const [key, value] of Object.entries(over)) {
+    if (value !== undefined) out[key] = value;
+  }
+  return out as T;
+};
+
 const marketTabs = [
   { value: "Holding", labelKey: "tabHolding" },
   { value: "Hot", labelKey: "tabHot" },
@@ -128,13 +202,10 @@ function DashboardInner() {
 
   // Memoized: the market feed ticks frequently — rebuilding these lists on
   // every unrelated parent render would redo all mapping/filtering each time.
-  const marketTokens = useMemo(() => (feed.markets || []).map((m: any) => ({
-    pair: m.symbol || m.pair || `${m.base}/${m.quote}`,
-    symbol: m.base || m.symbol?.split("-")[0] || "",
-    price: Number(m.last_price ?? m.lastPrice ?? m.price ?? 0),
-    changePercent24h: Number(m.percent_change ?? m.priceChangePercent ?? m.changePercent24h ?? 0),
-    volume24h: Number(m.volume ?? m.volume24h ?? m.quoteVolume ?? 0),
-  })), [feed.markets]);
+  const marketTokens = useMemo(
+    () => (feed.markets || []).map((m: any) => normalizeMarketItem(m)),
+    [feed.markets]
+  );
 
   const { data: movers } = useQuery({
     queryKey: tradingKeys.gainersLosers,
@@ -147,57 +218,91 @@ function DashboardInner() {
   const moverTokens = useMemo(() => {
     const moversArray = movers ? [...(movers.gainers || []), ...(movers.losers || [])] : [];
     return moversArray.map((m: any) => {
-      const rawPair = m.pair ?? m.symbol ?? `${m.base ?? ""}/USDT`;
-      const base = m.base ?? rawPair.replace("-", "/").split("/")[0] ?? "";
-      return {
-        pair: rawPair,
-        symbol: base,
-        price: Number(m.price ?? m.latest_price ?? m.last_price ?? m.lastPrice ?? 0),
-        changePercent24h: Number(m.changePercent24h ?? m.percent_change ?? m.priceChangePercent ?? 0),
-        volume24h: Number(m.volume24h ?? m.volume ?? m.quoteVolume ?? 0),
-        image: m.image ?? m.logo ?? m.icon ?? getCryptoIcon(base),
-      };
+      const token = normalizeMarketItem({ ...m, pair: m.pair ?? m.symbol });
+      const image = m.image ?? m.logo ?? m.icon ?? getCryptoIcon(token.symbol);
+      return { ...token, image };
     });
   }, [movers]);
 
   // Combine WS market feed (subscribed pairs) and REST movers for a complete market list
   const displayTokens = useMemo(() => {
-    const allTokensMap = new Map();
-    moverTokens.forEach((t: any) => allTokensMap.set(t.symbol, t));
-    marketTokens.forEach((t: any) => {
-      const rawPair = t.pair ?? t.symbol ?? "";
-      const base = t.base ?? rawPair.replace("-", "/").split("/")[0] ?? "";
-      const sym = base || t.symbol;
-      allTokensMap.set(sym, {
-        ...allTokensMap.get(sym),
-        ...t,
-        symbol: sym,
-        pair: rawPair,
-        image: allTokensMap.get(sym)?.image || getCryptoIcon(sym)
-      });
+    // Keyed by PAIR (not base symbol) so BTC/USDT and BTC/ETH can't overwrite each other.
+    const allTokensMap = new Map<string, MarketToken>();
+    moverTokens.forEach((t: MarketToken) => allTokensMap.set(t.pair, t));
+    marketTokens.forEach((t: MarketToken) => {
+      const existing = allTokensMap.get(t.pair);
+      const merged = mergeDefined<MarketToken>(existing, t);
+      merged.image = existing?.image || t.image || getCryptoIcon(t.symbol);
+      allTokensMap.set(t.pair, merged);
     });
 
     // Hydrate images from portfolio if missing
     if (wsPortfolio && wsPortfolio.length > 0) {
+      const imageBySymbol = new Map<string, string>();
       wsPortfolio.forEach((p: any) => {
         const sym = (p.symbol || "").toUpperCase();
-        if (sym && p.image && allTokensMap.has(sym)) {
-          allTokensMap.get(sym).image = p.image;
-        }
+        if (sym && p.image) imageBySymbol.set(sym, p.image);
+      });
+      allTokensMap.forEach((token) => {
+        const img = imageBySymbol.get(token.symbol);
+        if (img) token.image = img;
       });
     }
 
-    return Array.from(allTokensMap.values()).filter((t: any) => {
-      // Filter out garbage pairs the backend might send
-      const validQuotes = ["USDT", "USDC", "BTC", "ETH"];
-      const [base, quote] = (t.pair || "").replace("-", "/").split("/");
-      if (!quote) return false;
-      if (!validQuotes.includes(quote)) return false;
-      if ((base === "USDT" && quote === "USDC") || (base === "USDC" && quote === "USDT")) return true;
-      if (validQuotes.includes(base) && quote !== "USDT") return false;
-      return true;
-    });
+    return Array.from(allTokensMap.values())
+      .filter((t) => {
+        // Filter out garbage pairs the backend might send
+        const validQuotes = ["USDT", "USDC", "BTC", "ETH"];
+        const [base, quote] = t.pair.split("/");
+        if (!quote) return false;
+        if (!validQuotes.includes(quote)) return false;
+        if ((base === "USDT" && quote === "USDC") || (base === "USDC" && quote === "USDT")) return true;
+        if (validQuotes.includes(base) && quote !== "USDT") return false;
+        return true;
+      })
+      .map((t) => ({
+        ...t,
+        // Render-safe defaults, applied only after merging.
+        price: t.price ?? 0,
+        changePercent24h: t.changePercent24h ?? 0,
+        volumeUsd: t.volumeUsd ?? 0,
+      }));
   }, [marketTokens, moverTokens, wsPortfolio]);
+
+  // Ranked tabs compare like with like: USDT/USDC pairs only (BTC- or ETH-quoted
+  // volumes are in a different unit), one row per coin, preferring USDT.
+  const rankableTokens = useMemo(() => {
+    const byBase = new Map<string, (typeof displayTokens)[number]>();
+    displayTokens.forEach((t) => {
+      const quote = t.pair.split("/")[1];
+      if (quote !== "USDT" && quote !== "USDC") return;
+      const current = byBase.get(t.symbol);
+      if (!current || (quote === "USDT" && current.pair.split("/")[1] !== "USDT")) byBase.set(t.symbol, t);
+    });
+    return Array.from(byBase.values());
+  }, [displayTokens]);
+
+  const favoritesQuery = useQuery({
+    queryKey: ["trading-favorites"],
+    queryFn: () => tradingService.getFavorites(),
+    staleTime: 30_000,
+  });
+  const favoriteKeys = useMemo(() => {
+    const response: any = favoritesQuery.data;
+    const rows = Array.isArray(response) ? response
+      : Array.isArray(response?.symbols) ? response.symbols
+      : Array.isArray(response?.data) ? response.data
+      : Array.isArray(response?.data?.symbols) ? response.data.symbols
+      : Array.isArray(response?.data?.favorites) ? response.data.favorites
+      : Array.isArray(response?.data?.items) ? response.data.items
+      : Array.isArray(response?.favorites) ? response.favorites
+      : [];
+    return new Set<string>(
+      rows
+        .map((item: any) => pairKeyOf(normalizePair(typeof item === "string" ? item : item?.symbol ?? item?.pair ?? item?.market)))
+        .filter(Boolean)
+    );
+  }, [favoritesQuery.data]);
 
   const getRepresentativeHoldingTokens = useCallback(() => {
     const portfolio = wsPortfolio;
@@ -218,7 +323,7 @@ function DashboardInner() {
         const marketMatch = displayTokens.find(
           (t: any) =>
             (t.symbol || "").toUpperCase() === sym &&
-            ((t.pair || "").toUpperCase().endsWith("/USDT") || (t.pair || "").toUpperCase().endsWith("-USDT"))
+            (t.pair || "").toUpperCase().endsWith("/USDT")
         ) || displayTokens.find(
           (t: any) => (t.symbol || "").toUpperCase() === sym
         );
@@ -240,7 +345,7 @@ function DashboardInner() {
           symbol: sym,
           price,
           changePercent24h,
-          volume24h: marketMatch?.volume24h ?? 0,
+          volumeUsd: marketMatch?.volumeUsd ?? 0,
           balance: totalBalance,
           usdValue: totalBalance * price,
           image: item.image || item.logo || item.icon || marketMatch?.image || getCryptoIcon(sym),
@@ -250,31 +355,53 @@ function DashboardInner() {
   }, [wsPortfolio, displayTokens]);
 
   const filteredTokens = useMemo(() => {
-    if (activeMarketTab === "Top Gainers") {
-      return [...displayTokens]
-        .filter((t: any) => t.changePercent24h !== 0)
-        .sort((a: any, b: any) => b.changePercent24h - a.changePercent24h)
-        .slice(0, 10);
+    switch (activeMarketTab) {
+      case "Holding":
+        return getRepresentativeHoldingTokens();
+
+      case "Top Gainers":
+        // Only coins that are actually up, biggest rise first.
+        return [...rankableTokens]
+          .filter((t) => t.changePercent24h > 0)
+          .sort((a, b) => b.changePercent24h - a.changePercent24h)
+          .slice(0, 10);
+
+      case "24h Volume":
+        return [...rankableTokens]
+          .filter((t) => t.volumeUsd > 0)
+          .sort((a, b) => b.volumeUsd - a.volumeUsd)
+          .slice(0, 10);
+
+      case "Hot": {
+        // Most traded: by number of trades when the feed provides it, else by traded value.
+        const hasTradeCounts = rankableTokens.some((t) => (t.tradeCount ?? 0) > 0);
+        return [...rankableTokens]
+          .filter((t) => t.volumeUsd > 0)
+          .sort((a, b) =>
+            hasTradeCounts
+              ? (b.tradeCount ?? 0) - (a.tradeCount ?? 0) || b.volumeUsd - a.volumeUsd
+              : b.volumeUsd - a.volumeUsd
+          )
+          .slice(0, 10);
+      }
+
+      case "New listing":
+        // Same rule as the Markets page: the feed's `category` marks newly listed pairs.
+        // Newest first when a listing date is available. No match means an empty list, not a guess.
+        return displayTokens
+          .filter((t) => NEWLY_LISTED_RE.test(String(t.category ?? "").toLowerCase().trim()))
+          .sort((a, b) => (b.listedAt ?? 0) - (a.listedAt ?? 0) || b.volumeUsd - a.volumeUsd)
+          .slice(0, 10);
+
+      case "Favorite":
+        return displayTokens
+          .filter((t) => favoriteKeys.has(pairKeyOf(t.pair)))
+          .sort((a, b) => b.volumeUsd - a.volumeUsd);
+
+      default:
+        return [];
     }
-    if (activeMarketTab === "Top Losers") {
-      return [...displayTokens]
-        .filter((t: any) => t.changePercent24h !== 0)
-        .sort((a: any, b: any) => a.changePercent24h - b.changePercent24h)
-        .slice(0, 10);
-    }
-    if (activeMarketTab === "24h Volume") {
-      return [...displayTokens]
-        .sort((a: any, b: any) => (b.volume24h * b.price) - (a.volume24h * a.price))
-        .slice(0, 10);
-    }
-    if (activeMarketTab === "Holding") {
-      return getRepresentativeHoldingTokens();
-    }
-    // Hot / New listing / Favorite → just show full list by volume
-    return [...displayTokens]
-      .sort((a: any, b: any) => (b.volume24h * b.price) - (a.volume24h * a.price))
-      .slice(0, 10);
-  }, [activeMarketTab, displayTokens, getRepresentativeHoldingTokens]);
+  }, [activeMarketTab, displayTokens, rankableTokens, favoriteKeys, getRepresentativeHoldingTokens]);
 
   const openConvertModal = (symbol: string) => {
     modals.open({
@@ -516,11 +643,11 @@ function DashboardInner() {
                       <TableTd className="!px-1 !py-3 max-[768px]:!text-right">
                         <span className="block truncate whitespace-nowrap text-caption max-[768px]:text-xs font-medium text-white/90 tabular-nums" title={item.value === "Holding" && token.balance != null
                           ? `${Number(token.balance).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${token.symbol}`
-                          : `$${formatVolume(token.volume24h * token.price)}`
+                          : `$${formatVolume(token.volumeUsd)}`
                         }>
                           {item.value === "Holding" && token.balance != null
                             ? `${Number(token.balance).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${token.symbol}`
-                            : `$${formatVolume(token.volume24h * token.price)}`}
+                            : `$${formatVolume(token.volumeUsd)}`}
                         </span>
                       </TableTd>
                       <TableTd className="max-[768px]:hidden !py-3">
