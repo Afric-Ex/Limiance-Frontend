@@ -1,6 +1,6 @@
 "use client";
 
-import { TextInput, PasswordInput, Button, Divider } from "@mantine/core";
+import { TextInput, PasswordInput, Button, Divider, Checkbox } from "@mantine/core";
 import { useAuth } from "@/src/hooks/queries/use-auth";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -114,13 +114,15 @@ export const LoginForm = () => {
                 placeholder={t("passwordPlaceholder")}
                 {...form.getInputProps("password")}
               />
-              {/* <Checkbox
-                label="Remember me"
-                checked={form.values.rememberMe}
-                onChange={(e) =>
-                  form.setFieldValue("rememberMe", e.target.checked)
-                }
-              /> */}
+              <Checkbox
+                label={t("rememberMe")}
+                {...form.getInputProps("rememberMe", { type: "checkbox" })}
+                classNames={{
+                  label: "!text-sm !text-white/70 cursor-pointer",
+                  input:
+                    "!bg-transparent !border-gray-9 checked:!bg-primary checked:!border-primary cursor-pointer",
+                }}
+              />
             </div>
             <Button
               type="submit"
