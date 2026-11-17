@@ -113,14 +113,14 @@ export const auth = {
   },
   verifyLogin2FA: async (data: VerifyLoginSecondFactor): Promise<ApiResponse<any>> => {
     authDebug("verify-2fa-request", {
-      endpoint: "users/login/verify-second-factor",
+      endpoint: "users/login/verify_second_factor",
       challengeTokenPresent: Boolean(data.loginChallengeToken),
       challengeTokenLength: data.loginChallengeToken?.length ?? 0,
       emailOtpLength: data.emailOtpCode?.length ?? 0,
       totpLength: data.totpCode?.length ?? 0,
       rememberMe: Boolean(data.rememberMe),
     });
-    const response = await api.post("users/login/verify-second-factor", data);
+    const response = await api.post("users/login/verify_second_factor", data);
     authDebug("verify-2fa-response", {
       status: response.status,
       responseKeys:
