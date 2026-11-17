@@ -15,8 +15,13 @@ interface NotificationState {
   notifications: AppNotification[];
   unreadCount: number;
   viewing: AppNotification | null;
+  /** Id of the account the cached notifications belong to. Persisted items are
+   *  only trusted for this account; a different (or unknown) account clears
+   *  them so a new login never inherits a previous user's notifications. */
+  ownerId: string | null;
   addNotification: (notification: Omit<AppNotification, "id" | "createdAt" | "read">) => void;
-  setNotifications: (notifications: AppNotification[]) => void;
+  setNotifications: (notifications: AppNotification[], ownerId?: string | null) => void;
+  setOwner: (ownerId: string | null) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearAll: () => void;
@@ -30,6 +35,7 @@ export const useNotificationStore = create<NotificationState>()(
       notifications: [],
       unreadCount: 0,
       viewing: null,
+      ownerId: null,
 
       addNotification: (notification) =>
         set((state) => {
@@ -60,12 +66,17 @@ export const useNotificationStore = create<NotificationState>()(
       // persisted on the backend) are preserved. An empty server list is
       // authoritative: it means the backend has no records, so drop local-only
       // items too.
-      setNotifications: (serverNotifications) =>
+      setNotifications: (serverNotifications, ownerId) =>
         set((state) => {
+          // Only keep local-only items (e.g. foreground FCM pushes) when they
+          // were added while the same account is signed in. Otherwise the store
+          // was persisted from a different account and must not leak through.
+          const sameOwner = ownerId != null && state.ownerId === ownerId;
+          const localNotifications = sameOwner ? state.notifications : [];
           const serverIds = new Set(serverNotifications.map((n) => n.id));
 
           const merged = serverNotifications.length
-            ? [...serverNotifications, ...state.notifications.filter((n) => !serverIds.has(n.id))]
+            ? [...serverNotifications, ...localNotifications.filter((n) => !serverIds.has(n.id))]
                 .sort((a, b) => b.createdAt - a.createdAt)
                 .slice(0, 100)
             : [];
@@ -73,7 +84,16 @@ export const useNotificationStore = create<NotificationState>()(
           return {
             notifications: merged,
             unreadCount: merged.filter((n) => !n.read).length,
+            ownerId: ownerId ?? state.ownerId,
           };
+        }),
+
+      setOwner: (ownerId) =>
+        set((state) => {
+          if (state.ownerId === ownerId) return state;
+          // Different account (or first load after an upgrade where the owner
+          // was not recorded): drop everything cached for the previous owner.
+          return { ownerId, notifications: [], unreadCount: 0, viewing: null };
         }),
 
       markAsRead: (id) =>
@@ -103,6 +123,7 @@ export const useNotificationStore = create<NotificationState>()(
         set({
           notifications: [],
           unreadCount: 0,
+          ownerId: null,
         }),
 
       openNotification: (notification) =>
@@ -116,6 +137,7 @@ export const useNotificationStore = create<NotificationState>()(
       partialize: (state) => ({
         notifications: state.notifications,
         unreadCount: state.unreadCount,
+        ownerId: state.ownerId,
       }),
     }
   )
