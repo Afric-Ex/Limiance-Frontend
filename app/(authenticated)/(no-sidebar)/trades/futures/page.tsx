@@ -1292,6 +1292,7 @@ function FuturesTradesInner() {
               quote={quoteAsset}
               currentPrice={effectiveMarketPrice}
               bookLastPrice={orderBook.lastPrice} centerPrice={markPrice}
+              dayChangePercent={feed.changePercent24h}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
@@ -1329,6 +1330,7 @@ function FuturesTradesInner() {
               quote={quoteAsset}
               currentPrice={effectiveMarketPrice}
               bookLastPrice={orderBook.lastPrice} centerPrice={markPrice}
+              dayChangePercent={feed.changePercent24h}
               buyPercentage={orderBook.buyPercentage}
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}

@@ -28,6 +28,8 @@ interface SpotPairHeaderProps {
   currentPrice?: number | null;
   // Futures: keep the arrow + red/green from the last real (6-decimal) price move.
   showPriceArrow?: boolean;
+  // Decimal places for the main price and other price stats (default 2).
+  priceDecimals?: number;
 }
 
 // Quote assets that trade ~1:1 with USD, so "≈ price USD" is accurate for them.
@@ -71,6 +73,7 @@ export function SpotPairHeader({
   className,
   currentPrice,
   showPriceArrow = false,
+  priceDecimals = 2,
 }: SpotPairHeaderProps) {
   const t = useTranslations("Trading");
   const icons = useTokenIconMap();
@@ -111,6 +114,14 @@ export function SpotPairHeader({
   const low = toNum(feed.low24h);
   const volBase = toNum(feed.volume24h);
   const volQuote = volBase !== null && price !== null ? volBase * price : null;
+
+  const fmtPrice = (value: number | null) =>
+    value === null
+      ? "—"
+      : value.toLocaleString("en-US", {
+          minimumFractionDigits: priceDecimals,
+          maximumFractionDigits: priceDecimals,
+        });
 
   const isUp = (pct ?? 0) >= 0;
   const tone = isUp ? "text-success-6" : "text-error-1";
@@ -220,13 +231,13 @@ export function SpotPairHeader({
             >
               {showPriceArrow && shownDir === "up" && <IoArrowUp size={16} />}
               {showPriceArrow && shownDir === "down" && <IoArrowDown size={16} />}
-              {fmt(price)}
+              {fmtPrice(price)}
             </span>
           ) : (
             <Skeleton variant="text" width="80px" height="24px" />
           )}
           <span className="text-micro tabular-nums text-white/50">
-            {showUsd ? `≈${fmt(price)} USD` : "\u00A0"}
+            {showUsd ? `≈${fmtPrice(price)} USD` : "\u00A0"}
           </span>
         </div>
 
@@ -237,8 +248,8 @@ export function SpotPairHeader({
               {pct === null ? "—" : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`}
             </span>
           </Stat>
-          <Stat label={t("high24h")}>{fmt(high)}</Stat>
-          <Stat label={t("low24h")}>{fmt(low)}</Stat>
+          <Stat label={t("high24h")}>{fmtPrice(high)}</Stat>
+          <Stat label={t("low24h")}>{fmtPrice(low)}</Stat>
 
           <Stat label={t("volume24hOf", { base })}>{fmt(volBase)}</Stat>
           <Stat label={t("turnover24hOf", { quote })}>{fmt(volQuote)}</Stat>

@@ -383,6 +383,7 @@ function SpotTrades() {
           markets={filteredMarkets}
           onSelectPair={handleSelectPair}
           currentPrice={effectiveMarketPrice}
+          priceDecimals={3}
         />
 
         {/* MOBILE: Floating Order Book Button */}

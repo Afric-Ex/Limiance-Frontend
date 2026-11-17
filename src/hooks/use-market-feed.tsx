@@ -54,6 +54,14 @@ export type MarketFeedMarket = "spot" | "margin" | "futures";
 const normalizePairKey = (value: unknown) =>
   String(value ?? "").replace(/[/\\\-_:\s]/g, "").toUpperCase();
 
+/**
+ * Normalised market key with a trailing market-type tag stripped, so a ticker
+ * tagged "BTCUSDT:spot", "BTCUSDTSPOT" or a "BTC-PERP" symbol still compares
+ * equal to the "BTC/USDT" pair it represents.
+ */
+const normalizeMarketKey = (value: unknown) =>
+  normalizePairKey(value).replace(/(?:SPOT|MARGIN|FUTURES|PERP|PERPETUAL|SWAP)$/, "");
+
 /** The pair spelling the funding-rate stream expects ("BTC/USDT"). */
 const canonicalPair = (value: string) => {
   const raw = String(value ?? "").trim().toUpperCase();
@@ -86,10 +94,22 @@ function extractMarketItems(raw: unknown, depth = 0): any[] {
 
 /** Selected-pair ticker from a ticker list, separator-insensitive. */
 function findMarket(items: any[], pair: string): any | undefined {
-  const target = normalizePairKey(pair);
-  return items.find(
-    (item) => normalizePairKey(item?.symbol ?? item?.pair) === target
-  );
+  const target = normalizeMarketKey(pair);
+  return items.find((item) => {
+    if (!item || typeof item !== "object") return false;
+    const base = item.base ?? item.baseAsset;
+    const quote = item.quote ?? item.quoteAsset;
+    const candidates = [
+      item.symbol,
+      item.pair,
+      item.tradingPair,
+      item.trading_pair,
+      base && quote ? `${base}/${quote}` : undefined,
+    ];
+    return candidates.some(
+      (candidate) => candidate != null && normalizeMarketKey(candidate) === target
+    );
+  });
 }
 
 export const useMarketFeed = (
@@ -125,12 +145,9 @@ export const useMarketFeed = (
     lastFallbackAt.current = now;
 
     try {
-      const normalisedPair = normalizePairKey(pair);
       const res = await api.get("trading/24_hours_movers", { params: { limit: 100 } });
       const items: any[] = Array.isArray(res.data?.data) ? res.data.data : [];
-      const match = items.find(
-        (m: any) => normalizePairKey(m.symbol ?? m.pair) === normalisedPair
-      );
+      const match = findMarket(items, pair);
 
       setData((prev) => ({
         ...prev,
@@ -252,6 +269,8 @@ export const useMarketFeed = (
                 : prev.change24h),
             changePercent24h:
               match?.priceChangePercent ??
+              match?.priceChangePercent24h ??
+              match?.price_change_percent ??
               match?.percent_change ??
               match?.changePercent24h ??
               prev.changePercent24h,

@@ -274,6 +274,14 @@ export function OrderBookTabs({
   const lowestAsk = rawAsks.length > 0 ? rawAsks[0].price : null;
   const highestBid = rawBids.length > 0 ? rawBids[0].price : null;
   const spread = lowestAsk !== null && highestBid !== null ? lowestAsk - highestBid : null;
+  // Show the spread at the precision it actually needs, otherwise a tiny spread
+  // (e.g. 0.00001) rounds to "0.0000" whenever the grouped price step is coarser.
+  const spreadDecimals = spread !== null ? Math.max(displayDecimals, decimalsOf(spread)) : displayDecimals;
+  const formatSpread = (value: number) =>
+    value.toLocaleString("en-US", {
+      minimumFractionDigits: spreadDecimals,
+      maximumFractionDigits: spreadDecimals,
+    });
   const midPrice = lowestAsk !== null && highestBid !== null ? (lowestAsk + highestBid) / 2 : lowestAsk ?? highestBid ?? null;
   const latestTradePrice = getLatestTradePrice(recentTrades);
   const validCurrentPrice = currentPrice != null && Number.isFinite(currentPrice) && currentPrice > 0 ? currentPrice : null;
@@ -341,7 +349,7 @@ export function OrderBookTabs({
       ? `≈${formatCenter(lastTradedPrice)} USD`
       : spread === null
         ? t("lastPrice")
-        : t("spreadValue", { spread: formatPrice(spread) });
+        : t("spreadValue", { spread: formatSpread(spread) });
 
   const renderRow = (order: Level, side: "ask" | "bid", distance: number) => (
     <button
