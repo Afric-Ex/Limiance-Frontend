@@ -145,7 +145,12 @@ export const useAuth = () => {
     }
 
     const user = getLoginUser(payload);
-    if (user) {
+    // Some success replies carry only identifiers (e.g. `{ id, isActive }` on
+    // the second-factor step), not a full profile. Persisting that would leave
+    // the app with an identity-less user, so hydrate from `/user_details` via
+    // the freshly-set session cookie when identity fields are missing.
+    const hasIdentity = Boolean(user && (user.email || user.username || user.firstName));
+    if (user && hasIdentity) {
       setUser(user);
       if (!payload?.wsToken) {
         void useUserStore.getState().fetchUser();
@@ -220,13 +225,16 @@ export const useAuth = () => {
       const requiresSecondFactor = requiresLoginSecondFactor(data);
       const challengeToken = getLoginChallengeToken(data);
       const userId = getLoginChallengeUserId(data);
-      if (requiresSecondFactor && challengeToken) {
+      // A response that already reports success is a finished login; leftover
+      // flags like `emailOtpRequired` describe account configuration, not a
+      // pending second-factor step.
+      if (data?.success !== true && requiresSecondFactor && challengeToken) {
         setPendingLogin2FA(userId || challengeToken, variables.rememberMe, challengeToken, getLoginSecondFactorMethod(data));
         setEmail(variables.emailOrPhone);
         push("/auth/verify-2fa");
         return;
       }
-      if (requiresSecondFactor) {
+      if (data?.success !== true && requiresSecondFactor) {
         errorNotification("Your login session could not be started. Please log in again.");
         return;
       }
@@ -246,6 +254,17 @@ export const useAuth = () => {
 
   const { mutate: verifyLogin2FA, isPending: verifyLogin2FALoading } = mutate(auth.verifyLogin2FA, {
     onSuccess: async (data) => {
+      // success:true (or an issued wsToken) means the session cookie is live and
+      // the login is finished. Leftover flags such as `emailOtpRequired` reflect
+      // the account's configuration, not a pending factor — complete the login
+      // instead of falling into the "another factor required" branches.
+      if (data?.success === true || (typeof data?.wsToken === "string" && data.wsToken)) {
+        await persistLoginSession(data);
+        successNotification("Login successful");
+        push("/dashboard");
+        return;
+      }
+
       if (requiresLoginSecondFactor(data)) {
         const challengeToken = getLoginChallengeToken(data);
 
