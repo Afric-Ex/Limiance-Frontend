@@ -111,7 +111,7 @@ function SpotTrades() {
   }, [feed.price, prevPrice]);
 
   const formatPrice = (val: number | null) =>
-    val !== null ? val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : null;
+    val !== null ? val.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : null;
   const formatOrderDate = (value: unknown, timeOnly = false) => {
     if (!value) return "—";
     const raw = String(value);
