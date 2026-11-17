@@ -427,6 +427,17 @@ export const useAuth = () => {
 
   const handleVerify = otpForm.onSubmit((values) => {
     setOtp(values.otp);
+    // Password reset codes must not go through verify_email: that endpoint
+    // consumes the code, so the subsequent reset_password call sees it as
+    // expired. Carry the code straight to the reset form instead.
+    const params =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search)
+        : null;
+    if (params?.get("referrer") === "forgot_password") {
+      push("/auth/reset-password");
+      return;
+    }
     verify({ ...values, email: emailOrPhone });
   });
 
