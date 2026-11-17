@@ -18,6 +18,8 @@ import {
 // Authorization header: every call relies on the cookie the browser attaches to
 // credentialed requests.
 
+const CLIENT_TYPE_HEADERS = { "X-Client-Type": "web" } as const;
+
 export const auth = {
   register: async (data: Register): Promise<ApiResponse<RegisterResponse>> => {
     const response = await api.post("users/register", {
@@ -29,6 +31,8 @@ export const auth = {
       lastName: data.lastName,
       username: data.username,
       country: data.country,
+    }, {
+      headers: CLIENT_TYPE_HEADERS,
     });
     return response;
   },
@@ -43,7 +47,7 @@ export const auth = {
       passToken: data.passToken,
       genTime: data.genTime,
     }, {
-      headers: { "X-Client-Type": "web" },
+      headers: CLIENT_TYPE_HEADERS,
     });
     authDebug("login-response", {
       status: response.status,
@@ -64,11 +68,13 @@ export const auth = {
    * makes logout survive a reload or a back-button navigation.
    */
   logout: async (): Promise<ApiResponse<any>> => {
-    const response = await api.post("users/logout", {});
+    const response = await api.post("users/logout", {}, { headers: CLIENT_TYPE_HEADERS });
     return response;
   },
   verifyEmail: async (data: VerifyEmail): Promise<ApiResponse<any>> => {
-    const response = await api.post("users/verify_email", { email: data.email, otp: data.otp });
+    const response = await api.post("users/verify_email", { email: data.email, otp: data.otp }, {
+      headers: CLIENT_TYPE_HEADERS,
+    });
     return response;
   },
   forgotPassword: async (data: {
@@ -76,6 +82,8 @@ export const auth = {
   }): Promise<ApiResponse<any>> => {
     const response = await api.post("users/forgot_password", {
       email: data.email,
+    }, {
+      headers: CLIENT_TYPE_HEADERS,
     });
     return response;
   },
@@ -90,6 +98,8 @@ export const auth = {
       code: data.otp,
       newPassword: data.password,
       confirmPassword: data.confirmPassword,
+    }, {
+      headers: CLIENT_TYPE_HEADERS,
     });
     return response;
   },
@@ -120,7 +130,9 @@ export const auth = {
       totpLength: data.totpCode?.length ?? 0,
       rememberMe: Boolean(data.rememberMe),
     });
-    const response = await api.post("users/login/verify_second_factor", data);
+    const response = await api.post("users/login/verify_second_factor", data, {
+      headers: CLIENT_TYPE_HEADERS,
+    });
     authDebug("verify-2fa-response", {
       status: response.status,
       responseKeys:
