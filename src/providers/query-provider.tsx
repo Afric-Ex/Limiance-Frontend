@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { sessionCoordinator } from "@/src/lib/session-coordinator";
 import { useAuthStore } from "@/src/stores/auth-store";
 import { useUserStore } from "@/src/stores/user-store";
+import { useNotificationStore } from "@/src/stores/notification-store";
 import { clearP2PUserActions } from "@/src/lib/p2p-user-actions";
 import { wsClient } from "@/src/lib/websocket-client";
 
@@ -34,6 +35,7 @@ function QueryProvider({ children }: { children: ReactNode }) {
   useEffect(() => sessionCoordinator.subscribe(() => {
     useAuthStore.getState().reset();
     useUserStore.getState().reset();
+    useNotificationStore.getState().clearAll();
     clearP2PUserActions();
     queryClient.clear();
     wsClient.disconnect();

@@ -99,9 +99,23 @@ const normalizeNotifications = (res: any): AppNotification[] => {
 export function useNotifications() {
   const user = useUserStore((s) => s.user);
   const setNotifications = useNotificationStore((s) => s.setNotifications);
+  const setOwner = useNotificationStore((s) => s.setOwner);
+
+  const userId = user
+    ? String(user.id ?? user.user_id ?? user.userId ?? "") || null
+    : null;
+
+  // Bind the cached notifications to the signed-in account. When the account
+  // changes (new signup, account switch, logout) anything persisted for the
+  // previous owner is dropped before the backend response is applied.
+  useEffect(() => {
+    setOwner(userId);
+  }, [userId, setOwner]);
 
   const query = useQuery({
-    queryKey: notificationKeys.list,
+    // Scope the cache per account so one user's response can never be served
+    // to another account sharing the same browser/session.
+    queryKey: [...notificationKeys.list, userId],
     queryFn: () => notificationService.getNotifications(),
     enabled: !!user,
     staleTime: 60_000,
@@ -112,9 +126,9 @@ export function useNotifications() {
 
   useEffect(() => {
     if (query.data) {
-      setNotifications(notifications);
+      setNotifications(notifications, userId);
     }
-  }, [query.data, notifications, setNotifications]);
+  }, [query.data, notifications, userId, setNotifications]);
 
   return { notifications, error: query.error, isLoading: query.isLoading, hasData: query.data !== undefined };
 }
