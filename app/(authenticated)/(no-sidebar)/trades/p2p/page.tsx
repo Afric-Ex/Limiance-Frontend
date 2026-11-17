@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FilterBar } from "@/src/components/p2p/filter-bar";
 import { AdvertiserProfilePanel } from "@/src/components/p2p/advertiser-profile-panel";
 import { NonAdvertiserModal } from "@/src/components/p2p/non-advertiser-modal";
@@ -18,7 +18,8 @@ import { P2PMarketplaceSkeleton } from "@/src/components/skeletons/p2p";
 function P2PMarketplacePageInner() {
   const { adFilters } = useP2PStore();
   const [selectedAdvertiser, setSelectedAdvertiser] = useState<any | null>(null);
-  const [showNonAdvertiserModal, setShowNonAdvertiserModal] = useState(false);
+  const [nonAdvertiserMode, setNonAdvertiserMode] = useState<null | "post-ad" | "exit">(null);
+  const autoPromptedRef = useRef(false);
   const [, setRelationshipRefreshKey] = useState(0);
   const router = useRouter();
 
@@ -36,7 +37,7 @@ function P2PMarketplacePageInner() {
   };
 
   const { data: listingsData, isLoading, refetch, isRefetching } = useOrderListings(queryParams);
-  const { data: advertiserData, isLoading: isAdvertiserLoading } = useAdvertiserInfo();
+  const { data: advertiserData, isLoading: isAdvertiserLoading, error: advertiserError } = useAdvertiserInfo();
 
   const listings: P2POrderListings["data"] =
     (listingsData?.data?.data ?? []).filter(
@@ -44,10 +45,33 @@ function P2PMarketplacePageInner() {
     );
   const isAdvertiser = !!advertiserData?.data?.data?.id;
 
+  // `advertiser_info` answers 400 with `success: false` (or an empty `data.id`)
+  // for users who have no P2P advertiser account. That is expected, not an
+  // error: prompt them to apply instead.
+  const advertiserErrorBody = (advertiserError as any)?.response?.data;
+  const advertiserErrorStatus = (advertiserError as any)?.response?.status;
+  const advertiserInfoBody = advertiserData?.data as any;
+  const noAdvertiserId =
+    !advertiserInfoBody?.data?.id && !advertiserErrorBody?.data?.id;
+  const isNotAdvertiser =
+    noAdvertiserId &&
+    ((advertiserInfoBody?.success === false) ||
+      ((advertiserErrorStatus === 400 || advertiserErrorStatus === 404) &&
+        (advertiserErrorBody?.success === false ||
+          /adverti[sz]er/i.test(
+            String(advertiserErrorBody?.message ?? advertiserErrorBody?.error ?? "")
+          ))));
+
+  useEffect(() => {
+    if (autoPromptedRef.current || isAdvertiserLoading || !isNotAdvertiser) return;
+    autoPromptedRef.current = true;
+    setNonAdvertiserMode("exit");
+  }, [isAdvertiserLoading, isNotAdvertiser]);
+
   const handlePostAd = () => {
     if (isAdvertiserLoading) return; // Prevent action while loading
     if (!isAdvertiser) {
-      setShowNonAdvertiserModal(true);
+      setNonAdvertiserMode("post-ad");
     } else {
       router.push("/trades/p2p/ads/create");
     }
@@ -282,8 +306,10 @@ function P2PMarketplacePageInner() {
       />
 
       <NonAdvertiserModal
-        isOpen={showNonAdvertiserModal}
-        onClose={() => setShowNonAdvertiserModal(false)}
+        isOpen={nonAdvertiserMode !== null}
+        onClose={() => setNonAdvertiserMode(null)}
+        backLabel={nonAdvertiserMode === "exit" ? "Exit" : undefined}
+        onBack={nonAdvertiserMode === "exit" ? () => router.push("/dashboard") : undefined}
       />
     </P2PLayout>
   );
