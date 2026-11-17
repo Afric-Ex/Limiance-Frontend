@@ -16,7 +16,8 @@ import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { modals } from "@mantine/modals";
 import { errorNotification, successNotification } from "@/src/lib/notification-handler";
 import { useUserStore } from "@/src/stores/user-store";
-import { markLoginGrace } from "@/src/lib/login-grace";
+import { clearLoginGrace, markLoginGrace } from "@/src/lib/login-grace";
+import { userService } from "@/src/services/user";
 import { wsClient } from "@/src/lib/websocket-client";
 
 type OtpFormValues = {
@@ -91,6 +92,38 @@ export const useAuth = () => {
         payload?.data?.totpRequired ||
         getLoginChallengeToken(payload)
     );
+
+  /**
+   * Ask the server whether the login already produced a session (the session lives in
+   * an httpOnly cookie, so the only way to know is to use it).
+   *  - true  -> signed in
+   *  - false -> not signed in yet: another factor is genuinely needed
+   *  - null  -> could not tell (network/server error): never guess
+   * Retries a 401 once, because a fresh cookie can lose a race with the first request.
+   */
+  const hasActiveSession = async (): Promise<boolean | null> => {
+    // Keep the global 401 handler from treating this probe's answer as an expired session.
+    markLoginGrace();
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const response = await userService.getUser();
+        return Boolean(response?.data);
+      } catch (error: any) {
+        if (error?.response?.status === 401) {
+          if (attempt === 0) {
+            await new Promise((resolve) => setTimeout(resolve, 700));
+            continue;
+          }
+          clearLoginGrace();
+          return false;
+        }
+        clearLoginGrace();
+        return null;
+      }
+    }
+    clearLoginGrace();
+    return false;
+  };
 
   const getLoginSecondFactorMethod = (payload: any) => {
     if (payload?.emailOtpRequired || payload?.data?.emailOtpRequired) return "email" as const;
@@ -233,23 +266,32 @@ export const useAuth = () => {
         return;
       }
 
-      // Some deployed API versions omit requiresSecondFactor/totpRequired after
-      // accepting email OTP, but also return no access token. The email step has
-      // still advanced the server challenge, so continue with the authenticator.
+      // The reply says nothing about a next step and carries no user. Cookie-only
+      // backends answer a finished login with an empty body, so an empty reply must not
+      // be read as "authenticator needed". Ask the server instead of guessing.
       if (
         pending2FAMethod === "email" &&
         !data?.authenticated &&
         !data?.data?.user &&
         pending2FAChallengeToken
       ) {
-        setPendingLogin2FA(
-          pending2FAUserId || pending2FAChallengeToken,
-          pending2FARememberMe,
-          pending2FAChallengeToken,
-          "totp"
-        );
-        successNotification("Email code verified. Enter your authenticator code to continue.");
-        return;
+        const sessionActive = await hasActiveSession();
+        if (sessionActive === null) {
+          errorNotification("We couldn't confirm your login. Please try again.");
+          return;
+        }
+        if (sessionActive === false) {
+          // Genuinely not signed in yet: the account needs the authenticator step.
+          setPendingLogin2FA(
+            pending2FAUserId || pending2FAChallengeToken,
+            pending2FARememberMe,
+            pending2FAChallengeToken,
+            "totp"
+          );
+          successNotification("Email code verified. Enter your authenticator code to continue.");
+          return;
+        }
+        // sessionActive === true: signed in, fall through to the normal login completion.
       }
 
       await persistLoginSession(data);
