@@ -31,6 +31,7 @@ import { BuyerPendingPanel } from "@/src/components/p2p/buyer-pending-panel";
 import { BuyerPaidPanel } from "@/src/components/p2p/buyer-paid-panel";
 import { SellerPendingPanel } from "@/src/components/p2p/seller-pending-panel";
 import { SellerPaidPanel } from "@/src/components/p2p/seller-paid-panel";
+import { resolveP2PRole } from "@/src/lib/p2p-trade-parties";
 import { CancelOrderModal } from "@/src/components/p2p/cancel-order-modal";
 import { ReleaseCryptoModal } from "@/src/components/p2p/release-crypto-modal";
 import { DisputePanel } from "@/src/components/p2p/dispute-panel";
@@ -138,17 +139,13 @@ function OrderRoomPageInner() {
             (adType === "BUY" && sameId(buyerId, currentUserId))))
     );
 
-  const isBuyer = matchedAs === "BUY"
-    ? true
-    : matchedAs === "SELL"
-    ? false
-    : Boolean(
-        currentUserId &&
-          (sameId(buyerId, currentUserId) ||
-            (!buyerId && sameId(matcherId, currentUserId) && adType === "SELL") ||
-            (!buyerId && sameId(advertiserId, currentUserId) && adType === "BUY") ||
-            (!buyerId && !matcherId && !advertiserId && adType === "SELL"))
-      );
+  // `matchedAs` is the MATCHER's role, not the viewer's. Resolve the viewer's own
+  // role from who they are in the trade, so buyer and seller see their own screens.
+  const { role: myRole } = resolveP2PRole(
+    { buyerId, sellerId, advertiserId, matcherId, matchedAs, adType },
+    currentUserId
+  );
+  const isBuyer = myRole === "BUY";
   const isSeller = !isBuyer;
   // Side is always shown from the signed-in user's perspective: the buyer sees
   // BUY and the seller sees SELL, regardless of the ad's own side.
@@ -244,14 +241,15 @@ function OrderRoomPageInner() {
   const counterpartyName = (() => {
     // When the current user is selling ("matchedAs": "SELL"), the counterparty is the BUYER.
     // When the current user is buying ("matchedAs": "BUY"), the counterparty is the SELLER.
-    const counterpartySideName =
-      matchedAs === "SELL"
-        ? orderBuyerName
-        : matchedAs === "BUY"
-          ? orderSellerName
-          : isBuyer
-            ? orderSellerName
-            : orderBuyerName;
+    // The counterparty is the opposite side of the viewer's own role, and a side that
+    // belongs to the signed-in user is never shown as the counterparty.
+    const counterpartySideName = isBuyer
+      ? sameId(sellerId, currentUserId)
+        ? ""
+        : orderSellerName
+      : sameId(buyerId, currentUserId)
+        ? ""
+        : orderBuyerName;
 
     if (counterpartySideName && !isCurrentUserName(counterpartySideName)) {
       return counterpartySideName;

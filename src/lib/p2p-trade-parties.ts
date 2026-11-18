@@ -141,3 +141,62 @@ export function sameId(value1: any, value2: any): boolean {
   const id2 = extractId(value2);
   return Boolean(id1 && id2 && id1.toLowerCase() === id2.toLowerCase());
 }
+
+export interface P2PRoleInput {
+  buyerId?: string;
+  sellerId?: string;
+  advertiserId?: string;
+  matcherId?: string;
+  /** The MATCHER's own role in the trade (not the viewer's). */
+  matchedAs?: string;
+  /** The ad's side: what the advertiser is doing ("SELL" ad = advertiser sells). */
+  adType?: string;
+}
+
+export interface P2PRole {
+  role: "BUY" | "SELL";
+  isMatcher: boolean;
+  isAdvertiser: boolean;
+}
+
+const oppositeSide = (side: "BUY" | "SELL"): "BUY" | "SELL" => (side === "BUY" ? "SELL" : "BUY");
+
+/**
+ * The signed-in user's role in a P2P order, worked out from WHO THEY ARE in the trade.
+ *
+ * `matchedAs` describes the matcher only, so it must never be applied to the other
+ * party: the advertiser is always on the opposite side of the matcher. Using it
+ * directly makes both people see the same (matcher's) screen.
+ *
+ * Order of trust:
+ *  1. explicit buyer / seller ids on the order
+ *  2. matcher  -> matchedAs (or the opposite of the ad's side)
+ *  3. advertiser -> opposite of matchedAs (or the ad's own side)
+ *  4. last resort: the ad's side
+ */
+export function resolveP2PRole(input: P2PRoleInput, currentUserId: string): P2PRole {
+  const me = String(currentUserId ?? "").trim().toLowerCase();
+  const eq = (id?: string) => Boolean(me && id && String(id).trim().toLowerCase() === me);
+  const asSide = (v?: string): "BUY" | "SELL" | null => {
+    const up = String(v ?? "").toUpperCase();
+    return up === "BUY" || up === "SELL" ? up : null;
+  };
+
+  const isMatcher = eq(input.matcherId);
+  const isAdvertiser = !isMatcher && eq(input.advertiserId);
+  const matchedAs = asSide(input.matchedAs);
+  const adType = asSide(input.adType);
+
+  if (eq(input.buyerId)) return { role: "BUY", isMatcher, isAdvertiser };
+  if (eq(input.sellerId)) return { role: "SELL", isMatcher, isAdvertiser };
+
+  if (isMatcher) {
+    const role = matchedAs ?? (adType ? oppositeSide(adType) : "BUY");
+    return { role, isMatcher, isAdvertiser };
+  }
+  if (isAdvertiser) {
+    const role = matchedAs ? oppositeSide(matchedAs) : adType ?? "SELL";
+    return { role, isMatcher, isAdvertiser };
+  }
+  return { role: adType ?? "SELL", isMatcher, isAdvertiser };
+}
