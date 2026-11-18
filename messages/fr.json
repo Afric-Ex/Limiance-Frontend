@@ -545,6 +545,7 @@
     "fee": "Frais",
     "placeOrder": "Passer l’ordre",
     "orderPlaced": "Ordre passé avec succès",
+    "orderFilled": "Ordre exécuté : {side} {symbol} à {price}",
     "orderFailed": "L’ordre n’a pas pu être passé",
     "openOrders": "Ordres ouverts",
     "orderHistory": "Historique des ordres",

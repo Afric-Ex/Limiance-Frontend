@@ -102,7 +102,7 @@ function MarginTrades() {
   });
 
   const { data: openOrders } = useQuery({
-    queryKey: tradingKeys.openOrders(hideOtherPairs ? selectedPair : undefined),
+    queryKey: tradingKeys.openOrders(hideOtherPairs ? selectedPair : undefined, "margin"),
     queryFn: () => tradingService.fetchMarginOpenOrders({ pair: hideOtherPairs ? selectedPair : undefined }),
     select: (res: any) => res.data,
     retry: false,

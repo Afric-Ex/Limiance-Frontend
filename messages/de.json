@@ -545,6 +545,7 @@
     "fee": "Gebühr",
     "placeOrder": "Order platzieren",
     "orderPlaced": "Order erfolgreich platziert",
+    "orderFilled": "Order ausgeführt: {side} {symbol} zu {price}",
     "orderFailed": "Order konnte nicht platziert werden",
     "openOrders": "Offene Orders",
     "orderHistory": "Orderverlauf",

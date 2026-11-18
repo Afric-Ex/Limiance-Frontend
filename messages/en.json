@@ -545,6 +545,7 @@
     "fee": "Fee",
     "placeOrder": "Place order",
     "orderPlaced": "Order placed successfully",
+    "orderFilled": "Order filled: {side} {symbol} at {price}",
     "orderFailed": "Order could not be placed",
     "openOrders": "Open orders",
     "orderHistory": "Order history",

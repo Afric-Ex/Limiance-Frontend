@@ -87,7 +87,7 @@ function SpotTrades() {
   usePortfolioWs({});
 
   const { data: openOrders } = useQuery({
-    queryKey: tradingKeys.openOrders(selectedPair),
+    queryKey: tradingKeys.openOrders(selectedPair, "spot"),
     queryFn: () => tradingService.fetchOpenOrders({ pair: selectedPair }),
     select: (res: unknown) => readList<Record<string, any>>(res),
     retry: false,
