@@ -31,7 +31,7 @@ export const OpenTab = () => {
   const [pair, setPair] = useState("");
 
   const { data: orders, isLoading } = useQuery({
-    queryKey: tradingKeys.openOrders(),
+    queryKey: tradingKeys.openOrders(undefined, "spot"),
     queryFn: () => tradingService.fetchOpenOrders(),
     select: (res) => res?.data ?? [],
   });
@@ -40,7 +40,7 @@ export const OpenTab = () => {
     mutationFn: (orderId: string): Promise<any> => cancelSpotOrderWs(orderId),
     onSuccess: () => {
       successNotification(t("orderCancelled"));
-      queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
+      queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders(undefined, "spot") });
       queryClient.invalidateQueries({ queryKey: ["order-history"] });
     },
     onError: (e: any) => errorMessageHandler(e),

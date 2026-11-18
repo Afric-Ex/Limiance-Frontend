@@ -87,7 +87,7 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
   const balLoading = portLoading;
 
   const { data: openOrders } = useQuery({
-    queryKey: tradingKeys.openOrders(),
+    queryKey: tradingKeys.openOrders(undefined, "margin"),
     queryFn: () => tradingService.fetchMarginOpenOrders({}),
     select: (res: any) => res?.data ?? [],
     retry: false,

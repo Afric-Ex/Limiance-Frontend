@@ -84,6 +84,8 @@ const PUSH_UPDATE_TYPES = new Set([
   "order_updated",
   "order_update",
   "user_order_update",
+  "order_filled",
+  "order_partially_filled",
   "position_updated",
   "position_update",
 ]);
@@ -206,7 +208,14 @@ function sendOrderFrameOnce(
           if (!incomingRequestId && !replyMatchesMarket(frame, raw)) return;
 
           const failure = describeFailure(raw);
-          settle(() => (failure ? reject(new Error(failure)) : resolve(data ?? raw)));
+          // The backend does not echo `requestId` yet. Attaching our generated
+          // id lets callers correlate the ack with the later fill event.
+          const payload = data ?? raw;
+          const enriched =
+            payload && typeof payload === "object" && !Array.isArray(payload)
+              ? { ...payload, clientOrderId: requestId }
+              : { data: payload, clientOrderId: requestId };
+          settle(() => (failure ? reject(new Error(failure)) : resolve(enriched)));
         });
 
         const timer = setTimeout(() => {

@@ -545,6 +545,7 @@
     "fee": "Gebyr",
     "placeOrder": "Afgiv ordre",
     "orderPlaced": "Ordren blev afgivet",
+    "orderFilled": "Ordre udført: {side} {symbol} til {price}",
     "orderFailed": "Ordren kunne ikke afgives",
     "openOrders": "Åbne ordrer",
     "orderHistory": "Ordrehistorik",

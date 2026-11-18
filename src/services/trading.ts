@@ -302,11 +302,11 @@ export const tradingService = {
     page?: number;
     limit?: number;
   }) => {
-    const response = await api.get("trading/order_history", { 
-      params: { 
+    const response = await api.get("trading/order_history", {
+      params: {
         ...params,
         market_type: "margin"
-      } 
+      }
     });
     return response.data;
   },
@@ -316,11 +316,11 @@ export const tradingService = {
   },
 
   fetchMarginOpenOrders: async (params?: { pair?: string }) => {
-    const response = await api.get("trading/orders", { 
-      params: { 
+    const response = await api.get("trading/order_history", {
+      params: {
         status: "open",
         market_type: "margin"
-      } 
+      }
     });
     if (!Array.isArray(response.data?.data)) return response.data;
     return { ...response.data, data: filterOrdersByPair(response.data.data, params?.pair) };
@@ -395,11 +395,11 @@ export const tradingService = {
   },
 
   fetchFuturesOpenOrders: async (params?: { pair?: string }) => {
-    const response = await api.get("trading/orders", { 
-      params: { 
+    const response = await api.get("trading/order_history", {
+      params: {
         status: "open",
         market_type: "futures"
-      } 
+      }
     });
     if (!Array.isArray(response.data?.data)) return response.data;
     return { ...response.data, data: filterOrdersByPair(response.data.data, params?.pair) };

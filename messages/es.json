@@ -545,6 +545,7 @@
     "fee": "Comisión",
     "placeOrder": "Colocar orden",
     "orderPlaced": "Orden colocada correctamente",
+    "orderFilled": "Orden ejecutada: {side} {symbol} a {price}",
     "orderFailed": "No se pudo colocar la orden",
     "openOrders": "Órdenes abiertas",
     "orderHistory": "Historial de órdenes",

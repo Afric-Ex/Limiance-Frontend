@@ -14,9 +14,11 @@ import { icons } from "../assets/icons";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { tradingKeys, tradingService } from "@/src/services/trading";
+import { tradingService } from "@/src/services/trading";
 import { placeSpotOrderWs, placeMarginOrderWs, placeMarginOcoOrderWs } from "@/src/lib/order-ws";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { refreshActivePortfolioTopics } from "@/src/lib/portfolio-store";
+import { applyOrderPlaced } from "@/src/lib/trades/order-event-sync";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import clsx from "clsx";
@@ -459,10 +461,10 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
   };
 
   const refreshTradingBalances = () => {
-    queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders() });
-    queryClient.invalidateQueries({ queryKey: tradingKeys.openOrders(pair) });
+    // Open orders are seeded from the placement ack and reconciled by the
+    // `order_filled` stream, so no refetch is needed here.
     queryClient.invalidateQueries({ queryKey: ["order-history"] });
-    refreshBalances();
+    refreshActivePortfolioTopics();
   };
 
   const { mutate: placeBuy, isPending: buyLoading } = useMutation({
@@ -493,6 +495,12 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         });
       }
       successNotification(t("buyOrderPlaced"));
+      applyOrderPlaced(queryClient, res, {
+        market: mode === "spot" ? "spot" : "margin",
+        pair: `${base}/${quote}`.toUpperCase(),
+        type: activeTab,
+        side: "buy",
+      });
       refreshTradingBalances();
       setBuyPrice(""); setBuyAmount(""); setBuyTp(""); setBuySl(""); setBuyPct(0);
       setBuyOcoPrice(""); setBuyOcoStop(""); setBuyOcoLimit(""); setBuyStopPrice("");
@@ -528,6 +536,12 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         });
       }
       successNotification(t("sellOrderPlaced"));
+      applyOrderPlaced(queryClient, res, {
+        market: mode === "spot" ? "spot" : "margin",
+        pair: `${base}/${quote}`.toUpperCase(),
+        type: activeTab,
+        side: "sell",
+      });
       refreshTradingBalances();
       setSellPrice(""); setSellAmount(""); setSellTp(""); setSellSl(""); setSellPct(0);
       setSellOcoPrice(""); setSellOcoStop(""); setSellOcoLimit(""); setSellStopPrice("");

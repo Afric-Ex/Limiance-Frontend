@@ -13,7 +13,10 @@ import { parseDate } from "@/src/lib/parse-date";
 import {
   cancelSpotOrderWs,
   closeFuturesPositionWs,
+  getFuturesOrderHistoryWs,
+  getMarginOrderHistoryWs,
   getMarginTradesWs,
+  getSpotOrderHistoryWs,
   getSpotTradesWs,
 } from "@/src/lib/order-ws";
 import { readList } from "@/src/lib/api-response";
@@ -50,7 +53,7 @@ import {
   type StatusFilter,
 } from "@/src/components/trades/order-history-table";
 import { useOrderHistory, ORDER_HISTORY_QUERY_KEY } from "@/src/hooks/use-order-history";
-import { useUserOrderUpdates } from "@/src/hooks/use-user-order-updates";
+import { isPendingOrderId, removeOpenOrder } from "@/src/lib/trades/order-event-sync";
 import { Loader, Checkbox, NumberInput, Popover, PopoverTarget, PopoverDropdown } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
@@ -126,21 +129,64 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   
   const queryClient = useQueryClient();
   const { refreshBalances } = usePortfolioWs({});
-  // Keep this panel's open orders / history fresh on every fill or cancellation.
-  useUserOrderUpdates();
 
   // Open Orders
-  // Fetched on mount/pair change and refreshed AFTER an order is placed or
-  // cancelled (see invalidations below). Do not poll on a timer: this panel is
-  // mounted twice (desktop + mobile), so a 5s interval turned into a constant
-  // stream of `GET trading/order_history?status=open` requests.
-  const { data: openOrders, isLoading: openOrdersLoading } = useQuery({
-    queryKey: tradingKeys.openOrders(hideOtherPairs ? selectedPair : undefined, selectedMarket),
-    queryFn: () =>
-      tradingService.fetchOpenOrders({
-        pair: hideOtherPairs ? selectedPair : undefined,
+  // WS-first (get_*_order_history?status=OPEN) because live fills are merged
+  // into this cache by order-event-sync. REST is only a connection fallback;
+  // the list is no longer refetched after every placement/fill.
+  const openOrdersPair = hideOtherPairs ? selectedPair : undefined;
+  const fetchOpenOrders = async () => {
+    const markets: TradingMarket[] =
+      selectedMarket === "all" ? ["spot", "margin", "futures"] : [selectedMarket];
+    try {
+      const lists = await Promise.all(
+        markets.map(async (m) => {
+          const tag = (rows: Record<string, any>[]) =>
+            rows.map((order) => ({
+              ...order,
+              market_type: order.market_type ?? order.marketType ?? order.market ?? m,
+            }));
+          if (m === "spot") {
+            return tag(
+              readList<Record<string, any>>(
+                await getSpotOrderHistoryWs({ status: "OPEN", limit: 100 })
+              )
+            );
+          }
+          if (m === "margin") {
+            return tag(
+              readList<Record<string, any>>(
+                await getMarginOrderHistoryWs({ status: "OPEN", limit: 100 })
+              )
+            );
+          }
+          const res = await getFuturesOrderHistoryWs({ limit: 100 });
+          return tag(
+            readList<Record<string, any>>(res).filter(
+              (order) => String(getOrderStatus(order) ?? "").toUpperCase() === "OPEN"
+            )
+          );
+        })
+      );
+      let merged = lists.flat();
+      if (openOrdersPair) {
+        const target = openOrdersPair.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+        merged = merged.filter(
+          (order) =>
+            getOrderPair(order).replace(/[^a-zA-Z0-9]/g, "").toUpperCase() === target
+        );
+      }
+      return { data: merged };
+    } catch {
+      return tradingService.fetchOpenOrders({
+        pair: openOrdersPair,
         market_type: selectedMarket,
-      }),
+      });
+    }
+  };
+  const { data: openOrders, isLoading: openOrdersLoading } = useQuery({
+    queryKey: tradingKeys.openOrders(openOrdersPair, selectedMarket),
+    queryFn: fetchOpenOrders,
     select: (res: unknown) => readList<Record<string, any>>(res),
     retry: false,
   });
@@ -232,9 +278,10 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
       if (orderMarket === "margin") return tradingService.closeMarginOrder(orderId);
       return cancelSpotOrderWs(orderId);
     },
-    onSuccess: () => {
+    onSuccess: (_res, param) => {
       successNotification(t("orderCancelled"));
-      queryClient.invalidateQueries({ queryKey: ["open-orders"] });
+      const orderId = typeof param === "string" ? param : param.id;
+      removeOpenOrder(queryClient, orderId);
       queryClient.invalidateQueries({ queryKey: [ORDER_HISTORY_QUERY_KEY] });
       refreshBalances();
     },
@@ -788,7 +835,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
                 <span className={clsx("text-xs font-bold uppercase", isBuySide(order.side) ? "text-success-5" : "text-error-1")}>{order.side}</span>
                 <span className="text-2xs text-white/40 capitalize bg-white/[0.06] px-1.5 py-0.5 rounded">{getOrderTypeLabel(order)}</span>
               </div>
-              <button onClick={() => onCancel({ id: order.id, market: getOrderMarket(order) })} disabled={cancelling} className="text-xs font-semibold text-white/40 active:text-primary transition-colors">{tp("cancel")}</button>
+              <button onClick={() => onCancel({ id: order.id, market: getOrderMarket(order) })} disabled={cancelling || isPendingOrderId(order.id)} className="text-xs font-semibold text-white/40 active:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors">{tp("cancel")}</button>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
               <MobileRow label={tp("price")} value={formatOrderNumber(getOrderPrice(order))} />
@@ -874,8 +921,8 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
               <td className="px-3 py-2.5 text-right">
                 <button
                   onClick={() => onCancel({ id: order.id, market: getOrderMarket(order) })}
-                  disabled={cancelling}
-                  className="text-xs font-semibold text-white/40 hover:text-primary transition-colors"
+                  disabled={cancelling || isPendingOrderId(order.id)}
+                  className="text-xs font-semibold text-white/40 hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   {tp("cancel")}
                 </button>
