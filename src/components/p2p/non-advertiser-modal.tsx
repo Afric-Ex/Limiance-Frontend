@@ -50,8 +50,8 @@ export const NonAdvertiserModal = ({
     >
       <div className="flex flex-col py-3 gap-5">
         <p className="text-white/70 text-xs leading-relaxed">
-          To post your own advertisements and set your own prices in the P2P marketplace, apply to become a Limiance
-          P2P Advertiser.
+          A P2P Advertiser account is required to use Limiance P2P. Apply to become a P2P Advertiser to buy, sell,
+          and post your own advertisements in the marketplace.
         </p>
 
         <div className="flex flex-col gap-3.5">

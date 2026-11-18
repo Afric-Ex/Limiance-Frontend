@@ -5,7 +5,7 @@ import { modals } from "@mantine/modals";
 import { useTranslations } from "next-intl";
 import { MdOutlineClose } from "react-icons/md";
 import { NumberInput, Popover, PopoverDropdown, PopoverTarget, TextInput } from "@mantine/core";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { asset } from "@/src/services/asset";
 import { SupportedListingsDropdown } from "../assets/supported-pairs-dropdown";
 import { SelectedCoin } from "@/src/hooks/use-deposit";
@@ -15,10 +15,12 @@ import { InlineLoading } from "../shared/inline-loading";
 import { useDisclosure } from "@mantine/hooks";
 import { IoChevronDown } from "react-icons/io5";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { refreshFinancialData } from "@/src/lib/refresh-financial-data";
 
 export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) => {
   const t = useTranslations("Transactions");
-  const { coins: portfolio, refreshBalances } = usePortfolioWs({ coins: true });
+  const queryClient = useQueryClient();
+  const { coins: portfolio } = usePortfolioWs({ coins: true });
   const [activeStep, setActiveStep] = useState<"request" | "transfer">("request");
   const [selectedCoin, setSelectedCoin] = useState<SelectedCoin>({
     name: "",
@@ -94,8 +96,9 @@ export const ExternalTransfer = ({ embedded = false }: { embedded?: boolean }) =
         releaseCode,
       }),
     onSuccess: () => {
-      // WebSocket auto-refreshes balances
-      refreshBalances();
+      // Both the sender's and recipient's balance surfaces (and history) may be
+      // mounted, so refresh every active portfolio topic, not just this one.
+      refreshFinancialData(queryClient);
       successNotification(t("transferSuccessful"));
       if (!embedded) modals.closeAll();
     },

@@ -16,6 +16,7 @@ import { SupportedListingsDropdown } from "../assets/supported-pairs-dropdown";
 import { SelectedCoin } from "@/src/hooks/use-deposit";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
+import { refreshFinancialData } from "@/src/lib/refresh-financial-data";
 
 interface ConvertAssetProps {
   defaultFromAsset?: string;
@@ -23,7 +24,7 @@ interface ConvertAssetProps {
 
 export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
   const t = useTranslations("Transactions");
-  useQueryClient();
+  const queryClient = useQueryClient();
   const [fromCoin, setFromCoin] = useState<SelectedCoin>({
     name: "",
     image: "",
@@ -44,7 +45,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
   const rateEnabled =
     !!fromCoin.symbol && !!toCoin.symbol && !!amount && +amount > 0;
 
-  const { coins: portfolio, refreshBalances } = usePortfolioWs({ coins: true });
+  const { coins: portfolio } = usePortfolioWs({ coins: true });
 
   // hydrate name + image when modal opens with a pre-set symbol
   useEffect(() => {
@@ -130,8 +131,9 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
         sourceWallet,
       }),
     onSuccess: () => {
-      // WebSocket auto-refreshes balances
-      refreshBalances();
+      // Refresh every mounted balance surface (source & destination wallets)
+      // plus the convert/transaction history lists.
+      refreshFinancialData(queryClient);
 
       modals.open({
         children: (

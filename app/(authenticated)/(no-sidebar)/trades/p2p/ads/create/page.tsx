@@ -19,7 +19,6 @@ import { IoMdInformationCircleOutline } from "react-icons/io";
 import { IoChevronBack } from "react-icons/io5";
 import { MdPersonOff } from "react-icons/md";
 import { getBanksForFiat } from "@/src/lib/banks";
-import { NonAdvertiserModal } from "@/src/components/p2p/non-advertiser-modal";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { P2PCreateAdSkeleton } from "@/src/components/skeletons/p2p";
 import clsx from "clsx";
@@ -97,14 +96,6 @@ function CreateAdPageInner() {
   // Advertiser guard
   const { data: advertiserData, isLoading: isCheckingAdvertiser } = useAdvertiserInfo();
   const isAdvertiser = !!advertiserData?.data?.data?.id;
-  const [showNonAdvertiserModal, setShowNonAdvertiserModal] = React.useState(false);
-
-  // Show modal as soon as we know the user is not an advertiser
-  React.useEffect(() => {
-    if (!isCheckingAdvertiser && !isAdvertiser) {
-      setShowNonAdvertiserModal(true);
-    }
-  }, [isCheckingAdvertiser, isAdvertiser]);
 
   const [adMode, setAdMode] = useState<"BUY" | "SELL">("SELL");
   const [selectedAsset, setSelectedAsset] = useState("USDT");
@@ -304,15 +295,6 @@ function CreateAdPageInner() {
 
   return (
     <P2PLayout>
-      {/* Advertiser guard modal */}
-      <NonAdvertiserModal
-        isOpen={showNonAdvertiserModal}
-        onClose={() => {
-          setShowNonAdvertiserModal(false);
-          router.push("/trades/p2p");
-        }}
-      />
-
       {/* Loading state while checking advertiser status */}
       {isCheckingAdvertiser ? (
         <div className="w-full max-w-3xl mx-auto py-6 flex flex-col gap-4 animate-pulse">

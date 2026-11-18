@@ -50,6 +50,43 @@ export const useAdvertiserInfo = () => {
   });
 };
 
+/**
+ * Single source of truth for "does this user have a P2P advertiser account?".
+ *
+ * `advertiser_info` answers 400/404 (or `success: false`) for users with no
+ * advertiser account — that is an expected answer, not an error, so the guards
+ * must distinguish it from a real network/server failure. A successful response
+ * that simply has no `id` is also treated as "no account".
+ */
+export const useP2PAdvertiserStatus = () => {
+  const { data, isLoading, error } = useAdvertiserInfo();
+
+  const advertiserBody = data?.data as any;
+  const errorBody = (error as any)?.response?.data;
+  const errorStatus = (error as any)?.response?.status;
+
+  // The advertiser record is nested one level deeper than the API envelope.
+  const advertiserId =
+    advertiserBody?.data?.id ?? advertiserBody?.id ?? errorBody?.data?.id;
+  const isAdvertiser = !!advertiserId;
+
+  const explicitNotAdvertiser =
+    advertiserBody?.success === false ||
+    ((errorStatus === 400 || errorStatus === 404) &&
+      (errorBody?.success === false ||
+        /adverti[sz]er/i.test(
+          String(errorBody?.message ?? errorBody?.error ?? "")
+        )));
+
+  // A successful (non-error) response without an id also means no account.
+  const resolvedWithoutAccount = !error && !isAdvertiser;
+
+  const isNotAdvertiser =
+    !isLoading && !isAdvertiser && (explicitNotAdvertiser || resolvedWithoutAccount);
+
+  return { isLoading, isAdvertiser, isNotAdvertiser };
+};
+
 export const useBecomeAdvertiser = () => {
   const queryClient = useQueryClient();
   return useMutation({
