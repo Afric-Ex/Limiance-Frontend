@@ -14,6 +14,7 @@ import { SpotTradePageSkeleton } from "@/src/components/skeletons/trades";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
 import { readList } from "@/src/lib/api-response";
 import { getLatestTradePrice } from "@/src/lib/recent-trades";
+import { mergeLiveOpenOrders } from "@/src/lib/trades/order-event-sync";
 import {
   Tabs,
   TabsList,
@@ -89,7 +90,11 @@ function SpotTrades() {
   const { data: openOrders } = useQuery({
     queryKey: tradingKeys.openOrders(selectedPair, "spot"),
     queryFn: () => tradingService.fetchOpenOrders({ pair: selectedPair }),
-    select: (res: unknown) => readList<Record<string, any>>(res),
+    select: (res: unknown) =>
+      mergeLiveOpenOrders(readList<Record<string, any>>(res), {
+        pair: selectedPair,
+        market: "spot",
+      }),
     retry: false,
     throwOnError: false,
   });

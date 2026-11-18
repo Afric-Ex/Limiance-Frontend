@@ -13,6 +13,7 @@ import { TradingPanel } from '@/src/components/trades/trading-panel';
 import { usePortfolioWs } from '@/src/hooks/use-portfolio-ws';
 import { readList } from '@/src/lib/api-response';
 import { getLatestTradePrice } from '@/src/lib/recent-trades';
+import { mergeLiveOpenOrders } from '@/src/lib/trades/order-event-sync';
 import { errorMessageHandler } from '@/src/lib/error-handler';
 import { successNotification } from '@/src/lib/notification-handler';
 import { useUserStore } from '@/src/stores/user-store';
@@ -143,7 +144,11 @@ function FuturesTradesInner() {
   const { refetch: refetchOpenOrders } = useQuery({
     queryKey: ['futures-open-orders', selectedPair],
     queryFn: () => tradingService.fetchFuturesOpenOrders({ pair: selectedPair }),
-    select: (res: unknown) => readList<Record<string, any>>(res),
+    select: (res: unknown) =>
+      mergeLiveOpenOrders(readList<Record<string, any>>(res), {
+        pair: selectedPair,
+        market: "futures",
+      }),
     retry: false,
     throwOnError: false,
   });

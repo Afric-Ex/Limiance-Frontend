@@ -18,8 +18,9 @@ export const hasConditional = (order: any) =>
   Number(order?.sl_trigger_price) > 0;
 
 export const formatOrderNumber = (value: unknown) => {
+  if (value === null || value === undefined || value === "") return "-";
   const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "—";
+  return Number.isFinite(numberValue) ? numberValue.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "-";
 };
 
 export const formatOrderDate = (value: unknown) => {

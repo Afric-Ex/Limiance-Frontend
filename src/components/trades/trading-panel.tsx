@@ -53,7 +53,11 @@ import {
   type StatusFilter,
 } from "@/src/components/trades/order-history-table";
 import { useOrderHistory, ORDER_HISTORY_QUERY_KEY } from "@/src/hooks/use-order-history";
-import { isPendingOrderId, removeOpenOrder } from "@/src/lib/trades/order-event-sync";
+import {
+  isPendingOrderId,
+  mergeLiveOpenOrders,
+  removeOpenOrder,
+} from "@/src/lib/trades/order-event-sync";
 import { Loader, Checkbox, NumberInput, Popover, PopoverTarget, PopoverDropdown } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
@@ -187,7 +191,11 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
   const { data: openOrders, isLoading: openOrdersLoading } = useQuery({
     queryKey: tradingKeys.openOrders(openOrdersPair, selectedMarket),
     queryFn: fetchOpenOrders,
-    select: (res: unknown) => readList<Record<string, any>>(res),
+    select: (res: unknown) =>
+      mergeLiveOpenOrders(readList<Record<string, any>>(res), {
+        pair: openOrdersPair,
+        market: selectedMarket,
+      }),
     retry: false,
   });
 

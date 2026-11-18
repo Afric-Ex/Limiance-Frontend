@@ -500,6 +500,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         pair: `${base}/${quote}`.toUpperCase(),
         type: activeTab,
         side: "buy",
+        quantity: +buildPayload("buy").quantity,
       });
       refreshTradingBalances();
       setBuyPrice(""); setBuyAmount(""); setBuyTp(""); setBuySl(""); setBuyPct(0);
@@ -541,6 +542,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         pair: `${base}/${quote}`.toUpperCase(),
         type: activeTab,
         side: "sell",
+        quantity: +buildPayload("sell").quantity,
       });
       refreshTradingBalances();
       setSellPrice(""); setSellAmount(""); setSellTp(""); setSellSl(""); setSellPct(0);

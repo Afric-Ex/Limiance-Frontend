@@ -33,6 +33,8 @@ export interface PlacedOrderMeta {
   /** UI order type: limit / market / stop / oco. */
   type: string;
   side?: string;
+  /** Submitted quantity. The ack's quantity can echo the filled qty instead. */
+  quantity?: number | string;
 }
 
 interface PendingOrder {
@@ -44,6 +46,11 @@ interface PendingOrder {
   price: number | null;
   quantity: number | null;
   filledQuantity: number;
+  filledValue: number;
+  avgPrice: number | null;
+  lastFillPrice: number | null;
+  lastFillQty: number | null;
+  feeAmount: number;
   fee?: string;
   feeCurrency?: string;
   market: OrderEventMarket;
@@ -55,6 +62,7 @@ interface PendingOrder {
 interface BufferedFill {
   data: Record<string, any>;
   at: number;
+  terminalOnStatus: boolean;
 }
 
 const PENDING_PREFIX = "pending:";
@@ -64,6 +72,47 @@ const pendingOrders: PendingOrder[] = [];
 const bufferedFills: BufferedFill[] = [];
 /** The same WS frame reaches both the topic handler and onAnyMessage. */
 const processedFrames = new WeakSet<object>();
+
+/**
+ * Open-orders snapshots can be stale (the backend sometimes returns an OPEN
+ * row with cumExecQty/avgPrice still zero after a fill). Keep the live fill
+ * patch keyed by order id and merge it back onto every snapshot refetch.
+ */
+interface LiveOrderOverride {
+  row?: Record<string, any>;
+  removed?: boolean;
+  updatedAt: number;
+}
+
+const OVERRIDE_TTL_MS = 5 * 60_000;
+const liveOrderOverrides = new Map<string, LiveOrderOverride>();
+
+const overrideIds = (row: Record<string, any>): string[] =>
+  rowIds(row)
+    .map((id) => id.toLowerCase())
+    .filter(Boolean);
+
+function rememberLiveOrder(row: Record<string, any>, removed = false): void {
+  const now = Date.now();
+  for (const id of overrideIds(row)) {
+    liveOrderOverrides.set(id, { row: removed ? undefined : row, removed, updatedAt: now });
+  }
+}
+
+function pruneLiveOrderOverrides(): void {
+  const now = Date.now();
+  for (const [id, entry] of liveOrderOverrides) {
+    if (now - entry.updatedAt > OVERRIDE_TTL_MS) liveOrderOverrides.delete(id);
+  }
+}
+
+function overrideForRow(row: Record<string, any>): LiveOrderOverride | undefined {
+  for (const id of overrideIds(row)) {
+    const entry = liveOrderOverrides.get(id);
+    if (entry) return entry;
+  }
+  return undefined;
+}
 
 const num = (value: unknown): number | null => {
   if (value === undefined || value === null || value === "") return null;
@@ -261,25 +310,55 @@ function rowIds(row: any): string[] {
     .map((value) => String(value));
 }
 
+/** Spread helper: `undefined` fields in a rebuilt row must not blank out the
+ *  original snapshot's values (quantity, price, ids, ...). */
+const definedOnly = (obj: Record<string, any>): Record<string, any> =>
+  Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== undefined));
+
 /* ─── placement ──────────────────────────────────────────────────────────── */
 
 function buildRow(pending: PendingOrder): Record<string, any> {
+  const isPartial =
+    pending.filledQuantity > 0 &&
+    (pending.quantity === null ||
+      pending.filledQuantity < pending.quantity - pending.quantity * 1e-8);
+  const status = isPartial ? "PARTIALLY_FILLED" : "OPEN";
+
   return {
     id: pending.orderId ?? `${PENDING_PREFIX}${pending.clientOrderId}`,
     orderId: pending.orderId,
     order_id: pending.orderId,
     clientOrderId: pending.clientOrderId,
     market_type: pending.market,
+    marketType: pending.market,
     symbol: pending.pair,
     pair: pending.pair,
+    base: pending.pair.split("/")[0],
+    quote: pending.pair.split("/")[1],
     side: pending.side,
     type: pending.type,
     order_type: pending.type,
     price: pending.price ?? undefined,
     quantity: pending.quantity ?? undefined,
     filledQuantity: pending.filledQuantity,
-    status: "OPEN",
+    filledValue: pending.filledValue,
+    avgPrice: pending.avgPrice ?? undefined,
+    cumExecQty: pending.filledQuantity,
+    cumExecValue: pending.filledValue,
+    cumExecFee: pending.feeAmount > 0 ? String(pending.feeAmount) : undefined,
+    remainingQuantity:
+      pending.quantity !== null
+        ? Math.max(0, pending.quantity - pending.filledQuantity)
+        : undefined,
+    lastFillPrice: pending.lastFillPrice ?? undefined,
+    lastFillQty: pending.lastFillQty ?? undefined,
+    fillPrice: pending.lastFillPrice ?? undefined,
+    fillQty: pending.lastFillQty ?? undefined,
+    fillFee: pending.fee,
+    status,
+    orderStatus: status,
     createdAt: pending.createdAt,
+    updatedAt: new Date().toISOString(),
     fee: pending.fee,
     feeCurrency: pending.feeCurrency,
   };
@@ -307,7 +386,7 @@ function updateRow(queryClient: QueryClient, pending: PendingOrder): void {
         return existing;
       }
       replaced = true;
-      return { ...existing, ...row };
+      return { ...existing, ...definedOnly(row) };
     });
     return replaced ? next : [row, ...next];
   });
@@ -315,6 +394,88 @@ function updateRow(queryClient: QueryClient, pending: PendingOrder): void {
 
 export function isPendingOrderId(id: unknown): boolean {
   return typeof id === "string" && id.startsWith(PENDING_PREFIX);
+}
+
+export interface LiveOpenOrdersFilter {
+  pair?: string;
+  market?: OrderEventMarket | "all";
+}
+
+function pendingAllowed(pending: PendingOrder, filter: LiveOpenOrdersFilter): boolean {
+  if (filter.market && filter.market !== "all" && pending.market !== filter.market) {
+    return false;
+  }
+  if (filter.pair && normalizeOrderSymbol(filter.pair) !== pending.symbolKey) {
+    return false;
+  }
+  return true;
+}
+
+function pendingMatchesRow(pending: PendingOrder, row: Record<string, any>): boolean {
+  const rowSymbol = normalizeOrderSymbol(
+    row.pair ?? row.symbol ?? (row.base && row.quote ? `${row.base}/${row.quote}` : undefined)
+  );
+  if (rowSymbol && rowSymbol !== pending.symbolKey) return false;
+
+  const rowSide = String(row.side ?? "").toUpperCase();
+  if (rowSide && pending.side && rowSide !== pending.side) return false;
+
+  const rowPrice = num(row.price);
+  if (pending.price !== null && rowPrice !== null) {
+    const tolerance = Math.max(1e-8, Math.abs(pending.price) * 0.05);
+    if (Math.abs(pending.price - rowPrice) > tolerance) return false;
+  }
+
+  const rowQty = num(row.quantity);
+  if (pending.quantity !== null && rowQty !== null && rowQty > 0) {
+    if (Math.abs(pending.quantity - rowQty) > Math.max(1e-8, rowQty * 1e-6)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Overlay in-session fill state on an open-orders snapshot. Snapshots are the
+ * source of pre-existing orders, but they can lag a fill; the live override
+ * keeps the filled quantity, average fill, value and fee visible.
+ */
+export function mergeLiveOpenOrders(
+  rows: readonly Record<string, any>[],
+  filter: LiveOpenOrdersFilter = {}
+): Record<string, any>[] {
+  pruneLiveOrderOverrides();
+  const used = new Set<PendingOrder>();
+  const merged: Record<string, any>[] = [];
+
+  for (const row of rows) {
+    const rowIdsLower = overrideIds(row);
+    const exact = pendingOrders.find(
+      (pending) =>
+        !used.has(pending) &&
+        overrideIds(buildRow(pending)).some((id) => rowIdsLower.includes(id))
+    );
+    const pending =
+      exact ?? pendingOrders.find((p) => !used.has(p) && pendingMatchesRow(p, row));
+
+    if (pending) {
+      used.add(pending);
+      merged.push({ ...row, ...definedOnly(buildRow(pending)) });
+      continue;
+    }
+
+    const override = overrideForRow(row);
+    if (override?.removed) continue;
+    merged.push(override?.row ? { ...row, ...override.row } : row);
+  }
+
+  for (const pending of pendingOrders) {
+    if (used.has(pending) || !pendingAllowed(pending, filter)) continue;
+    merged.unshift(buildRow(pending));
+  }
+
+  return merged;
 }
 
 /** Seed an OPEN row from the `order_placed` ack (skips immediate/market orders). */
@@ -348,8 +509,15 @@ export function applyOrderPlaced(
     symbolKey: normalizeOrderSymbol(pair),
     side,
     price: num(data.price),
-    quantity: num(data.quantity ?? data.qty),
+    // The ack can echo the filled quantity (e.g. quantity === fill_qty) instead
+    // of the submitted order size, so prefer what the user actually submitted.
+    quantity: num(meta.quantity) ?? num(data.quantity ?? data.qty),
     filledQuantity: 0,
+    filledValue: 0,
+    avgPrice: null,
+    lastFillPrice: null,
+    lastFillQty: null,
+    feeAmount: 0,
     market: meta.market,
     type,
     createdAt: new Date(now).toISOString(),
@@ -362,11 +530,10 @@ export function applyOrderPlaced(
   );
   if (bufferedIndex !== -1) {
     const [fill] = bufferedFills.splice(bufferedIndex, 1);
-    if (!isTerminalStatus(String(fill.data.status ?? "").toLowerCase())) {
-      pendingOrders.push(pending);
-      insertRow(queryClient, pending);
-      consumeFill(queryClient, pending, fill.data);
-    }
+    pendingOrders.push(pending);
+    consumeFill(queryClient, pending, fill.data, {
+      terminalOnStatus: fill.terminalOnStatus,
+    });
     return;
   }
 
@@ -422,62 +589,193 @@ function findPendingFill(fill: Record<string, any>): PendingOrder | undefined {
   );
 }
 
+interface ConsumeFillOptions {
+  /** `order_filled` is a per-execution frame; only status updates can close an order. */
+  terminalOnStatus: boolean;
+}
+
 function consumeFill(
   queryClient: QueryClient,
   pending: PendingOrder,
-  fill: Record<string, any>
-): { fullyFilled: boolean } {
-  const fillQty =
-    num(fill.fill_qty ?? fill.fillQty ?? fill.filledQuantity ?? fill.cumExecQty) ?? 0;
+  fill: Record<string, any>,
+  options: ConsumeFillOptions
+): { terminal: boolean } {
   const status = String(fill.status ?? fill.state ?? "").toLowerCase();
+  const fillId = str(fill.order_id ?? fill.orderId ?? fill.id);
+  if (fillId && !pending.orderId) pending.orderId = fillId;
+
+  const fillQty = num(fill.fill_qty ?? fill.fillQty ?? fill.filledQuantity);
+  const cumulativeQty = num(fill.cumExecQty);
+  const fillPrice = num(
+    fill.fill_price ?? fill.fillPrice ?? fill.avgPrice ?? fill.executionPrice ?? fill.price
+  );
+  const cumulativeValue = num(fill.cumExecValue);
+  const feeValue = num(fill.fee ?? fill.fillFee);
+  const cumulativeFee = num(fill.cumExecFee);
+
+  const previousQty = pending.filledQuantity;
+  let deltaQty = 0;
+  if (cumulativeQty !== null) {
+    pending.filledQuantity = Math.max(previousQty, cumulativeQty);
+    deltaQty = Math.max(0, pending.filledQuantity - previousQty);
+  } else if (fillQty !== null) {
+    pending.filledQuantity = previousQty + fillQty;
+    deltaQty = fillQty;
+  }
+
+  if (cumulativeValue !== null) {
+    pending.filledValue = Math.max(pending.filledValue, cumulativeValue);
+  } else if (deltaQty > 0 && fillPrice !== null) {
+    pending.filledValue += deltaQty * fillPrice;
+  }
+  if (fillPrice !== null) pending.lastFillPrice = fillPrice;
+  if (deltaQty > 0) pending.lastFillQty = deltaQty;
+
+  if (pending.filledQuantity > 0 && pending.filledValue > 0) {
+    pending.avgPrice = pending.filledValue / pending.filledQuantity;
+  } else if (fillPrice !== null) {
+    pending.avgPrice = fillPrice;
+  }
+
+  if (cumulativeFee !== null) {
+    pending.feeAmount = Math.max(pending.feeAmount, cumulativeFee);
+  } else if (feeValue !== null) {
+    pending.feeAmount += feeValue;
+  }
+  if (pending.feeAmount > 0) pending.fee = String(pending.feeAmount);
+  pending.feeCurrency =
+    str(fill.fee_currency ?? fill.feeCurrency ?? fill.feeAsset) ?? pending.feeCurrency;
+
   // `user_order_update` carries the order quantity as "0.00000000"; treating
   // that as a real order size would mark an untouched order as fully filled.
   const reportedOrderQty = num(fill.quantity ?? fill.origQty);
   const orderQty =
-    reportedOrderQty !== null && reportedOrderQty > 0
-      ? reportedOrderQty
-      : pending.quantity;
-  const fillId = str(fill.order_id ?? fill.orderId ?? fill.id);
-
-  if (fillId && !pending.orderId) pending.orderId = fillId;
-  const perFillQuantity =
-    fill.fill_qty !== undefined ||
-    fill.fillQty !== undefined ||
-    fill.cumExecQty !== undefined;
-  pending.filledQuantity = perFillQuantity
-    ? pending.filledQuantity + fillQty
-    : Math.max(pending.filledQuantity, fillQty);
-  pending.fee = str(fill.fee) ?? pending.fee;
-  pending.feeCurrency =
-    str(fill.fee_currency ?? fill.feeCurrency ?? fill.feeAsset) ?? pending.feeCurrency;
-
+    pending.quantity ??
+    (reportedOrderQty !== null && reportedOrderQty > 0 ? reportedOrderQty : null);
   const fullyFilled =
-    isTerminalStatus(status) ||
-    (orderQty !== null &&
-      orderQty > 0 &&
-      fillQty >= orderQty - orderQty * 1e-8) ||
-    (pending.quantity !== null &&
-      pending.quantity > 0 &&
-      pending.filledQuantity >= pending.quantity - pending.quantity * 1e-8);
+    orderQty !== null &&
+    orderQty > 0 &&
+    pending.filledQuantity >= orderQty - orderQty * 1e-8;
+  const terminal = fullyFilled || (options.terminalOnStatus && isTerminalStatus(status));
 
-  if (fullyFilled) {
+  if (terminal) {
+    rememberLiveOrder(buildRow(pending), true);
+    rememberLiveOrder(
+      { id: `${PENDING_PREFIX}${pending.clientOrderId}`, clientOrderId: pending.clientOrderId },
+      true
+    );
     removeOpenOrdersById(queryClient, `${PENDING_PREFIX}${pending.clientOrderId}`);
     if (pending.orderId) removeOpenOrdersById(queryClient, pending.orderId);
     const index = pendingOrders.indexOf(pending);
     if (index !== -1) pendingOrders.splice(index, 1);
-    return { fullyFilled: true };
+    return { terminal: true };
   }
 
+  // Two rows can describe one order: the synthetic `pending:` row and the
+  // snapshot row carrying the server id. Drop the synthetic one and patch the
+  // snapshot row in place (it also carries TP/SL and other REST-only fields).
+  if (pending.orderId) {
+    removeOpenOrdersById(queryClient, `${PENDING_PREFIX}${pending.clientOrderId}`);
+  }
   updateRow(queryClient, pending);
-  return { fullyFilled: false };
+  rememberLiveOrder(buildRow(pending));
+  return { terminal: false };
 }
 
 interface FillApplyOutcome {
   fill: Record<string, any>;
   pending?: PendingOrder;
-  fullyFilled: boolean;
+  terminal: boolean;
   statusTerminal: boolean;
   market?: OrderEventMarket;
+}
+
+const isPerFillTopic = (type: string): boolean => /filled|executed|partial/i.test(type);
+
+/**
+ * An order can be filled by a resting order that is only present in the
+ * snapshot (placed before this session). Patch that row with the execution
+ * instead of dropping it, so partial fills keep their qty/avg/value/fee.
+ */
+function applyFillToSnapshot(
+  queryClient: QueryClient,
+  fill: Record<string, any>,
+  options: ConsumeFillOptions
+): { found: boolean; terminal: boolean } {
+  const orderId = str(fill.order_id ?? fill.orderId ?? fill.id);
+  if (!orderId) return { found: false, terminal: false };
+
+  const status = String(fill.status ?? fill.state ?? "").toLowerCase();
+  const fillQty = num(fill.fill_qty ?? fill.fillQty ?? fill.filledQuantity);
+  const cumulativeQty = num(fill.cumExecQty);
+  const fillPrice = num(
+    fill.fill_price ?? fill.fillPrice ?? fill.avgPrice ?? fill.executionPrice ?? fill.price
+  );
+  const cumulativeValue = num(fill.cumExecValue);
+  const feeValue = num(fill.fee ?? fill.fillFee) ?? 0;
+  const cumulativeFee = num(fill.cumExecFee);
+
+  let found = false;
+  let terminal = false;
+
+  updateOpenOrderCaches(queryClient, (list) =>
+    list.flatMap((row) => {
+      if (!rowMatchesId(row, orderId)) return [row];
+      found = true;
+
+      const currentQty = num(row.cumExecQty ?? row.filledQuantity) ?? 0;
+      const currentValue = num(row.cumExecValue ?? row.filledValue) ?? 0;
+      const currentFee = num(row.cumExecFee ?? row.fee) ?? 0;
+
+      const nextQty =
+        cumulativeQty !== null
+          ? Math.max(currentQty, cumulativeQty)
+          : currentQty + (fillQty ?? 0);
+      const nextValue =
+        cumulativeValue !== null
+          ? Math.max(currentValue, cumulativeValue)
+          : currentValue + (fillQty ?? 0) * (fillPrice ?? 0);
+      const nextFee =
+        cumulativeFee !== null ? Math.max(currentFee, cumulativeFee) : currentFee + feeValue;
+      const avgPrice =
+        nextQty > 0 && nextValue > 0 ? nextValue / nextQty : fillPrice ?? num(row.avgPrice);
+
+      const orderQty = num(row.quantity);
+      terminal =
+        (orderQty !== null &&
+          orderQty > 0 &&
+          nextQty >= orderQty - orderQty * 1e-8) ||
+        (options.terminalOnStatus && isTerminalStatus(status));
+      if (terminal) return [];
+
+      const patched = {
+        ...row,
+        filledQuantity: nextQty,
+        cumExecQty: nextQty,
+        filledValue: nextValue,
+        cumExecValue: nextValue,
+        avgPrice: avgPrice ?? undefined,
+        cumExecFee: nextFee > 0 ? String(nextFee) : row.cumExecFee,
+        fee: nextFee > 0 ? String(nextFee) : row.fee,
+        fillPrice: fillPrice ?? row.fillPrice,
+        fillQty: fillQty ?? row.fillQty,
+        fillFee: feeValue > 0 ? String(feeValue) : row.fillFee,
+        remainingQuantity:
+          orderQty !== null ? Math.max(0, orderQty - nextQty) : row.remainingQuantity,
+        status: nextQty > 0 ? "PARTIALLY_FILLED" : row.status,
+        orderStatus: nextQty > 0 ? "PARTIALLY_FILLED" : row.orderStatus,
+        updatedAt: new Date().toISOString(),
+      };
+      rememberLiveOrder(patched);
+      return [patched];
+    })
+  );
+
+  if (found && terminal) {
+    rememberLiveOrder({ id: orderId, orderId }, true);
+  }
+
+  return { found, terminal };
 }
 
 export function applyOrderFilled(
@@ -487,16 +785,28 @@ export function applyOrderFilled(
   const fill = extractFillData(frame);
   if (!fill || Object.keys(fill).length === 0) return null;
 
+  const type = String(frame?.type ?? "");
+  const terminalOnStatus = !isPerFillTopic(type);
   const status = String(fill.status ?? fill.state ?? "").toLowerCase();
   const pending = findPendingFill(fill);
   if (pending) {
-    const { fullyFilled } = consumeFill(queryClient, pending, fill);
+    const { terminal } = consumeFill(queryClient, pending, fill, { terminalOnStatus });
     return {
       fill,
       pending,
-      fullyFilled,
+      terminal,
       statusTerminal: isTerminalStatus(status),
       market: pending.market,
+    };
+  }
+
+  const snapshot = applyFillToSnapshot(queryClient, fill, { terminalOnStatus });
+  if (snapshot.found) {
+    return {
+      fill,
+      terminal: snapshot.terminal,
+      statusTerminal: isTerminalStatus(status),
+      market: extractMarket(frame),
     };
   }
 
@@ -513,7 +823,7 @@ export function applyOrderFilled(
     rawTime === null ? null : rawTime < 1e12 ? rawTime * 1000 : rawTime;
   const isRecent = fillTimeMs === null || now - fillTimeMs <= FILL_BUFFER_MS;
   if (isRecent && bufferedFills.length < 50) {
-    bufferedFills.push({ data: fill, at: now });
+    bufferedFills.push({ data: fill, at: now, terminalOnStatus });
   }
 
   // Unknown order that was not seeded this session: if it filled, it simply is
@@ -523,7 +833,7 @@ export function applyOrderFilled(
 
   return {
     fill,
-    fullyFilled: false,
+    terminal: isTerminalStatus(status),
     statusTerminal: isTerminalStatus(status),
     market: extractMarket(frame),
   };
@@ -534,6 +844,16 @@ export function applyOrderCancelled(queryClient: QueryClient, frame: any): void 
   const orderId = str(data.order_id ?? data.orderId ?? data.id);
   const clientOrderId = str(data.clientOrderId);
   let matchedPending = false;
+
+  // Remember the removal so a stale REST snapshot refetch cannot resurrect the
+  // cancelled order for the override TTL.
+  if (orderId) rememberLiveOrder({ id: orderId, orderId, order_id: orderId }, true);
+  if (clientOrderId) {
+    rememberLiveOrder(
+      { id: `${PENDING_PREFIX}${clientOrderId}`, clientOrderId },
+      true
+    );
+  }
 
   if (clientOrderId) {
     removeOpenOrdersById(queryClient, `${PENDING_PREFIX}${clientOrderId}`);
@@ -555,6 +875,17 @@ export function applyOrderCancelled(queryClient: QueryClient, frame: any): void 
 
 /** Remove a cancelled order locally instead of refetching the whole list. */
 export function removeOpenOrder(queryClient: QueryClient, orderId: string): void {
+  // Keys both the server id and the synthetic/client id so a stale snapshot
+  // refetch stays hidden for the override TTL.
+  rememberLiveOrder(
+    {
+      id: `${PENDING_PREFIX}${orderId}`,
+      orderId,
+      order_id: orderId,
+      clientOrderId: orderId,
+    },
+    true
+  );
   removeOpenOrdersById(queryClient, orderId);
   const index = pendingOrders.findIndex(
     (pending) => pending.orderId === orderId || pending.clientOrderId === orderId
@@ -593,13 +924,9 @@ export function applyOrderFrame(
   const outcome = applyOrderFilled(queryClient, raw);
   if (!outcome) return null;
 
-  const { fill, pending } = outcome;
+  const { fill } = outcome;
   const status = str(fill.status ?? fill.state)?.toLowerCase();
-  const terminalTopic =
-    /filled|executed|closed/i.test(type) && !/partial/i.test(type);
-  const terminal = pending
-    ? outcome.fullyFilled
-    : outcome.statusTerminal || (terminalTopic && !status);
+  const terminal = outcome.terminal;
   const cancelledStatus =
     status !== undefined &&
     ["cancelled", "canceled", "rejected", "expired"].includes(status);

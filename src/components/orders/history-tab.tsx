@@ -9,6 +9,7 @@ import { tradingKeys, tradingService } from "@/src/services/trading";
 import { cancelSpotOrderWs } from "@/src/lib/order-ws";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
+import { mergeLiveOpenOrders } from "@/src/lib/trades/order-event-sync";
 import clsx from "clsx";
 import {
   fmtDate,
@@ -33,7 +34,7 @@ export const OpenTab = () => {
   const { data: orders, isLoading } = useQuery({
     queryKey: tradingKeys.openOrders(undefined, "spot"),
     queryFn: () => tradingService.fetchOpenOrders(),
-    select: (res) => res?.data ?? [],
+    select: (res) => mergeLiveOpenOrders(res?.data ?? [], { market: "spot" }),
   });
 
   const { mutate: cancelOrder } = useMutation({
