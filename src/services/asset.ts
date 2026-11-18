@@ -8,6 +8,11 @@ import {
   SupportedTokens,
 } from "../types/asset";
 
+/** Prefix shared by both transaction-history caches above/below. */
+export const TRANSACTION_HISTORY_QUERY_KEY = ["transaction-history"] as const;
+/** Prefix shared by every `assetKeys.allWallets(...)` variant. */
+export const ALL_WALLETS_QUERY_KEY = ["all-wallets"] as const;
+
 export const assetKeys = {
   supportedChainsKey: (q: string) => ["assets", "supported-chains", q],
   supportedTokensKey: (q: string) => ["assets", "supported-tokens", q],

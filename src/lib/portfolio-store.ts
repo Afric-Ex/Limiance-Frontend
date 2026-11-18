@@ -791,6 +791,18 @@ class PortfolioStore {
 export const portfolioStore = new PortfolioStore();
 
 /**
+ * Re-request every portfolio topic that currently has a mounted consumer.
+ *
+ * Balance-changing operations must not be scoped to the component that fired
+ * them: the store is shared, so a conversion opened from the dashboard also
+ * needs to refresh the spot/funding cards, and vice versa. Topics nobody is
+ * watching are skipped — they fetch fresh data when next acquired.
+ */
+export const refreshActivePortfolioTopics = (): void => {
+  portfolioStore.refresh(ALL_PORTFOLIO_TOPICS);
+};
+
+/**
  * Map a caller's declared needs onto the topic list the store ref-counts.
  *
  * Only topics the caller explicitly declares are subscribed. In particular the

@@ -15,7 +15,7 @@ import { SuccessModal } from "../login/verify-email-success";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { SupportedListingsDropdown } from "../assets/supported-pairs-dropdown";
 import { asset } from "@/src/services/asset";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { SelectedCoin } from "@/src/hooks/use-deposit";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
@@ -25,10 +25,12 @@ import { errorNotification } from "@/src/lib/notification-handler";
 import { IoChevronDown } from "react-icons/io5";
 import { useUserStore } from "@/src/stores/user-store";
 import { usePortfolioWs } from "@/src/hooks/use-portfolio-ws";
+import { refreshFinancialData } from "@/src/lib/refresh-financial-data";
 
 
 export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }: { defaultFrom?: string, defaultTo?: string }) => {
   const t = useTranslations("Transactions");
+  const queryClient = useQueryClient();
   const [selectedCoin, setSelectedCoin] = useState<SelectedCoin>({
     name: "",
     image: "",
@@ -47,7 +49,7 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
   const user = useUserStore((state) => state.user);
 
   // Use WebSocket for real-time portfolio balances (REST endpoint unreliable)
-  const { coins: portfolio, refreshBalances } = usePortfolioWs({ coins: true });
+  const { coins: portfolio } = usePortfolioWs({ coins: true });
 
   const walletBalanceKey = form.values.sourceWallet === "spot" ? "spotBalance" : form.values.sourceWallet === "futures" ? "futuresBalance" : form.values.sourceWallet === "margin" ? "marginBalance" : "fundingBalance";
   const coinEntry = portfolio?.find((p: any) => p.symbol === selectedCoin.symbol || p.symbol?.toLowerCase() === selectedCoin.symbol?.toLowerCase());
@@ -66,8 +68,9 @@ export const InternalTransfer = ({ defaultFrom = "spot", defaultTo = "funding" }
         totpCode,
       }),
     onSuccess: () => {
-      // Refresh wallet balances over WebSocket
-      refreshBalances();
+      // Refresh every mounted balance surface plus history lists — the source
+      // and destination wallets can be displayed on other pages/cards.
+      refreshFinancialData(queryClient);
       modals.open({
         children: (
           <SuccessModal

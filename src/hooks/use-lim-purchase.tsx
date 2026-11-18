@@ -3,8 +3,9 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePortfolioWs } from "./use-portfolio-ws";
-import { tradingService, tradingKeys } from "@/src/services/trading";
-import { asset, assetKeys } from "@/src/services/asset";
+import { tradingService } from "@/src/services/trading";
+import { asset } from "@/src/services/asset";
+import { refreshFinancialData } from "@/src/lib/refresh-financial-data";
 import {
   ConversionQuote,
   LIM_SYMBOL,
@@ -195,12 +196,9 @@ export function useLimPurchase() {
         message: normalized.message,
       });
       setStep("result");
-      // Source balances always change; history refresh keeps every surface
-      // (wallet, convert history, recent activity) consistent after settlement.
-      refreshBalances();
-      void queryClient.invalidateQueries({ queryKey: tradingKeys.convertHistory });
-      void queryClient.invalidateQueries({ queryKey: assetKeys.transactionHistoryList() });
-      queryClient.invalidateQueries({ queryKey: assetKeys.allWallets() });
+      // Source balances always change; refresh every mounted balance surface
+      // plus the convert/transaction history lists after settlement.
+      refreshFinancialData(queryClient);
     },
     onError: (error: any) => {
       if (error?.response) {
@@ -223,8 +221,7 @@ export function useLimPurchase() {
             : "We couldn't reach the server to confirm this purchase.",
       });
       setStep("result");
-      refreshBalances();
-      void queryClient.invalidateQueries({ queryKey: tradingKeys.convertHistory });
+      refreshFinancialData(queryClient);
     },
   });
 
