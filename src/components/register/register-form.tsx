@@ -14,6 +14,7 @@ import { useAuth } from "@/src/hooks/queries/use-auth";
 import { useAuthStore } from "@/src/stores/auth-store";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useTranslations } from "next-intl";
+import { PasswordChecklist } from "@/src/components/password/password-checklist";
 
 const inputStyles = {
   input:
@@ -89,6 +90,10 @@ export const RegisterForm = () => {
               label={t("password")}
               placeholder={t("passwordPlaceholder")}
               {...form.getInputProps("password")}
+            />
+            <PasswordChecklist
+              password={form.values.password}
+              className="flex flex-col gap-2 -mt-3"
             />
             <PasswordInput
               classNames={inputStyles}

@@ -2,6 +2,7 @@ import { api } from "../lib/axios";
 import { normalizeUser } from "../lib/normalize-user";
 import { normalizeKycStatus } from "../lib/normalize-kyc-status";
 import { wsClient } from "../lib/websocket-client";
+import { resolveBackendTimezone } from "../lib/timezones";
 import { ApiResponse } from "../types/api";
 import { UserSettings } from "../types/user";
 
@@ -15,6 +16,14 @@ export const userKeys = {
   twoFASetup: ["2fa-setup"] as const,
   loginLogs: (params?: any) => ["login-logs", params],
 } as const;
+
+// Every settings PATCH sends the full document, so the timezone must already be
+// one of the identifiers accepted by the backend. Resolve it here so no caller
+// has to remember to normalise it.
+const withValidTimezone = async (data: Record<string, any>) => ({
+  ...data,
+  timezone: await resolveBackendTimezone(data?.timezone),
+});
 
 export const userService = {
   getUser: async (): Promise<ApiResponse<any>> => {
@@ -159,11 +168,11 @@ export const userService = {
     return response.data;
   },
   saveSettings: async (data: Record<string, any>): Promise<ApiResponse<any>> => {
-    const response = await api.patch("users/app_settings", data);
+    const response = await api.patch("users/app_settings", await withValidTimezone(data));
     return response.data;
   },
   updateSettings: async (data: Record<string, any>): Promise<ApiResponse<any>> => {
-    const response = await api.patch("users/app_settings", data);
+    const response = await api.patch("users/app_settings", await withValidTimezone(data));
     return response.data;
   },
 

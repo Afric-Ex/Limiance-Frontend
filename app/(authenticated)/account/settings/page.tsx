@@ -3,7 +3,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { userKeys, userService } from "@/src/services/user";
 import { buildSettingsPayload } from "@/src/lib/user-settings";
-import { api } from "@/src/lib/axios";
+import { fetchBackendTimezones } from "@/src/lib/timezones";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Loader } from "@mantine/core";
@@ -105,10 +105,7 @@ function SettingsPageInner() {
   // Load timezones
   const { data: timezones, isLoading: tzsLoading, isError: tzsError } = useQuery({
     queryKey: ["timezones"],
-    queryFn: async () => {
-      const res = await api.get("/timezones");
-      return res.data?.data ?? res.data ?? [];
-    },
+    queryFn: () => fetchBackendTimezones(),
   });
 
   // Local form state
@@ -138,19 +135,22 @@ function SettingsPageInner() {
   const normalizeTimezone = useCallback(
     (value?: string | null): string => {
       const raw = (value ?? "").trim();
-      if (!raw) return "UTC";
-      const match = (timezones ?? []).find((tz: any) => {
-        if (typeof tz === "string") return tz === raw;
-        return (
-          tzValue(tz) === raw ||
-          tz.locatonName === raw ||
-          tz.locationName === raw ||
-          tz.name === raw ||
-          tz.code === raw
-        );
-      });
+      const match = raw
+        ? (timezones ?? []).find((tz: any) => {
+            if (typeof tz === "string") return tz === raw;
+            return (
+              tzValue(tz) === raw ||
+              tz.locatonName === raw ||
+              tz.locationName === raw ||
+              tz.name === raw ||
+              tz.code === raw
+            );
+          })
+        : undefined;
       if (match) return tzValue(match);
-      return raw.includes("/") ? raw : "UTC";
+      if (raw.includes("/")) return raw;
+      const first = (timezones ?? [])[0];
+      return first ? tzValue(first) : "UTC";
     },
     [timezones, tzValue]
   );

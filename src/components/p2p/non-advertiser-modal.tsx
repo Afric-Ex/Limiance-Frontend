@@ -8,10 +8,28 @@ import { MdSecurity, MdSpeed, MdSupportAgent } from "react-icons/md";
 interface NonAdvertiserModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Label for the secondary button. Defaults to "Back to Market". */
+  backLabel?: string;
+  /** Override what the secondary button does. Defaults to returning to the marketplace. */
+  onBack?: () => void;
 }
 
-export const NonAdvertiserModal = ({ isOpen, onClose }: NonAdvertiserModalProps) => {
+export const NonAdvertiserModal = ({
+  isOpen,
+  onClose,
+  backLabel = "Back to Market",
+  onBack,
+}: NonAdvertiserModalProps) => {
   const router = useRouter();
+
+  const handleBack = () => {
+    onClose();
+    if (onBack) {
+      onBack();
+      return;
+    }
+    router.push("/trades/p2p");
+  };
 
   return (
     <Modal
@@ -76,9 +94,9 @@ export const NonAdvertiserModal = ({ isOpen, onClose }: NonAdvertiserModalProps)
           <Button
             variant="subtle"
             className="flex-1 !bg-white/[0.06] hover:!bg-white/[0.1] !border !border-white/[0.08] !text-white !h-10 !rounded-lg !text-xs !font-semibold"
-            onClick={() => router.push("/trades/p2p")}
+            onClick={handleBack}
           >
-            Back to Market
+            {backLabel}
           </Button>
           <Button
             className="flex-[1.5] !bg-primary hover:!bg-primary/90 !text-white !h-10 !rounded-lg !text-xs !font-semibold"

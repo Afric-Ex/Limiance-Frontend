@@ -11,7 +11,11 @@ import { errorMessageHandler } from "@/src/lib/error-handler";
 import { Authenticator } from "@/src/components/icons/authenticator";
 import { OtpInput } from "@/src/components/settings/otp-input";
 import { MdSmartphone, MdDesktopMac, MdTablet, MdMailOutline, MdRefresh } from "react-icons/md";
-import { BiCheck } from "react-icons/bi";
+import {
+  PasswordChecklist,
+  getPasswordCriteria,
+  getPasswordStrength,
+} from "@/src/components/password/password-checklist";
 import { CopyButton } from "@/src/components/shared/copy-button";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { AccountSecuritySkeleton } from "@/src/components/skeletons/account";
@@ -333,25 +337,9 @@ function SecurityPageInner() {
   const [confirmPw, setConfirmPw] = useState("");
   const [pwError, setPwError] = useState("");
 
-  const passwordCriteria = useMemo(() => {
-    return {
-      length: newPw.length >= 8,
-      upper: /[A-Z]/.test(newPw),
-      lower: /[a-z]/.test(newPw),
-      number: /[0-9]/.test(newPw),
-      special: /[^A-Za-z0-9]/.test(newPw),
-    };
-  }, [newPw]);
+  const passwordCriteria = useMemo(() => getPasswordCriteria(newPw), [newPw]);
 
-  const strength = Object.values(passwordCriteria).filter(Boolean).length;
-  const strengthLabels = [
-    t("passwordWeak"),
-    t("passwordWeak"),
-    t("passwordFair"),
-    t("passwordStrong"),
-    t("passwordVeryStrong"),
-  ];
-  const strengthColors = ["bg-error-1", "bg-error-1", "bg-yellow-500", "bg-success-6", "bg-success-6"];
+  const strength = getPasswordStrength(passwordCriteria);
 
   const { mutate: changePassword, isPending: changePwLoading } = useMutation({
     mutationFn: () => userService.changePassword({ currentPassword: currentPw, newPassword: newPw, confirmPassword: confirmPw }),
@@ -608,25 +596,10 @@ function SecurityPageInner() {
           />
           
           {/* Password Strength Indicator */}
-          {newPw && (
-            <div className="flex flex-col gap-2 -mt-2 mb-2">
-              <div className="flex gap-1 h-1.5">
-                {[1, 2, 3, 4].map((level) => (
-                  <div key={level} className={`flex-1 rounded-full transition-colors ${strength >= level ? strengthColors[Math.max(0, strength - 1)] : "bg-gray-7"}`} />
-                ))}
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className={strengthColors[Math.max(0, strength - 1)]?.replace("bg-", "text-")}>{strength > 0 ? strengthLabels[strength - 1] : ""}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.length ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> {t("passwordChars")}</div>
-                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.upper ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> {t("passwordUppercase")}</div>
-                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.lower ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> {t("passwordLowercase")}</div>
-                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.number ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> {t("passwordNumber")}</div>
-                <div className={`flex items-center gap-1.5 text-xs ${passwordCriteria.special ? "text-success-6" : "text-white/40"}`}><BiCheck size={16} /> {t("passwordSpecial")}</div>
-              </div>
-            </div>
-          )}
+          <PasswordChecklist
+            password={newPw}
+            className="flex flex-col gap-2 -mt-2 mb-2"
+          />
 
           <TextInput
             label={t("confirmNewPassword")}

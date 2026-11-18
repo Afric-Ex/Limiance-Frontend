@@ -80,7 +80,7 @@ function extractMarketItems(raw: unknown, depth = 0): any[] {
   if (typeof raw !== "object") return [];
   const record = raw as Record<string, unknown>;
   const direct =
-    record.markets ?? record.tickers ?? record.ticker ?? record.market ?? record.futures;
+    record.markets ?? record.tickers ?? record.ticker ?? record.market ?? record.futures ?? record.Data;
   if (Array.isArray(direct)) return direct;
   const data = record.data;
   if (Array.isArray(data)) return data;
@@ -136,37 +136,61 @@ export const useMarketFeed = (
   // which can hammer the endpoint and hit a backend account-status check failure.
   const lastFallbackAt = useRef<number>(0);
 
-  const fetchHttpFallback = useCallback(async () => {
-    const now = Date.now();
-    if (now - lastFallbackAt.current < 30_000) return; // throttle: max once per 30s
-    // Don't hit REST while the socket is healthy and already pushing this pair —
-    // that just burns a request for data we are about to receive anyway.
-    if (wsClient.getIsConnected()) return;
-    lastFallbackAt.current = now;
+  const fetchHttpFallback = useCallback(
+    async (options?: { force?: boolean; statsOnly?: boolean }) => {
+      const force = options?.force === true;
+      const statsOnly = options?.statsOnly === true;
+      const now = Date.now();
+      if (!force && now - lastFallbackAt.current < 30_000) return; // throttle: max once per 30s
+      // Don't hit REST while the socket is healthy and already pushing this pair —
+      // that just burns a request for data we are about to receive anyway. A forced
+      // call (the 24h stats seed) is an explicit exception.
+      if (!force && wsClient.getIsConnected()) return;
+      lastFallbackAt.current = now;
 
-    try {
-      const res = await api.get("trading/24_hours_movers", { params: { limit: 100 } });
-      const items: any[] = Array.isArray(res.data?.data) ? res.data.data : [];
-      const match = findMarket(items, pair);
+      try {
+        const res = await api.get("trading/24_hours_movers", { params: { limit: 100 } });
+        const items: any[] = extractMarketItems(res.data);
+        const match = findMarket(items, pair);
 
-      setData((prev) => ({
-        ...prev,
-        price: match ? parseFloat(match.last_price ?? match.lastPrice ?? match.price ?? "0") : prev.price,
-        change24h: match ? parseFloat(match.price_change ?? match.priceChange ?? match.change24h ?? "0") : prev.change24h,
-        changePercent24h: match ? parseFloat(match.percent_change ?? match.priceChangePercent ?? match.changePercent24h ?? "0") : prev.changePercent24h,
-        high24h: match ? parseFloat(match.high_24h ?? match.highPrice ?? "0") : prev.high24h,
-        low24h: match ? parseFloat(match.low_24h ?? match.lowPrice ?? "0") : prev.low24h,
-        volume24h: match ? parseFloat(match.volume ?? match.volume24h ?? "0") : prev.volume24h,
-        lastUpdated: new Date(),
-        markets: items,
-        marketsLoading: false,
-      }));
-    } catch {
-      // Feed falls back to the last known values; nothing to surface here.
-    } finally {
-      setData((prev) => ({ ...prev, marketsLoading: false }));
-    }
-  }, [pair]);
+        setData((prev) => ({
+          ...prev,
+          price:
+            statsOnly || !match
+              ? prev.price
+              : parseFloat(match.last_price ?? match.lastPrice ?? match.price ?? "0"),
+          change24h: match ? parseFloat(match.price_change ?? match.priceChange ?? match.change24h ?? "0") : prev.change24h,
+          changePercent24h: match ? parseFloat(match.percent_change ?? match.priceChangePercent ?? match.changePercent24h ?? "0") : prev.changePercent24h,
+          high24h: match ? parseFloat(match.high_24h ?? match.highPrice ?? "0") : prev.high24h,
+          low24h: match ? parseFloat(match.low_24h ?? match.lowPrice ?? "0") : prev.low24h,
+          volume24h: match ? parseFloat(match.volume ?? match.volume24h ?? "0") : prev.volume24h,
+          lastUpdated: new Date(),
+          markets: items.length > 0 ? (items as MarketItem[]) : prev.markets,
+          marketsLoading: false,
+        }));
+      } catch {
+        // Feed falls back to the last known values; nothing to surface here.
+      } finally {
+        setData((prev) => ({ ...prev, marketsLoading: false }));
+      }
+    },
+    [pair]
+  );
+
+  // The market-wide WS ticker does not always surface the selected pair's 24h
+  // stats (and never carries high/low on futures), which left the pair header's
+  // 24H fields blank. Seed them from REST and keep them fresh; WS snapshots still
+  // overwrite these whenever the pair is present. `statsOnly` leaves the live
+  // price/mark untouched.
+  useEffect(() => {
+    const seed = () => void fetchHttpFallback({ force: true, statsOnly: true });
+    const timer = setTimeout(seed, 1500);
+    const interval = setInterval(seed, 60_000);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [fetchHttpFallback]);
 
   // --- real mode: single shared WebSocket connection via wsClient ---
   useEffect(() => {

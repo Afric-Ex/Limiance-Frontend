@@ -4,6 +4,7 @@ import { Button, PasswordInput } from "@mantine/core";
 import { useAuth } from "@/src/hooks/queries/use-auth";
 import { Info } from "@/src/components/icons/info";
 import { useTranslations } from "next-intl";
+import { PasswordChecklist } from "@/src/components/password/password-checklist";
 
 const inputStyles = {
   input:
@@ -25,6 +26,10 @@ export const ResetPasswordForm = () => {
                 label={t("password")}
                 placeholder={t("passwordPlaceholder")}
                 {...resetForm.getInputProps("password")}
+              />
+              <PasswordChecklist
+                password={resetForm.values.password}
+                className="flex flex-col gap-2 -mt-2"
               />
               <PasswordInput
                 classNames={inputStyles}
