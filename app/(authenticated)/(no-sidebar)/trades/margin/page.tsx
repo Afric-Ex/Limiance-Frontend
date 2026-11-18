@@ -15,6 +15,7 @@ import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { readList } from "@/src/lib/api-response";
 import { getLatestTradePrice } from "@/src/lib/recent-trades";
+import { mergeLiveOpenOrders } from "@/src/lib/trades/order-event-sync";
 import {
   Tabs,
   TabsList,
@@ -104,7 +105,11 @@ function MarginTrades() {
   const { data: openOrders } = useQuery({
     queryKey: tradingKeys.openOrders(hideOtherPairs ? selectedPair : undefined, "margin"),
     queryFn: () => tradingService.fetchMarginOpenOrders({ pair: hideOtherPairs ? selectedPair : undefined }),
-    select: (res: any) => res.data,
+    select: (res: any) =>
+      mergeLiveOpenOrders(readList<Record<string, any>>(res), {
+        pair: hideOtherPairs ? selectedPair : undefined,
+        market: "margin",
+      }),
     retry: false,
     throwOnError: false,
   });
@@ -220,7 +225,7 @@ function MarginTrades() {
   // Open margin orders already filtered by selectedPair (query key) — draw Entry/TP/SL on the chart.
   // The backend may return TP/SL under different names (camelCase on orders,
   // snake_case on OCO/trigger orders), so read defensively.
-  const chartOrderLevels =
+  const chartOrderLevels: any[] =
     (openOrders ?? []).flatMap((order: any) => {
       const entry = Number(order.price ?? order.entryPrice);
       const takeProfit = Number(order.takeProfit ?? order.take_profit ?? order.take_profit_price ?? order.tp_trigger_price ?? order.tp_price ?? order.tp);

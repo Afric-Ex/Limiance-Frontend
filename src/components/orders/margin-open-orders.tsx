@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
 import { readList } from "@/src/lib/api-response";
+import { mergeLiveOpenOrders } from "@/src/lib/trades/order-event-sync";
 import { cancelMarginOrderWs } from "@/src/lib/order-ws";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
@@ -75,7 +76,8 @@ export const MarginOpenOrders = () => {
     queryKey: tradingKeys.marginOpenOrders,
     queryFn: () =>
       tradingService.fetchMarginOpenOrders(),
-    select: (res: unknown) => readList<Record<string, any>>(res),
+    select: (res: unknown) =>
+      mergeLiveOpenOrders(readList<Record<string, any>>(res), { market: "margin" }),
   });
 
   const { mutate: cancelOrder } = useMutation({

@@ -6,6 +6,7 @@ import { modals } from "@mantine/modals";
 import { Checkbox, Table, TableTh, TableTr, TableTd } from "@mantine/core";
 import { useTranslations } from "next-intl";
 import { tradingKeys, tradingService } from "@/src/services/trading";
+import { mergeLiveOpenOrders } from "@/src/lib/trades/order-event-sync";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { MarginBorrowRepayModal } from "./margin-borrow-repay-modal";
 import { MarginTransferModal } from "./margin-transfer-modal";
@@ -89,7 +90,8 @@ export function MarginAccountPanel({ pair = "BTC_USDT", tradeMode, onTradeModeCh
   const { data: openOrders } = useQuery({
     queryKey: tradingKeys.openOrders(undefined, "margin"),
     queryFn: () => tradingService.fetchMarginOpenOrders({}),
-    select: (res: any) => res?.data ?? [],
+    select: (res: any) =>
+      mergeLiveOpenOrders(res?.data ?? [], { market: "margin" }),
     retry: false,
     throwOnError: false,
   });
