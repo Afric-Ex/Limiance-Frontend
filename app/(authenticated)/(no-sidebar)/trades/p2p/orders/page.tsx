@@ -13,6 +13,7 @@ import { P2POrdersSkeleton } from "@/src/components/skeletons/p2p";
 import { useUserStore } from "@/src/stores/user-store";
 import { parseDate } from "@/src/lib/parse-date";
 import { ResponsiveFilters } from "@/src/components/shared/responsive-filters";
+import { resolveP2PRole } from "@/src/lib/p2p-trade-parties";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "text-[#FBA42A] bg-[#FBA42A]/10 border-[#FBA42A]/20",
@@ -74,36 +75,21 @@ const nameOf = (value: any): string => {
 };
 
 const resolveUserSide = (order: any, userId: string): "BUY" | "SELL" => {
-  const norm = (v: unknown) => String(v ?? "").trim().toLowerCase();
-  const uId = norm(userId);
   const adType = String(
     order?.type ?? order?.order?.type ?? order?.orderType ?? order?.order_type ?? ""
   ).toUpperCase();
-  const matchedAs = String(
-    order?.matchedAs ?? order?.matched_as ?? ""
-  ).toUpperCase();
-
-  if (matchedAs === "BUY" || matchedAs === "SELL") return matchedAs;
-
-  const buyerId = norm(idOf(order?.buyerId ?? order?.buyer_id ?? order?.buyer));
-  const sellerId = norm(idOf(order?.sellerId ?? order?.seller_id ?? order?.seller));
-  const matcherId = norm(idOf(order?.matcherId ?? order?.matcher_id ?? order?.matcher));
-  const advertiserId = norm(idOf(
-    order?.advertiserId ?? order?.advertiser_id ?? order?.advertiser
-  ));
-
-  if (uId && buyerId && buyerId === uId) return "BUY";
-  if (uId && sellerId && sellerId === uId) return "SELL";
-
-  if (uId && matcherId && matcherId === uId) {
-    if (adType === "BUY") return "SELL";
-    if (adType === "SELL") return "BUY";
-  }
-  if (uId && advertiserId && advertiserId === uId) {
-    if (adType === "BUY" || adType === "SELL") return adType as "BUY" | "SELL";
-  }
-
-  return adType === "BUY" ? "BUY" : "SELL";
+  // `matchedAs` is the matcher's role; the shared resolver applies it only to the matcher.
+  return resolveP2PRole(
+    {
+      buyerId: idOf(order?.buyerId ?? order?.buyer_id ?? order?.buyer),
+      sellerId: idOf(order?.sellerId ?? order?.seller_id ?? order?.seller),
+      advertiserId: idOf(order?.advertiserId ?? order?.advertiser_id ?? order?.advertiser),
+      matcherId: idOf(order?.matcherId ?? order?.matcher_id ?? order?.matcher),
+      matchedAs: order?.matchedAs ?? order?.matched_as,
+      adType,
+    },
+    userId
+  ).role;
 };
 
 const EMPTY_STATE: Record<OrderTab, { title: string; body: string }> = {
