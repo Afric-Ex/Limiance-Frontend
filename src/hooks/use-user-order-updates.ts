@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { wsClient } from "@/src/lib/websocket-client";
 import { ORDER_HISTORY_QUERY_KEY } from "@/src/hooks/use-order-history";
 import { useNotificationSound } from "@/src/hooks/use-notification-sound";
-import { successNotification } from "@/src/lib/notification-handler";
 import { refreshActivePortfolioTopics } from "@/src/lib/portfolio-store";
 import {
   applyOrderFrame,
@@ -31,7 +29,6 @@ const NOTIFICATION_DEDUPE_MS = 30_000;
  */
 export function useUserOrderUpdates(enabled = true) {
   const queryClient = useQueryClient();
-  const t = useTranslations("Trading");
   const playSound = useNotificationSound();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notifiedOrders = useRef(new Map<string, number>());
@@ -55,15 +52,8 @@ export function useUserOrderUpdates(enabled = true) {
       if (notifiedOrders.current.has(key)) return;
       notifiedOrders.current.set(key, now);
 
-      const side = String(result.side ?? "").toUpperCase();
-      const sideLabel = side === "SELL" ? t("sell") : side ? t("buy") : "";
-      const symbol = result.symbol ?? "";
-      const price =
-        typeof result.price === "number" && Number.isFinite(result.price)
-          ? result.price.toLocaleString(undefined, { maximumFractionDigits: 8 })
-          : "-";
-
-      successNotification(t("orderFilled", { side: sideLabel, symbol, price }).trim());
+      // No toast here: bursts of fills stacked top-center toasts until they
+      // covered the screen and blocked the UI. The sound cue is enough.
       playSound({
         id: key,
         source: "order-ws",
@@ -73,7 +63,7 @@ export function useUserOrderUpdates(enabled = true) {
             : result.market
               ? "spot"
               : undefined,
-        data: { symbol, market_type: result.market },
+        data: { symbol: result.symbol ?? "", market_type: result.market },
       });
     };
 
@@ -112,5 +102,5 @@ export function useUserOrderUpdates(enabled = true) {
       unsubscribeAny();
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [enabled, playSound, queryClient, t]);
+  }, [enabled, playSound, queryClient]);
 }
