@@ -65,12 +65,19 @@ function CreateApiKeyInner() {
   });
 
   const { mutate: createKey, isPending } = useMutation({
-    mutationFn: (): Promise<any> =>
-      userService.createApiKey({
+    mutationFn: (): Promise<any> => {
+      const productSet = new Set(permissionData?.productIds ?? []);
+      const coverageSet = new Set(permissionData?.coverageIds ?? []);
+      const selectedProducts = permissions.filter((p) => productSet.has(p));
+      const selectedCoverage = permissions.filter((p) => coverageSet.has(p));
+
+      return userService.createApiKey({
         label: form.values.label.trim(),
-        permissions,
+        permissions: selectedProducts.length > 0 ? selectedProducts : permissions,
+        coverage: selectedCoverage.length > 0 ? selectedCoverage.join(",") : "trading",
         ipAllowlist: parseIpAllowlist(form.values.ipAllowlist),
-      }),
+      });
+    },
     onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: userKeys.apiKeys });
       // Response: { data: { key, secret, keyPrefix, label, coverage, ... } }

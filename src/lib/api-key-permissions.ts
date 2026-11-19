@@ -37,51 +37,82 @@ export type ApiKeyPermissionGroup = {
 
 export type NormalizedApiKeyPermissions = {
   permissions: string[];
+  productIds: string[];
+  coverageIds: string[];
   groups: ApiKeyPermissionGroup[];
 };
 
+const PRODUCT_PERMISSION_SET = new Set(["spot", "futures", "margin", "p2p", "funding"]);
+const ACTION_COVERAGE_SET = new Set([
+  "trading",
+  "deposit",
+  "withdrawals",
+  "conversion",
+  "transfers",
+  "internal_transfers",
+  "external_transfers",
+]);
+
 const PERMISSION_META: Record<string, Omit<ApiKeyPermissionMeta, "id">> = {
   spot: {
-    label: "Spot trading",
+    label: "Spot",
     shortLabel: "Spot",
-    description: "Place and manage spot market orders.",
+    description: "Permit actions on your Spot account and orders.",
     group: "trading",
     icon: MdOutlineShowChart,
     tone: "primary",
     sensitive: false,
   },
   futures: {
-    label: "Futures trading",
+    label: "Futures",
     shortLabel: "Futures",
-    description: "Open, manage and close futures positions.",
+    description: "Permit actions on your Futures account and positions.",
     group: "trading",
     icon: MdOutlineTrendingUp,
     tone: "primary",
     sensitive: false,
   },
   margin: {
-    label: "Margin trading",
+    label: "Margin",
     shortLabel: "Margin",
-    description: "Borrow funds and trade with margin.",
+    description: "Permit actions on your Margin account and borrowings.",
     group: "trading",
     icon: MdOutlineAccountBalanceWallet,
     tone: "blue",
     sensitive: false,
   },
   p2p: {
-    label: "P2P trading",
+    label: "P2P",
     shortLabel: "P2P",
-    description: "Create and manage peer-to-peer orders.",
+    description: "Permit actions on peer-to-peer orders.",
     group: "trading",
     icon: MdOutlinePeopleOutline,
     tone: "blue",
+    sensitive: false,
+  },
+  funding: {
+    label: "Funding",
+    shortLabel: "Funding",
+    description: "Permit actions on your Funding wallet.",
+    group: "trading",
+    icon: MdOutlineAccountBalanceWallet,
+    tone: "blue",
+    sensitive: false,
+  },
+  trading: {
+    label: "Trading",
+    shortLabel: "Trading",
+    description: "Place, modify, and cancel orders on permitted products.",
+    group: "accounts",
+    icon: MdOutlineShowChart,
+    tone: "primary",
     sensitive: false,
   },
   conversion: {
     label: "Conversion",
     shortLabel: "Convert",
     description: "Convert between supported assets.",
-    group: "trading",
+    group: "accounts",
     icon: MdOutlineCurrencyExchange,
     tone: "blue",
     sensitive: false,
@@ -102,6 +133,15 @@ const PERMISSION_META: Record<string, Omit<ApiKeyPermissionMeta, "id">> = {
     group: "accounts",
     icon: MdOutlineLock,
     tone: "warning",
+    sensitive: true,
+  },
+  transfers: {
+    label: "Transfers",
+    shortLabel: "Transfers",
+    description: "Move funds internally or to external addresses.",
+    group: "accounts",
+    icon: MdOutlineSwapVert,
+    tone: "blue",
     sensitive: true,
   },
   internal_transfers: {
@@ -129,12 +169,12 @@ const GROUP_META: Record<
   { title: string; description: string }
 > = {
   trading: {
-    title: "Trading permissions",
-    description: "Place orders, manage positions and convert assets.",
+    title: "Account & Product Permissions",
+    description: "Select which accounts/products this key can access (e.g. Spot, Futures, Margin).",
   },
   accounts: {
-    title: "Account permissions",
-    description: "Deposit, withdraw and move funds between accounts.",
+    title: "Action Coverage",
+    description: "Select which operations this key can perform on the permitted accounts.",
   },
 };
 
@@ -182,11 +222,15 @@ export const normalizeApiKeyPermissions = (
   response: unknown
 ): NormalizedApiKeyPermissions => {
   const payload = unwrapObject<Record<string, unknown>>(response) ?? {};
-  const coverage = isRecord(payload.coverage) ? payload.coverage : {};
+  const coverageObj = isRecord(payload.coverage) ? payload.coverage : {};
+  const coverageArray = readStringList(payload.coverage).filter((c) => c !== "all");
+  const rawPerms = readStringList(payload.permissions).filter((p) => p !== "all");
 
   const groupedIds: Record<ApiKeyPermissionGroupKey, string[]> = {
-    trading: readStringList(coverage.trading),
-    accounts: readStringList(coverage.accounts),
+    trading: isRecord(payload.coverage) ? readStringList(coverageObj.trading) : [],
+    accounts: isRecord(payload.coverage)
+      ? readStringList(coverageObj.accounts)
+      : coverageArray,
   };
 
   const ordered: string[] = [];
@@ -197,7 +241,7 @@ export const normalizeApiKeyPermissions = (
     ordered.push(id);
   };
 
-  readStringList(payload.permissions).forEach(add);
+  rawPerms.forEach(add);
   GROUP_ORDER.forEach((key) => groupedIds[key].forEach(add));
 
   ordered.forEach((id) => {
@@ -205,11 +249,14 @@ export const normalizeApiKeyPermissions = (
     if (!groupedIds[group].includes(id)) groupedIds[group].push(id);
   });
 
+  const productIds = ordered.filter((id) => PRODUCT_PERMISSION_SET.has(id) || rawPerms.includes(id));
+  const coverageIds = ordered.filter((id) => ACTION_COVERAGE_SET.has(id) || coverageArray.includes(id));
+
   const groups = GROUP_ORDER.map((key) => ({
     key,
     ...GROUP_META[key],
     permissionIds: groupedIds[key],
   })).filter((group) => group.permissionIds.length > 0);
 
-  return { permissions: ordered, groups };
+  return { permissions: ordered, productIds, coverageIds, groups };
 };

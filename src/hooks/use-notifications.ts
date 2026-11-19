@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { notificationKeys, notificationService } from "@/src/services/notification";
 import { useNotificationStore, AppNotification } from "@/src/stores/notification-store";
 import { useUserStore } from "@/src/stores/user-store";
+import { wsClient } from "@/src/lib/websocket-client";
 
 /** Some notifications (e.g. `SWAP` records) carry `body` as a structured
  *  object instead of text — `String()` on those renders as `[object Object]`.
@@ -100,6 +101,8 @@ export function useNotifications() {
   const user = useUserStore((s) => s.user);
   const setNotifications = useNotificationStore((s) => s.setNotifications);
   const setOwner = useNotificationStore((s) => s.setOwner);
+  const queryClient = useQueryClient();
+  const [wsData, setWsData] = useState<any>(undefined);
 
   const userId = user
     ? String(user.id ?? user.user_id ?? user.userId ?? "") || null
@@ -110,7 +113,23 @@ export function useNotifications() {
   // previous owner is dropped before the backend response is applied.
   useEffect(() => {
     setOwner(userId);
+    setWsData(undefined);
   }, [userId, setOwner]);
+
+  // Subscribe to real-time WebSocket notification_history stream
+  useEffect(() => {
+    if (!userId) return;
+    const unsubscribe = wsClient.subscribe(
+      "notification_history",
+      { type: "get_notifications_history", data: { page: "1", limit: "20" } },
+      (payload) => {
+        if (!payload || payload?.error) return;
+        setWsData(payload);
+        queryClient.setQueryData([...notificationKeys.list, userId], payload);
+      }
+    );
+    return unsubscribe;
+  }, [userId, queryClient]);
 
   const query = useQuery({
     // Scope the cache per account so one user's response can never be served
@@ -120,15 +139,17 @@ export function useNotifications() {
     enabled: !!user,
     staleTime: 60_000,
     refetchInterval: 60_000,
+    retry: (failureCount, err: any) => err?.response?.status !== 403 && failureCount < 2,
   });
 
-  const notifications = useMemo(() => normalizeNotifications(query.data), [query.data]);
+  const activeData = wsData ?? query.data;
+  const notifications = useMemo(() => normalizeNotifications(activeData), [activeData]);
 
   useEffect(() => {
-    if (query.data) {
+    if (activeData) {
       setNotifications(notifications, userId);
     }
-  }, [query.data, notifications, userId, setNotifications]);
+  }, [activeData, notifications, userId, setNotifications]);
 
-  return { notifications, error: query.error, isLoading: query.isLoading, hasData: query.data !== undefined };
+  return { notifications, error: query.error, isLoading: query.isLoading && wsData === undefined, hasData: activeData !== undefined };
 }
