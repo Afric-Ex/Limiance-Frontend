@@ -19,27 +19,25 @@ export function KycRequiredGate({
   featureName = "this section",
 }: KycRequiredGateProps) {
   const router = useRouter();
-  const { user, _hasHydrated } = useUserStore();
+  const { user, hydrated } = useUserStore();
 
-  const { data: kycStatus, isLoading } = useQuery({
+  const { data: kycStatus, isLoading, isError } = useQuery({
     queryKey: userKeys.kycStatus,
     queryFn: () => userService.getKycStatus(),
     select: (res) => res?.data?.status,
     staleTime: 5 * 60_000,
-    enabled: _hasHydrated,
+    enabled: hydrated,
   });
 
-  const normalizedStatus = String(kycStatus ?? user?.kycStatus ?? "").toLowerCase();
+  const normalizedStatus = String(kycStatus ?? "").toLowerCase();
   const isKycComplete = Boolean(
-    user?.isIDverified ||
-      user?.isVerified ||
-      isKycApproved(normalizedStatus)
+    isKycApproved(normalizedStatus) || (isError && user?.isIDverified)
   );
 
-  if (!_hasHydrated || (!isKycComplete && isLoading)) {
+  if (!hydrated || (!isKycComplete && isLoading)) {
     return (
       <div className="flex min-h-[60vh] w-full items-center justify-center p-6">
-        <InlineLoading label="Checking verification status..." />
+        <InlineLoading message="Checking verification status..." />
       </div>
     );
   }
