@@ -5,7 +5,8 @@ import { Select, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, TextI
 import { Search } from "../icons/search";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { tradingKeys, tradingService } from "@/src/services/trading";
+import { tradingKeys } from "@/src/services/trading";
+import { asset } from "@/src/services/asset";
 import { readList } from "@/src/lib/api-response";
 import { fmtDate, OrdersEmptyState, parseDate, ResponsiveFilters, TableCard, tableClassNames } from "./orders-shared";
 import { ConvertHistoryShare } from "@/src/components/snapshot/convert-history-share";
@@ -41,8 +42,15 @@ export const ConvertTable = () => {
   const { data: history, isLoading } = useQuery({
     queryKey: tradingKeys.convertHistory,
     queryFn: () =>
-      tradingService.convertHistory(),
-    select: (res) => readList<any>(res),
+      asset.transactionHistory({
+        page: 1,
+        limit: 100,
+        transaction_type: "conversion",
+      }),
+    select: (res) =>
+      readList<any>(res).filter((item: any) =>
+        ["conversion", "convert"].includes(String(item?.type ?? "conversion").toLowerCase())
+      ),
     refetchOnMount: "always",
   });
 
