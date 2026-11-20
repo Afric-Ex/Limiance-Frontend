@@ -63,17 +63,6 @@ export function FiatOrdersSkeleton() {
   );
 }
 
-export function PaymentHistorySkeleton() {
-  return (
-    <SkeletonShell>
-      <SkeletonHeader titleWidth={180} subtitle={false} action={false} />
-      <SkeletonCard header={false}>
-        <SkeletonTable rows={8} cols={5} />
-      </SkeletonCard>
-    </SkeletonShell>
-  );
-}
-
 export function TransactionAnalysisSkeleton() {
   return (
     <SkeletonShell>

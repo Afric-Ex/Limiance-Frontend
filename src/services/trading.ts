@@ -51,13 +51,6 @@ export const tradingKeys = {
   futuresPnlHistory: (symbol?: string) => ["futures-pnl-history", symbol],
   convertHistory: ["convert-history"],
   fiatOrderHistory: ["fiat-order-history"],
-  paymentHistory: ["payment-history"],
-  /** Filters-only key for the infinite-scroll list; `page` is owned by react-query. */
-  paymentHistoryList: (filters: Record<string, unknown> = {}) => [
-    "payment-history",
-    "list",
-    filters,
-  ],
   listedTokens: (params?: { query?: string; page?: number; limit?: number; isTradable?: boolean }) => ["listed-tokens", params],
   listedCurrencies: ["listed-currencies"],
 } as const;
@@ -395,10 +388,10 @@ export const tradingService = {
   },
 
   fetchFuturesOpenOrders: async (params?: { pair?: string }) => {
-    const response = await api.get("trading/order_history", {
+    const response = await api.get("trading/futures/orders", {
       params: {
         status: "open",
-        market_type: "futures"
+        ...(params?.pair ? { symbol: params.pair } : {}),
       }
     });
     if (!Array.isArray(response.data?.data)) return response.data;
@@ -620,16 +613,6 @@ export const tradingService = {
 
   fiatOrderHistory: async () => {
     const response = await api.get("wallet/fiat/history");
-    return response.data;
-  },
-
-  paymentHistory: async (params?: {
-    page?: number;
-    limit?: number;
-    start_date?: string;
-    end_date?: string;
-  }) => {
-    const response = await api.get("trading/payment/history", { params });
     return response.data;
   },
 

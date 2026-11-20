@@ -68,7 +68,6 @@ const mainNavLinks: NavItem[] = [
       { nameKey: "fiatOrder", link: "/orders/fiat" },
       { nameKey: "transactionAnalysis", link: "/orders/transaction-analysis" },
       { nameKey: "convertHistory", link: "/orders/convert-history" },
-      { nameKey: "paymentHistory", link: "/orders/payment-history" },
     ],
   },
   { nameKey: "futures", link: "/trades/futures", icon: IoFlashOutline, badge: "PRO" },

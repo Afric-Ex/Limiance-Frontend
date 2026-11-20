@@ -166,8 +166,10 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
           }
           const res = await getFuturesOrderHistoryWs({ limit: 100 });
           return tag(
-            readList<Record<string, any>>(res).filter(
-              (order) => String(getOrderStatus(order) ?? "").toUpperCase() === "OPEN"
+            readList<Record<string, any>>(res).filter((order) =>
+              ["OPEN", "PARTIALLY_FILLED", "NEW", "PENDING"].includes(
+                String(getOrderStatus(order) ?? "").toUpperCase()
+              )
             )
           );
         })
