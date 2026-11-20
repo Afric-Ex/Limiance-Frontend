@@ -65,18 +65,35 @@ function CreateApiKeyInner() {
   });
 
   const { mutate: createKey, isPending } = useMutation({
-    mutationFn: (): Promise<any> => {
+    mutationFn: async (): Promise<any> => {
       const productSet = new Set(permissionData?.productIds ?? []);
       const coverageSet = new Set(permissionData?.coverageIds ?? []);
       const selectedProducts = permissions.filter((p) => productSet.has(p));
       const selectedCoverage = permissions.filter((p) => coverageSet.has(p));
 
-      return userService.createApiKey({
+      const response = await userService.createApiKey({
         label: form.values.label.trim(),
         permissions: selectedProducts.length > 0 ? selectedProducts : permissions,
         coverage: selectedCoverage.length > 0 ? selectedCoverage.join(",") : "trading",
         ipAllowlist: parseIpAllowlist(form.values.ipAllowlist),
       });
+      const result = response as typeof response & {
+        success?: boolean;
+        statusCode?: number;
+        error?: string;
+      };
+      const statusCode = Number(result?.statusCode);
+      if (result?.success === false || (Number.isFinite(statusCode) && statusCode >= 400)) {
+        const error = new Error(
+          result?.message || result?.error || t("apiKeyCreateFailed")
+        ) as Error & { response: { data: typeof response; status: number } };
+        error.response = {
+          data: response,
+          status: Number.isFinite(statusCode) && statusCode >= 400 ? statusCode : 500,
+        };
+        throw error;
+      }
+      return response;
     },
     onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: userKeys.apiKeys });

@@ -146,7 +146,7 @@ export const userService = {
     })();
 
     const response = await api.post("users/api_keys", {
-      coverage: data.coverage ?? permissions.join(", "),
+      coverage: data.coverage?.trim() || "trading",
       expires_at: expiresAt,
       name: data.name ?? data.label,
       label: data.label,

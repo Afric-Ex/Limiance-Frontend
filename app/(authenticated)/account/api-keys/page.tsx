@@ -110,9 +110,15 @@ function ApiKeysPageInner() {
   // Mutations
   const { mutate: createKey, isPending: createLoading } = useMutation({
     mutationFn: async () => {
+      const productSet = new Set(permissionData?.productIds ?? []);
+      const coverageSet = new Set(permissionData?.coverageIds ?? []);
+      const selectedProducts = selectedPerms.filter((p) => productSet.has(p));
+      const selectedCoverage = selectedPerms.filter((p) => coverageSet.has(p));
+
       const response = await userService.createApiKey({
         label: label.trim(),
-        permissions: selectedPerms,
+        permissions: selectedProducts.length > 0 ? selectedProducts : selectedPerms,
+        coverage: selectedCoverage.length > 0 ? selectedCoverage.join(",") : "trading",
       });
       const result = response as typeof response & {
         success?: boolean;
