@@ -130,15 +130,21 @@ export const userService = {
     label: string;
     permissions: string[];
     name?: string;
-    coverage?: string;
+    coverage?: string[];
     expiresAt?: string;
     ipAllowlist?: string[];
   }): Promise<ApiResponse<any>> => {
     // Backend contract: POST /users/api_keys expects coverage, expires_at,
-    // name and label (plus the permission list the UI collects). Keys are
+    // name and label (plus the permission list the UI collects). `coverage`
+    // is a list of action-coverage ids, not a comma-joined string — the
+    // list response normalizer reads it back as an array/object. Keys are
     // not creatable without an expiry, so default to one year when the caller
     // does not supply one.
     const permissions = Array.isArray(data.permissions) ? data.permissions : [];
+    const coverage =
+      Array.isArray(data.coverage) && data.coverage.length > 0
+        ? data.coverage.filter(Boolean)
+        : ["trading"];
     const expiresAt = data.expiresAt ?? (() => {
       const expiry = new Date();
       expiry.setFullYear(expiry.getFullYear() + 1);
@@ -146,7 +152,7 @@ export const userService = {
     })();
 
     const response = await api.post("users/api_keys", {
-      coverage: data.coverage?.trim() || "trading",
+      coverage,
       expires_at: expiresAt,
       name: data.name ?? data.label,
       label: data.label,

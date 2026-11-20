@@ -249,8 +249,12 @@ export const normalizeApiKeyPermissions = (
     if (!groupedIds[group].includes(id)) groupedIds[group].push(id);
   });
 
-  const productIds = ordered.filter((id) => PRODUCT_PERMISSION_SET.has(id) || rawPerms.includes(id));
-  const coverageIds = ordered.filter((id) => ACTION_COVERAGE_SET.has(id) || coverageArray.includes(id));
+  const productIds = ordered.filter(
+    (id) => PRODUCT_PERMISSION_SET.has(id) || (!ACTION_COVERAGE_SET.has(id) && rawPerms.includes(id))
+  );
+  const coverageIds = ordered.filter(
+    (id) => ACTION_COVERAGE_SET.has(id) || coverageArray.includes(id)
+  );
 
   const groups = GROUP_ORDER.map((key) => ({
     key,

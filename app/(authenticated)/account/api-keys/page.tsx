@@ -117,8 +117,8 @@ function ApiKeysPageInner() {
 
       const response = await userService.createApiKey({
         label: label.trim(),
-        permissions: selectedProducts.length > 0 ? selectedProducts : selectedPerms,
-        coverage: selectedCoverage.length > 0 ? selectedCoverage.join(",") : "trading",
+        permissions: selectedProducts,
+        coverage: selectedCoverage.length > 0 ? selectedCoverage : ["trading"],
       });
       const result = response as typeof response & {
         success?: boolean;

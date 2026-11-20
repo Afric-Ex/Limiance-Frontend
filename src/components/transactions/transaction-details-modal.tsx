@@ -10,6 +10,9 @@ import {
   MdOutlineSwapHoriz,
 } from "react-icons/md";
 import { Copy } from "@/src/components/shared/copy";
+import { TransactionShare } from "@/src/components/snapshot/transaction-share";
+import type { TransactionShareData } from "@/src/components/snapshot/templates/transaction-card";
+import { maskId } from "@/src/lib/snapshot/redact";
 import { parseDate } from "@/src/lib/parse-date";
 import {
   isZeroAddress,
@@ -654,6 +657,18 @@ export const TransactionDetailsModal = ({
   );
   const showBank = Boolean(bankName || accountName || accountNumber);
 
+  const shareData: TransactionShareData = {
+    typeLabel: typeLabel || t("transaction"),
+    status: status ? statusLabelFor(t, status) : "",
+    amount: primaryAmount,
+    symbol: primarySymbol,
+    direction,
+    createdAt,
+    network,
+    reference: maskId(transactionId || reference || hash),
+    fee: fee ? `${amountText(fee)}${feeSymbol ? ` ${feeSymbol}` : ""}`.trim() : "",
+  };
+
   return (
     <Modal
       opened={!!transaction}
@@ -693,6 +708,9 @@ export const TransactionDetailsModal = ({
           {/* Hero: direction, type, amount, status */}
           <div className="relative overflow-hidden px-4 pb-6 pt-6">
             <div className="pointer-events-none absolute -top-28 left-1/2 h-56 w-64 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl" />
+            <div className="absolute right-4 top-4 z-10">
+              <TransactionShare data={shareData} />
+            </div>
             <div className="relative flex flex-col items-center text-center">
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${heroTone}`}
