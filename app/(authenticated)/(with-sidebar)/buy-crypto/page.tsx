@@ -7,6 +7,7 @@ import { IoSparklesOutline, IoShieldCheckmarkOutline } from "react-icons/io5";
 import { LuRepeat } from "react-icons/lu";
 import { FiCreditCard } from "react-icons/fi";
 import { PageSuspense } from "@/src/components/shared/page-suspense";
+import { KycRequiredGate } from "@/src/components/shared/kyc-required-gate";
 import { BuyCryptoSkeleton } from "@/src/components/skeletons/with-sidebar";
 import { useTranslations } from "next-intl";
 
@@ -239,7 +240,9 @@ function BuyCryptoInner() {
 export default function BuyCrypto() {
   return (
     <PageSuspense fallback={<BuyCryptoSkeleton />}>
-      <BuyCryptoInner />
+      <KycRequiredGate featureName="Buy Crypto">
+        <BuyCryptoInner />
+      </KycRequiredGate>
     </PageSuspense>
   );
 }

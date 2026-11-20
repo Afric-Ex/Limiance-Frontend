@@ -7,6 +7,7 @@ import { usePathname } from "@/src/hooks/use-pathname";
 import clsx from "clsx";
 import { GlobalP2PNotification } from "./global-p2p-notification";
 import { NonAdvertiserModal } from "./non-advertiser-modal";
+import { KycRequiredGate } from "@/src/components/shared/kyc-required-gate";
 import { SidebarMenuButton } from "@/src/components/shared/sidebar-menu";
 import {
   useAllMatchedOrders,
@@ -62,7 +63,7 @@ export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <>
+    <KycRequiredGate featureName="P2P Trading">
       <div
         className={clsx(
           "flex flex-col h-full w-full",
@@ -115,6 +116,6 @@ export const P2PLayout = ({ children }: { children: React.ReactNode }) => {
         backLabel="Exit to Dashboard"
         onBack={() => router.push("/dashboard")}
       />
-    </>
+    </KycRequiredGate>
   );
 };
