@@ -92,6 +92,12 @@ function extractMarketItems(raw: unknown, depth = 0): any[] {
   return [];
 }
 
+const positiveOrPrev = (val: unknown, prev: number | null): number | null => {
+  if (val === null || val === undefined || val === "") return prev;
+  const n = Number(val);
+  return Number.isFinite(n) && n > 0 ? n : prev;
+};
+
 /** Selected-pair ticker from a ticker list, separator-insensitive. */
 function findMarket(items: any[], pair: string): any | undefined {
   const target = normalizeMarketKey(pair);
@@ -149,7 +155,8 @@ export const useMarketFeed = (
       lastFallbackAt.current = now;
 
       try {
-        const res = await api.get("trading/24_hours_movers", { params: { limit: 100 } });
+        const endpoint = market === "futures" ? "trading/futures/markets" : "trading/24_hours_movers";
+        const res = await api.get(endpoint, { params: { limit: 100 } });
         const items: any[] = extractMarketItems(res.data);
         const match = findMarket(items, pair);
 
@@ -158,14 +165,29 @@ export const useMarketFeed = (
           price:
             statsOnly || !match
               ? prev.price
-              : parseFloat(match.last_price ?? match.lastPrice ?? match.price ?? "0"),
-          change24h: match ? parseFloat(match.price_change ?? match.priceChange ?? match.change24h ?? "0") : prev.change24h,
-          changePercent24h: match ? parseFloat(match.percent_change ?? match.priceChangePercent ?? match.changePercent24h ?? "0") : prev.changePercent24h,
-          high24h: match ? parseFloat(match.high_24h ?? match.highPrice ?? "0") : prev.high24h,
-          low24h: match ? parseFloat(match.low_24h ?? match.lowPrice ?? "0") : prev.low24h,
-          volume24h: match ? parseFloat(match.volume ?? match.volume24h ?? "0") : prev.volume24h,
+              : positiveOrPrev(
+                  match.mark_price ?? match.markPrice ?? match.last_price ?? match.lastPrice ?? match.price,
+                  prev.price
+                ),
+          change24h: match
+            ? Number(match.price_change_24h ?? match.price_change ?? match.priceChange ?? match.change24h ?? prev.change24h ?? 0)
+            : prev.change24h,
+          changePercent24h: match
+            ? Number(match.change_percent_24h ?? match.percent_change ?? match.priceChangePercent ?? match.changePercent24h ?? prev.changePercent24h ?? 0)
+            : prev.changePercent24h,
+          high24h: match ? positiveOrPrev(match.high_24h ?? match.highPrice ?? match.high24h, prev.high24h) : prev.high24h,
+          low24h: match ? positiveOrPrev(match.low_24h ?? match.lowPrice ?? match.low24h, prev.low24h) : prev.low24h,
+          volume24h: match ? Number(match.volume_24h ?? match.volume ?? match.volume24h ?? prev.volume24h ?? 0) : prev.volume24h,
+          fundingRate:
+            market === "futures" && match
+              ? Number(match.funding_rate ?? match.fundingRate ?? prev.fundingRate ?? 0)
+              : prev.fundingRate,
+          nextFundingTime:
+            market === "futures" && match
+              ? match.next_funding_time ?? match.nextFundingTime ?? prev.nextFundingTime
+              : prev.nextFundingTime,
           lastUpdated: new Date(),
-          markets: items.length > 0 ? (items as MarketItem[]) : prev.markets,
+          markets: items.length > 0 && market !== "futures" ? (items as MarketItem[]) : prev.markets,
           marketsLoading: false,
         }));
       } catch {
@@ -174,7 +196,7 @@ export const useMarketFeed = (
         setData((prev) => ({ ...prev, marketsLoading: false }));
       }
     },
-    [pair]
+    [pair, market]
   );
 
   // The market-wide WS ticker does not always surface the selected pair's 24h
@@ -300,8 +322,8 @@ export const useMarketFeed = (
               match?.change_percent_24h ??
               match?.changePercent24h ??
               prev.changePercent24h,
-            high24h: match?.highPrice ?? match?.high_24h ?? match?.high24h ?? prev.high24h,
-            low24h: match?.lowPrice ?? match?.low_24h ?? match?.low24h ?? prev.low24h,
+            high24h: positiveOrPrev(match?.high_24h ?? match?.highPrice ?? match?.high24h, prev.high24h),
+            low24h: positiveOrPrev(match?.low_24h ?? match?.lowPrice ?? match?.low24h, prev.low24h),
             volume24h: match?.volume24h ?? match?.volume_24h ?? match?.volume ?? prev.volume24h,
             fundingRate: match?.fundingRate ?? match?.funding_rate ?? prev.fundingRate,
             nextFundingTime:
