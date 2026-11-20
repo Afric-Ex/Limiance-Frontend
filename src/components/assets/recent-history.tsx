@@ -25,7 +25,19 @@ export const RecentHistory = () => {
     }),
     queryFn: () => asset.transactionHistory({ page: 1, limit: 5 }),
     select: (res: any) => Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []), // GUARANTEE ARRAY
-    staleTime: Infinity,
+    staleTime: 10_000,
+    refetchOnMount: "always",
+    refetchInterval: (query) => {
+      const items = Array.isArray(query.state.data)
+        ? query.state.data
+        : Array.isArray((query.state.data as any)?.data)
+          ? (query.state.data as any).data
+          : [];
+      const hasPending = items.some((item: any) =>
+        ["pending", "processing", "broadcast_pending"].includes(String(item?.status ?? "").toLowerCase())
+      );
+      return hasPending ? 10_000 : 30_000;
+    },
   });
 
   return (
