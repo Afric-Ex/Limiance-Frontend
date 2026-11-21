@@ -2484,7 +2484,8 @@
       "walletMargin": "Margin-Konto teilen",
       "walletFutures": "Futures-Konto teilen",
       "assetsOverview": "Vermögensübersicht teilen",
-      "earn": "Earn teilen"
+      "earn": "Earn teilen",
+      "transaction": "Transaktion teilen"
     },
     "save": "Speichern",
     "copy": "Kopieren",
@@ -2507,7 +2508,8 @@
       "marginOrders": "Keine Margin-Orders",
       "convertHistory": "Keine Konvertierungen",
       "p2pOrder": "Orderdetails sind nicht bereit",
-      "generic": "Noch nichts zum Teilen"
+      "generic": "Noch nichts zum Teilen",
+      "transaction": "Transaktionsdetails sind nicht bereit"
     },
     "errors": {
       "node-missing": "Der Snapshot ist nicht bereit.",

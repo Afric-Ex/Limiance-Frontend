@@ -2484,7 +2484,8 @@
       "walletMargin": "Del marginkonto",
       "walletFutures": "Del futureskonto",
       "assetsOverview": "Del aktivoversigt",
-      "earn": "Del Earn"
+      "earn": "Del Earn",
+      "transaction": "Del transaktion"
     },
     "save": "Gem",
     "copy": "Kopiér",
@@ -2507,7 +2508,8 @@
       "marginOrders": "Ingen marginordrer",
       "convertHistory": "Ingen konverteringer",
       "p2pOrder": "Ordreoplysninger er ikke klar",
-      "generic": "Intet at dele endnu"
+      "generic": "Intet at dele endnu",
+      "transaction": "Transaktionsoplysninger er ikke klar"
     },
     "errors": {
       "node-missing": "Snapshottet er ikke klar.",
