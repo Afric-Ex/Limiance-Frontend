@@ -40,10 +40,9 @@ import {
   getOrderQuantity,
   getOrderStatus,
   getOrderTotal,
-  getOrderType,
   getOrderTypeLabel,
-  hasConditional,
   isBuySide,
+  filterOpenOrdersByType,
 } from "@/src/lib/trades/order-rows";
 import {
   OrderHistoryTable,
@@ -802,25 +801,7 @@ function MobileRow({ label, value, valueClass }: { label: string; value: React.R
 function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mobile }: any) {
   const tp = useTranslations("Trading");
 
-  // Filter by order type tab
-  const filteredOrders = useMemo(() => {
-    if (!orders) return [];
-    if (orderType === "limit_market") {
-      return orders.filter((o: any) => {
-        const type = getOrderType(o);
-        // Unknown order type (the API doesn't send one) is a plain order, not
-        // something to hide; only drop orders known to be conditional.
-        return !type || type.includes("limit") || type.includes("market");
-      });
-    }
-    if (orderType === "tpsl") {
-      return orders.filter((o: any) => hasConditional(o));
-    }
-    if (orderType === "oco") {
-      return orders.filter((o: any) => getOrderType(o) === "oco");
-    }
-    return orders;
-  }, [orders, orderType]);
+  const filteredOrders = filterOpenOrdersByType(orders, orderType);
 
   if (loading) {
     return (

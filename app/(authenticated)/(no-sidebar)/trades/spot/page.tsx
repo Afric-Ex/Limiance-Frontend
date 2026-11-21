@@ -30,7 +30,8 @@ import dynamic from "next/dynamic";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import clsx from "clsx";
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { normalizePair } from "@/src/utils/pair";
 
 import { MobileTopBar } from "@/src/components/shared/mobile-top-bar";
 import { IoChevronDown, IoChevronUp, IoSwapHorizontal, IoBarChartOutline, IoListOutline } from "react-icons/io5";
@@ -48,8 +49,18 @@ type TradeMode = "spot" | "cross" | "isolated";
 
 function SpotTrades() {
   const searchParams = useSearchParams();
-  const initialPair = searchParams.get("pair")?.replace("_", "/") ?? "BTC/USDT";
+  const router = useRouter();
+  const pairParam = searchParams.get("pair");
+  const initialPair = pairParam ? normalizePair(pairParam) : "BTC/USDT";
   const [selectedPair, setSelectedPair] = useState(initialPair);
+
+  // The global market dropdown and other links navigate to this same route with
+  // a new `?pair=`. The component stays mounted, so `useState` keeps the first
+  // value; mirror the param into state whenever it changes.
+  useEffect(() => {
+    if (!pairParam) return;
+    setSelectedPair(normalizePair(pairParam));
+  }, [pairParam]);
   const [pairSearch, setPairSearch] = useState("");
   // Mobile and desktop headers are BOTH mounted (one is hidden by CSS), so they
   // need separate state — sharing it would open both dropdowns at once.
@@ -185,7 +196,9 @@ function SpotTrades() {
     : feed.markets || [];
 
   const handleSelectPair = (base: string, quote: string) => {
-    setSelectedPair(`${base}/${quote}`);
+    const nextPair = `${base}/${quote}`;
+    setSelectedPair(nextPair);
+    router.replace(`/trades/spot?pair=${encodeURIComponent(nextPair)}`, { scroll: false });
     setPairSearch("");
     setPairMenuOpen(false);
     setPairMenuDesktopOpen(false);

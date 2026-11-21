@@ -17,6 +17,16 @@ export const hasConditional = (order: any) =>
   Number(order?.tp_trigger_price) > 0 ||
   Number(order?.sl_trigger_price) > 0;
 
+export function filterOpenOrdersByType(
+  orders: readonly any[] | null | undefined,
+  tab: string
+): any[] {
+  if (!orders) return [];
+  if (tab === "tpsl") return orders.filter((order) => hasConditional(order));
+  if (tab === "oco") return orders.filter((order) => getOrderType(order) === "oco");
+  return [...orders];
+}
+
 export const formatOrderNumber = (value: unknown) => {
   if (value === null || value === undefined || value === "") return "-";
   const numberValue = Number(value);
