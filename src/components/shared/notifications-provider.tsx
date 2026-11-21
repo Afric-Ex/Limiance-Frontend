@@ -64,6 +64,7 @@ export function NotificationsProvider() {
         title: notification.title,
         body: notification.body,
         type: notification.type,
+        createdAt: notification.createdAt,
       });
     }
   }, [notifications, hasData, playSound]);

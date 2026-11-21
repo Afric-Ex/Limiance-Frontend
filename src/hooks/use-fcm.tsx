@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { notificationService } from "@/src/services/notification";
 import toast from "react-hot-toast";
 import { redactDiagnostic } from "@/src/lib/pii-policy";
+import { logNotificationSound } from "@/src/lib/notification-sound";
 import { useNotificationSound } from "@/src/hooks/use-notification-sound";
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
@@ -90,18 +91,32 @@ export function useFCM() {
         const unsubscribe = onMessage(fcmMessaging, (payload) => {
           const title = payload.notification?.title ?? "Limiance";
           const body = payload.notification?.body ?? "";
-
-          // Play the WhatsApp-style chime if the matching sound setting is on
-          playSoundRef.current({
-            title,
-            body,
-            type: typeof payload.data?.type === "string" ? payload.data.type : undefined,
-            data: payload.data,
-          });
+          const type = typeof payload.data?.type === "string" ? payload.data.type : undefined;
 
           // Add to local notification store so the bell can show it
-          import("@/src/stores/notification-store").then(({ useNotificationStore }) => {
-            useNotificationStore.getState().addNotification({
+          void import("@/src/stores/notification-store").then(({ useNotificationStore }) => {
+            const store = useNotificationStore.getState();
+            const duplicate = store.notifications.some(
+              (notification) => notification.title === title && notification.body === body
+            );
+            if (duplicate) {
+              logNotificationSound({
+                event: "skipped",
+                source: "push",
+                id: payload.messageId,
+                reason: "already present in notification history",
+              });
+            } else {
+              playSoundRef.current({
+                id: payload.messageId,
+                source: "push",
+                title,
+                body,
+                type,
+                data: payload.data,
+              });
+            }
+            store.addNotification({
               title,
               body,
               type: "push",

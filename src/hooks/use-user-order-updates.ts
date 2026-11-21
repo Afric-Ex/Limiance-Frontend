@@ -13,8 +13,6 @@ import {
 
 /** One execution can emit `order_filled` + `user_order_update` + balance pushes. */
 const REFRESH_DEBOUNCE_MS = 400;
-/** Both fill frames can describe the same order; announce it only once per session. */
-const NOTIFICATION_DEDUPE_LIMIT = 500;
 
 /**
  * Live order lifecycle stream (WEBSOCKET_MESSAGES.md §7.1).
@@ -31,7 +29,6 @@ export function useUserOrderUpdates(enabled = true) {
   const queryClient = useQueryClient();
   const playSound = useNotificationSound();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const notifiedOrders = useRef(new Set<string>());
 
   useEffect(() => {
     if (!enabled) return;
@@ -44,13 +41,6 @@ export function useUserOrderUpdates(enabled = true) {
         result.clientOrderId ??
         `${result.symbol ?? ""}|${result.side ?? ""}|${result.price ?? ""}`;
       if (!key) return;
-
-      if (notifiedOrders.current.has(key)) return;
-      notifiedOrders.current.add(key);
-      if (notifiedOrders.current.size > NOTIFICATION_DEDUPE_LIMIT) {
-        const oldest = notifiedOrders.current.values().next().value;
-        if (oldest !== undefined) notifiedOrders.current.delete(oldest);
-      }
 
       // No toast here: bursts of fills stacked top-center toasts until they
       // covered the screen and blocked the UI. The sound cue is enough.
