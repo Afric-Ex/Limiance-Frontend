@@ -73,7 +73,7 @@ export const OrderConfirmationModal = ({
             <div className="flex justify-between items-center">
               <span className="text-white/40">Unit Price</span>
               <span className="text-white font-medium font-mono">
-                {price.toLocaleString()} {fiat}
+                {price.toLocaleString(undefined, { maximumFractionDigits: 6 })} {fiat}
               </span>
             </div>
             <div className="h-px bg-white/[0.05]" />

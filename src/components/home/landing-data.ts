@@ -94,7 +94,7 @@ export function useCandles(symbol: string, interval: Interval) {
 export const fmtPrice = (n: number) =>
   new Intl.NumberFormat("en-US", {
     minimumFractionDigits: n >= 1000 ? 2 : 0,
-    maximumFractionDigits: n >= 1000 ? 2 : n >= 1 ? 4 : 8,
+    maximumFractionDigits: n >= 1000 ? 2 : n >= 1 ? 4 : 6,
   }).format(n);
 
 export const fmtPct = (n: number) => `${n >= 0 ? "+" : "\u2212"}${Math.abs(n).toFixed(2)}%`;

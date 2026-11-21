@@ -4,6 +4,11 @@ import { useEffect, useRef } from "react";
 import { useNotifications } from "@/src/hooks/use-notifications";
 import { useNotificationSound } from "@/src/hooks/use-notification-sound";
 import { logNotificationSound, unlockNotificationAudio } from "@/src/lib/notification-sound";
+import {
+  EMPTY_FRESHNESS_STATE,
+  selectFreshNotifications,
+  type FreshnessState,
+} from "@/src/lib/notification-freshness";
 
 /**
  * NotificationsProvider – zero-UI client component that fetches the user's
@@ -15,7 +20,7 @@ import { logNotificationSound, unlockNotificationAudio } from "@/src/lib/notific
 export function NotificationsProvider() {
   const { notifications, hasData } = useNotifications();
   const playSound = useNotificationSound();
-  const seenIdsRef = useRef<Set<string> | null>(null);
+  const freshnessRef = useRef<FreshnessState>(EMPTY_FRESHNESS_STATE);
 
   useEffect(() => {
     unlockNotificationAudio();
@@ -23,27 +28,25 @@ export function NotificationsProvider() {
 
   useEffect(() => {
     if (!hasData) {
-      // Reset when notifications are no longer loaded (e.g. logged out) so the
-      // next user's first batch doesn't trigger a burst of chimes.
-      seenIdsRef.current = null;
+      freshnessRef.current = EMPTY_FRESHNESS_STATE;
       return;
     }
 
-    const currentIds = new Set(notifications.map((n) => n.id));
+    const previous = freshnessRef.current;
+    const baseline = previous.seenIds === null;
+    const { state, fresh } = selectFreshNotifications(previous, notifications, hasData);
+    freshnessRef.current = state;
 
-    // Don't chime for the initial batch of existing notifications.
-    if (seenIdsRef.current === null) {
-      seenIdsRef.current = currentIds;
+    if (baseline) {
       logNotificationSound({
         event: "skipped",
         source: "history",
-        reason: `initial load baseline (${currentIds.size} existing notifications, no chime)`,
+        reason: `initial load baseline (${notifications.length} existing notifications, no chime)`,
       });
       return;
     }
 
-    for (const notification of notifications) {
-      if (seenIdsRef.current.has(notification.id)) continue;
+    for (const notification of fresh) {
       const meta = {
         source: "history",
         id: notification.id,
@@ -63,8 +66,6 @@ export function NotificationsProvider() {
         type: notification.type,
       });
     }
-
-    seenIdsRef.current = currentIds;
   }, [notifications, hasData, playSound]);
 
   return null;

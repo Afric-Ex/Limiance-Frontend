@@ -2484,7 +2484,8 @@
       "walletMargin": "Partager le compte sur marge",
       "walletFutures": "Partager le compte futures",
       "assetsOverview": "Partager l'aperçu des actifs",
-      "earn": "Partager Earn"
+      "earn": "Partager Earn",
+      "transaction": "Partager la transaction"
     },
     "save": "Enregistrer",
     "copy": "Copier",
@@ -2507,7 +2508,8 @@
       "marginOrders": "Aucun ordre sur marge",
       "convertHistory": "Aucune conversion",
       "p2pOrder": "Les détails de l'ordre ne sont pas prêts",
-      "generic": "Rien à partager pour l'instant"
+      "generic": "Rien à partager pour l'instant",
+      "transaction": "Les détails de la transaction ne sont pas prêts"
     },
     "errors": {
       "node-missing": "La capture n'est pas prête.",

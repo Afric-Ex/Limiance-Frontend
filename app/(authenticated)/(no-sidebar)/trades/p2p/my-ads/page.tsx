@@ -193,7 +193,7 @@ function MyAdsPageInner() {
                       <div>
                         <div className="text-white/35 text-2xs mb-0.5 uppercase tracking-wider">Price</div>
                         <div className="text-white font-mono font-semibold break-words">
-                          {parseFloat(String(ad.price ?? 0)).toLocaleString()} {ad.fiat}
+                          {parseFloat(String(ad.price ?? 0)).toLocaleString(undefined, { maximumFractionDigits: 6 })} {ad.fiat}
                         </div>
                       </div>
                       <div>

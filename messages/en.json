@@ -2484,7 +2484,8 @@
       "walletMargin": "Share margin account",
       "walletFutures": "Share futures account",
       "assetsOverview": "Share assets overview",
-      "earn": "Share earn"
+      "earn": "Share earn",
+      "transaction": "Share transaction"
     },
     "save": "Save",
     "copy": "Copy",
@@ -2507,7 +2508,8 @@
       "marginOrders": "No margin orders",
       "convertHistory": "No conversions",
       "p2pOrder": "Order details are not ready",
-      "generic": "Nothing to share yet"
+      "generic": "Nothing to share yet",
+      "transaction": "Transaction details are not ready"
     },
     "errors": {
       "node-missing": "The snapshot is not ready.",

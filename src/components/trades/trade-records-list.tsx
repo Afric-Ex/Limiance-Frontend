@@ -24,7 +24,7 @@ const formatNumber = (value: unknown) => {
   if (value === undefined || value === null || value === "") return "—";
   const number = Number(value);
   return Number.isFinite(number)
-    ? number.toLocaleString("en-US", { maximumFractionDigits: 8 })
+    ? number.toLocaleString("en-US", { maximumFractionDigits: 6 })
     : String(value);
 };
 

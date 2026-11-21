@@ -163,11 +163,11 @@ export function filterOrderHistoryRows(rows: readonly OrderHistoryRow[], f: Orde
   });
 }
 
-export const fmt = (value: number | null, maxDigits = 8, minDigits = 0) =>
+export const fmt = (value: number | null, maxDigits = 6, minDigits = 0) =>
   value === null
     ? "—"
     : value.toLocaleString(undefined, { minimumFractionDigits: minDigits, maximumFractionDigits: maxDigits });
-export const fmtPrice = (value: number | null) => fmt(value, 8, 2);
+export const fmtPrice = (value: number | null) => fmt(value, 6, 2);
 export const fmtMoney = (value: number | null) => fmt(value, 2, 2);
 
 const typeLabelKey = (type: string) => {

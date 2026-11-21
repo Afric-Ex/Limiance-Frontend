@@ -43,6 +43,13 @@ export function maskAccount(account?: string | null): string {
   return `${MASK}${tailOf(value)}`;
 }
 
+/** Masks an identifier (transaction/order reference) down to its last 6 chars. */
+export function maskId(id?: string | null): string {
+  const value = typeof id === "string" ? id.trim() : "";
+  if (!value) return "";
+  return `${MASK}${tailOf(value, 6) || tailOf(value)}`;
+}
+
 export function maskAmount(_value: number | string | null | undefined): string {
   return AMOUNT_MASK;
 }

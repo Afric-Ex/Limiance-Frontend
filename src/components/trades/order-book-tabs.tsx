@@ -53,10 +53,9 @@ function formatNumber(value: unknown, digits = 6) {
     : "—";
 }
 
-// Number of decimals a price actually uses (capped at 8).
 function decimalsOf(value: number) {
   if (!Number.isFinite(value)) return 0;
-  const fixed = value.toFixed(8).replace(/0+$/, "");
+  const fixed = value.toFixed(6).replace(/0+$/, "");
   const dot = fixed.indexOf(".");
   return dot === -1 ? 0 : fixed.length - dot - 1;
 }
@@ -412,7 +411,7 @@ export function OrderBookTabs({
               >
                 {stepOptions.map((step) => (
                   <option key={step} value={step} className="bg-[#181a20] text-white">
-                    {formatNumber(step, 8)}
+                    {formatNumber(step, 6)}
                   </option>
                 ))}
               </select>

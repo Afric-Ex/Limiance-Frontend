@@ -111,7 +111,7 @@ export function ConvertHistoryCard({ rows, timestamp, maskedUid }: ConvertHistor
               <span style={{ ...NUMERIC, color: UP }}>
                 + {toAmount} {item?.to ?? ""}
               </span>
-              <span style={NUMERIC}>{Number.isFinite(rate) ? rate.toLocaleString() : "—"}</span>
+              <span style={NUMERIC}>{Number.isFinite(rate) ? rate.toLocaleString(undefined, { maximumFractionDigits: 6 }) : "—"}</span>
               <span>
                 <Pill label={status} color={statusTone(status)} />
               </span>

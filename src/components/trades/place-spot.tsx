@@ -85,6 +85,14 @@ const STACKED_SLIDER = {
   },
 } as const;
 
+const MAX_PRICE_DECIMALS = 6;
+const PRICE_INPUT_PATTERN = /^\d*(?:\.\d{0,6})?$/;
+
+const formatPriceInput = (value: number | string): string => {
+  const n = Number(value);
+  return Number.isFinite(n) ? String(Number(n.toFixed(MAX_PRICE_DECIMALS))) : "";
+};
+
 const formatAmount = (value: number) =>
   Number.isFinite(value) ? value.toLocaleString("en-US", { maximumFractionDigits: 8 }) : "0";
 
@@ -126,7 +134,7 @@ function FieldRow({
             value={value !== undefined && value !== null ? value : ""}
             onChange={(e) => {
               const val = e.target.value;
-              if (val === "" || /^\d*\.?\d*$/.test(val)) onChange?.(val);
+              if (val === "" || PRICE_INPUT_PATTERN.test(val)) onChange?.(val);
             }}
             className="mt-1 h-5 w-full min-w-0 border-none bg-transparent p-0 font-mono text-sm font-semibold tabular-nums text-white outline-none placeholder-white/20 focus:ring-0"
             placeholder="0.00"
@@ -145,8 +153,7 @@ function FieldRow({
         value={value !== undefined && value !== null ? value : ""}
         onChange={(e) => {
           const val = e.target.value;
-          // Allow empty, numbers, and one decimal point
-          if (val === "" || /^\d*\.?\d*$/.test(val)) {
+          if (val === "" || PRICE_INPUT_PATTERN.test(val)) {
             onChange?.(val);
           }
         }}
@@ -248,15 +255,16 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
   // auto-fill limit price from market feed; skip if user has manually typed
   useEffect(() => {
     if (activeTab !== "limit" || !marketPrice) return;
-    if (!buyPriceEdited) setBuyPrice(marketPrice);
-    if (!sellPriceEdited) setSellPrice(marketPrice);
+    if (!buyPriceEdited) setBuyPrice(formatPriceInput(marketPrice));
+    if (!sellPriceEdited) setSellPrice(formatPriceInput(marketPrice));
   }, [activeTab, marketPrice, pair, buyPriceEdited, sellPriceEdited]);
 
   // order book row click â€” always overrides both price fields and marks as user-set
   useEffect(() => {
     if (!clickedPrice) return;
-    setBuyPrice(clickedPrice);
-    setSellPrice(clickedPrice);
+    const price = formatPriceInput(clickedPrice);
+    setBuyPrice(price);
+    setSellPrice(price);
     setBuyPriceEdited(true);
     setSellPriceEdited(true);
   }, [clickedPrice]);
@@ -564,7 +572,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     const total = referencePrice * quantity;
     const fmtPrice = (value: number) =>
       Number.isFinite(value) && value > 0
-        ? `${value.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${quote}`
+        ? `${value.toLocaleString("en-US", { maximumFractionDigits: MAX_PRICE_DECIMALS })} ${quote}`
         : "—";
 
     const rows: TradeConfirmationRow[] = [

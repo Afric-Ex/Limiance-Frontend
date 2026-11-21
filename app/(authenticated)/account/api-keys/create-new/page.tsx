@@ -73,8 +73,8 @@ function CreateApiKeyInner() {
 
       const response = await userService.createApiKey({
         label: form.values.label.trim(),
-        permissions: selectedProducts.length > 0 ? selectedProducts : permissions,
-        coverage: selectedCoverage.length > 0 ? selectedCoverage.join(",") : "trading",
+        permissions: selectedProducts,
+        coverage: selectedCoverage.length > 0 ? selectedCoverage : ["trading"],
         ipAllowlist: parseIpAllowlist(form.values.ipAllowlist),
       });
       const result = response as typeof response & {

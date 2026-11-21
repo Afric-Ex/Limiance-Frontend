@@ -55,7 +55,7 @@ export const AdManagementCard = ({
 
         <div className="text-right">
           <div className="text-lg font-bold text-white font-mono tabular-nums">
-            {ad.price.toLocaleString()} <span className="text-xs font-normal text-white/40">{ad.fiat}</span>
+            {ad.price.toLocaleString(undefined, { maximumFractionDigits: 6 })} <span className="text-xs font-normal text-white/40">{ad.fiat}</span>
           </div>
         </div>
       </div>

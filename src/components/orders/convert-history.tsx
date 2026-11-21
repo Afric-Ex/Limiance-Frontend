@@ -210,7 +210,7 @@ export const ConvertTable = () => {
                     <TableTd>{t("convert")}</TableTd>
                     <TableTd className="!text-error-1">- {item.fromAmount} {item.from}</TableTd>
                     <TableTd className="!text-success-6">+ {item.toAmount} {item.to}</TableTd>
-                    <TableTd>{item.rate > 0 ? item.rate.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "—"}</TableTd>
+                    <TableTd>{item.rate > 0 ? item.rate.toLocaleString(undefined, { maximumFractionDigits: 6 }) : "—"}</TableTd>
                     <TableTd className="pr-6">
                       <span className="text-success-6 bg-success-6/10 px-2 py-1 flex items-center justify-center w-fit text-xs font-bold rounded-md uppercase tracking-wider">
                         {item.status}

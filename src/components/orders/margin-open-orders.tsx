@@ -23,7 +23,7 @@ const selectStyles = {
 
 const formatNumber = (value: unknown) => {
   const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue.toLocaleString() : "—";
+  return Number.isFinite(numberValue) ? numberValue.toLocaleString(undefined, { maximumFractionDigits: 6 }) : "—";
 };
 
 const getOrderId = (order: any): string => {
@@ -200,9 +200,9 @@ export const MarginOpenOrders = () => {
                     <TableTd>{formatNumber(order.total)}</TableTd>
                     <TableTd>
                       <span className="text-xs">
-                        {levels.takeProfit ? <span className="text-success-6">{levels.takeProfit.toLocaleString()}</span> : "—"}
+                        {levels.takeProfit ? <span className="text-success-6">{levels.takeProfit.toLocaleString(undefined, { maximumFractionDigits: 6 })}</span> : "—"}
                         {" / "}
-                        {levels.stopLoss ? <span className="text-error-1">{levels.stopLoss.toLocaleString()}</span> : "—"}
+                        {levels.stopLoss ? <span className="text-error-1">{levels.stopLoss.toLocaleString(undefined, { maximumFractionDigits: 6 })}</span> : "—"}
                       </span>
                     </TableTd>
                     <TableTd>

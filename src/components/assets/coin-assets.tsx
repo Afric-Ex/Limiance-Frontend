@@ -56,7 +56,7 @@ export const CoinAssets = () => {
               </span>
             </TableTd>
             <TableTd>
-              <span className="text-sm font-bold">${item.currencyPrice || 0}</span>
+              <span className="text-sm font-bold">${Number(item.currencyPrice || 0).toLocaleString(undefined, { maximumFractionDigits: 6 })}</span>
             </TableTd>
             <TableTd>
               <span
