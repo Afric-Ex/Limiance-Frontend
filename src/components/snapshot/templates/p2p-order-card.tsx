@@ -37,12 +37,12 @@ function statusColor(status: string) {
 }
 
 function formatNumber(value: number) {
-  return Number.isFinite(value) ? value.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "—";
+  return Number.isFinite(value) ? value.toLocaleString(undefined, { maximumFractionDigits: 6 }) : "—";
 }
 
 function formatPrice(value: number) {
   return Number.isFinite(value)
-    ? value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+    ? value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })
     : "—";
 }
 

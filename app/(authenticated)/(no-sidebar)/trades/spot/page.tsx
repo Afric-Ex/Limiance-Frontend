@@ -597,7 +597,7 @@ function SpotTrades() {
                           <div key={`bid-${i}`} onClick={() => setClickedPrice(order.price)} className="flex justify-between relative py-0.5 px-1 cursor-pointer">
                             <div className="absolute top-0 right-0 bottom-0 bg-success-6/[0.08]" style={{ width: `${w}%` }} />
                             <span className="text-micro font-mono text-white/80 z-10">{order.quantity.toFixed(4)}</span>
-                            <span className="text-micro font-mono text-success-6 z-10">{order.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                            <span className="text-micro font-mono text-success-6 z-10">{order.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span>
                           </div>
                         )
                       })}
@@ -612,7 +612,7 @@ function SpotTrades() {
                         return (
                           <div key={`ask-${i}`} onClick={() => setClickedPrice(order.price)} className="flex justify-between relative py-0.5 px-1 cursor-pointer">
                             <div className="absolute top-0 left-0 bottom-0 bg-error-1/[0.08]" style={{ width: `${w}%` }} />
-                            <span className="text-micro font-mono text-error-1 z-10">{order.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                            <span className="text-micro font-mono text-error-1 z-10">{order.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span>
                             <span className="text-micro font-mono text-white/80 z-10">{order.quantity.toFixed(4)}</span>
                           </div>
                         )

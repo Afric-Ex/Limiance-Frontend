@@ -108,7 +108,7 @@ export const MarginPositions = () => {
                           {Number(pos.quantity || 0).toLocaleString()}
                         </span>
                         <span className="text-xs font-mono text-white/40">
-                          @ ${Number(pos.price || 0).toLocaleString()}
+                          @ ${Number(pos.price || 0).toLocaleString(undefined, { maximumFractionDigits: 6 })}
                         </span>
                       </div>
                     </TableTd>

@@ -303,7 +303,7 @@ export const ConvertAsset = ({ defaultFromAsset }: ConvertAssetProps) => {
           ) : rate?.baseInQuote !== undefined && rate.baseInQuote !== "" ? (
             <span className="text-xs font-semibold text-white/80">
               1 {fromCoin.symbol} ≈{" "}
-              {(+rate.baseInQuote).toLocaleString("en-US", { maximumFractionDigits: 8 })}{" "}
+              {(+rate.baseInQuote).toLocaleString("en-US", { maximumFractionDigits: 6 })}{" "}
               {toCoin.symbol}
             </span>
           ) : (

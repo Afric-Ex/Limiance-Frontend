@@ -241,7 +241,7 @@ export const FiatBankDeposit = () => {
         <div className="flex flex-col gap-1 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">
           <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">Rate</span>
           <span className="text-sm font-bold text-white tabular-nums">
-            {rate > 0 ? `₦${Number(rate).toLocaleString()}` : rateLoading ? "…" : "—"}
+            {rate > 0 ? `₦${Number(rate).toLocaleString(undefined, { maximumFractionDigits: 6 })}` : rateLoading ? "…" : "—"}
           </span>
         </div>
         <div className="flex flex-col gap-1 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3">

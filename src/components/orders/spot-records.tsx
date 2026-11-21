@@ -99,7 +99,7 @@ export const SpotRecords = () => {
                           <span className={isBuy ? "text-emerald-400" : "text-red-400"}>{rec.side}</span>
                         </TableTd>
                         <TableTd>{parseDate(rec.createdAt)?.toLocaleString() ?? '—'}</TableTd>
-                        <TableTd className="font-mono">{Number(rec.price || 0).toLocaleString()}</TableTd>
+                        <TableTd className="font-mono">{Number(rec.price || 0).toLocaleString(undefined, { maximumFractionDigits: 6 })}</TableTd>
                         <TableTd className="font-mono">{Number(rec.quantity || rec.amount || 0).toLocaleString()}</TableTd>
                         <TableTd className="capitalize">{rec.status || t("closed")}</TableTd>
                       </TableTr>

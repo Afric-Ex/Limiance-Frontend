@@ -66,7 +66,7 @@ export const toNumber = (value: unknown): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
-export const fmtNum = (value: unknown, fallback = "—", maxDigits = 8) => {
+export const fmtNum = (value: unknown, fallback = "—", maxDigits = 6) => {
   const n = toNumber(value);
   return n === null ? fallback : n.toLocaleString(undefined, { maximumFractionDigits: maxDigits });
 };

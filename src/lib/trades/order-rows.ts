@@ -20,7 +20,7 @@ export const hasConditional = (order: any) =>
 export const formatOrderNumber = (value: unknown) => {
   if (value === null || value === undefined || value === "") return "-";
   const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "-";
+  return Number.isFinite(numberValue) ? numberValue.toLocaleString(undefined, { maximumFractionDigits: 6 }) : "-";
 };
 
 export const formatOrderDate = (value: unknown) => {

@@ -57,6 +57,12 @@ const CandlestickChart = dynamic(
 );
 
 const LEVERAGE_PRESETS = [1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100];
+
+const toPriceInput = (value: number | string | null | undefined): string => {
+  if (value === '' || value === null || value === undefined) return '';
+  const n = Number(value);
+  return Number.isFinite(n) ? String(Number(n.toFixed(6))) : '';
+};
 // Stacked (Bybit-style) quantity slider, same look as the spot/margin panels:
 // dots every 25%, labels only at the two ends.
 const PERCENT_MARKS = [
@@ -362,7 +368,7 @@ function FuturesTradesInner() {
     }
     // Only auto-fill if the user hasn't manually typed their own price
     if (feed.price !== null && futuresPrice === '' && !priceUserEditedRef.current) {
-      setFuturesPrice(feed.price);
+      setFuturesPrice(toPriceInput(feed.price));
     }
   }, [feed.price, futuresPrice, orderType]);
 
@@ -377,7 +383,7 @@ function FuturesTradesInner() {
 
     if (!pairChanged && !typeChanged) return; // ignore feed.price ticks
 
-    setFuturesPrice(orderType === 'market' ? '' : feed.price ?? '');
+    setFuturesPrice(orderType === 'market' ? '' : toPriceInput(feed.price ?? ''));
     setFuturesAmount('');
     setSliderValue(0);
     setTakeProfit('');
@@ -733,8 +739,8 @@ function FuturesTradesInner() {
   };
 
   const inputLabel = orderType === 'stop' ? 'Trigger' : 'Price';
-  const inputPlaceholder = feed.price ? feed.price.toString() : '0';
-  const stopLimitPlaceholder = workingPrice > 0 ? workingPrice.toString() : inputPlaceholder;
+  const inputPlaceholder = feed.price ? toPriceInput(feed.price) : '0';
+  const stopLimitPlaceholder = workingPrice > 0 ? toPriceInput(workingPrice) : inputPlaceholder;
 
   const tradeFormPanel = (
     <div className="flex flex-col gap-4">
@@ -817,6 +823,7 @@ function FuturesTradesInner() {
             <span className="text-xs text-white/40 w-14">{inputLabel}</span>
             <NumberInput
               hideControls
+              decimalScale={6}
               value={futuresPrice}
               onChange={(val) => {
                 setFuturesPrice(val);
@@ -849,6 +856,7 @@ function FuturesTradesInner() {
             <span className="text-xs text-white/40 w-14">Limit</span>
             <NumberInput
               hideControls
+              decimalScale={6}
               value={stopLimitPrice}
               onChange={(val) => {
                 setStopLimitPrice(val);
@@ -929,6 +937,7 @@ function FuturesTradesInner() {
           <div className="grid grid-cols-2 gap-2">
             <NumberInput
               hideControls
+              decimalScale={6}
               value={takeProfit}
               onChange={setTakeProfit}
               classNames={{
@@ -938,6 +947,7 @@ function FuturesTradesInner() {
             />
             <NumberInput
               hideControls
+              decimalScale={6}
               value={stopLoss}
               onChange={setStopLoss}
               classNames={{
@@ -1156,7 +1166,7 @@ function FuturesTradesInner() {
           isConnected={orderBook.isConnected}
           lastUpdated={orderBook.lastUpdated}
           onSelectPrice={(price) => {
-            setFuturesPrice(price);
+            setFuturesPrice(toPriceInput(price));
             priceUserEditedRef.current = true;
           }}
         />
@@ -1303,7 +1313,7 @@ function FuturesTradesInner() {
               isConnected={orderBook.isConnected}
               lastUpdated={orderBook.lastUpdated}
               onSelectPrice={(price) => {
-                setFuturesPrice(price);
+                setFuturesPrice(toPriceInput(price));
                 priceUserEditedRef.current = true;
               }}
             />
@@ -1341,7 +1351,7 @@ function FuturesTradesInner() {
               isConnected={orderBook.isConnected}
               lastUpdated={orderBook.lastUpdated}
               onSelectPrice={(price) => {
-                setFuturesPrice(price);
+                setFuturesPrice(toPriceInput(price));
                 priceUserEditedRef.current = true;
               }}
             />

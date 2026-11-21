@@ -947,7 +947,7 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
 
 function TradeHistoryTable({ trades, loading, mobile, days, instrument }: any) {
   const tp = useTranslations("Trading");
-  const fmt = (value: unknown, decimals = 8) => {
+  const fmt = (value: unknown, decimals = 6) => {
     const n = Number(value);
     return Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: decimals }) : "—";
   };
@@ -1353,7 +1353,7 @@ function PnLPanel({ selectedPair, market = "spot" }: { selectedPair?: string; ma
             const fee = row.cumExecFee ?? row.fee;
             const feeCurrency = row.feeCurrency || row.quote || "";
             const status = row.orderStatus || row.status || row.execType || "—";
-            const formatNumber = (value: unknown, digits = 8) => {
+            const formatNumber = (value: unknown, digits = 6) => {
               if (value === null || value === undefined || value === "") return "—";
               const number = Number(value);
               return Number.isFinite(number)
