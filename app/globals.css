@@ -368,3 +368,34 @@ button {
     max-width: calc(100vw - 24px) !important;
   }
 }
+
+/* ── Slider smoothness & reactivity ── */
+/* Thumb: instant grab cursor + no touch scroll interference */
+.mantine-Slider-thumb {
+  touch-action: none;
+  cursor: grab;
+  transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+}
+.mantine-Slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12) !important;
+}
+/* Bar fill: no lag during drag */
+.mantine-Slider-bar {
+  transition: none !important;
+}
+/* Track: fully rounded ends */
+.mantine-Slider-track::before {
+  border-radius: 999px !important;
+}
+/* Root: prevent text selection while dragging */
+.mantine-Slider-root {
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* Mark labels: prevent them from eating pointer events */
+.mantine-Slider-markLabel {
+  pointer-events: none;
+  user-select: none;
+}

@@ -9,6 +9,7 @@ import { MarginTransferModal } from "./margin-transfer-modal";
 import { openTradeOrderConfirmation, type TradeConfirmationRow } from "./trade-order-confirmation-modal";
 import { useTradeConfirmations, type TradeConfirmationKey } from "@/src/hooks/use-trade-confirmations";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
+import { splitPair } from "@/src/utils/pair";
 import { MdExpandMore, MdRefresh } from "react-icons/md";
 import { icons } from "../assets/icons";
 import Image from "next/image";
@@ -54,34 +55,21 @@ interface Props {
 type AdvancedTab = "tpsl" | "oco" | "conditional" | "trailing";
 type AdvancedOption = { value: AdvancedTab; label: string; disabled?: boolean };
 
-const PERCENT_MARKS = [
-  { value: 0,   label: "0%" },
-  { value: 25,  label: "25%" },
-  { value: 50,  label: "50%" },
-  { value: 75,  label: "75%" },
-  { value: 100, label: "100%" },
-];
-
-// Stacked (Bybit-style) slider: dots every 25%, labels only at the two ends.
-const STACKED_MARKS = [
-  { value: 0, label: "0" },
-  { value: 25 },
-  { value: 50 },
-  { value: 75 },
-  { value: 100, label: "100%" },
-];
+const formatPct = (value: number): string => {
+  if (!Number.isFinite(value)) return "0%";
+  const rounded = Math.round(value * 10) / 10;
+  return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}%`;
+};
 
 // Full class strings (not built with template literals) so Tailwind can see them.
 const STACKED_SLIDER = {
   buy: {
     bar: "!bg-success-6",
     thumb: "!border-2 !border-success-6 !bg-[#181a20] !w-3 !h-3",
-    mark: "!w-2 !h-2 !rounded-full !border-2 !border-success-6/40 !bg-[#181a20] !-mt-[3px]",
   },
   sell: {
     bar: "!bg-error-1",
     thumb: "!border-2 !border-error-1 !bg-[#181a20] !w-3 !h-3",
-    mark: "!w-2 !h-2 !rounded-full !border-2 !border-error-1/40 !bg-[#181a20] !-mt-[3px]",
   },
 } as const;
 
@@ -124,7 +112,7 @@ function FieldRow({
   if (floating) {
     // Bybit-style field: small label on top, value below, unit on the right.
     return (
-      <div className={clsx("flex h-11 items-center rounded-lg border border-transparent bg-white/[0.05] px-3 transition-colors", !readOnly && focusBorder, readOnly && "opacity-80")}>
+      <div className={clsx("flex h-11 items-center rounded-lg border border-transparent bg-white/[0.05] px-3 transition-colors duration-75", !readOnly && focusBorder, readOnly && "opacity-80")}>
         <div className="flex min-w-0 flex-1 flex-col justify-center">
           <span className="text-2xs leading-none text-white/40">{label}</span>
           <input
@@ -145,10 +133,11 @@ function FieldRow({
     );
   }
   return (
-    <div className={clsx("flex items-center bg-white/[0.03] border border-white/[0.06] rounded-lg px-2 h-10 transition-colors", !readOnly && focusBorder, readOnly && "opacity-70")}>
+    <div className={clsx("flex items-center bg-white/[0.03] border border-white/[0.06] rounded-lg px-2 h-10 transition-colors duration-75", !readOnly && focusBorder, readOnly && "opacity-70")}>
       <span className="text-xs text-white/40 w-10 shrink-0">{label}</span>
       <input
         type="text"
+        inputMode="decimal"
         readOnly={readOnly}
         value={value !== undefined && value !== null ? value : ""}
         onChange={(e) => {
@@ -287,8 +276,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     });
   }, [tpslEnabled, buyTp, buySl, sellTp, sellSl, onTpslChange]);
 
-  const pairStr = String(pair || "");
-  const [base, quote] = pairStr.includes("/") ? pairStr.split("/") : pairStr.match(/^([A-Z]+)([A-Z]{3,6})$/i)?.slice(1,3) || ["BTC", "USDT"];
+  const [base, quote] = splitPair(pair);
 
   const { coins: portfolioResponse, refreshBalances, isRefreshing } = usePortfolioWs({ coins: true });
 
@@ -780,8 +768,9 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           <Slider
             min={0}
             max={100}
-            step={1}
-            label={(v) => `${v}%`}
+            step={0.1}
+            label={formatPct}
+            labelAlwaysOn
             value={pct}
             onChange={(v) => {
               if (isBuy) {
@@ -797,10 +786,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               track: "!h-1 before:!h-1 before:!bg-white/10",
               bar: sliderStyle.bar,
               thumb: sliderStyle.thumb,
-              mark: sliderStyle.mark,
-              markLabel: "!text-2xs !text-white/40 !mt-2",
             }}
-            marks={STACKED_MARKS}
           />
         </div>
 
@@ -1014,8 +1000,9 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           <Slider
             min={0}
             max={100}
-            step={1}
-            label={(v) => `${v}%`}
+            step={0.1}
+            label={formatPct}
+            labelAlwaysOn
             value={pct}
             onChange={(v) => {
               setPct(v);
@@ -1031,10 +1018,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
               track: "!h-1 before:!h-1 before:!bg-white/10",
               bar: sliderStyle.bar,
               thumb: sliderStyle.thumb,
-              mark: sliderStyle.mark,
-              markLabel: "!text-2xs !text-white/40 !mt-2",
             }}
-            marks={STACKED_MARKS}
           />
         </div>
 
@@ -1267,7 +1251,9 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           <div className="px-1 pt-1 pb-3">
             <Slider
-              min={0} max={100} step={25}
+              min={0} max={100} step={0.1}
+              label={formatPct}
+              labelAlwaysOn
               value={buyPct}
               onChange={(v) => {
                 setBuyPct(v);
@@ -1278,10 +1264,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 track: "!h-1 before:!h-1 before:!bg-white/10",
                 bar: "!bg-success-6",
                 thumb: "!border-2 !border-success-6 !bg-[#181a20] !w-3 !h-3",
-                mark: "!w-2 !h-2 !rounded-full !border-2 !border-success-6/40 !bg-[#181a20] !-mt-[3px]",
-                markLabel: "!text-2xs !text-white/30 !mt-1",
               }}
-              marks={PERCENT_MARKS}
             />
           </div>
 
@@ -1362,7 +1345,9 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           <div className="px-1 pt-1 pb-3">
             <Slider
-              min={0} max={100} step={25}
+              min={0} max={100} step={0.1}
+              label={formatPct}
+              labelAlwaysOn
               value={sellPct}
               onChange={(v) => {
                 setSellPct(v);
@@ -1372,10 +1357,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
                 track: "!h-1 before:!h-1 before:!bg-white/10",
                 bar: "!bg-error-1",
                 thumb: "!border-2 !border-error-1 !bg-[#181a20] !w-3 !h-3",
-                mark: "!w-2 !h-2 !rounded-full !border-2 !border-error-1/40 !bg-[#181a20] !-mt-[3px]",
-                markLabel: "!text-2xs !text-white/30 !mt-1",
               }}
-              marks={PERCENT_MARKS}
             />
           </div>
 

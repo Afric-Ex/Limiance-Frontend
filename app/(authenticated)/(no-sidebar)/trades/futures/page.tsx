@@ -63,15 +63,12 @@ const toPriceInput = (value: number | string | null | undefined): string => {
   const n = Number(value);
   return Number.isFinite(n) ? String(Number(n.toFixed(6))) : '';
 };
-// Stacked (Bybit-style) quantity slider, same look as the spot/margin panels:
-// dots every 25%, labels only at the two ends.
-const PERCENT_MARKS = [
-  { value: 0, label: '0' },
-  { value: 25 },
-  { value: 50 },
-  { value: 75 },
-  { value: 100, label: '100%' },
-];
+
+const formatPct = (value: number): string => {
+  if (!Number.isFinite(value)) return '0%';
+  const rounded = Math.round(value * 10) / 10;
+  return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}%`;
+};
 
 // Futures shows Buy/Long and Sell/Short together (no active side), so the slider
 // uses the neutral brand colour. Full class strings so Tailwind can see them.
@@ -79,8 +76,6 @@ const FUTURES_SLIDER_CLASSES = {
   track: '!h-1 before:!h-1 before:!bg-white/10',
   bar: '!bg-primary',
   thumb: '!border-2 !border-primary !bg-[#181a20] !w-3 !h-3',
-  mark: '!w-2 !h-2 !rounded-full !border-2 !border-primary/40 !bg-[#181a20] !-mt-[3px]',
-  markLabel: '!text-2xs !text-white/40 !mt-2',
 } as const;
 
 type OrderType = 'limit' | 'market' | 'stop';
@@ -243,6 +238,7 @@ function FuturesTradesInner() {
             onChangeEnd={(val) => handleSetFuturesLeverage(val)}
             min={1}
             max={marginMode === 'cross' ? 50 : 100}
+            step={1}
           />
           <div className="grid grid-cols-5 gap-1">
             {LEVERAGE_PRESETS.filter((value) => value <= (marginMode === 'cross' ? 50 : 100)).map((value) => (
@@ -729,12 +725,13 @@ function FuturesTradesInner() {
   };
 
   const updateSliderValue = (value: number) => {
-    setSliderValue(value);
+    const nextValue = Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
+    setSliderValue(nextValue);
     // Use feed.price as fallback when user hasn't typed a price yet
     const effectivePrice = effectiveLimitPrice || feed.price || 0;
     if (!effectivePrice) return;
     const effectiveMax = effectivePrice > 0 ? (availableQuote * leverage) / effectivePrice : 0;
-    const nextQuantity = (effectiveMax * value) / 100;
+    const nextQuantity = (effectiveMax * nextValue) / 100;
     setFuturesAmount(fmtFuturesQty(nextQuantity));
   };
 
@@ -890,8 +887,8 @@ function FuturesTradesInner() {
               const effectivePrice = effectiveLimitPrice || feed.price || 0;
               const effectiveMax = effectivePrice > 0 ? (availableQuote * leverage) / effectivePrice : 0;
               if (effectiveMax > 0) {
-                const pct = Math.max(0, Math.min(100, Math.round((Number(v) / effectiveMax) * 100)));
-                setSliderValue(pct);
+                const pct = Math.max(0, Math.min(100, (Number(v) / effectiveMax) * 100));
+                setSliderValue(Number.isFinite(pct) ? pct : 0);
               } else {
                 setSliderValue(0);
               }
@@ -909,12 +906,12 @@ function FuturesTradesInner() {
           <Slider
             min={0}
             max={100}
-            step={1}
-            label={(v) => `${v}%`}
+            step={0.1}
+            label={formatPct}
+            labelAlwaysOn
             value={sliderValue}
             onChange={updateSliderValue}
             classNames={FUTURES_SLIDER_CLASSES}
-            marks={PERCENT_MARKS}
           />
         </div>
 
