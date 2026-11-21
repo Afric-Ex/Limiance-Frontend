@@ -177,14 +177,31 @@ function enqueueOrderFrame<T>(key: string, task: () => Promise<T>): Promise<T> {
   return run;
 }
 
-function sendOrderFrame(frame: { type: string; data: Record<string, unknown> }): Promise<any> {
+interface SendOrderFrameOptions {
+  /**
+   * Some placement feeds do not emit a per-request ack; the order lifecycle
+   * arrives on the user-order stream (`user_order_update` / `order_filled`)
+   * and is reconciled there (see order-event-sync). Treat a silent socket as a
+   * successful send instead of failing after the wait, so the caller can seed
+   * the optimistic row and free the per-market queue.
+   */
+  optimisticOnTimeout?: boolean;
+}
+
+function sendOrderFrame(
+  frame: { type: string; data: Record<string, unknown> },
+  options: SendOrderFrameOptions = {}
+): Promise<any> {
   const requestId = createRequestId(frame.type);
-  return enqueueOrderFrame(orderQueueKey(frame), () => sendOrderFrameOnce(frame, requestId));
+  return enqueueOrderFrame(orderQueueKey(frame), () =>
+    sendOrderFrameOnce(frame, requestId, options)
+  );
 }
 
 function sendOrderFrameOnce(
   frame: { type: string; data: Record<string, unknown> },
-  requestId: string
+  requestId: string,
+  options: SendOrderFrameOptions = {}
 ): Promise<any> {
   return waitForConnection().then(
     () =>
@@ -199,8 +216,25 @@ function sendOrderFrameOnce(
           action();
         };
 
+        const enrich = (payload: any) =>
+          payload && typeof payload === "object" && !Array.isArray(payload)
+            ? { ...payload, clientOrderId: requestId }
+            : { data: payload, clientOrderId: requestId };
+
         const unsubscribe = wsClient.onAnyMessage((data, raw) => {
           const type = String(raw?.type ?? "");
+          const normalized = type.toLowerCase();
+
+          // An execution/update frame means the order reached the book — the
+          // backend uses this instead of `order_placed` for many placements.
+          if (PUSH_UPDATE_TYPES.has(normalized)) {
+            const incomingRequestId = readRequestId(raw);
+            if (incomingRequestId && incomingRequestId !== requestId) return;
+            if (!incomingRequestId && !replyMatchesMarket(frame, raw)) return;
+            settle(() => resolve(enrich(data ?? raw)));
+            return;
+          }
+
           if (!looksLikeOrderResponse(type)) return;
 
           const incomingRequestId = readRequestId(raw);
@@ -210,18 +244,22 @@ function sendOrderFrameOnce(
           const failure = describeFailure(raw);
           // The backend does not echo `requestId` yet. Attaching our generated
           // id lets callers correlate the ack with the later fill event.
-          const payload = data ?? raw;
-          const enriched =
-            payload && typeof payload === "object" && !Array.isArray(payload)
-              ? { ...payload, clientOrderId: requestId }
-              : { data: payload, clientOrderId: requestId };
-          settle(() => (failure ? reject(new Error(failure)) : resolve(enriched)));
+          settle(() => (failure ? reject(new Error(failure)) : resolve(enrich(data ?? raw))));
         });
 
         const timer = setTimeout(() => {
-          settle(() =>
-            reject(new Error(`No response to ${frame.type} within ${RESPONSE_TIMEOUT_MS / 1000}s`))
-          );
+          settle(() => {
+            if (options.optimisticOnTimeout) {
+              resolve({
+                ...frame.data,
+                clientOrderId: requestId,
+                success: true,
+                statusCode: 200,
+              });
+              return;
+            }
+            reject(new Error(`No response to ${frame.type} within ${RESPONSE_TIMEOUT_MS / 1000}s`));
+          });
         }, RESPONSE_TIMEOUT_MS);
 
         if (!wsClient.send({ ...frame, requestId })) {
@@ -277,7 +315,7 @@ export function placeSpotOrderWs(input: {
   if (Number(input.stopLoss) > 0) payload.stopLoss = Number(input.stopLoss);
   if (input.postOnly) payload.postOnly = true;
   if (input.timeInForce) payload.timeInForce = input.timeInForce;
-  return sendOrderFrame({ type: "place_spot_order", data: payload });
+  return sendOrderFrame({ type: "place_spot_order", data: payload }, { optimisticOnTimeout: true });
 }
 
 /** cancel_spot_order frame: { type: "cancel_spot_order", data: { orderId } } */
