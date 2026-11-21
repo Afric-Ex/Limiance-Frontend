@@ -55,23 +55,23 @@ const titleFromType = (type: unknown): string | undefined => {
 
 const toAppNotification = (raw: any): AppNotification => {
   const rawCreatedAt = raw.createdAt ?? raw.created_at ?? raw.timestamp;
-  const createdAt = rawCreatedAt
-    ? new Date(rawCreatedAt).getTime()
-    : Date.now();
+  const parsedCreatedAt = rawCreatedAt ? new Date(rawCreatedAt).getTime() : 0;
+  const createdAt = Number.isFinite(parsedCreatedAt) ? parsedCreatedAt : 0;
 
   const title =
     raw.title || raw.heading
       ? String(raw.title ?? raw.heading)
       : (titleFromType(raw.type ?? raw.kind) ?? "Notification");
+  const body = toDisplayString(raw.body ?? raw.message ?? "");
 
   return {
-    id: String(raw.id ?? raw._id ?? `${title}-${createdAt}`),
+    id: String(raw.id ?? raw._id ?? `${title}|${body}|${createdAt}`),
     title,
-    body: toDisplayString(raw.body ?? raw.message ?? ""),
+    body,
     read: Boolean(raw.read ?? raw.isRead ?? raw.is_read),
     type: raw.type ?? raw.kind,
     link: raw.link ?? raw.url,
-    createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
+    createdAt,
   };
 };
 
