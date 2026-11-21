@@ -33,7 +33,8 @@ import dynamic from "next/dynamic";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import clsx from "clsx";
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { normalizePair } from "@/src/utils/pair";
 
 import { MobileTopBar } from "@/src/components/shared/mobile-top-bar";
 import { IoChevronDown, IoChevronUp, IoSwapHorizontal, IoBarChartOutline, IoListOutline } from "react-icons/io5";
@@ -49,8 +50,14 @@ type TradeMode = "cross" | "isolated";
 
 function MarginTrades() {
   const searchParams = useSearchParams();
-  const initialPair = searchParams.get("pair")?.replace("_", "/") ?? "BTC/USDT";
+  const router = useRouter();
+  const pairParam = searchParams.get("pair");
+  const initialPair = pairParam ? normalizePair(pairParam) : "BTC/USDT";
   const [selectedPair, setSelectedPair] = useState(initialPair);
+
+  useEffect(() => {
+    setSelectedPair(pairParam ? normalizePair(pairParam) : "BTC/USDT");
+  }, [pairParam]);
   const [hideOtherPairs] = useState(false);
   const [pairSearch, setPairSearch] = useState("");
   // Mobile and desktop headers are BOTH mounted (one is hidden by CSS), so they
@@ -216,7 +223,9 @@ function MarginTrades() {
     : (feed.markets || []);
 
   const handleSelectPair = (base: string, quote: string) => {
-    setSelectedPair(`${base}/${quote}`);
+    const nextPair = `${base}/${quote}`;
+    setSelectedPair(nextPair);
+    router.replace(`/trades/margin?pair=${encodeURIComponent(nextPair)}`, { scroll: false });
     setPairSearch("");
     setPairMenuOpen(false);
     setPairMenuDesktopOpen(false);
@@ -503,6 +512,7 @@ function MarginTrades() {
             </TabsList>
             <TabsPanel value="cross">
               <PlaceSpot
+                key={`${selectedPair}-cross`}
                 onFill={setPlacedFill}
                 onTpslChange={setTpslPreview}
                 pair={selectedPair}
@@ -517,6 +527,7 @@ function MarginTrades() {
             </TabsPanel>
             <TabsPanel value="isolated">
               <PlaceSpot
+                key={`${selectedPair}-isolated`}
                 onFill={setPlacedFill}
                 onTpslChange={setTpslPreview}
                 pair={selectedPair}
@@ -632,10 +643,10 @@ function MarginTrades() {
                     <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
                   </TabsList>
                   <TabsPanel value="buy">
-                    <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" />
+                    <PlaceSpot key={`${selectedPair}-quick-buy`} onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" />
                   </TabsPanel>
                   <TabsPanel value="sell">
-                    <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" />
+                    <PlaceSpot key={`${selectedPair}-quick-sell`} onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" />
                   </TabsPanel>
                 </Tabs>
               </div>
@@ -684,10 +695,10 @@ function MarginTrades() {
               <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
             </TabsList>
             <TabsPanel value="buy">
-              <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" />
+              <PlaceSpot key={`${selectedPair}-sheet-buy`} onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" />
             </TabsPanel>
             <TabsPanel value="sell">
-              <PlaceSpot onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" />
+              <PlaceSpot key={`${selectedPair}-sheet-sell`} onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" />
             </TabsPanel>
           </Tabs>
         </div>

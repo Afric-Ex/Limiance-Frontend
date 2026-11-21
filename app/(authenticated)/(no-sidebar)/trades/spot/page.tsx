@@ -58,8 +58,7 @@ function SpotTrades() {
   // a new `?pair=`. The component stays mounted, so `useState` keeps the first
   // value; mirror the param into state whenever it changes.
   useEffect(() => {
-    if (!pairParam) return;
-    setSelectedPair(normalizePair(pairParam));
+    setSelectedPair(pairParam ? normalizePair(pairParam) : "BTC/USDT");
   }, [pairParam]);
   const [pairSearch, setPairSearch] = useState("");
   // Mobile and desktop headers are BOTH mounted (one is hidden by CSS), so they
@@ -481,10 +480,11 @@ function SpotTrades() {
               <TabsTab value="isolated">Isolated {tradeMode === "isolated" ? `${leverage}x` : "10x"}</TabsTab>
             </TabsList>
             <TabsPanel value="spot">
-              <PlaceSpot pair={selectedPair} mode="spot" sideToggle leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} onTpslChange={setTpslPreview} onFill={setPlacedFill} />
+              <PlaceSpot key={selectedPair} pair={selectedPair} mode="spot" sideToggle leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} onTpslChange={setTpslPreview} onFill={setPlacedFill} />
             </TabsPanel>
             <TabsPanel value="cross">
               <PlaceSpot
+                key={`${selectedPair}-cross`}
                 pair={selectedPair}
                 mode="cross"
                 sideToggle
@@ -497,6 +497,7 @@ function SpotTrades() {
             </TabsPanel>
             <TabsPanel value="isolated">
               <PlaceSpot
+                key={`${selectedPair}-isolated`}
                 pair={selectedPair}
                 mode="isolated"
                 sideToggle
@@ -698,10 +699,10 @@ function SpotTrades() {
                     <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
                   </TabsList>
                   <TabsPanel value="buy">
-                    <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
+                    <PlaceSpot key={`${selectedPair}-quick-buy`} pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
                   </TabsPanel>
                   <TabsPanel value="sell">
-                    <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
+                    <PlaceSpot key={`${selectedPair}-quick-sell`} pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
                   </TabsPanel>
                 </Tabs>
               </div>
@@ -755,10 +756,10 @@ function SpotTrades() {
               <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
             </TabsList>
             <TabsPanel value="buy">
-              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
+              <PlaceSpot key={`${selectedPair}-sheet-buy`} pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
             </TabsPanel>
             <TabsPanel value="sell">
-              <PlaceSpot pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
+              <PlaceSpot key={`${selectedPair}-sheet-sell`} pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
             </TabsPanel>
           </Tabs>
         </div>

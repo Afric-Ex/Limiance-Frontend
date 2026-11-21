@@ -10,7 +10,6 @@ import { wsClient } from "./websocket-client";
  * frame and settles on the first one that arrives.
  */
 
-const RESPONSE_TIMEOUT_MS = 15_000;
 const CONNECT_TIMEOUT_MS = 4_000;
 /** History is read-only and has a REST fallback, so settle (and fall back) sooner. */
 const HISTORY_RESPONSE_TIMEOUT_MS = 8_000;
@@ -177,31 +176,14 @@ function enqueueOrderFrame<T>(key: string, task: () => Promise<T>): Promise<T> {
   return run;
 }
 
-interface SendOrderFrameOptions {
-  /**
-   * Some placement feeds do not emit a per-request ack; the order lifecycle
-   * arrives on the user-order stream (`user_order_update` / `order_filled`)
-   * and is reconciled there (see order-event-sync). Treat a silent socket as a
-   * successful send instead of failing after the wait, so the caller can seed
-   * the optimistic row and free the per-market queue.
-   */
-  optimisticOnTimeout?: boolean;
-}
-
-function sendOrderFrame(
-  frame: { type: string; data: Record<string, unknown> },
-  options: SendOrderFrameOptions = {}
-): Promise<any> {
+function sendOrderFrame(frame: { type: string; data: Record<string, unknown> }): Promise<any> {
   const requestId = createRequestId(frame.type);
-  return enqueueOrderFrame(orderQueueKey(frame), () =>
-    sendOrderFrameOnce(frame, requestId, options)
-  );
+  return enqueueOrderFrame(orderQueueKey(frame), () => sendOrderFrameOnce(frame, requestId));
 }
 
 function sendOrderFrameOnce(
   frame: { type: string; data: Record<string, unknown> },
-  requestId: string,
-  options: SendOrderFrameOptions = {}
+  requestId: string
 ): Promise<any> {
   return waitForConnection().then(
     () =>
@@ -211,7 +193,6 @@ function sendOrderFrameOnce(
         const settle = (action: () => void) => {
           if (settled) return;
           settled = true;
-          clearTimeout(timer);
           unsubscribe();
           action();
         };
@@ -246,21 +227,6 @@ function sendOrderFrameOnce(
           // id lets callers correlate the ack with the later fill event.
           settle(() => (failure ? reject(new Error(failure)) : resolve(enrich(data ?? raw))));
         });
-
-        const timer = setTimeout(() => {
-          settle(() => {
-            if (options.optimisticOnTimeout) {
-              resolve({
-                ...frame.data,
-                clientOrderId: requestId,
-                success: true,
-                statusCode: 200,
-              });
-              return;
-            }
-            reject(new Error(`No response to ${frame.type} within ${RESPONSE_TIMEOUT_MS / 1000}s`));
-          });
-        }, RESPONSE_TIMEOUT_MS);
 
         if (!wsClient.send({ ...frame, requestId })) {
           settle(() => reject(new Error("WebSocket send failed — order was not sent")));
@@ -315,7 +281,7 @@ export function placeSpotOrderWs(input: {
   if (Number(input.stopLoss) > 0) payload.stopLoss = Number(input.stopLoss);
   if (input.postOnly) payload.postOnly = true;
   if (input.timeInForce) payload.timeInForce = input.timeInForce;
-  return sendOrderFrame({ type: "place_spot_order", data: payload }, { optimisticOnTimeout: true });
+  return sendOrderFrame({ type: "place_spot_order", data: payload });
 }
 
 /** cancel_spot_order frame: { type: "cancel_spot_order", data: { orderId } } */

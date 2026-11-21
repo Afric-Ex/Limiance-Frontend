@@ -106,7 +106,7 @@ const PairRow = ({ market }: { market: any }) => {
   const iconUrl = market.icon || market.logo || market.coinIcon;
   return (
     <div
-      onClick={() => push(`/trades/spot?pair=${base}${quote}`)}
+      onClick={() => push(`/trades/spot?pair=${encodeURIComponent(`${base}/${quote}`)}`)}
       className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-white/[0.02] cursor-pointer"
     >
       <div className="flex items-center gap-2">
