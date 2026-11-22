@@ -119,8 +119,8 @@ interface MethodSheetProps {
 /** Self-contained sheet (header + options) for modals.open / Mantine Modal bodies. */
 export const MethodSheet = ({ title, subtitle, options, onClose }: MethodSheetProps) => {
   return (
-    <div className="w-full max-w-[540px] bg-[#181a20] rounded-2xl flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-6 pt-6 pb-5 border-b border-white/[0.06]">
+    <div className="w-full max-w-[540px] max-h-[85vh] bg-[#181a20] rounded-2xl flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-6 pt-6 pb-5 border-b border-white/[0.06] shrink-0">
         <div className="flex flex-col gap-0.5">
           <h4 className="text-lg font-bold text-white tracking-tight">{title}</h4>
           {subtitle ? <p className="text-xs text-white/40">{subtitle}</p> : null}
@@ -134,7 +134,7 @@ export const MethodSheet = ({ title, subtitle, options, onClose }: MethodSheetPr
         </button>
       </div>
 
-      <div className="flex flex-col p-6">
+      <div className="flex flex-col p-6 overflow-y-auto min-h-0">
         <MethodOptionList options={options} />
       </div>
     </div>

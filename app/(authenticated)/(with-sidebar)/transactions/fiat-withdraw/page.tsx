@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -92,6 +92,14 @@ function FiatWithdrawInner() {
   const { coins: portfolio, isLoading: portfolioLoading, notice: portfolioNotice } = usePortfolioWs({ coins: true });
   const limit = 30;
 
+  // Withdrawable assets come from the portfolio API rather than a hardcoded list.
+  const assetOptions = useMemo(() => {
+    const symbols = (portfolio ?? [])
+      .map((p: any) => String(p.symbol ?? "").toUpperCase())
+      .filter(Boolean);
+    return Array.from(new Set(symbols)).sort();
+  }, [portfolio]);
+
   const coinPortfolio = form.values.symbol
     ? portfolio?.find((p: any) => p.symbol?.toUpperCase() === form.values.symbol.toUpperCase())
     : undefined;
@@ -150,7 +158,8 @@ function FiatWithdrawInner() {
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">{t("asset")}</label>
               <Select
-                data={["USDT", "USDC", "BTC", "ETH", "SOL"]}
+                data={assetOptions}
+                placeholder={t("selectAsset")}
                 classNames={bankSelectClass}
                 {...form.getInputProps("symbol")}
               />

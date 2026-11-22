@@ -50,9 +50,9 @@ export const SelectDepositMethod = (_props: { defaultSymbol?: string }) => {
   ];
 
   return (
-    <div className="w-full max-w-[540px] bg-[#181a20] rounded-2xl flex flex-col overflow-hidden">
+    <div className="w-full max-w-[540px] max-h-[85vh] bg-[#181a20] rounded-2xl flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 pt-6 pb-5 border-b border-white/[0.06]">
+      <div className="flex items-center justify-between px-6 pt-6 pb-5 border-b border-white/[0.06] shrink-0">
         <div className="flex flex-col gap-0.5">
           <h4 className="text-lg font-bold text-white tracking-tight">Add Funds</h4>
           <p className="text-xs text-white/40">Choose how you want to deposit</p>
@@ -66,7 +66,7 @@ export const SelectDepositMethod = (_props: { defaultSymbol?: string }) => {
       </div>
 
       {/* Method Cards */}
-      <div className="flex flex-col gap-3 p-6">
+      <div className="flex flex-col gap-3 p-6 overflow-y-auto min-h-0">
         {actions.map((item) => (
           <div
             key={item.subtitle}
