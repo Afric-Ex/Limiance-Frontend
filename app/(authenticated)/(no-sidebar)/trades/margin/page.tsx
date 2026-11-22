@@ -11,7 +11,7 @@ import { SpotPairHeader } from "@/src/components/trades/spot-pair-header";
 import { TradingPanel } from "@/src/components/trades/trading-panel";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { MarginTradePageSkeleton } from "@/src/components/skeletons/trades";
-import { successNotification } from "@/src/lib/notification-handler";
+import { successNotification, loadingNotification, dismissNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
 import { readList } from "@/src/lib/api-response";
 import { getLatestTradePrice } from "@/src/lib/recent-trades";
@@ -171,7 +171,12 @@ function MarginTrades() {
   // One handler for desktop and mobile: switch mode, and cap cross leverage at 10x.
   const handleTradeModeChange = (v: string | null) => {
     const m = (v ?? "cross") as TradeMode;
-    handleSetMarginMode(m);
+    const label = m === "cross" ? "Cross" : "Isolated";
+    const toastId = loadingNotification(`Switching to ${label}…`);
+    handleSetMarginMode(m, {
+      onSuccess: () => dismissNotification(toastId),
+      onError: () => dismissNotification(toastId),
+    });
     if (m === "cross" && leverage > 10) handleSetLeverage(10);
   };
 

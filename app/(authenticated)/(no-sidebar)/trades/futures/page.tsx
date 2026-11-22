@@ -15,7 +15,7 @@ import { readList } from '@/src/lib/api-response';
 import { getLatestTradePrice } from '@/src/lib/recent-trades';
 import { mergeLiveOpenOrders } from '@/src/lib/trades/order-event-sync';
 import { errorMessageHandler } from '@/src/lib/error-handler';
-import { successNotification } from '@/src/lib/notification-handler';
+import { successNotification, loadingNotification, dismissNotification } from '@/src/lib/notification-handler';
 import { useUserStore } from '@/src/stores/user-store';
 import { tradingService } from '@/src/services/trading';
 import { placeFuturesOrderWs } from '@/src/lib/order-ws';
@@ -210,7 +210,12 @@ function FuturesTradesInner() {
   const maxLeverage = marginMode === 'cross' ? 50 : 10;
   const handleFuturesModeChange = (v: string | null) => {
     const m = (v ?? 'cross') as MarginMode;
-    handleSetFuturesMode(m);
+    const label = m === 'cross' ? 'Cross' : 'Isolated';
+    const toastId = loadingNotification(`Switching to ${label}…`);
+    handleSetFuturesMode(m, {
+      onSuccess: () => dismissNotification(toastId),
+      onError: () => dismissNotification(toastId),
+    });
     const cap = m === 'cross' ? 50 : 10;
     if (leverage > cap) handleSetFuturesLeverage(cap);
   };
