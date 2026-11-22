@@ -29,3 +29,11 @@ export const errorNotification = (message: string) =>
     ...toastDarkModeStyles,
     icon: <MdErrorOutline size={22} className="text-red-500" />,
   });
+
+export const loadingNotification = (message: string) =>
+  toast.loading(message, {
+    ...toastDarkModeStyles,
+    duration: Infinity,
+  });
+
+export const dismissNotification = (id?: string) => toast.dismiss(id);

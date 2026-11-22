@@ -15,7 +15,7 @@ import { readList } from '@/src/lib/api-response';
 import { getLatestTradePrice } from '@/src/lib/recent-trades';
 import { mergeLiveOpenOrders } from '@/src/lib/trades/order-event-sync';
 import { errorMessageHandler } from '@/src/lib/error-handler';
-import { successNotification } from '@/src/lib/notification-handler';
+import { successNotification, loadingNotification, dismissNotification } from '@/src/lib/notification-handler';
 import { useUserStore } from '@/src/stores/user-store';
 import { tradingService } from '@/src/services/trading';
 import { placeFuturesOrderWs } from '@/src/lib/order-ws';
@@ -206,12 +206,17 @@ function FuturesTradesInner() {
     },
   });
 
-  // Cross 50x max, Isolated 100x max. Switching to Cross clamps leverage down to its cap.
-  const maxLeverage = marginMode === 'cross' ? 50 : 100;
+  // Cross 50x max, Isolated 10x max. Switching to Cross clamps leverage down to its cap.
+  const maxLeverage = marginMode === 'cross' ? 50 : 10;
   const handleFuturesModeChange = (v: string | null) => {
     const m = (v ?? 'cross') as MarginMode;
-    handleSetFuturesMode(m);
-    const cap = m === 'cross' ? 50 : 100;
+    const label = m === 'cross' ? 'Cross' : 'Isolated';
+    const toastId = loadingNotification(`Switching to ${label}…`);
+    handleSetFuturesMode(m, {
+      onSuccess: () => dismissNotification(toastId),
+      onError: () => dismissNotification(toastId),
+    });
+    const cap = m === 'cross' ? 50 : 10;
     if (leverage > cap) handleSetFuturesLeverage(cap);
   };
 
@@ -237,11 +242,11 @@ function FuturesTradesInner() {
             onChange={setLeverage}
             onChangeEnd={(val) => handleSetFuturesLeverage(val)}
             min={1}
-            max={marginMode === 'cross' ? 50 : 100}
+            max={marginMode === 'cross' ? 50 : 10}
             step={1}
           />
           <div className="grid grid-cols-5 gap-1">
-            {LEVERAGE_PRESETS.filter((value) => value <= (marginMode === 'cross' ? 50 : 100)).map((value) => (
+            {LEVERAGE_PRESETS.filter((value) => value <= (marginMode === 'cross' ? 50 : 10)).map((value) => (
               <button
                 type="button"
                 key={value}

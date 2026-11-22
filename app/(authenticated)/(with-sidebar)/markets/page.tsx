@@ -658,24 +658,24 @@ function MarketsPageInner() {
                   onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") goTrade(token.pair); }}
                   className="flex items-center justify-between w-full py-4 text-left active:bg-white/[0.02] cursor-pointer"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <MarketTokenIcon symbol={token.symbol} image={token.image} className="h-9 w-9 text-sm" />
-                    <div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-bold text-white">{token.symbol}</span>
-                        <span className="text-micro text-white/30">/{quote || "USDT"}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="text-sm font-bold text-white truncate">{token.symbol}</span>
+                        <span className="text-micro text-white/30 shrink-0">/{quote || "USDT"}</span>
                         {hasData && token.leverage && (
                           <span className="text-2xs font-bold px-1.5 py-0.5 bg-primary/15 text-primary rounded-md uppercase shrink-0 border border-primary/30">
                             {token.leverage}
                           </span>
                         )}
                       </div>
-                      <p className="text-micro text-white/40 mt-0.5">
+                      <p className="text-micro text-white/40 mt-0.5 truncate">
                         {t("volLabel")} {hasData && token.volume > 0 ? formatVolume(token.volume) : "-"}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 shrink-0">
                     <button
                       type="button"
                       aria-label={isFav ? `Remove ${token.pair} from favorites` : `Add ${token.pair} to favorites`}
