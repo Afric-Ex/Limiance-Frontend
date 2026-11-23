@@ -1,5 +1,5 @@
 import toast from "react-hot-toast";
-import { MdCheckCircle, MdErrorOutline } from "react-icons/md";
+import { MdCheckCircle, MdClose, MdErrorOutline } from "react-icons/md";
 import React from "react";
 
 const toastDarkModeStyles = {
@@ -30,10 +30,28 @@ export const errorNotification = (message: string) =>
     icon: <MdErrorOutline size={22} className="text-red-500" />,
   });
 
-export const loadingNotification = (message: string) =>
-  toast.loading(message, {
-    ...toastDarkModeStyles,
-    duration: Infinity,
-  });
+export const loadingNotification = (message: string, onCancel?: () => void) =>
+  toast.loading(
+    (t) => (
+      <span className="flex items-center justify-between gap-3 w-full">
+        <span>{message}</span>
+        <button
+          type="button"
+          aria-label="Cancel"
+          onClick={() => {
+            toast.dismiss(t.id);
+            onCancel?.();
+          }}
+          className="shrink-0 -mr-1 rounded-full p-1 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <MdClose size={16} />
+        </button>
+      </span>
+    ),
+    {
+      ...toastDarkModeStyles,
+      duration: Infinity,
+    }
+  );
 
 export const dismissNotification = (id?: string) => toast.dismiss(id);
