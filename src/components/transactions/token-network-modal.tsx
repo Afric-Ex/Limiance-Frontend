@@ -27,6 +27,25 @@ interface TokenEntry extends SelectedCoin {
 
 const normalize = (value: unknown) => String(value ?? "").trim().toLowerCase();
 
+const CHAIN_ALIASES: Record<string, string[]> = {
+  "binance smart chain": ["bsc", "bnb smart chain", "binance"],
+  "bnb smart chain": ["bsc", "binance smart chain", "binance"],
+  bsc: ["binance smart chain", "bnb smart chain", "binance"],
+};
+
+const expandChainNames = (values: string[]): Set<string> => {
+  const out = new Set<string>();
+  for (const raw of values) {
+    const v = normalize(raw);
+    if (!v) continue;
+    out.add(v);
+    for (const alias of CHAIN_ALIASES[v] ?? []) {
+      out.add(alias);
+    }
+  }
+  return out;
+};
+
 const inputClass =
   "!bg-white/[0.04] !border !border-white/[0.08] !text-white !text-sm !rounded-xl !h-11 focus:!border-primary/60 placeholder:!text-white/20";
 
@@ -129,7 +148,7 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
   // A token is listed once per chain, each with its own `blockchain`. Offer the
   // network step every chain that token actually has a row for, matched exactly.
   const coinBlockchains = useMemo(
-    () => (pendingCoin?.blockchains ?? []).map(normalize).filter(Boolean),
+    () => expandChainNames(pendingCoin?.blockchains ?? []),
     [pendingCoin]
   );
 
@@ -144,12 +163,12 @@ export const TokenNetworkModal = ({ opened, onClose, onSelect }: Props) => {
       );
     }
 
-    if (!coinBlockchains.length) return [];
+    if (!coinBlockchains.size) return [];
 
     return (supportedChains ?? []).filter((chain: any) =>
-      [chain.blockchain, chain.symbol]
+      [chain.blockchain, chain.symbol, chain.name]
         .filter(Boolean)
-        .some((value) => coinBlockchains.includes(normalize(value)))
+        .some((value) => coinBlockchains.has(normalize(value)))
     );
   }, [pendingCoin, supportedChains, coinBlockchains]);
 
