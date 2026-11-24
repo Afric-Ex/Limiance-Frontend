@@ -1720,6 +1720,7 @@
     "requestNotCompleted": "The request could not be completed.",
     "retry": "Retry",
     "revoke": "Revoke",
+    "revokeCurrentSessionQuestion": "Revoke your current session? You will be signed out.",
     "revokeSessionQuestion": "Revoke this session?",
     "scanQrHint": "Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.).",
     "scannedNext": "I’ve scanned it - Next",

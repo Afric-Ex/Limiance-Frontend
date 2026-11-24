@@ -8,6 +8,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { Modal, Loader, TextInput, Button } from "@mantine/core";
 import { successNotification } from "@/src/lib/notification-handler";
 import { errorMessageHandler } from "@/src/lib/error-handler";
+import { handleLogout } from "@/src/lib/handle-logout";
 import { Authenticator } from "@/src/components/icons/authenticator";
 import { OtpInput } from "@/src/components/settings/otp-input";
 import { MdSmartphone, MdDesktopMac, MdTablet, MdMailOutline, MdRefresh } from "react-icons/md";
@@ -416,7 +417,7 @@ function SecurityPageInner() {
           canRevoke:
             session?.canRevoke === false || session?.can_revoke === false
               ? false
-              : !isCurrent && Boolean(id),
+              : Boolean(id),
         };
       });
     },
@@ -426,12 +427,21 @@ function SecurityPageInner() {
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
   const { mutate: revokeSession } = useMutation({
-    mutationFn: (sessionId: string) => userService.revokeSession(sessionId),
-    onMutate: (sessionId) => setRevokingId(sessionId),
-    onSuccess: () => {
+    mutationFn: (session: SessionItem) => userService.revokeSession(session.id),
+    onMutate: (session) => setRevokingId(session.id),
+    onSuccess: (_data, session) => {
       successNotification(t("sessionRevoked"));
-      queryClient.invalidateQueries({ queryKey: userKeys.sessions });
       setRevokeConfirmId(null);
+
+      // Revoking the session you're using kills the cookie, so the only valid
+      // next state is a signed-out one. Clear local state and send the user to
+      // the login page instead of waiting for the next request to 401.
+      if (session.isCurrent) {
+        void handleLogout();
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: userKeys.sessions });
     },
     onSettled: () => setRevokingId(null),
     onError: (e: any) => errorMessageHandler(e),
@@ -451,7 +461,7 @@ function SecurityPageInner() {
         return {
           ...session,
           isCurrent,
-          canRevoke: session.canRevoke && !isCurrent,
+          canRevoke: session.canRevoke,
         };
       })
       .sort((a, b) => timestamp(b.lastActive) - timestamp(a.lastActive));
@@ -705,10 +715,12 @@ function SecurityPageInner() {
                   </div>
                 </div>
 
-                {!session.isCurrent && session.canRevoke && (
+                {session.canRevoke && (
                   revokeConfirmId === session.id ? (
                     <div className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-warning-1/20 bg-warning-1/[0.06] px-3 py-2 sm:w-auto">
-                      <span className="mr-auto text-xs text-warning-1">{t("revokeSessionQuestion")}</span>
+                      <span className="mr-auto text-xs text-warning-1">
+                        {session.isCurrent ? t("revokeCurrentSessionQuestion") : t("revokeSessionQuestion")}
+                      </span>
                       <Button
                         size="xs"
                         variant="subtle"
@@ -723,7 +735,7 @@ function SecurityPageInner() {
                         color="red"
                         loading={revokingId === session.id}
                         disabled={revokingId !== null && revokingId !== session.id}
-                        onClick={() => revokeSession(session.id)}
+                        onClick={() => revokeSession(session)}
                       >
                         {t("confirm")}
                       </Button>
