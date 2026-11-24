@@ -39,25 +39,46 @@ const unwrapPayload = (value: any): any => {
   return payload;
 };
 
+const findRecordArray = (value: any, depth = 0): any[] | null => {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== "object" || depth > 3) return null;
+  for (const key of ["data", "api_keys", "apiKeys", "records", "items", "results"]) {
+    if (key in value) {
+      const found = findRecordArray(value[key], depth + 1);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+const firstDefined = (...values: any[]) =>
+  values.find((value) => value !== undefined && value !== null);
+
+const formatLastUsed = (value: any): string | null => {
+  if (value === undefined || value === null || value === "") return null;
+  const numeric = typeof value === "string" && /^\d+$/.test(value) ? Number(value) : value;
+  const date = new Date(numeric);
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleString();
+};
+
 const normalizeApiKeys = (response: any): any[] => {
-  const candidates = [
-    response?.data?.data,
-    response?.data?.api_keys,
-    response?.data?.apiKeys,
-    response?.data,
-    response?.api_keys,
-    response?.apiKeys,
-    response,
-  ];
-  const records = candidates.find(Array.isArray);
+  const records = findRecordArray(response);
   if (!records) return [];
 
   return records.map((record: any) => ({
     ...record,
-    id: record.id ?? record.keyId ?? record.key_id ?? record._id,
-    apiKey: record.apiKey ?? record.api_key ?? record.key,
-    createdAt: record.createdAt ?? record.created_at,
-    lastUsed: record.lastUsedAt ?? record.lastUsed ?? record.last_used_at ?? record.last_used,
+    id: firstDefined(record.id, record.keyId, record.key_id, record._id),
+    apiKey: firstDefined(record.apiKey, record.api_key, record.key),
+    createdAt: firstDefined(record.createdAt, record.created_at),
+    lastUsed: firstDefined(
+      record.lastUsedAt,
+      record.lastUsed,
+      record.last_used_at,
+      record.lastUsed_at,
+      record.last_used,
+      record.lastUsageAt,
+      record.last_usage_at
+    ),
     permissions: Array.isArray(record.permissions) ? record.permissions : [],
   }));
 };
@@ -260,7 +281,7 @@ function ApiKeysPageInner() {
                     </div>
                   </TableTd>
                   <TableTd><span className="text-xs text-white/50">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : "—"}</span></TableTd>
-                  <TableTd><span className="text-xs text-white/50">{k.lastUsed ? new Date(k.lastUsed).toLocaleString() : t("never")}</span></TableTd>
+                  <TableTd><span className="text-xs text-white/50">{formatLastUsed(k.lastUsed ?? k.lastUsedAt) ?? t("never")}</span></TableTd>
                   <TableTd>
                     {deleteConfirmId === k.id ? (
                       <div className="flex items-center gap-2">
