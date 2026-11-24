@@ -260,7 +260,7 @@ function ApiKeysPageInner() {
                     </div>
                   </TableTd>
                   <TableTd><span className="text-xs text-white/50">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : "—"}</span></TableTd>
-                  <TableTd><span className="text-xs text-white/50">{k.lastUsed ? new Date(k.lastUsed).toLocaleString() : t("never")}</span></TableTd>
+                  <TableTd><span className="text-xs text-white/50">{(k.lastUsed ?? k.lastUsedAt) ? new Date(k.lastUsed ?? k.lastUsedAt).toLocaleString() : t("never")}</span></TableTd>
                   <TableTd>
                     {deleteConfirmId === k.id ? (
                       <div className="flex items-center gap-2">
