@@ -57,7 +57,7 @@ const normalizeApiKeys = (response: any): any[] => {
     id: record.id ?? record.keyId ?? record.key_id ?? record._id,
     apiKey: record.apiKey ?? record.api_key ?? record.key,
     createdAt: record.createdAt ?? record.created_at,
-    lastUsed: record.lastUsed ?? record.last_used,
+    lastUsed: record.lastUsedAt ?? record.lastUsed ?? record.last_used_at ?? record.last_used,
     permissions: Array.isArray(record.permissions) ? record.permissions : [],
   }));
 };
