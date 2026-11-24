@@ -2,7 +2,6 @@
 
 import { redactDiagnostic } from "./pii-policy";
 import { resolveSocketTarget } from "./ws-url";
-import { handleLogout } from "./handle-logout";
 import { sessionCoordinator } from "./session-coordinator";
 import { isInLoginGrace } from "./login-grace";
 
@@ -317,6 +316,14 @@ class WebSocketClient {
     this.intentionalClose = false;
 
     try {
+      if (!this.wsTicket && typeof window !== "undefined") {
+        const stored =
+          (typeof sessionStorage !== "undefined" ? sessionStorage.getItem("limiance_cross_origin_token") : null) ||
+          (typeof localStorage !== "undefined" ? localStorage.getItem("limiance_cross_origin_token") : null);
+        if (stored) {
+          this.wsTicket = stored;
+        }
+      }
       // No credential is ever appended to the URL. On same-site domains the
       // browser attaches the HttpOnly session cookie automatically; on proxied
       // cross-origin setups an in-memory ticket is passed via Sec-WebSocket-Protocol.
@@ -423,7 +430,6 @@ class WebSocketClient {
               event.code +
               "); stopping reconnection"
           );
-          void handleLogout();
           this.authFailed = true;
           return;
         }
