@@ -1720,6 +1720,7 @@
     "requestNotCompleted": "Die Anfrage konnte nicht abgeschlossen werden.",
     "retry": "Erneut versuchen",
     "revoke": "Widerrufen",
+    "revokeCurrentSessionQuestion": "Aktuelle Sitzung widerrufen? Sie werden abgemeldet.",
     "revokeSessionQuestion": "Diese Sitzung widerrufen?",
     "scanQrHint": "Scannen Sie diesen QR-Code mit Ihrer Authenticator-App (Google Authenticator, Authy usw.).",
     "scannedNext": "Ich habe ihn gescannt - Weiter",

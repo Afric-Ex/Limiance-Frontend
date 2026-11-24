@@ -1720,6 +1720,7 @@
     "requestNotCompleted": "Anmodningen kunne ikke gennemføres.",
     "retry": "Prøv igen",
     "revoke": "Tilbagekald",
+    "revokeCurrentSessionQuestion": "Tilbagekald din nuværende session? Du bliver logget ud.",
     "revokeSessionQuestion": "Tilbagekald denne session?",
     "scanQrHint": "Scan denne QR-kode med din godkendelsesapp (Google Authenticator, Authy osv.).",
     "scannedNext": "Jeg har scannet den - Næste",
