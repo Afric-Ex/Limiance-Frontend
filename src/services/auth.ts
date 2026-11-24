@@ -1,4 +1,4 @@
-import { api } from "../lib/axios";
+import { api, CROSS_ORIGIN_TOKEN_KEY, isSameOriginApi } from "../lib/axios";
 import { normalizeUser } from "../lib/normalize-user";
 import { normalizeKycStatus } from "../lib/normalize-kyc-status";
 import { authDebug, describeAuthPayload } from "../lib/auth-debug";
@@ -18,7 +18,19 @@ import {
 // Authorization header: every call relies on the cookie the browser attaches to
 // credentialed requests.
 
-const CLIENT_TYPE_HEADERS = { "X-Client-Type": "web" } as const;
+const getClientTypeHeaders = () => (isSameOriginApi() ? { "X-Client-Type": "web" } : {});
+
+function persistCrossOriginSession(data: any) {
+  if (typeof sessionStorage !== "undefined" && typeof data?.accessToken === "string" && data.accessToken) {
+    sessionStorage.setItem(CROSS_ORIGIN_TOKEN_KEY, data.accessToken);
+    if (!data?.wsToken) {
+      wsClient.setAuthTicket(data.accessToken);
+    }
+  }
+  if (typeof data?.wsToken === "string" && data.wsToken) {
+    wsClient.setAuthTicket(data.wsToken);
+  }
+}
 
 export const auth = {
   register: async (data: Register): Promise<ApiResponse<RegisterResponse>> => {
@@ -32,7 +44,7 @@ export const auth = {
       username: data.username,
       country: data.country,
     }, {
-      headers: CLIENT_TYPE_HEADERS,
+      headers: getClientTypeHeaders(),
     });
     return response;
   },
@@ -47,16 +59,14 @@ export const auth = {
       passToken: data.passToken,
       genTime: data.genTime,
     }, {
-      headers: CLIENT_TYPE_HEADERS,
+      headers: getClientTypeHeaders(),
     });
     authDebug("login-response", {
       status: response.status,
       headers: Object.keys(response.headers ?? {}),
       payload: describeAuthPayload(response.data),
     });
-    if (typeof response?.data?.wsToken === "string" && response.data.wsToken) {
-      wsClient.setAuthTicket(response.data.wsToken);
-    }
+    persistCrossOriginSession(response?.data);
     if (response?.data?.data) {
       response.data.data = normalizeUser(response.data.data);
     }
@@ -68,12 +78,12 @@ export const auth = {
    * makes logout survive a reload or a back-button navigation.
    */
   logout: async (): Promise<ApiResponse<any>> => {
-    const response = await api.post("users/logout", {}, { headers: CLIENT_TYPE_HEADERS });
+    const response = await api.post("users/logout", {}, { headers: getClientTypeHeaders() });
     return response;
   },
   verifyEmail: async (data: VerifyEmail): Promise<ApiResponse<any>> => {
     const response = await api.post("users/verify_email", { email: data.email, otp: data.otp }, {
-      headers: CLIENT_TYPE_HEADERS,
+      headers: getClientTypeHeaders(),
     });
     return response;
   },
@@ -83,7 +93,7 @@ export const auth = {
     const response = await api.post("users/forgot_password", {
       email: data.email,
     }, {
-      headers: CLIENT_TYPE_HEADERS,
+      headers: getClientTypeHeaders(),
     });
     return response;
   },
@@ -99,7 +109,7 @@ export const auth = {
       newPassword: data.password,
       confirmPassword: data.confirmPassword,
     }, {
-      headers: CLIENT_TYPE_HEADERS,
+      headers: getClientTypeHeaders(),
     });
     return response;
   },
@@ -131,7 +141,7 @@ export const auth = {
       rememberMe: Boolean(data.rememberMe),
     });
     const response = await api.post("users/login/verify_second_factor", data, {
-      headers: CLIENT_TYPE_HEADERS,
+      headers: getClientTypeHeaders(),
     });
     authDebug("verify-2fa-response", {
       status: response.status,
@@ -140,9 +150,7 @@ export const auth = {
           ? Object.keys(response.data)
           : [],
     });
-    if (typeof response?.data?.wsToken === "string" && response.data.wsToken) {
-      wsClient.setAuthTicket(response.data.wsToken);
-    }
+    persistCrossOriginSession(response?.data);
     if (response?.data?.data) {
       response.data.data = normalizeUser(response.data.data);
     }

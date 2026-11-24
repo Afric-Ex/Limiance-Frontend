@@ -1,3 +1,4 @@
+import { CROSS_ORIGIN_TOKEN_KEY } from "./axios";
 import { sessionCoordinator } from "./session-coordinator";
 import { useAuthStore } from "../stores/auth-store";
 import { useUserStore } from "../stores/user-store";
@@ -17,6 +18,9 @@ import { stripLocalePrefix, withLocale } from "./locale-path";
 let revoking = false;
 
 function clearSession(reason: "manual" | "unauthorized" | "expired" | "account-switch") {
+  if (typeof sessionStorage !== "undefined") {
+    sessionStorage.removeItem(CROSS_ORIGIN_TOKEN_KEY);
+  }
   useAuthStore.getState().reset();
   useUserStore.getState().reset();
   sessionCoordinator.logout(reason);

@@ -15,6 +15,18 @@ const serverBackend = isBrowser ? null : resolveBackendUrlsFromEnv(process.env);
 const apiBaseURL = isBrowser ? API_BASE_URL : serverBackend?.apiBaseUrl;
 const apiRootBaseURL = isBrowser ? API_ROOT_BASE_URL : serverBackend?.rootBaseUrl;
 
+export const CROSS_ORIGIN_TOKEN_KEY = "limiance_cross_origin_token";
+
+export function isSameOriginApi(): boolean {
+  if (!isBrowser || !apiBaseURL) return true;
+  if (apiBaseURL.startsWith("/")) return true;
+  try {
+    return new URL(apiBaseURL).origin === window.location.origin;
+  } catch {
+    return true;
+  }
+}
+
 /**
  * Hard cap on every request the app makes. Axios defaults to no timeout, so a
  * backend that accepts the connection and then never answers leaves the caller
@@ -76,10 +88,16 @@ const attachInterceptors = (client: typeof api) => {
         config.signal = controller.signal;
         pendingControllers.add(controller);
       }
+      if (!isSameOriginApi() && typeof sessionStorage !== "undefined") {
+        const token = sessionStorage.getItem(CROSS_ORIGIN_TOKEN_KEY);
+        if (token && config.headers && !config.headers.Authorization) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      }
       authDebug("request-auth", {
         method: config.method,
         url: sanitizeUrl(config.url),
-        credentialMode: "http-only-cookie",
+        credentialMode: isSameOriginApi() ? "http-only-cookie" : "cross-origin-bearer",
       });
       return config;
     },
