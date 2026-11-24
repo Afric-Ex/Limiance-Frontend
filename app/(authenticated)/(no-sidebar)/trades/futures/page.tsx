@@ -173,10 +173,10 @@ function FuturesTradesInner() {
     (feed.price != null && feed.price > 0 ? Number(feed.price) : null);
 
   const effectiveMarketPrice =
+    (chartLastPrice != null && chartLastPrice > 0 ? chartLastPrice : null) ??
     markPrice ??
     (orderBook.lastPrice != null && orderBook.lastPrice > 0 ? orderBook.lastPrice : null) ??
     (latestTradePrice != null && latestTradePrice > 0 ? latestTradePrice : null) ??
-    (chartLastPrice != null && chartLastPrice > 0 ? chartLastPrice : null) ??
     orderBookMidPrice ??
     (isFeedPriceConsistent ? feed.price : null) ??
     (feed.price != null && feed.price > 0 ? feed.price : null) ??

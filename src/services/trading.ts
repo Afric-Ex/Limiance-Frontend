@@ -55,6 +55,34 @@ export const tradingKeys = {
   listedCurrencies: ["listed-currencies"],
 } as const;
 
+/** Amend payload accepted by PATCH trading/{spot,margin,futures}/orders/:id. */
+export interface OrderAmendInput {
+  orderId: string;
+  price?: number | string;
+  quantity?: number | string;
+  takeProfit?: number | string;
+  stopLoss?: number | string;
+}
+
+/**
+ * The gateway binds camelCase numeric fields (price, quantity, takeProfit,
+ * stopLoss). Empty / non-numeric values are dropped so they never overwrite an
+ * existing level; 0 is sent explicitly and clears the TP/SL.
+ */
+function buildOrderAmendBody(data: OrderAmendInput): Record<string, number> {
+  const body: Record<string, number> = {};
+  const put = (key: string, value: number | string | undefined) => {
+    if (value === undefined || value === null || value === "") return;
+    const n = Number(value);
+    if (Number.isFinite(n) && n >= 0) body[key] = n;
+  };
+  put("price", data.price);
+  put("quantity", data.quantity);
+  put("takeProfit", data.takeProfit);
+  put("stopLoss", data.stopLoss);
+  return body;
+}
+
 export const tradingService = {
   getFavorites: async () => {
     const response = await api.get("trading/favorites");
@@ -236,6 +264,13 @@ export const tradingService = {
 
   closeMarginOrder: async (orderId: string) => {
     const response = await api.delete(`trading/margin/orders/${orderId}`);
+    return response.data;
+  },
+
+  editMarginOrder: async (data: OrderAmendInput) => {
+    const body = buildOrderAmendBody(data);
+    const { orderId } = data;
+    const response = await api.patch(`trading/margin/orders/${orderId}`, body);
     return response.data;
   },
 
@@ -441,8 +476,9 @@ export const tradingService = {
     return response.data;
   },
 
-  editFuturesOrder: async (data: { orderId: string; price?: string; quantity?: string }) => {
-    const { orderId, ...body } = data;
+  editFuturesOrder: async (data: OrderAmendInput) => {
+    const body = buildOrderAmendBody(data);
+    const { orderId } = data;
     const response = await api.patch(`trading/futures/orders/${orderId}`, body);
     return response.data;
   },
@@ -477,6 +513,13 @@ export const tradingService = {
 
   cancelSpotOrder: async (orderId: string) => {
     const response = await api.delete(`trading/spot/orders/${orderId}`);
+    return response.data;
+  },
+
+  editSpotOrder: async (data: OrderAmendInput) => {
+    const body = buildOrderAmendBody(data);
+    const { orderId } = data;
+    const response = await api.patch(`trading/spot/orders/${orderId}`, body);
     return response.data;
   },
 

@@ -141,9 +141,9 @@ function MarginTrades() {
     (bestBid == null || bestAsk == null || (feed.price >= bestBid * 0.98 && feed.price <= bestAsk * 1.02));
 
   const effectiveMarketPrice =
+    (chartLastPrice != null && chartLastPrice > 0 ? chartLastPrice : null) ??
     (orderBook.lastPrice != null && orderBook.lastPrice > 0 ? orderBook.lastPrice : null) ??
     (latestTradePrice != null && latestTradePrice > 0 ? latestTradePrice : null) ??
-    (chartLastPrice != null && chartLastPrice > 0 ? chartLastPrice : null) ??
     orderBookMidPrice ??
     (isFeedPriceConsistent ? feed.price : null) ??
     (feed.price != null && feed.price > 0 ? feed.price : null) ??

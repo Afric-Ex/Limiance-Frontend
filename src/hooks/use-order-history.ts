@@ -55,9 +55,14 @@ const QUERY_KEY = "ORDER_HISTORY_QUERY_KEY";
 
 const WS_HISTORY_STATUSES = new Set<OrderHistoryStatus>([
   "OPEN",
+  "CLOSED",
   "FILLED",
+  "PARTIALLY_FILLED",
   "CANCELLED",
+  "CANCELED",
   "REJECTED",
+  "EXPIRED",
+  "NEW",
 ]);
 
 function wsHistoryRequest(

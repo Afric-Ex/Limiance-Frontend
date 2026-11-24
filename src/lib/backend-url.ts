@@ -93,9 +93,30 @@ export const resolveBackendUrlsFromEnv = (
  * Browser-facing base URLs. The `NEXT_PUBLIC_API_URL` read is written out
  * literally so Next.js can inline it into the client bundle.
  */
-const publicBackendUrls = resolveBackendUrls(process.env.NEXT_PUBLIC_API_URL);
+const rawPublicApi = process.env.NEXT_PUBLIC_API_URL;
+const parsedPublic = resolveBackendUrls(rawPublicApi);
+
+// On cross-origin browser deployments (like Render: onrender.com -> duckdns.org),
+// direct cross-origin cookie requests get blocked by browser third-party cookie policies (ITP/CHIPS).
+// Using the same-origin Next.js proxy route `/api/v1` keeps session cookies first-party so the user is never logged out.
+const isBrowser = typeof window !== "undefined";
+const isCrossOriginDeployment =
+  isBrowser &&
+  parsedPublic &&
+  !parsedPublic.apiBaseUrl.startsWith("/") &&
+  (() => {
+    try {
+      return new URL(parsedPublic.apiBaseUrl).origin !== window.location.origin;
+    } catch {
+      return false;
+    }
+  })();
+
+const publicBackendUrls = isCrossOriginDeployment
+  ? resolveBackendUrls("/api/v1")
+  : parsedPublic;
 
 /** API base (`.../api/v1`) for browser requests. */
-export const API_BASE_URL = publicBackendUrls?.apiBaseUrl;
+export const API_BASE_URL = publicBackendUrls?.apiBaseUrl || "/api/v1";
 /** Root base (without `/api/v1`) for browser requests. */
-export const API_ROOT_BASE_URL = publicBackendUrls?.rootBaseUrl;
+export const API_ROOT_BASE_URL = publicBackendUrls?.rootBaseUrl || "";

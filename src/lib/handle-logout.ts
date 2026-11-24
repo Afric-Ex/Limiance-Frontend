@@ -21,6 +21,9 @@ function clearSession(reason: "manual" | "unauthorized" | "expired" | "account-s
   if (typeof sessionStorage !== "undefined") {
     sessionStorage.removeItem(CROSS_ORIGIN_TOKEN_KEY);
   }
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem(CROSS_ORIGIN_TOKEN_KEY);
+  }
   useAuthStore.getState().reset();
   useUserStore.getState().reset();
   sessionCoordinator.logout(reason);

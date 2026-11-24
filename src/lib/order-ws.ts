@@ -446,11 +446,38 @@ const MARGIN_ORDER_HISTORY_ERROR = "margin_order_history_error";
 const FUTURES_ORDER_HISTORY_RESPONSE = "futures_order_history";
 const FUTURES_ORDER_HISTORY_ERROR = "futures_order_history_error";
 
-/** Status filter accepted by spot (§3.14) and margin (§4.11) history queries. */
-export type OrderHistoryStatus = "OPEN" | "FILLED" | "CANCELLED" | "REJECTED";
+const OPEN_ORDERS_RESPONSE = "open_orders";
+const OPEN_ORDERS_ERROR = "open_orders_error";
+const SPOT_OPEN_ORDERS_RESPONSE = "spot_open_orders";
+const MARGIN_OPEN_ORDERS_RESPONSE = "margin_open_orders";
+const FUTURES_OPEN_ORDERS_RESPONSE = "futures_open_orders";
+
+/** Status filter accepted by spot (§3.14), margin (§4.11), and futures (§5.10) history queries. */
+export type OrderHistoryStatus =
+  | "OPEN"
+  | "CLOSED"
+  | "FILLED"
+  | "PARTIALLY_FILLED"
+  | "CANCELLED"
+  | "CANCELED"
+  | "REJECTED"
+  | "EXPIRED"
+  | "NEW"
+  | "ALL";
 
 export interface OrderHistoryWsParams {
   status?: OrderHistoryStatus;
+  page?: number | string;
+  limit?: number | string;
+  symbol?: string;
+  pair?: string;
+  market_type?: string;
+}
+
+export interface OpenOrdersWsParams {
+  market_type?: "all" | "spot" | "margin" | "futures";
+  symbol?: string;
+  pair?: string;
   page?: number | string;
   limit?: number | string;
 }
@@ -472,6 +499,9 @@ function queryOrderHistory(
   if (params?.status) data.status = params.status.toUpperCase();
   if (params?.page !== undefined) data.page = String(params.page);
   if (params?.limit !== undefined) data.limit = String(params.limit);
+  if (params?.symbol) data.symbol = params.symbol;
+  if (params?.pair) data.pair = params.pair;
+  if (params?.market_type) data.market_type = params.market_type;
 
   const requestId = createRequestId(frameType);
   const payloadData = { ...data, requestId };
@@ -541,11 +571,8 @@ export function getMarginOrderHistoryWs(params?: OrderHistoryWsParams): Promise<
   );
 }
 
-/** get_futures_order_history frame (doc §5.10); page/limit only, no status filter. */
-export function getFuturesOrderHistoryWs(params?: {
-  page?: number | string;
-  limit?: number | string;
-}): Promise<any> {
+/** get_futures_order_history frame (doc §5.10). */
+export function getFuturesOrderHistoryWs(params?: OrderHistoryWsParams): Promise<any> {
   return queryOrderHistory(
     "get_futures_order_history",
     FUTURES_ORDER_HISTORY_RESPONSE,
@@ -580,5 +607,53 @@ export function getMarginTradesWs(params?: {
     MARGIN_ORDER_HISTORY_RESPONSE,
     MARGIN_ORDER_HISTORY_ERROR,
     params
+  );
+}
+
+/** get_open_orders frame — returns active open orders across markets */
+export function getOpenOrdersWs(params?: OpenOrdersWsParams): Promise<any> {
+  const p: any = { ...params };
+  if (p.pair && !p.symbol) p.symbol = p.pair;
+  return queryOrderHistory(
+    "get_open_orders",
+    OPEN_ORDERS_RESPONSE,
+    OPEN_ORDERS_ERROR,
+    p
+  );
+}
+
+/** get_spot_open_orders frame — returns active spot open orders */
+export function getSpotOpenOrdersWs(params?: OpenOrdersWsParams): Promise<any> {
+  const p: any = { ...params };
+  if (p.pair && !p.symbol) p.symbol = p.pair;
+  return queryOrderHistory(
+    "get_spot_open_orders",
+    SPOT_OPEN_ORDERS_RESPONSE,
+    OPEN_ORDERS_ERROR,
+    p
+  );
+}
+
+/** get_margin_open_orders frame — returns active margin open orders */
+export function getMarginOpenOrdersWs(params?: OpenOrdersWsParams): Promise<any> {
+  const p: any = { ...params };
+  if (p.pair && !p.symbol) p.symbol = p.pair;
+  return queryOrderHistory(
+    "get_margin_open_orders",
+    MARGIN_OPEN_ORDERS_RESPONSE,
+    OPEN_ORDERS_ERROR,
+    p
+  );
+}
+
+/** get_futures_open_orders frame — returns active futures open orders */
+export function getFuturesOpenOrdersWs(params?: OpenOrdersWsParams): Promise<any> {
+  const p: any = { ...params };
+  if (p.pair && !p.symbol) p.symbol = p.pair;
+  return queryOrderHistory(
+    "get_futures_open_orders",
+    FUTURES_OPEN_ORDERS_RESPONSE,
+    OPEN_ORDERS_ERROR,
+    p
   );
 }

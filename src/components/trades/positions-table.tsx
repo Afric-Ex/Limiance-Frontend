@@ -66,8 +66,10 @@ function splitPair(raw: any): { pair: string; base: string; quote: string } {
 
 function toRow(raw: any, market: "futures" | "margin", index: number): PositionRow {
   const { pair, base, quote } = splitPair(raw);
-  const isLong = /^(long|buy)$/i.test(String(raw?.side ?? ""));
-  const size = num(firstDefined(raw?.quantity, raw?.size)) ?? 0;
+  const rawSide = String(raw?.side ?? "");
+  const rawQty = num(firstDefined(raw?.quantity, raw?.size)) ?? 0;
+  const isLong = rawSide ? /^(long|buy)$/i.test(rawSide) : rawQty >= 0;
+  const size = Math.abs(rawQty);
   const entryPrice = num(firstDefined(raw?.entryPrice, raw?.entry_price, raw?.price, raw?.entry)) ?? 0;
   const markPrice = positive(firstDefined(raw?.markPrice, raw?.mark_price));
   const leverage = num(raw?.leverage) ?? 1;

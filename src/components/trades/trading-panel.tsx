@@ -13,11 +13,12 @@ import { parseDate } from "@/src/lib/parse-date";
 import {
   cancelSpotOrderWs,
   closeFuturesPositionWs,
-  getFuturesOrderHistoryWs,
-  getMarginOrderHistoryWs,
   getMarginTradesWs,
-  getSpotOrderHistoryWs,
   getSpotTradesWs,
+  getOpenOrdersWs,
+  getSpotOpenOrdersWs,
+  getMarginOpenOrdersWs,
+  getFuturesOpenOrdersWs,
 } from "@/src/lib/order-ws";
 import { readList } from "@/src/lib/api-response";
 import { successNotification } from "@/src/lib/notification-handler";
@@ -57,14 +58,14 @@ import {
   mergeLiveOpenOrders,
   removeOpenOrder,
 } from "@/src/lib/trades/order-event-sync";
-import { Loader, Checkbox, NumberInput, Popover, PopoverTarget, PopoverDropdown } from "@mantine/core";
+import { Loader, Checkbox, NumberInput, Popover, PopoverTarget, PopoverDropdown, TextInput } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { MarginBorrowRepayModal } from "@/src/components/trades/margin-borrow-repay-modal";
 import { MarginTransferModal } from "@/src/components/trades/margin-transfer-modal";
 import { ResponsiveFilters } from "@/src/components/shared/responsive-filters";
 import clsx from "clsx";
-import { MdMoreVert, MdCalculate, MdInfo, MdContentCopy } from "react-icons/md";
+import { MdMoreVert, MdCalculate, MdInfo, MdContentCopy, MdEdit } from "react-icons/md";
 
 interface TradingPanelProps {
   selectedPair: string;
@@ -142,6 +143,29 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
     const markets: TradingMarket[] =
       selectedMarket === "all" ? ["spot", "margin", "futures"] : [selectedMarket];
     try {
+      if (selectedMarket === "all") {
+        try {
+          const res = await getOpenOrdersWs({
+            market_type: "all",
+            symbol: openOrdersPair,
+            limit: 100,
+          });
+          const rows = readList<Record<string, any>>(res);
+          if (rows.length > 0 || res?.success) {
+            let merged = rows;
+            if (openOrdersPair) {
+              const target = openOrdersPair.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+              merged = merged.filter(
+                (order) =>
+                  getOrderPair(order).replace(/[^a-zA-Z0-9]/g, "").toUpperCase() === target
+              );
+            }
+            return { data: merged };
+          }
+        } catch {
+          // Fall back to per-market queries
+        }
+      }
       const lists = await Promise.all(
         markets.map(async (m) => {
           const tag = (rows: Record<string, any>[]) =>
@@ -152,23 +176,20 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
           if (m === "spot") {
             return tag(
               readList<Record<string, any>>(
-                await getSpotOrderHistoryWs({ status: "OPEN", limit: 100 })
+                await getSpotOpenOrdersWs({ symbol: openOrdersPair, limit: 100 })
               )
             );
           }
           if (m === "margin") {
             return tag(
               readList<Record<string, any>>(
-                await getMarginOrderHistoryWs({ status: "OPEN", limit: 100 })
+                await getMarginOpenOrdersWs({ symbol: openOrdersPair, limit: 100 })
               )
             );
           }
-          const res = await getFuturesOrderHistoryWs({ limit: 100 });
           return tag(
-            readList<Record<string, any>>(res).filter((order) =>
-              ["OPEN", "PARTIALLY_FILLED", "NEW", "PENDING"].includes(
-                String(getOrderStatus(order) ?? "").toUpperCase()
-              )
+            readList<Record<string, any>>(
+              await getFuturesOpenOrdersWs({ symbol: openOrdersPair, limit: 100 })
             )
           );
         })
@@ -351,6 +372,50 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
     },
     onError: (e) => errorMessageHandler(e),
   });
+
+  const { mutate: editOrderTpsl } = useMutation({
+    mutationFn: (data: { id: string; market: string; takeProfit?: number; stopLoss?: number }) => {
+      const orderMarket = data.market.toLowerCase();
+      if (orderMarket === "futures") {
+        return tradingService.editFuturesOrder({ orderId: data.id, takeProfit: data.takeProfit, stopLoss: data.stopLoss });
+      }
+      if (orderMarket === "margin") {
+        return tradingService.editMarginOrder({ orderId: data.id, takeProfit: data.takeProfit, stopLoss: data.stopLoss });
+      }
+      return tradingService.editSpotOrder({ orderId: data.id, takeProfit: data.takeProfit, stopLoss: data.stopLoss });
+    },
+    onSuccess: () => {
+      successNotification(t("tpSlUpdated"));
+      queryClient.invalidateQueries({ queryKey: ["open-orders"] });
+      modals.closeAll();
+    },
+    onError: (e) => errorMessageHandler(e),
+  });
+
+  const handleEditOrderTpsl = (order: any) => {
+    const currentTp = order.takeProfit ?? order.take_profit ?? "";
+    const currentSl = order.stopLoss ?? order.stop_loss ?? "";
+    const orderMarket = getOrderMarket(order);
+
+    modals.open({
+      title: `${t("editTpSl")} (${getOrderPair(order)})`,
+      centered: true,
+      children: (
+        <TpslOrderModalForm
+          initialTp={currentTp ? String(currentTp) : ""}
+          initialSl={currentSl ? String(currentSl) : ""}
+          onSubmit={(tp, sl) => {
+            editOrderTpsl({
+              id: order.id,
+              market: orderMarket,
+              takeProfit: tp ? Number(tp) : undefined,
+              stopLoss: sl ? Number(sl) : undefined,
+            });
+          }}
+        />
+      ),
+    });
+  };
   const { mutate: updatePositionTpsl } = useMutation({
     mutationFn: (data: { positionId: string; take_profit_price?: string; stop_loss_price?: string }) =>
       tradingService.updateFuturesPositionTPSL(data),
@@ -361,7 +426,6 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
     },
     onError: (e) => errorMessageHandler(e),
   });
-
 
   const filteredOrders = useMemo(() => {
     if (!openOrders) return [];
@@ -707,7 +771,7 @@ export function TradingPanel({ selectedPair, market = "spot", className, mobile 
 
       {/* Content Area */}
       <div className="flex-1 overflow-auto min-h-0">
-        {activeMainTab === "open_orders" && <OpenOrdersTable orders={filteredOrders} loading={openOrdersLoading} onCancel={closeOrder} cancelling={closeOrderPending} orderType={activeOrderTypeTab} mobile={mobile} />}
+        {activeMainTab === "open_orders" && <OpenOrdersTable orders={filteredOrders} loading={openOrdersLoading} onCancel={closeOrder} cancelling={closeOrderPending} onEditOrderTpsl={handleEditOrderTpsl} orderType={activeOrderTypeTab} mobile={mobile} />}
         {activeMainTab === "positions" && (
           <PositionsTable
             rows={filteredPositions}
@@ -797,8 +861,50 @@ function MobileRow({ label, value, valueClass }: { label: string; value: React.R
 }
 
 
+function TpslOrderModalForm({
+  initialTp,
+  initialSl,
+  onSubmit,
+}: {
+  initialTp: string;
+  initialSl: string;
+  onSubmit: (takeProfit: string, stopLoss: string) => void;
+}) {
+  const t = useTranslations("Trading");
+  const [takeProfit, setTakeProfit] = useState(initialTp);
+  const [stopLoss, setStopLoss] = useState(initialSl);
+  const isPrice = (v: string) => v === "" || (Number.isFinite(Number(v)) && Number(v) > 0);
+  const valid = isPrice(takeProfit) && isPrice(stopLoss);
+  return (
+    <div className="flex min-w-[280px] flex-col gap-3 p-1">
+      <TextInput
+        label={t("takeProfitPrice")}
+        placeholder={t("enterTargetPrice")}
+        value={takeProfit}
+        onChange={(e) => setTakeProfit(e.currentTarget.value)}
+        error={!isPrice(takeProfit) ? t("enterValidPrice") : undefined}
+      />
+      <TextInput
+        label={t("stopLossPrice")}
+        placeholder={t("enterTriggerPrice")}
+        value={stopLoss}
+        onChange={(e) => setStopLoss(e.currentTarget.value)}
+        error={!isPrice(stopLoss) ? t("enterValidPrice") : undefined}
+      />
+      <button
+        type="button"
+        disabled={!valid}
+        onClick={() => onSubmit(takeProfit.trim(), stopLoss.trim())}
+        className="mt-2 h-10 w-full rounded bg-primary text-sm font-semibold text-white transition-opacity disabled:opacity-40"
+      >
+        {t("confirmUpdate")}
+      </button>
+    </div>
+  );
+}
+
 // Table Components
-function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mobile }: any) {
+function OpenOrdersTable({ orders, loading, onCancel, cancelling, onEditOrderTpsl, orderType, mobile }: any) {
   const tp = useTranslations("Trading");
 
   const filteredOrders = filterOpenOrdersByType(orders, orderType);
@@ -836,11 +942,21 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
               <MobileRow label={tp("fee")} value={getFee(order) ? `${formatOrderNumber(getFee(order))} ${order.feeCurrency ?? ""}`.trim() : "—"} />
               <MobileRow label={tp("status")} value={formatStatus(getOrderStatus(order))} />
               <MobileRow label={tp("time")} value={formatOrderDate(order.createdAt)} />
-              {(order.takeProfit || order.stopLoss) && (
-                <MobileRow label={tp("tpSl")} value={
+              <MobileRow label={tp("tpSl")} value={
+                <div className="flex items-center gap-1.5 justify-end">
                   <span>{order.takeProfit ? <span className="text-success-6">{formatOrderNumber(order.takeProfit)}</span> : "—"} / {order.stopLoss ? <span className="text-error-1">{formatOrderNumber(order.stopLoss)}</span> : "—"}</span>
-                } />
-              )}
+                  {onEditOrderTpsl && (
+                    <button
+                      type="button"
+                      onClick={() => onEditOrderTpsl(order)}
+                      className="text-white/40 hover:text-white transition-colors"
+                      title="Edit TP/SL"
+                    >
+                      <MdEdit size={12} />
+                    </button>
+                  )}
+                </div>
+              } />
             </div>
           </div>
         ))}
@@ -897,9 +1013,23 @@ function OpenOrdersTable({ orders, loading, onCancel, cancelling, orderType, mob
                 )}
               </td>
               <td className="px-3 py-2.5 text-white/70">
-                {order.takeProfit ? <span className="text-success-6">{formatOrderNumber(order.takeProfit)}</span> : "—"}
-                {" / "}
-                {order.stopLoss ? <span className="text-error-1">{formatOrderNumber(order.stopLoss)}</span> : "—"}
+                <div className="flex items-center gap-1.5">
+                  <span>
+                    {order.takeProfit ? <span className="text-success-6">{formatOrderNumber(order.takeProfit)}</span> : "—"}
+                    {" / "}
+                    {order.stopLoss ? <span className="text-error-1">{formatOrderNumber(order.stopLoss)}</span> : "—"}
+                  </span>
+                  {onEditOrderTpsl && (
+                    <button
+                      type="button"
+                      onClick={() => onEditOrderTpsl(order)}
+                      className="text-white/40 hover:text-white transition-colors p-0.5"
+                      title="Edit TP/SL"
+                    >
+                      <MdEdit size={12} />
+                    </button>
+                  )}
+                </div>
               </td>
               <td className="px-3 py-2.5 text-white/70 font-mono">
                 {getFee(order) ? `${formatOrderNumber(getFee(order))} ${order.feeCurrency ?? ""}`.trim() : "—"}

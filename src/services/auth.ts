@@ -21,8 +21,13 @@ import {
 const getClientTypeHeaders = () => (isSameOriginApi() ? { "X-Client-Type": "web" } : {});
 
 function persistCrossOriginSession(data: any) {
-  if (typeof sessionStorage !== "undefined" && typeof data?.accessToken === "string" && data.accessToken) {
-    sessionStorage.setItem(CROSS_ORIGIN_TOKEN_KEY, data.accessToken);
+  if (typeof data?.accessToken === "string" && data.accessToken) {
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem(CROSS_ORIGIN_TOKEN_KEY, data.accessToken);
+    }
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(CROSS_ORIGIN_TOKEN_KEY, data.accessToken);
+    }
     if (!data?.wsToken) {
       wsClient.setAuthTicket(data.accessToken);
     }
