@@ -40,7 +40,7 @@ import { modals } from '@mantine/modals';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import dynamic from 'next/dynamic';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { MdKeyboardArrowDown, MdMoreVert, MdRefresh } from 'react-icons/md';
 import { MobileTopBar } from '@/src/components/shared/mobile-top-bar';
@@ -50,6 +50,7 @@ import { MobileBottomNav } from '@/src/components/shared/mobile-bottom-nav';
 import { PageSuspense } from "@/src/components/shared/page-suspense";
 import { FuturesTradePageSkeleton } from "@/src/components/skeletons/trades";
 import type { OrderLevel } from "@/src/components/trades/candlestick-chart";
+import { countDecimalPlaces, snapToStep, validateOrderPrecision } from "@/src/utils/market-precision";
 
 const CandlestickChart = dynamic(
   () => import('@/src/components/trades/candlestick-chart'),
@@ -57,12 +58,6 @@ const CandlestickChart = dynamic(
 );
 
 const LEVERAGE_PRESETS = [1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100];
-
-const toPriceInput = (value: number | string | null | undefined): string => {
-  if (value === '' || value === null || value === undefined) return '';
-  const n = Number(value);
-  return Number.isFinite(n) ? String(Number(n.toFixed(6))) : '';
-};
 
 const formatPct = (value: number): string => {
   if (!Number.isFinite(value)) return '0%';
@@ -132,6 +127,20 @@ function FuturesTradesInner() {
   const [fundingCountdown, setFundingCountdown] = useState('--:--:--');
 
   const feed = useMarketFeed(selectedPair, "futures");
+  const displayPriceDecimals =
+    feed.precision.tickSize > 0
+      ? countDecimalPlaces(feed.precision.tickSize)
+      : feed.precision.pricePrecision;
+  const toPriceInput = useCallback(
+    (value: number | string | null | undefined): string => {
+      if (value === '' || value === null || value === undefined) return '';
+      const n = Number(value);
+      if (!Number.isFinite(n) || n <= 0) return '';
+      const snapped = snapToStep(n, feed.precision.tickSize, feed.precision.pricePrecision, 'round');
+      return snapped === '0' ? '' : snapped;
+    },
+    [feed.precision.tickSize, feed.precision.pricePrecision]
+  );
   const orderBook = useOrderBook(selectedPair, "futures");
 
   // Futures screen: open positions, per-coin balances and the account total.
@@ -371,7 +380,7 @@ function FuturesTradesInner() {
     if (feed.price !== null && futuresPrice === '' && !priceUserEditedRef.current) {
       setFuturesPrice(toPriceInput(feed.price));
     }
-  }, [feed.price, futuresPrice, orderType]);
+  }, [feed.price, futuresPrice, orderType, toPriceInput]);
 
   // When user switches pair or order type, reset amounts but only pre-fill price if the field is empty
   const prevOrderTypeRef = useRef(orderType);
@@ -546,11 +555,32 @@ function FuturesTradesInner() {
 
   const formatPrice = (value: number | null) =>
     value !== null
-      ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      ? value.toLocaleString('en-US', {
+          minimumFractionDigits: displayPriceDecimals,
+          maximumFractionDigits: displayPriceDecimals,
+        })
       : null;
 
   const isPositive = (feed.changePercent24h ?? 0) >= 0;
   const changeColor = isPositive ? 'text-success-6' : 'text-error-1';
+
+  const validateFuturesPrecision = () =>
+    validateOrderPrecision({
+      rules: feed.precision,
+      price:
+        orderType === 'market'
+          ? null
+          : orderType === 'stop'
+            ? stopLimitPrice || futuresPrice
+            : futuresPrice,
+      stopPrice: orderType === 'stop' ? futuresPrice : null,
+      quantity: futuresAmount,
+      takeProfit: tpslEnabled ? takeProfit : null,
+      stopLoss: tpslEnabled ? stopLoss : null,
+      skipPriceCheck: orderType === 'market',
+      effectiveMarketPrice: effectiveMarketPrice ?? feed.price,
+      priceLabel: orderType === 'stop' ? 'Limit price' : 'Price',
+    });
 
   const validateTpsl = (side: TradeSide) => {
     if (!tpslEnabled) return;
@@ -582,6 +612,10 @@ function FuturesTradesInner() {
       }
 
       validateTpsl(side);
+      const precisionErr = validateFuturesPrecision();
+      if (precisionErr) {
+        throw new Error(precisionErr);
+      }
 
       const payload = {
         pair: selectedPair,
@@ -651,6 +685,10 @@ function FuturesTradesInner() {
     }
     try {
       validateTpsl(side);
+      const precisionErr = validateFuturesPrecision();
+      if (precisionErr) {
+        throw new Error(precisionErr);
+      }
     } catch (error: any) {
       errorMessageHandler(error);
       return;
@@ -668,7 +706,10 @@ function FuturesTradesInner() {
 
     const fmtPx = (value: number) =>
       value > 0
-        ? `${value.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDT`
+        ? `${value.toLocaleString('en-US', {
+            minimumFractionDigits: displayPriceDecimals,
+            maximumFractionDigits: displayPriceDecimals,
+          })} USDT`
         : '—';
     const referencePrice =
       orderType === 'market' ? (effectiveMarketPrice ?? feed.price ?? 0) : effectiveLimitPrice;
@@ -694,7 +735,7 @@ function FuturesTradesInner() {
     rows.push(
       {
         label: 'Quantity',
-        value: `${quantity.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${baseAsset}`,
+        value: `${quantity.toLocaleString('en-US', { maximumFractionDigits: feed.precision.quantityPrecision })} ${baseAsset}`,
       },
       { label: 'Leverage', value: `${leverage}x` },
       { label: 'Margin mode', value: marginMode === 'cross' ? 'Cross' : 'Isolated' },
@@ -723,10 +764,11 @@ function FuturesTradesInner() {
     });
   };
 
-  // Format qty without scientific notation, max 6 decimal places
+  // Format qty without scientific notation, snapped to lot size & quantity precision
   const fmtFuturesQty = (val: number): string => {
-    if (!Number.isFinite(val) || val === 0) return "";
-    return val.toFixed(6).replace(/(\.[0-9]*?)0+$/, "$1").replace(/\.$/, "");
+    if (!Number.isFinite(val) || val <= 0) return "";
+    const snapped = snapToStep(val, feed.precision.lotSize, feed.precision.quantityPrecision, 'floor');
+    return snapped === "0" ? "" : snapped;
   };
 
   const updateSliderValue = (value: number) => {
@@ -825,7 +867,7 @@ function FuturesTradesInner() {
             <span className="text-xs text-white/40 w-14">{inputLabel}</span>
             <NumberInput
               hideControls
-              decimalScale={6}
+              decimalScale={feed.precision.pricePrecision}
               value={futuresPrice}
               onChange={(val) => {
                 setFuturesPrice(val);
@@ -858,7 +900,7 @@ function FuturesTradesInner() {
             <span className="text-xs text-white/40 w-14">Limit</span>
             <NumberInput
               hideControls
-              decimalScale={6}
+              decimalScale={feed.precision.pricePrecision}
               value={stopLimitPrice}
               onChange={(val) => {
                 setStopLimitPrice(val);
@@ -885,6 +927,7 @@ function FuturesTradesInner() {
           <span className="text-xs text-white/40 w-14">Qty</span>
           <NumberInput
             hideControls
+            decimalScale={feed.precision.quantityPrecision}
             value={futuresAmount}
             onChange={(v) => {
               setFuturesAmount(v);
@@ -931,7 +974,7 @@ function FuturesTradesInner() {
             }}
           />
           <span className="text-2xs text-white/40">
-            Max {maxQuantity.toFixed(4)} {baseAsset}
+            Max {fmtFuturesQty(maxQuantity) || "0"} {baseAsset}
           </span>
         </div>
 
@@ -939,7 +982,7 @@ function FuturesTradesInner() {
           <div className="grid grid-cols-2 gap-2">
             <NumberInput
               hideControls
-              decimalScale={6}
+              decimalScale={feed.precision.pricePrecision}
               value={takeProfit}
               onChange={setTakeProfit}
               classNames={{
@@ -949,7 +992,7 @@ function FuturesTradesInner() {
             />
             <NumberInput
               hideControls
-              decimalScale={6}
+              decimalScale={feed.precision.pricePrecision}
               value={stopLoss}
               onChange={setStopLoss}
               classNames={{
@@ -964,7 +1007,12 @@ function FuturesTradesInner() {
           <div className="flex justify-between items-center">
             <span className="text-xs text-white/40">Entry</span>
             <span className="text-xs font-semibold text-white/90">
-              {workingPrice ? `${workingPrice.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDT` : '0.00 USDT'}
+              {workingPrice
+                ? `${workingPrice.toLocaleString('en-US', {
+                    minimumFractionDigits: displayPriceDecimals,
+                    maximumFractionDigits: displayPriceDecimals,
+                  })} USDT`
+                : `${(0).toFixed(displayPriceDecimals)} USDT`}
             </span>
           </div>
           <div className="flex justify-between items-center">
@@ -1118,6 +1166,7 @@ function FuturesTradesInner() {
           onSelectPair={handleSelectPair}
           currentPrice={effectiveMarketPrice}
           showPriceArrow
+          priceDecimals={displayPriceDecimals}
         />
 
         {/* MOBILE: Floating Order Book Button */}
@@ -1167,6 +1216,9 @@ function FuturesTradesInner() {
           sellPercentage={orderBook.sellPercentage}
           isConnected={orderBook.isConnected}
           lastUpdated={orderBook.lastUpdated}
+          pricePrecision={feed.precision.pricePrecision}
+          tickSize={feed.precision.tickSize}
+          quantityPrecision={feed.precision.quantityPrecision}
           onSelectPrice={(price) => {
             setFuturesPrice(toPriceInput(price));
             priceUserEditedRef.current = true;
@@ -1314,6 +1366,9 @@ function FuturesTradesInner() {
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
               lastUpdated={orderBook.lastUpdated}
+              pricePrecision={feed.precision.pricePrecision}
+              tickSize={feed.precision.tickSize}
+              quantityPrecision={feed.precision.quantityPrecision}
               onSelectPrice={(price) => {
                 setFuturesPrice(toPriceInput(price));
                 priceUserEditedRef.current = true;
@@ -1352,6 +1407,9 @@ function FuturesTradesInner() {
               sellPercentage={orderBook.sellPercentage}
               isConnected={orderBook.isConnected}
               lastUpdated={orderBook.lastUpdated}
+              pricePrecision={feed.precision.pricePrecision}
+              tickSize={feed.precision.tickSize}
+              quantityPrecision={feed.precision.quantityPrecision}
               onSelectPrice={(price) => {
                 setFuturesPrice(toPriceInput(price));
                 priceUserEditedRef.current = true;

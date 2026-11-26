@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { api } from "@/src/lib/axios";
 import { wsClient } from "@/src/lib/websocket-client";
 import { fallbackIfSocketStaysDown } from "@/src/lib/ws-fallback";
+import {
+  DEFAULT_MARKET_PRECISION,
+  extractMarketPrecision,
+  type MarketPrecisionRules,
+} from "@/src/utils/market-precision";
 
 interface MarketItem {
   symbol: string;
@@ -18,6 +23,12 @@ interface MarketItem {
   last_updated: string;
   funding_rate?: number;
   next_funding_time?: string;
+  price_precision?: number;
+  tick_size?: number;
+  quantity_precision?: number;
+  lot_size?: number;
+  min_order_qty?: number;
+  min_notional?: number;
   // Fallback API properties
   lastPrice?: number;
   price?: number;
@@ -31,6 +42,12 @@ interface MarketItem {
   quoteVolume?: number;
   pair?: string;
   fundingRate?: number;
+  pricePrecision?: number;
+  tickSize?: number;
+  quantityPrecision?: number;
+  lotSize?: number;
+  minOrderQty?: number;
+  minNotional?: number;
 }
 
 interface MarketFeedData {
@@ -46,6 +63,7 @@ interface MarketFeedData {
   lastUpdated: Date | null;
   markets: MarketItem[];
   marketsLoading: boolean;
+  precision: MarketPrecisionRules;
 }
 
 export type MarketFeedMarket = "spot" | "margin" | "futures";
@@ -74,22 +92,44 @@ const canonicalPair = (value: string) => {
  * `{ data: [...] }`, `{ markets: [...] }`, a bare array, or a single ticker
  * object pushed as `market_data` / `futures_markets`.
  */
-function extractMarketItems(raw: unknown, depth = 0): any[] {
-  if (!raw || depth > 4) return [];
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw !== "object") return [];
+function extractMarketPayload(raw: unknown, depth = 0): { foundArray: boolean; items: any[] } {
+  if (!raw || depth > 4) return { foundArray: false, items: [] };
+  if (Array.isArray(raw)) return { foundArray: true, items: raw };
+  if (typeof raw !== "object") return { foundArray: false, items: [] };
   const record = raw as Record<string, unknown>;
   const direct =
     record.markets ?? record.tickers ?? record.ticker ?? record.market ?? record.futures ?? record.Data;
-  if (Array.isArray(direct)) return direct;
+  if (Array.isArray(direct)) return { foundArray: true, items: direct };
   const data = record.data;
-  if (Array.isArray(data)) return data;
+  if (Array.isArray(data)) return { foundArray: true, items: data };
   if (data && typeof data === "object") {
-    const nested = extractMarketItems(data, depth + 1);
-    if (nested.length > 0) return nested;
+    const nested = extractMarketPayload(data, depth + 1);
+    if (nested.foundArray || nested.items.length > 0) return nested;
   }
-  if (record.symbol !== undefined || record.pair !== undefined) return [record];
-  return [];
+  if (record.symbol !== undefined || record.pair !== undefined) return { foundArray: false, items: [record] };
+  return { foundArray: false, items: [] };
+}
+
+function buildMetaIndex(items: any[]): Record<string, Record<string, unknown>> {
+  const index: Record<string, Record<string, unknown>> = {};
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const base = item.base ?? item.baseAsset;
+    const quote = item.quote ?? item.quoteAsset;
+    const candidates = [
+      item.symbol,
+      item.pair,
+      item.tradingPair,
+      item.trading_pair,
+      base && quote ? `${base}/${quote}` : undefined,
+    ];
+    for (const candidate of candidates) {
+      if (candidate == null) continue;
+      const key = normalizeMarketKey(candidate);
+      if (key) index[key] = item as Record<string, unknown>;
+    }
+  }
+  return index;
 }
 
 const positiveOrPrev = (val: unknown, prev: number | null): number | null => {
@@ -122,6 +162,7 @@ export const useMarketFeed = (
   pair: string,
   market: MarketFeedMarket = "spot"
 ): MarketFeedData => {
+  const [futuresMetaByKey, setFuturesMetaByKey] = useState<Record<string, Record<string, unknown>>>({});
   const [data, setData] = useState<MarketFeedData>({
     price: null,
     change24h: null,
@@ -135,6 +176,7 @@ export const useMarketFeed = (
     lastUpdated: null,
     markets: [],
     marketsLoading: true,
+    precision: DEFAULT_MARKET_PRECISION,
   });
 
   // Throttle the HTTP fallback so it fires at most once every 30 seconds.
@@ -157,8 +199,13 @@ export const useMarketFeed = (
       try {
         const endpoint = market === "futures" ? "trading/futures/markets" : "trading/24_hours_movers";
         const res = await api.get(endpoint, { params: { limit: 100 } });
-        const items: any[] = extractMarketItems(res.data);
+        const extracted = extractMarketPayload(res.data);
+        const items: any[] = extracted.items;
         const match = findMarket(items, pair);
+
+        if (market === "futures" && items.length > 0) {
+          setFuturesMetaByKey((prev) => ({ ...prev, ...buildMetaIndex(items) }));
+        }
 
         setData((prev) => ({
           ...prev,
@@ -187,7 +234,10 @@ export const useMarketFeed = (
               ? match.next_funding_time ?? match.nextFundingTime ?? prev.nextFundingTime
               : prev.nextFundingTime,
           lastUpdated: new Date(),
-          markets: items.length > 0 && market !== "futures" ? (items as MarketItem[]) : prev.markets,
+          markets:
+            market !== "futures" && (extracted.foundArray || items.length > 0)
+              ? (items as MarketItem[])
+              : prev.markets,
           marketsLoading: false,
         }));
       } catch {
@@ -238,8 +288,9 @@ export const useMarketFeed = (
     });
 
     const applyMarkets = (dataPayload: any) => {
-      const items = extractMarketItems(dataPayload);
-      if (items.length === 0) return;
+      const extracted = extractMarketPayload(dataPayload);
+      const items = extracted.items;
+      if (!extracted.foundArray && items.length === 0) return;
       const match = findMarket(items, pair);
 
       setData((prev) => ({
@@ -276,7 +327,11 @@ export const useMarketFeed = (
           market === "futures" ? prev.nextFundingTime : match?.next_funding_time ?? prev.nextFundingTime,
         isConnected: true,
         lastUpdated: new Date(),
-        markets: items as MarketItem[],
+        markets: extracted.foundArray
+          ? (items as MarketItem[])
+          : prev.markets.length > 0
+            ? prev.markets
+            : (items as MarketItem[]),
         marketsLoading: false,
       }));
     };
@@ -296,8 +351,9 @@ export const useMarketFeed = (
       // §5.12: mark/index price, 24h stats and open interest for every perp.
       unsubscribes.push(
         wsClient.subscribe("futures_markets", { type: "get_futures_markets", data: {} }, (dataPayload) => {
-          const items = extractMarketItems(dataPayload);
+          const { items } = extractMarketPayload(dataPayload);
           if (items.length === 0) return;
+          setFuturesMetaByKey((prev) => ({ ...prev, ...buildMetaIndex(items) }));
           const match = findMarket(items, pair);
 
           setData((prev) => ({
@@ -370,5 +426,12 @@ export const useMarketFeed = (
     };
   }, [pair, market, fetchHttpFallback]);
 
-  return data;
+  const precision = useMemo(() => {
+    const key = normalizeMarketKey(pair);
+    const spotMatch = findMarket(data.markets, pair);
+    const meta = market === "futures" ? (futuresMetaByKey[key] ?? spotMatch) : spotMatch;
+    return extractMarketPrecision(meta as Record<string, unknown> | undefined);
+  }, [data.markets, futuresMetaByKey, market, pair]);
+
+  return useMemo(() => ({ ...data, precision }), [data, precision]);
 };

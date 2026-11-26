@@ -8,6 +8,7 @@ import { useOrderBook } from "@/src/hooks/use-order-book";
 import { useRecentTrades } from "@/src/hooks/use-recent-trades";
 import { OrderBookTabs } from "@/src/components/trades/order-book-tabs";
 import { SpotPairHeader } from "@/src/components/trades/spot-pair-header";
+import { countDecimalPlaces } from "@/src/utils/market-precision";
 import { TradingPanel } from "@/src/components/trades/trading-panel";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { MarginTradePageSkeleton } from "@/src/components/skeletons/trades";
@@ -212,8 +213,17 @@ function MarginTrades() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feed.price]);
 
+  const displayPriceDecimals =
+    feed.precision.tickSize > 0
+      ? countDecimalPlaces(feed.precision.tickSize)
+      : feed.precision.pricePrecision;
   const formatPrice = (val: number | null) =>
-    val !== null ? val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : null;
+    val !== null
+      ? val.toLocaleString("en-US", {
+          minimumFractionDigits: displayPriceDecimals,
+          maximumFractionDigits: displayPriceDecimals,
+        })
+      : null;
   const normalizedSymbol = selectedPair.replace(/[/\\\-_\s]/g, "").toUpperCase();
   const isPositive = (feed.changePercent24h ?? 0) >= 0;
   const changeColor = isPositive ? "text-success-6" : "text-error-1";
@@ -442,6 +452,7 @@ function MarginTrades() {
           markets={filteredMarkets}
           onSelectPair={handleSelectPair}
           currentPrice={effectiveMarketPrice}
+          priceDecimals={displayPriceDecimals}
         />
 
         {/* MOBILE: Floating Order Book Button */}
@@ -492,6 +503,9 @@ function MarginTrades() {
           isConnected={orderBook.isConnected}
           lastUpdated={orderBook.lastUpdated}
           onSelectPrice={setClickedPrice}
+          pricePrecision={feed.precision.pricePrecision}
+          tickSize={feed.precision.tickSize}
+          quantityPrecision={feed.precision.quantityPrecision}
         />
 
         {/* Desktop trading panel: Open Orders / Positions / Borrowings / ... (spans under chart + order book) */}
@@ -528,6 +542,7 @@ function MarginTrades() {
                 onLeverageChangeEnd={(val) => handleSetLeverage(val)}
                 marketPrice={effectiveMarketPrice}
                 clickedPrice={clickedPrice}
+                marketPrecision={feed.precision}
               />
             </TabsPanel>
             <TabsPanel value="isolated">
@@ -543,6 +558,7 @@ function MarginTrades() {
                 onLeverageChangeEnd={(val) => handleSetLeverage(val)}
                 marketPrice={effectiveMarketPrice}
                 clickedPrice={clickedPrice}
+                marketPrecision={feed.precision}
               />
             </TabsPanel>
           </Tabs>
@@ -620,6 +636,9 @@ function MarginTrades() {
               isConnected={orderBook.isConnected}
               lastUpdated={orderBook.lastUpdated}
               onSelectPrice={setClickedPrice}
+              pricePrecision={feed.precision.pricePrecision}
+              tickSize={feed.precision.tickSize}
+              quantityPrecision={feed.precision.quantityPrecision}
             />
           </div>
         ) : (
@@ -648,10 +667,10 @@ function MarginTrades() {
                     <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
                   </TabsList>
                   <TabsPanel value="buy">
-                    <PlaceSpot key={`${selectedPair}-quick-buy`} onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" />
+                    <PlaceSpot key={`${selectedPair}-quick-buy`} onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} marketPrecision={feed.precision} compactSide="buy" />
                   </TabsPanel>
                   <TabsPanel value="sell">
-                    <PlaceSpot key={`${selectedPair}-quick-sell`} onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" />
+                    <PlaceSpot key={`${selectedPair}-quick-sell`} onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} onLeverageChangeEnd={(val) => handleSetLeverage(val)} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} marketPrecision={feed.precision} compactSide="sell" />
                   </TabsPanel>
                 </Tabs>
               </div>
@@ -673,6 +692,9 @@ function MarginTrades() {
               isConnected={orderBook.isConnected}
               lastUpdated={orderBook.lastUpdated}
               onSelectPrice={setClickedPrice}
+              pricePrecision={feed.precision.pricePrecision}
+              tickSize={feed.precision.tickSize}
+              quantityPrecision={feed.precision.quantityPrecision}
             />
             </div>
             </div>
@@ -700,10 +722,10 @@ function MarginTrades() {
               <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
             </TabsList>
             <TabsPanel value="buy">
-              <PlaceSpot key={`${selectedPair}-sheet-buy`} onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" />
+              <PlaceSpot key={`${selectedPair}-sheet-buy`} onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} marketPrecision={feed.precision} compactSide="buy" />
             </TabsPanel>
             <TabsPanel value="sell">
-              <PlaceSpot key={`${selectedPair}-sheet-sell`} onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" />
+              <PlaceSpot key={`${selectedPair}-sheet-sell`} onFill={setPlacedFill} onTpslChange={setTpslPreview} pair={selectedPair} mode={tradeMode} leverage={leverage} onLeverageChange={setLeverage} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} marketPrecision={feed.precision} compactSide="sell" />
             </TabsPanel>
           </Tabs>
         </div>
