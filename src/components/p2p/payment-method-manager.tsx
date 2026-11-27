@@ -25,7 +25,13 @@ export const PaymentMethodManager = ({
   const { data: pmData, isLoading } = usePaymentMethods();
   const { mutate: addPaymentMethod, isPending: isAddingMethod } = useAddPaymentMethod();
 
-  const savedMethods: any[] = pmData?.data?.data ?? [];
+  const pmBody = (pmData as any)?.data;
+  const savedMethods: any[] = Array.isArray(pmBody?.data)
+    ? pmBody.data
+    : Array.isArray(pmBody)
+      ? pmBody
+      : [];
+  const getMethodId = (method: any) => String(method?.id ?? method?._id ?? "");
 
   const [newMethod, setNewMethod] = useState("Bank Transfer");
   const [newAccountName, setNewAccountName] = useState("");
@@ -52,6 +58,7 @@ export const PaymentMethodManager = ({
   };
 
   const toggleSelection = (methodId: string) => {
+    if (!methodId) return;
     if (selectedMethodIds.includes(methodId)) {
       onChangeSelected(selectedMethodIds.filter((m) => m !== methodId));
     } else if (selectedMethodIds.length < 3) {
@@ -90,16 +97,17 @@ export const PaymentMethodManager = ({
         ) : (
           <div className="flex flex-col gap-2.5">
             {savedMethods.map((sm) => {
-              const isSelected = selectedMethodIds.includes(sm.id);
+              const id = getMethodId(sm);
+              const isSelected = !!id && selectedMethodIds.includes(id);
               return (
                 <div
-                  key={sm.id}
+                  key={id || sm.method}
                   className={`p-3.5 rounded-lg border cursor-pointer transition-colors ${
                     isSelected
                       ? "bg-primary/[0.08] border-primary/40 text-white"
                       : "bg-white/[0.03] border-white/[0.07] text-white/70 hover:bg-white/[0.05]"
                   }`}
-                  onClick={() => toggleSelection(sm.id)}
+                  onClick={() => toggleSelection(id)}
                 >
                   <div className="flex justify-between items-center mb-1.5">
                     <span className="font-semibold text-xs text-white">
