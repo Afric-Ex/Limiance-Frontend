@@ -10,6 +10,13 @@ import { openTradeOrderConfirmation, type TradeConfirmationRow } from "./trade-o
 import { useTradeConfirmations, type TradeConfirmationKey } from "@/src/hooks/use-trade-confirmations";
 import { DEFAULT_MODAL_SETTINGS } from "@/src/utils/constants";
 import { splitPair } from "@/src/utils/pair";
+import {
+  DEFAULT_MARKET_PRECISION,
+  isValidDecimalInput,
+  snapToStep,
+  validateOrderPrecision,
+  type MarketPrecisionRules,
+} from "@/src/utils/market-precision";
 import { MdExpandMore, MdRefresh } from "react-icons/md";
 import { icons } from "../assets/icons";
 import Image from "next/image";
@@ -38,6 +45,7 @@ interface Props {
   onLeverageChange?: (v: number) => void;
   marketPrice?: number | null;
   clickedPrice?: number | null;
+  marketPrecision?: MarketPrecisionRules;
   compactSide?: "buy" | "sell";
   // Bybit-style desktop form: one Buy/Sell toggle and a single stacked form.
   sideToggle?: boolean;
@@ -73,16 +81,10 @@ const STACKED_SLIDER = {
   },
 } as const;
 
-const MAX_PRICE_DECIMALS = 6;
-const PRICE_INPUT_PATTERN = /^\d*(?:\.\d{0,6})?$/;
-
-const formatPriceInput = (value: number | string): string => {
-  const n = Number(value);
-  return Number.isFinite(n) ? String(Number(n.toFixed(MAX_PRICE_DECIMALS))) : "";
-};
-
-const formatAmount = (value: number) =>
-  Number.isFinite(value) ? value.toLocaleString("en-US", { maximumFractionDigits: 8 }) : "0";
+const formatAmount = (value: number, maxDigits = 8) =>
+  Number.isFinite(value)
+    ? value.toLocaleString("en-US", { maximumFractionDigits: Math.max(0, Math.min(12, Math.trunc(maxDigits))) })
+    : "0";
 
 const LEVERAGE_PRESETS = [1, 3, 5, 10, 20, 50, 100];
 
@@ -96,6 +98,7 @@ function FieldRow({
   showMax,
   onMax,
   floating,
+  maxDecimals = 6,
 }: {
   label: string;
   value: number | string;
@@ -106,6 +109,7 @@ function FieldRow({
   showMax?: boolean;
   onMax?: () => void;
   floating?: boolean;
+  maxDecimals?: number;
 }) {
   const t = useTranslations("Trading");
   const focusBorder = color === "buy" ? "focus-within:border-success-6" : color === "sell" ? "focus-within:border-error-1" : "";
@@ -122,7 +126,7 @@ function FieldRow({
             value={value !== undefined && value !== null ? value : ""}
             onChange={(e) => {
               const val = e.target.value;
-              if (val === "" || PRICE_INPUT_PATTERN.test(val)) onChange?.(val);
+              if (isValidDecimalInput(val, maxDecimals)) onChange?.(val);
             }}
             className="mt-1 h-5 w-full min-w-0 border-none bg-transparent p-0 font-mono text-sm font-semibold tabular-nums text-white outline-none placeholder-white/20 focus:ring-0"
             placeholder="0.00"
@@ -142,7 +146,7 @@ function FieldRow({
         value={value !== undefined && value !== null ? value : ""}
         onChange={(e) => {
           const val = e.target.value;
-          if (val === "" || PRICE_INPUT_PATTERN.test(val)) {
+          if (isValidDecimalInput(val, maxDecimals)) {
             onChange?.(val);
           }
         }}
@@ -163,8 +167,9 @@ function FieldRow({
   );
 }
 
-export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLeverageChange, marketPrice, clickedPrice, compactSide, sideToggle = false, onLeverageChangeEnd, onTpslChange, onFill }: Props) => {
+export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLeverageChange, marketPrice, clickedPrice, marketPrecision, compactSide, sideToggle = false, onLeverageChangeEnd, onTpslChange, onFill }: Props) => {
   const t = useTranslations("Trading");
+  const rules = marketPrecision ?? DEFAULT_MARKET_PRECISION;
   const [activeTab, setActiveTab] = useState("market");
   const [advancedTab, setAdvancedTab] = useState<AdvancedTab | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -244,19 +249,26 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
   // auto-fill limit price from market feed; skip if user has manually typed
   useEffect(() => {
     if (activeTab !== "limit" || !marketPrice) return;
-    if (!buyPriceEdited) setBuyPrice(formatPriceInput(marketPrice));
-    if (!sellPriceEdited) setSellPrice(formatPriceInput(marketPrice));
-  }, [activeTab, marketPrice, pair, buyPriceEdited, sellPriceEdited]);
+    const n = Number(marketPrice);
+    if (!Number.isFinite(n) || n <= 0) return;
+    const snapped = snapToStep(n, rules.tickSize, rules.pricePrecision, "round");
+    const formatted = snapped === "0" ? "" : snapped;
+    if (!buyPriceEdited) setBuyPrice(formatted);
+    if (!sellPriceEdited) setSellPrice(formatted);
+  }, [activeTab, marketPrice, pair, buyPriceEdited, sellPriceEdited, rules.tickSize, rules.pricePrecision]);
 
-  // order book row click â€” always overrides both price fields and marks as user-set
+  // order book row click — always overrides both price fields and marks as user-set
   useEffect(() => {
     if (!clickedPrice) return;
-    const price = formatPriceInput(clickedPrice);
+    const n = Number(clickedPrice);
+    if (!Number.isFinite(n) || n <= 0) return;
+    const snapped = snapToStep(n, rules.tickSize, rules.pricePrecision, "round");
+    const price = snapped === "0" ? "" : snapped;
     setBuyPrice(price);
     setSellPrice(price);
     setBuyPriceEdited(true);
     setSellPriceEdited(true);
-  }, [clickedPrice]);
+  }, [clickedPrice, rules.tickSize, rules.pricePrecision]);
 
   // report live TP/SL preview so the chart can draw the levels
   useEffect(() => {
@@ -289,15 +301,12 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     return isNaN(num) ? 0 : num;
   };
 
-  // Format a quantity number without scientific notation (e.g. 1e-7 → "0.0000001")
-  // Trims trailing zeros after the decimal point, max 8 decimal places.
+  // Format a quantity number without scientific notation (e.g. 1e-7 -> "0.0000001")
+  // Snapped to configured lot size and quantity precision.
   const fmtQty = (val: number): string => {
-    if (!Number.isFinite(val) || val === 0) return "";
-    // toFixed(8) always gives fixed notation, then strip trailing zeros
-    const fixed = val.toFixed(8);
-    // Remove trailing zeros after decimal, keep at least 1 decimal if needed
-    const trimmed = fixed.replace(/(\.[0-9]*?)0+$/, "$1").replace(/\.$/, "");
-    return trimmed;
+    if (!Number.isFinite(val) || val <= 0) return "";
+    const snapped = snapToStep(val, rules.lotSize, rules.quantityPrecision, "floor");
+    return snapped === "0" ? "" : snapped;
   };
 
   const rawQuote = quoteAsset ? parseNum(mode === "spot" ? quoteAsset.spotBalance : quoteAsset.marginBalance) : 0;
@@ -388,6 +397,55 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         return false;
       }
     }
+
+    const isBuy = payload.side === "buy";
+    const rawPrice = isBuy
+      ? activeTab === "oco"
+        ? buyOcoPrice
+        : buyPrice
+      : activeTab === "oco"
+        ? sellOcoPrice
+        : sellPrice;
+    const rawStop = isBuy
+      ? activeTab === "oco"
+        ? buyOcoStop
+        : buyStopPrice
+      : activeTab === "oco"
+        ? sellOcoStop
+        : sellStopPrice;
+    const rawQty = isBuy ? buyAmount : sellAmount;
+    const rawTp = tpslEnabled ? (isBuy ? buyTp : sellTp) : null;
+    const rawSl = tpslEnabled ? (isBuy ? buySl : sellSl) : null;
+
+    const precisionErr = validateOrderPrecision({
+      rules,
+      price: activeTab !== "market" ? rawPrice : null,
+      stopPrice: activeTab === "stop" || activeTab === "oco" ? rawStop : null,
+      quantity: rawQty,
+      takeProfit: rawTp,
+      stopLoss: rawSl,
+      skipPriceCheck: activeTab === "market",
+      effectiveMarketPrice: parseNum(marketPrice) || null,
+      priceLabel: activeTab === "stop" ? t("limitPrice") : t("price"),
+    });
+    if (precisionErr) {
+      errorMessageHandler(new Error(precisionErr));
+      return false;
+    }
+
+    if (activeTab === "oco") {
+      const rawOcoLimit = isBuy ? buyOcoLimit : sellOcoLimit;
+      const ocoErr = validateOrderPrecision({
+        rules,
+        price: rawOcoLimit,
+        priceLabel: t("limit"),
+      });
+      if (ocoErr) {
+        errorMessageHandler(new Error(ocoErr));
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -560,7 +618,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     const total = referencePrice * quantity;
     const fmtPrice = (value: number) =>
       Number.isFinite(value) && value > 0
-        ? `${value.toLocaleString("en-US", { maximumFractionDigits: MAX_PRICE_DECIMALS })} ${quote}`
+        ? `${value.toLocaleString("en-US", { maximumFractionDigits: rules.pricePrecision })} ${quote}`
         : "—";
 
     const rows: TradeConfirmationRow[] = [
@@ -587,7 +645,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
     }
 
     rows.push(
-      { label: t("quantity"), value: `${formatAmount(quantity)} ${base}` },
+      { label: t("quantity"), value: `${formatAmount(quantity, rules.quantityPrecision)} ${base}` },
       { label: t("orderValue"), value: fmtPrice(total) }
     );
 
@@ -718,18 +776,19 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
         {effectiveTab === "oco" ? (
           <>
-            <FieldRow floating label={t("price")} value={isBuy ? buyOcoPrice : sellOcoPrice} onChange={(v) => {
+            <FieldRow floating maxDecimals={rules.pricePrecision} label={t("price")} value={isBuy ? buyOcoPrice : sellOcoPrice} onChange={(v) => {
               if (isBuy) { setBuyOcoPrice(v); setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount))); }
               else { setSellOcoPrice(v); setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount))); }
             }} unit={quote} color={tone} />
-            <FieldRow floating label={t("stop")} value={isBuy ? buyOcoStop : sellOcoStop} onChange={isBuy ? setBuyOcoStop : setSellOcoStop} unit={quote} color={tone} />
-            <FieldRow floating label={t("limit")} value={isBuy ? buyOcoLimit : sellOcoLimit} onChange={isBuy ? setBuyOcoLimit : setSellOcoLimit} unit={quote} color={tone} />
+            <FieldRow floating maxDecimals={rules.pricePrecision} label={t("stop")} value={isBuy ? buyOcoStop : sellOcoStop} onChange={isBuy ? setBuyOcoStop : setSellOcoStop} unit={quote} color={tone} />
+            <FieldRow floating maxDecimals={rules.pricePrecision} label={t("limit")} value={isBuy ? buyOcoLimit : sellOcoLimit} onChange={isBuy ? setBuyOcoLimit : setSellOcoLimit} unit={quote} color={tone} />
           </>
         ) : effectiveTab === "stop" ? (
           <>
-            <FieldRow floating label={t("stopPrice")} value={isBuy ? buyStopPrice : sellStopPrice} onChange={isBuy ? setBuyStopPrice : setSellStopPrice} unit={quote} color={tone} />
+            <FieldRow floating maxDecimals={rules.pricePrecision} label={t("stopPrice")} value={isBuy ? buyStopPrice : sellStopPrice} onChange={isBuy ? setBuyStopPrice : setSellStopPrice} unit={quote} color={tone} />
             <FieldRow
               floating
+              maxDecimals={rules.pricePrecision}
               label={t("limitPrice")}
               value={price}
               onChange={(v) => {
@@ -743,6 +802,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         ) : effectiveTab !== "market" ? (
           <FieldRow
             floating
+            maxDecimals={rules.pricePrecision}
             label={t("price")}
             value={price}
             onChange={(v) => {
@@ -754,7 +814,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           />
         ) : null}
 
-        <FieldRow floating label={t("quantity")} value={amount} onChange={(v) => {
+        <FieldRow floating maxDecimals={rules.quantityPrecision} label={t("quantity")} value={amount} onChange={(v) => {
           if (isBuy) {
             setBuyAmount(v);
             setBuyPct(calcPct("buy", effectivePriceFor("buy"), parseNum(v)));
@@ -794,7 +854,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
         <div className="flex items-center justify-between text-xs">
           <span className="text-white/50">{isBuy ? t("maxBuyingAmount") : t("maxSellingAmount")}</span>
-          <span className="font-semibold text-white/90">{formatAmount(maxAmount)} {base}</span>
+          <span className="font-semibold text-white/90">{formatAmount(maxAmount, rules.quantityPrecision)} {base}</span>
         </div>
 
         <label className="flex cursor-pointer items-center gap-2 self-start text-xs font-semibold text-white/70">
@@ -808,8 +868,8 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         </label>
         {tpslEnabled && (
           <>
-            <FieldRow floating label={t("takeProfit")} value={isBuy ? buyTp : sellTp} onChange={isBuy ? setBuyTp : setSellTp} unit={quote} color={tone} />
-            <FieldRow floating label={t("stopLoss")} value={isBuy ? buySl : sellSl} onChange={isBuy ? setBuySl : setSellSl} unit={quote} color={tone} />
+            <FieldRow floating maxDecimals={rules.pricePrecision} label={t("takeProfit")} value={isBuy ? buyTp : sellTp} onChange={isBuy ? setBuyTp : setSellTp} unit={quote} color={tone} />
+            <FieldRow floating maxDecimals={rules.pricePrecision} label={t("stopLoss")} value={isBuy ? buySl : sellSl} onChange={isBuy ? setBuySl : setSellSl} unit={quote} color={tone} />
           </>
         )}
 
@@ -933,6 +993,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
         <FieldRow
           floating
+          maxDecimals={rules.pricePrecision}
           label={t("triggerPrice")}
           value={trigger}
           onChange={setTrigger}
@@ -964,6 +1025,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
         {tpslExecType === "limit" && (
           <FieldRow
             floating
+            maxDecimals={rules.pricePrecision}
             label={t("orderPrice")}
             value={price}
             onChange={(v) => {
@@ -982,6 +1044,7 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
         <FieldRow
           floating
+          maxDecimals={rules.quantityPrecision}
           label={t("quantity")}
           value={amount}
           onChange={(v) => {
@@ -1222,29 +1285,29 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           {effectiveTab === "oco" ? (
             <>
-              <FieldRow label={t("price")} value={buyOcoPrice} onChange={(v) => {
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("price")} value={buyOcoPrice} onChange={(v) => {
                 setBuyOcoPrice(v);
                 setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount)));
               }} unit={quote} color="buy" />
-              <FieldRow label={t("stop")} value={buyOcoStop} onChange={setBuyOcoStop} unit={quote} color="buy" />
-              <FieldRow label={t("limit")} value={buyOcoLimit} onChange={setBuyOcoLimit} unit={quote} color="buy" />
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("stop")} value={buyOcoStop} onChange={setBuyOcoStop} unit={quote} color="buy" />
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("limit")} value={buyOcoLimit} onChange={setBuyOcoLimit} unit={quote} color="buy" />
             </>
           ) : effectiveTab === "stop" ? (
             <>
-              <FieldRow label={t("stop")} value={buyStopPrice} onChange={setBuyStopPrice} unit={quote} color="buy" />
-              <FieldRow label={t("limit")} value={buyPrice} onChange={(v) => {
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("stop")} value={buyStopPrice} onChange={setBuyStopPrice} unit={quote} color="buy" />
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("limit")} value={buyPrice} onChange={(v) => {
                 setBuyPriceEdited(true); setBuyPrice(v);
                 setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount)));
               }} unit={quote} color="buy" />
             </>
           ) : effectiveTab !== "market" ? (
-            <FieldRow label={t("price")} value={buyPrice} onChange={(v) => {
+            <FieldRow maxDecimals={rules.pricePrecision} label={t("price")} value={buyPrice} onChange={(v) => {
               setBuyPriceEdited(true); setBuyPrice(v);
               setBuyPct(calcPct("buy", parseNum(v), parseNum(buyAmount)));
             }} unit={quote} color="buy" />
           ) : null}
 
-          <FieldRow label={t("qty")} value={buyAmount} onChange={(v) => {
+          <FieldRow maxDecimals={rules.quantityPrecision} label={t("qty")} value={buyAmount} onChange={(v) => {
             setBuyAmount(v);
             setBuyPct(calcPct("buy", effectivePriceFor("buy"), parseNum(v)));
           }} unit={base} color="buy" showMax onMax={handleBuyMax} />
@@ -1273,8 +1336,8 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
           {/* TP/SL section */}
           {tpslEnabled && (
             <>
-              <FieldRow label={t("tp")} value={buyTp} onChange={setBuyTp} unit={quote} color="buy" />
-              <FieldRow label={t("sl")} value={buySl} onChange={setBuySl} unit={quote} color="buy" />
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("tp")} value={buyTp} onChange={setBuyTp} unit={quote} color="buy" />
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("sl")} value={buySl} onChange={setBuySl} unit={quote} color="buy" />
             </>
           )}
 
@@ -1316,29 +1379,29 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           {effectiveTab === "oco" ? (
             <>
-              <FieldRow label={t("price")} value={sellOcoPrice} onChange={(v) => {
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("price")} value={sellOcoPrice} onChange={(v) => {
                 setSellOcoPrice(v);
                 setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount)));
               }} unit={quote} color="sell" />
-              <FieldRow label={t("stop")} value={sellOcoStop} onChange={setSellOcoStop} unit={quote} color="sell" />
-              <FieldRow label={t("limit")} value={sellOcoLimit} onChange={setSellOcoLimit} unit={quote} color="sell" />
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("stop")} value={sellOcoStop} onChange={setSellOcoStop} unit={quote} color="sell" />
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("limit")} value={sellOcoLimit} onChange={setSellOcoLimit} unit={quote} color="sell" />
             </>
           ) : effectiveTab === "stop" ? (
             <>
-              <FieldRow label={t("stop")} value={sellStopPrice} onChange={setSellStopPrice} unit={quote} color="sell" />
-              <FieldRow label={t("limit")} value={sellPrice} onChange={(v) => {
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("stop")} value={sellStopPrice} onChange={setSellStopPrice} unit={quote} color="sell" />
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("limit")} value={sellPrice} onChange={(v) => {
                 setSellPriceEdited(true); setSellPrice(v);
                 setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount)));
               }} unit={quote} color="sell" />
             </>
           ) : effectiveTab !== "market" ? (
-            <FieldRow label={t("price")} value={sellPrice} onChange={(v) => {
+            <FieldRow maxDecimals={rules.pricePrecision} label={t("price")} value={sellPrice} onChange={(v) => {
               setSellPriceEdited(true); setSellPrice(v);
               setSellPct(calcPct("sell", parseNum(v), parseNum(sellAmount)));
             }} unit={quote} color="sell" />
           ) : null}
 
-          <FieldRow label={t("qty")} value={sellAmount} onChange={(v) => {
+          <FieldRow maxDecimals={rules.quantityPrecision} label={t("qty")} value={sellAmount} onChange={(v) => {
             setSellAmount(v);
             setSellPct(calcPct("sell", 0, parseNum(v)));
           }} unit={base} color="sell" showMax onMax={handleSellMax} />
@@ -1365,8 +1428,8 @@ export const PlaceSpot = ({ pair = "BTC/USDT", mode = "spot", leverage = 1, onLe
 
           {tpslEnabled && (
             <>
-              <FieldRow label={t("tp")} value={sellTp} onChange={setSellTp} unit={quote} color="sell" />
-              <FieldRow label={t("sl")} value={sellSl} onChange={setSellSl} unit={quote} color="sell" />
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("tp")} value={sellTp} onChange={setSellTp} unit={quote} color="sell" />
+              <FieldRow maxDecimals={rules.pricePrecision} label={t("sl")} value={sellSl} onChange={setSellSl} unit={quote} color="sell" />
             </>
           )}
 

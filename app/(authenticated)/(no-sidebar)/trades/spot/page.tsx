@@ -8,6 +8,7 @@ import { useOrderBook } from "@/src/hooks/use-order-book";
 import { useRecentTrades } from "@/src/hooks/use-recent-trades";
 import { OrderBookTabs } from "@/src/components/trades/order-book-tabs";
 import { SpotPairHeader } from "@/src/components/trades/spot-pair-header";
+import { countDecimalPlaces } from "@/src/utils/market-precision";
 import { TradingPanel } from "@/src/components/trades/trading-panel";
 import { Skeleton } from "@/src/components/shared/skeleton";
 import { SpotTradePageSkeleton } from "@/src/components/skeletons/trades";
@@ -125,8 +126,17 @@ function SpotTrades() {
     setPrevPrice(feed.price);
   }, [feed.price, prevPrice]);
 
+  const displayPriceDecimals =
+    feed.precision.tickSize > 0
+      ? countDecimalPlaces(feed.precision.tickSize)
+      : feed.precision.pricePrecision;
   const formatPrice = (val: number | null) =>
-    val !== null ? val.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : null;
+    val !== null
+      ? val.toLocaleString("en-US", {
+          minimumFractionDigits: displayPriceDecimals,
+          maximumFractionDigits: displayPriceDecimals,
+        })
+      : null;
   const formatOrderDate = (value: unknown, timeOnly = false) => {
     if (!value) return "—";
     const raw = String(value);
@@ -400,7 +410,7 @@ function SpotTrades() {
           markets={filteredMarkets}
           onSelectPair={handleSelectPair}
           currentPrice={effectiveMarketPrice}
-          priceDecimals={3}
+          priceDecimals={displayPriceDecimals}
         />
 
         {/* MOBILE: Floating Order Book Button */}
@@ -451,6 +461,9 @@ function SpotTrades() {
           isConnected={orderBook.isConnected}
           lastUpdated={orderBook.lastUpdated}
           onSelectPrice={setClickedPrice}
+          pricePrecision={feed.precision.pricePrecision}
+          tickSize={feed.precision.tickSize}
+          quantityPrecision={feed.precision.quantityPrecision}
         />
         {/* Desktop trading panel: Open Orders / Positions / Order History / ... (spans under chart + order book) */}
         <div className="hidden min-[1150px]:flex flex-col min-w-0 min-h-[260px] max-h-[420px] col-span-2 col-start-1 row-start-3">
@@ -480,7 +493,7 @@ function SpotTrades() {
               <TabsTab value="isolated">Isolated {tradeMode === "isolated" ? `${leverage}x` : "10x"}</TabsTab>
             </TabsList>
             <TabsPanel value="spot">
-              <PlaceSpot key={selectedPair} pair={selectedPair} mode="spot" sideToggle leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} onTpslChange={setTpslPreview} onFill={setPlacedFill} />
+              <PlaceSpot key={selectedPair} pair={selectedPair} mode="spot" sideToggle leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} marketPrecision={feed.precision} onTpslChange={setTpslPreview} onFill={setPlacedFill} />
             </TabsPanel>
             <TabsPanel value="cross">
               <PlaceSpot
@@ -492,6 +505,7 @@ function SpotTrades() {
                 onLeverageChange={setLeverage}
                 marketPrice={effectiveMarketPrice}
                 clickedPrice={clickedPrice}
+                marketPrecision={feed.precision}
                 onTpslChange={setTpslPreview} onFill={setPlacedFill}
               />
             </TabsPanel>
@@ -505,6 +519,7 @@ function SpotTrades() {
                 onLeverageChange={setLeverage}
                 marketPrice={effectiveMarketPrice}
                 clickedPrice={clickedPrice}
+                marketPrecision={feed.precision}
                 onTpslChange={setTpslPreview} onFill={setPlacedFill}
               />
             </TabsPanel>
@@ -585,6 +600,9 @@ function SpotTrades() {
               isConnected={orderBook.isConnected}
               lastUpdated={orderBook.lastUpdated}
               onSelectPrice={setClickedPrice}
+              pricePrecision={feed.precision.pricePrecision}
+              tickSize={feed.precision.tickSize}
+              quantityPrecision={feed.precision.quantityPrecision}
             />
             {/* Legacy mobile book markup kept hidden while the shared panel handles both tabs. */}
             <Tabs className="hidden" defaultValue="orderbook" classNames={{
@@ -699,10 +717,10 @@ function SpotTrades() {
                     <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
                   </TabsList>
                   <TabsPanel value="buy">
-                    <PlaceSpot key={`${selectedPair}-quick-buy`} pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
+                    <PlaceSpot key={`${selectedPair}-quick-buy`} pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} marketPrecision={feed.precision} compactSide="buy" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
                   </TabsPanel>
                   <TabsPanel value="sell">
-                    <PlaceSpot key={`${selectedPair}-quick-sell`} pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
+                    <PlaceSpot key={`${selectedPair}-quick-sell`} pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} marketPrecision={feed.precision} compactSide="sell" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
                   </TabsPanel>
                 </Tabs>
               </div>
@@ -728,6 +746,9 @@ function SpotTrades() {
                   isConnected={orderBook.isConnected}
                   lastUpdated={orderBook.lastUpdated}
                   onSelectPrice={setClickedPrice}
+                  pricePrecision={feed.precision.pricePrecision}
+                  tickSize={feed.precision.tickSize}
+                  quantityPrecision={feed.precision.quantityPrecision}
                 />
               </div>
             </div>
@@ -756,10 +777,10 @@ function SpotTrades() {
               <TabsTab value="sell" className="data-[active]:!text-[#e74c3c] data-[active]:!border-[#e74c3c]">Sell</TabsTab>
             </TabsList>
             <TabsPanel value="buy">
-              <PlaceSpot key={`${selectedPair}-sheet-buy`} pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="buy" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
+              <PlaceSpot key={`${selectedPair}-sheet-buy`} pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} marketPrecision={feed.precision} compactSide="buy" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
             </TabsPanel>
             <TabsPanel value="sell">
-              <PlaceSpot key={`${selectedPair}-sheet-sell`} pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} compactSide="sell" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
+              <PlaceSpot key={`${selectedPair}-sheet-sell`} pair={selectedPair} mode="spot" leverage={1} marketPrice={effectiveMarketPrice} clickedPrice={clickedPrice} marketPrecision={feed.precision} compactSide="sell" onTpslChange={setTpslPreview} onFill={setPlacedFill} />
             </TabsPanel>
           </Tabs>
         </div>

@@ -9,6 +9,7 @@ import { IoArrowDown, IoArrowUp } from "react-icons/io5";
 import type { OrderBookEntry } from "@/src/hooks/use-order-book";
 import type { RecentTrade } from "@/src/hooks/use-recent-trades";
 import { getLatestTradePrice } from "@/src/lib/recent-trades";
+import { buildOrderBookSteps } from "@/src/utils/market-precision";
 
 interface OrderBookTabsProps {
   buyOrders: OrderBookEntry[];
@@ -21,7 +22,7 @@ interface OrderBookTabsProps {
   // Last traded price carried by the order-book feed itself (order_book_update).
   bookLastPrice?: number | null;
   // When set (futures mark price) it is always the centre price: no spread/stale
-  // check, shown at 2 decimals, arrow/colour driven by 6-decimal moves.
+  // check, arrow/colour driven by 6-decimal moves.
   centerPrice?: number | null;
   // 24h % change; only used to pick the arrow before any live price move is seen.
   dayChangePercent?: number | null;
@@ -32,6 +33,9 @@ interface OrderBookTabsProps {
   onSelectPrice: (price: number) => void;
   fixedHeight?: number;
   className?: string;
+  pricePrecision?: number;
+  tickSize?: number;
+  quantityPrecision?: number;
 }
 
 type ViewMode = "both" | "bids" | "asks";
@@ -46,16 +50,19 @@ function formatTime(value: unknown) {
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleTimeString();
 }
 
-function formatNumber(value: unknown, digits = 6) {
+function formatNumber(value: unknown, digits = 6, minDigits?: number) {
   const number = Number(value);
   return Number.isFinite(number)
-    ? number.toLocaleString("en-US", { maximumFractionDigits: digits })
+    ? number.toLocaleString("en-US", {
+        ...(minDigits !== undefined ? { minimumFractionDigits: minDigits } : {}),
+        maximumFractionDigits: digits,
+      })
     : "—";
 }
 
 function decimalsOf(value: number) {
   if (!Number.isFinite(value)) return 0;
-  const fixed = value.toFixed(6).replace(/0+$/, "");
+  const fixed = value.toFixed(12).replace(/0+$/, "");
   const dot = fixed.indexOf(".");
   return dot === -1 ? 0 : fixed.length - dot - 1;
 }
@@ -142,9 +149,13 @@ function ViewModeButton({
 function RecentTradesPanel({
   trades,
   isLoading,
+  priceDecimals,
+  quantityDecimals,
 }: {
   trades: RecentTrade[];
   isLoading: boolean;
+  priceDecimals?: number;
+  quantityDecimals?: number;
 }) {
   const t = useTranslations("Trading");
   return (
@@ -171,15 +182,17 @@ function RecentTradesPanel({
             const quantity = trade.quantity ?? trade.qty ?? trade.size ?? trade.amount;
             const time =
               trade.timestamp ?? trade.createdAt ?? trade.time ?? trade.ts;
+            const pxDigits = priceDecimals !== undefined ? priceDecimals : 6;
+            const qtyDigits = quantityDecimals !== undefined ? quantityDecimals : 6;
             return (
               <div
                 key={String(trade.id ?? trade.tradeId ?? trade.trade_id ?? `${time}-${price}-${index}`)}
                 className="grid grid-cols-3 items-center px-3 py-1 text-micro font-mono tabular-nums"
               >
                 <span className={isBuy ? "text-success-6" : side === "SELL" ? "text-error-1" : "text-white/80"}>
-                  {formatNumber(price)}
+                  {formatNumber(price, pxDigits, priceDecimals)}
                 </span>
-                <span className="text-right text-white/80">{formatNumber(quantity)}</span>
+                <span className="text-right text-white/80">{formatNumber(quantity, qtyDigits)}</span>
                 <span className="text-right text-white/40">{formatTime(time)}</span>
               </div>
             );
@@ -208,6 +221,9 @@ export function OrderBookTabs({
   onSelectPrice,
   fixedHeight,
   className = "",
+  pricePrecision,
+  tickSize,
+  quantityPrecision,
 }: OrderBookTabsProps) {
   const t = useTranslations("Trading");
   const [viewMode, setViewMode] = useState<ViewMode>("both");
@@ -219,19 +235,34 @@ export function OrderBookTabs({
   const rawAsks = useMemo(() => [...sellOrders].sort((a, b) => a.price - b.price), [sellOrders]);
   const rawBids = useMemo(() => [...buyOrders].sort((a, b) => b.price - a.price), [buyOrders]);
 
-  // Finest price step the feed really uses (e.g. 2 decimals -> 0.01); the
-  // precision dropdown offers that step and three coarser ones.
-  const finestDecimals = useMemo(() => {
+  const hasConfiguredTick = tickSize !== undefined && Number.isFinite(tickSize) && tickSize > 0;
+  const clampedPricePrecision =
+    pricePrecision !== undefined && Number.isFinite(pricePrecision)
+      ? Math.max(0, Math.min(12, Math.trunc(pricePrecision)))
+      : undefined;
+  const qtyDecimals =
+    quantityPrecision !== undefined && Number.isFinite(quantityPrecision)
+      ? Math.max(0, Math.min(12, Math.trunc(quantityPrecision)))
+      : 6;
+
+  // Finest price step from configured tick size when available, otherwise inferred from live levels.
+  const inferredFinestDecimals = useMemo(() => {
     const sample = [...rawAsks.slice(0, 20), ...rawBids.slice(0, 20)];
     return sample.length ? Math.max(...sample.map((level) => decimalsOf(level.price))) : 2;
   }, [rawAsks, rawBids]);
-  const stepOptions = useMemo(
-    () =>
-      Array.from({ length: 4 }, (_, i) =>
-        Number((10 ** (i - finestDecimals)).toFixed(Math.max(finestDecimals, 0)))
-      ),
-    [finestDecimals]
-  );
+
+  const finestDecimals = hasConfiguredTick
+    ? Math.max(decimalsOf(tickSize!), clampedPricePrecision ?? 0)
+    : inferredFinestDecimals;
+
+  const stepOptions = useMemo(() => {
+    if (hasConfiguredTick) {
+      return buildOrderBookSteps(tickSize!, clampedPricePrecision ?? decimalsOf(tickSize!));
+    }
+    return Array.from({ length: 4 }, (_, i) =>
+      Number((10 ** (i - inferredFinestDecimals)).toFixed(Math.max(inferredFinestDecimals, 0)))
+    );
+  }, [hasConfiguredTick, tickSize, clampedPricePrecision, inferredFinestDecimals]);
   const activeStep = selectedStep !== null && stepOptions.includes(selectedStep) ? selectedStep : stepOptions[0];
   const displayDecimals = Math.max(decimalsOf(activeStep), 0);
   const formatPrice = (value: number) =>
@@ -303,10 +334,15 @@ export function OrderBookTabs({
   const validCenterPrice =
     centerPrice != null && Number.isFinite(centerPrice) && centerPrice > 0 ? centerPrice : null;
   const hasCenterPrice = validCenterPrice !== null;
-  // Centre price display: fixed 2 decimals when driven by the mark price.
+  const centerDecimals = hasConfiguredTick
+    ? decimalsOf(tickSize!)
+    : (clampedPricePrecision ?? 2);
   const formatCenter = (value: number) =>
     hasCenterPrice
-      ? value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      ? value.toLocaleString("en-US", {
+          minimumFractionDigits: centerDecimals,
+          maximumFractionDigits: centerDecimals,
+        })
       : formatPrice(value);
 
   const lastTradedPrice =
@@ -372,8 +408,8 @@ export function OrderBookTabs({
       >
         {formatPrice(order.price)}
       </span>
-      <span className="z-10 text-right font-mono text-micro tabular-nums text-white/80">{formatNumber(order.quantity, 6)}</span>
-      <span className="z-10 hidden text-right font-mono text-micro tabular-nums text-white/60 min-[1150px]:block">{formatNumber(order.total, 6)}</span>
+      <span className="z-10 text-right font-mono text-micro tabular-nums text-white/80">{formatNumber(order.quantity, qtyDecimals)}</span>
+      <span className="z-10 hidden text-right font-mono text-micro tabular-nums text-white/60 min-[1150px]:block">{formatNumber(order.total, qtyDecimals)}</span>
     </button>
   );
 
@@ -411,7 +447,7 @@ export function OrderBookTabs({
               >
                 {stepOptions.map((step) => (
                   <option key={step} value={step} className="bg-[#181a20] text-white">
-                    {formatNumber(step, 6)}
+                    {formatNumber(step, Math.max(6, decimalsOf(step)))}
                   </option>
                 ))}
               </select>
@@ -498,7 +534,12 @@ export function OrderBookTabs({
         </div>
       </TabsPanel>
       <TabsPanel value="recentTrades">
-        <RecentTradesPanel trades={recentTrades} isLoading={recentTradesLoading} />
+        <RecentTradesPanel
+          trades={recentTrades}
+          isLoading={recentTradesLoading}
+          priceDecimals={hasConfiguredTick ? decimalsOf(tickSize!) : clampedPricePrecision}
+          quantityDecimals={qtyDecimals}
+        />
       </TabsPanel>
     </Tabs>
   );
