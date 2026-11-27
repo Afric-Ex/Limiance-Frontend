@@ -110,15 +110,27 @@ function CreateAdPageInner() {
   const [paymentWindow, setPaymentWindow] = useState("15");
   const [remarks, setRemarks] = useState("");
 
-  const [selectedMethodIds, setSelectedMethodIds] = useState<string[]>([]);
+  // SELL and BUY ad modes select from different value domains (saved payment
+  // method IDs vs. bank names). Keeping them separate stops stale selections
+  // from one mode blocking the other mode's 3-method cap.
+  const [selectedSellMethodIds, setSelectedSellMethodIds] = useState<string[]>([]);
+  const [selectedBuyMethods, setSelectedBuyMethods] = useState<string[]>([]);
+  const selectedMethodIds = adMode === "SELL" ? selectedSellMethodIds : selectedBuyMethods;
+  const setSelectedMethodIds = adMode === "SELL" ? setSelectedSellMethodIds : setSelectedBuyMethods;
+
   const [isMethodManagerOpen, setIsMethodManagerOpen] = useState(false);
   const [agreed, setAgreed] = useState(false);
 
   // Resolve selected method names for SELL chips (matches edit-ad flow)
   const { data: pmData } = usePaymentMethods();
-  const paymentMethodsList = (pmData as any)?.data?.data ?? [];
+  const pmBody = (pmData as any)?.data;
+  const paymentMethodsList: any[] = Array.isArray(pmBody?.data)
+    ? pmBody.data
+    : Array.isArray(pmBody)
+      ? pmBody
+      : [];
   const methodName = (id: string) => {
-    const m = paymentMethodsList.find((pm: any) => pm.id === id);
+    const m = paymentMethodsList.find((pm: any) => String(pm.id ?? pm._id ?? "") === id);
     return m?.data?.bankName || m?.method || id;
   };
 

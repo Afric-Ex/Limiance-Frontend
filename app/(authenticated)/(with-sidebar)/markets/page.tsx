@@ -40,15 +40,6 @@ const matchesCategory = (tab: "derivatives" | "tradfi" | "newly-listed", categor
   return /(newly[\s-]?listed|new listed|newcoin|^new$)/.test(c);
 };
 
-const TRENDING_PAIRS = [
-  "🔥 MNT/USDT",
-  "🔥 BTC/USDT",
-  "🔥 ETH/USDT",
-  "🔥 XRP/USDT",
-  "🔥 SOL/USDT",
-  "🔥 INJ/USDT"
-];
-
 function formatVolume(val: number) {
   if (val >= 1e9) return `${(val / 1e9).toFixed(2)}B`;
   if (val >= 1e6) return `${(val / 1e6).toFixed(2)}M`;
@@ -277,17 +268,6 @@ function MarketsPageInner() {
     onError: (error) => errorMessageHandler(error),
   });
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setFadeState("out");
-      setTimeout(() => {
-        setTrendingIdx((prev) => (prev + 1) % TRENDING_PAIRS.length);
-        setFadeState("in");
-      }, 300);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Reset page on tab or search change
   useEffect(() => {
     setCurrentPage(1);
@@ -339,6 +319,28 @@ function MarketsPageInner() {
     });
     return list;
   }, [feed.markets, normaliseRow]);
+
+  // Search placeholder cycles through the live spot_margin_markets pairs.
+  const trendingPairs = useMemo(
+    () => Array.from(new Set(spotTokens.map((t) => t.pair).filter(Boolean))).slice(0, 6),
+    [spotTokens]
+  );
+
+  useEffect(() => {
+    if (trendingPairs.length <= 1) return;
+    const interval = setInterval(() => {
+      setFadeState("out");
+      setTimeout(() => {
+        setTrendingIdx((prev) => (prev + 1) % trendingPairs.length);
+        setFadeState("in");
+      }, 300);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [trendingPairs.length]);
+
+  useEffect(() => {
+    setTrendingIdx((prev) => (trendingPairs.length ? prev % trendingPairs.length : 0));
+  }, [trendingPairs.length]);
 
   // Main navigation tab filtering
   const activeRows = useMemo(() => {
@@ -419,7 +421,9 @@ function MarketsPageInner() {
                 fadeState === "in" ? "opacity-100" : "opacity-0"
               )}
             >
-              {TRENDING_PAIRS[trendingIdx]}
+              {trendingPairs.length > 0 && (
+                <span>{`🔥 ${trendingPairs[trendingIdx % trendingPairs.length]}`}</span>
+              )}
             </div>
           )}
         </div>

@@ -93,11 +93,16 @@ function EditAdPageInner() {
   const [isMethodManagerOpen, setIsMethodManagerOpen] = useState(false);
 
   const { data: pmData } = usePaymentMethods();
-  const paymentMethodsList = pmData?.data?.data ?? [];
+  const pmBody = (pmData as any)?.data;
+  const paymentMethodsList: any[] = Array.isArray(pmBody?.data)
+    ? pmBody.data
+    : Array.isArray(pmBody)
+      ? pmBody
+      : [];
   const { mutate: editAd, isPending: isSaving } = useEditAd();
 
   const methodName = (id: string) => {
-    const methodObj = paymentMethodsList.find((pm: any) => pm.id === id);
+    const methodObj = paymentMethodsList.find((pm: any) => String(pm.id ?? pm._id ?? "") === id);
     return methodObj?.data?.bankName || methodObj?.method || id;
   };
 

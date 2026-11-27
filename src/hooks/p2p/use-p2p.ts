@@ -106,10 +106,15 @@ export const useCreateAd = () => {
   return useMutation({
     mutationFn: (data: CreateOrder) => {
       const cached: any = queryClient.getQueryData(p2pKey.paymentMethods());
-      const methods: any[] = cached?.data?.data ?? [];
+      const cachedBody = cached?.data;
+      const methods: any[] = Array.isArray(cachedBody?.data)
+        ? cachedBody.data
+        : Array.isArray(cachedBody)
+          ? cachedBody
+          : [];
       if (methods.length === 0) return p2p.createOrder(data);
       const names = data.paymentMethod.map((id) => {
-        const method = methods.find((entry: any) => entry.id === id);
+        const method = methods.find((entry: any) => String(entry.id ?? entry._id ?? "") === id);
         return method?.data?.bankName || method?.method || id;
       });
       return p2p.createOrder(data, names);
